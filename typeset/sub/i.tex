@@ -1,0 +1,64 @@
+\usepackage[a4paper,width=150mm,top=25mm,bottom=25mm]{geometry}
+
+\usepackage{parskip}
+
+\usepackage[dvipsnames]{xcolor}
+% https://github.com/rebelot/kanagawa.nvim/blob/master/lua/kanagawa/colors.lua
+\definecolor{custom_bg}{HTML}{12120f} % dragonBlack1
+\definecolor{custom_fg}{HTML}{c5c9c5} % dragonWhite
+\definecolor{custom_url}{HTML}{b6927b} % dragonOrange
+
+\color{custom_fg}
+
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  urlcolor=custom_url,
+  linkcolor=custom_fg,
+  citecolor=custom_fg,
+}
+\urlstyle{same}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead{}\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\textcolor{custom_fg}{\thepage}}
+
+\usepackage{float}
+
+\usepackage{xltabular}
+% \newcolumntype{N}{p{0.9\textwidth}}
+% \newcolumntype{L}{>{\raggedright\arraybackslash}N}
+% \newcolumntype{C}{>{\centering\arraybackslash}N}
+% \newcolumntype{R}{>{\raggedleft\arraybackslash}N}
+
+\usepackage{bm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\color{custom_fg}\Large\bfseries}
+
+% https://tex.stackexchange.com/questions/60209/how-to-add-an-extra-level-of-sections-with-headings-below-subsubsection?noredirect=1&lq=1
+\usepackage{titlesec}
+\usepackage{titletoc}
+
+\setcounter{tocdepth}{4}
+
+% https://tex.stackexchange.com/questions/618849/how-to-create-subsubsubsection
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+% display heading, like subsubsection
+  {-3.25ex\@plus -1ex \@minus -.2ex}%
+  {1.5ex \@plus .2ex}%
+  {\normalfont\normalsize\bfseries}}
+  \setcounter{secnumdepth}{4}
+\makeatother
+
+\providecommand{\keywords}[1]
+{
+  \small	
+  \textbf{\textit{Keywords---}} #1
+}
+
+\usepackage{natbib}

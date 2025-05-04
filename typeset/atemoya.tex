@@ -1,0 +1,33 @@
+\documentclass{article}
+
+\input{sub/i.tex}
+
+\title{Atemoya}
+\author{\href{https://github.com/cb-g/atemoya}{github.com/cb-g/atemoya}}
+\date{\today}
+
+
+\begin{document}
+
+\pagecolor{custom_bg}\color{custom_fg}
+\pagenumbering{roman}
+\maketitle\thispagestyle{empty}
+
+\newpage\thispagestyle{empty}\addcontentsline{toc}{section}{Table of Contents}\tableofcontents
+
+\newpage\pagenumbering{arabic}\setcounter{page}{1}
+
+\newpage
+\section{Valuation}\input{sec/val.tex}\label{sec: Val}
+
+\newpage\addcontentsline{toc}{section}{References}
+% \bibliographystyle{apalike}
+% \bibliographystyle{chicago}
+% \bibliographystyle{plainnat}
+\bibliographystyle{abbrvnat}
+\bibliography{ref}
+\nocite{*}
+
+% \newpage\appendix\section{Appendix}\input{sec/app.tex}
+
+\end{document}

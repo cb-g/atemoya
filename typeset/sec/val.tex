@@ -1,0 +1,182 @@
+$$
+\text{FCFE} = \text{NI} - (1 - \text{TDR}) \cdot (\text{CAPX} - \text{D} - (\text{CA} - \text{CL}))
+$$
+
+\begin{itemize}
+  \item[] $\text{FCFE}$: free cash flow to equity
+  \item[] $\text{NI}$: net income
+  \item[] $\text{TDR}$: target debt ratio
+  \item[] $\text{CAPX}$: capital expenditure
+  \item[] $\text{D}$: depreciation
+  \item[] $\text{CA}$: current assets
+  \item[] $\text{CL}$: current liabilities
+\end{itemize}
+
+$$
+\text{FCFF} = \text{EBIT} \cdot (1 - \text{CTR}) + \text{B} - \text{CAPX} - (\text{CA} - \text{CL}) 
+$$
+
+\begin{itemize}
+  \item[] $\text{FCFF}$: free cash flow to firm
+  \item[] $\text{EBIT}$: earnings before interest and taxes
+  \item[] $\text{CTR}$: corporate tax rate
+  \item[] $\text{B}$: debt
+\end{itemize}
+
+$$
+\beta_{\text{L}} = \beta_{\text{U}} \cdot \left(1 + (1 - \text{CTR}) \cdot \frac{\text{MVB}}{\text{MVE}}\right)
+$$
+
+\begin{itemize}
+  \item[] $\beta_{\text{L}}$: levered beta
+  \item[] $\beta_{\text{U}}$: unlevered beta
+  \item[] $\text{MVB}$: market value of debt
+  \item[] $\text{MVE}$: market value of equity
+\end{itemize}
+
+$$
+\text{CE} = RFR + \beta_{\text{L}} \cdot \text{ERP}
+$$
+
+\begin{itemize}
+  \item[] $\text{CE}$: cost of equity
+  \item[] $\text{RFR}$: risk-free rate
+  \item[] $\text{ERP}$: equity risk premium
+\end{itemize}
+
+$$
+\text{ERPT} = (1 + \text{ERPS}) \cdot \left( \frac{1 + \text{IT}}{1 + \text{IS}} \right) - 1
+$$
+
+\begin{itemize}
+  \item[] $\text{ERPT}$: equity risk premium of target
+  \item[] $\text{ERPS}$: equity risk premium of source
+  \item[] $\text{IT}$: inflation of target
+  \item[] $\text{IS}$: inflation of source
+\end{itemize}
+
+$$
+\text{WACC} = \frac{\text{MVE}}{\text{MVE} + \text{MVB}} \cdot \text{CE} + \frac{\text{MVB}}{\text{MVE} + \text{MVB}} \cdot \text{CB} \cdot (1 - \text{CTR})
+$$
+
+\begin{itemize}
+  \item[] $\text{WACC}$: weighted average cost of capital
+  \item[] $\text{CB}$: pre-tax cost of debt
+\end{itemize}
+
+$$
+\begin{aligned}
+\text{FCFEGR} &= \text{ROE} \cdot \text{FCFERR} \\
+&= \left( \frac{\text{NI}}{\text{BVE}} \right) \cdot \left( 1 - \frac{\text{DP}}{\text{NI}} \right)
+\end{aligned}
+$$
+
+\begin{itemize}
+  \item[] $\text{FCFEGR}$: FCFE growth rate estimate
+  \item[] $\text{ROE}$: return on equity
+  \item[] $\text{FCFERR}$: FCFE retention ratio
+  \item[] $\text{BVE}$: book value of equity 
+  \item[] $\text{DP}$: dividends paid
+\end{itemize}
+
+$$
+\begin{aligned}
+\text{FCFFGR} &= \text{ROIC} \cdot \text{FCFFRR} \\
+&= \left( \frac{\text{NOPAT}}{\text{IC}} \right) \cdot \left( \frac{\text{CAPX} - \text{D} + (\text{CA} - \text{CL})}{\text{NOPAT}} \right) \\
+&= \left( \frac{\text{EBIT} \cdot (1 - \text{ETR})}{\text{IC}} \right) \cdot \left( \frac{\text{CAPX} - \text{D} + (\text{CA} - \text{CL})}{\text{EBIT} \cdot (1 - \text{ETR})} \right) \\
+&= \left( \frac{\text{EBIT} \cdot \left(1 - \frac{\text{ITE}}{\text{EBIT}} \right)}{\text{IC}} \right) \cdot \left( \frac{\text{CAPX} - \text{D} + (\text{CA} - \text{CL})}{\text{EBIT} \cdot \left(1 - \frac{\text{ITE}}{\text{EBIT}} \right) } \right) \\
+\end{aligned}
+$$
+
+\begin{itemize}
+  \item[] $\text{FCFFGR}$: FCFF growth rate estimate
+  \item[] $\text{ROIC}$: return on invested capital
+  \item[] $\text{FCFFRR}$: FCFF reinvestment rate
+  \item[] $\text{NOPAT}$: net operating profit after taxes
+  \item[] $\text{IC}$: invested capital
+  \item[] $\text{ETR}$: effective tax rate
+  \item[] $\text{ITE}$: income tax expense
+\end{itemize}
+
+$$
+\begin{aligned}
+\text{PVE} = \text{PVFCFE} &+ \text{PVTVFCFE} \\ 
+= \left( \sum_{t=1}^{h} \frac{\text{FCFE}_t}{(1 + \text{CE})^t} \right) &+ \text{PVTVFCFE} \\
+= \left( \sum_{t=1}^{h} \frac{\text{FCFE}_0 \cdot (1+\text{FCFEGR})^t}{(1+\text{CE})^t} \right) &+ \text{PVTVFCFE} \\
+= \text{PVFCFE} &+ \left( \sum_{t=h+1}^{\infty} \frac{\text{FCFE}_t}{(1 + \text{CE})^t} \right) \\
+= \text{PVFCFE} &+ \left( \sum_{t=h+1}^{\infty} \frac{\text{FCFE}_h \cdot (1+\text{TGR})^{t-h}}{(1+\text{CE})^t} \right) \\
+= \text{PVFCFE} &+ \left( \sum_{t=h+1}^{\infty} \frac{\text{FCFE}_h}{(1+\text{CE})^h} \cdot \left( \frac{1+\text{TGR}}{1+\text{CE}} \right)^{t-h} \right) \\
+= \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h}{(1+\text{CE})^h} \sum_{k=1}^{\infty} \left( \frac{1+\text{TGR}}{1+\text{CE}} \right)^k \right) \\
+\overset{\text{GGM}}{=} \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h}{(1+\text{CE})^h} \cdot \frac{\frac{1+\text{TGR}}{1+\text{CE}}}{1 - \frac{1+\text{TGR}}{1+\text{CE}}} \right) \\
+% = \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h}{(1+\text{CE})^h} \cdot \frac{1+\text{GR}}{(1+\text{CE}) - (1+\text{GR})} \right) \\
+= \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h}{(1+\text{CE})^h} \cdot \frac{1+\text{TGR}}{\text{CE} - \text{TGR}} \right) \\
+= \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h \cdot (1+\text{TGR})}{(\text{CE} - \text{TGR})} \cdot \frac{1}{(1+\text{CE})^h} \right) \\ 
+= \text{PVFCFE} &+ \left(\frac{\text{FCFE}_{h+1}}{(\text{CE} - \text{TGR})} \cdot \frac{1}{(1 + \text{CE})^h} \right) \\
+= \text{PVFCFE} &+ \left(\frac{\text{TVFCFE}}{(1 + \text{CE})^h} \right) \\ 
+= \left( \sum_{t=1}^{h} \frac{\text{FCFE}_0 \cdot (1+\text{FCFEGR})^t}{(1+\text{CE})^t} \right) &+ \left(\frac{\text{FCFE}_h \cdot (1+\text{TGR})}{(\text{CE} - \text{TGR}) \cdot (1 + \text{CE})^h} \right)
+\end{aligned}
+$$
+
+\begin{itemize}
+  \item[] $\text{PVE}$: present value of equity
+  \item[] $\text{PVFCFE}$: present value of free cash flow to equity
+  \item[] $\text{PVTVFCFE}$: present value of terminal value of free cash flow to firm
+  \item[] $h$: growth forecast horizon (before terminal growth rate into perpetuity)
+  \item[] $\text{GGM}$: Gordon growth model (closed-form solution of infinite geometric series)
+  \item[] $\text{TGR}$: terminal growth rate
+  \item[] $\text{TVFCFE}$: terminal value of free cash flow to firm
+\end{itemize}
+
+$$
+\begin{aligned}
+\text{PVF} = \text{PVFCFF} &+ \text{PVTVFCFF} \\ 
+= \left( \sum_{t=1}^{h} \frac{\text{FCFF}_t}{(1 + \text{WACC})^t} \right) &+ \text{PVTVFCFF} \\
+= \left( \sum_{t=1}^{h} \frac{\text{FCFF}_0 \cdot (1+\text{FCFFGR})^t}{(1+\text{WACC})^t} \right) &+ \text{PVTVFCFF} \\
+= \text{PVFCFF} &+ \left( \sum_{t=h+1}^{\infty} \frac{\text{FCFF}_t}{(1 + \text{WACC})^t} \right) \\
+= \text{PVFCFF} &+ \left( \sum_{t=h+1}^{\infty} \frac{\text{FCFF}_h \cdot (1+\text{TGR})^{t-h}}{(1+\text{WACC})^t} \right) \\
+= \text{PVFCFF} &+ \left( \sum_{t=h+1}^{\infty} \frac{\text{FCFF}_h}{(1+\text{WACC})^h} \cdot \left( \frac{1+\text{TGR}}{1+\text{WACC}} \right)^{t-h} \right) \\
+= \text{PVFCFF} &+ \left( \frac{\text{FCFF}_h}{(1+\text{WACC})^h} \sum_{k=1}^{\infty} \left( \frac{1+\text{TGR}}{1+\text{WACC}} \right)^k \right) \\
+\overset{\text{GGM}}{=} \text{PVFCFF} &+ \left( \frac{\text{FCFF}_h}{(1+\text{WACC})^h} \cdot \frac{\frac{1+\text{TGR}}{1+\text{WACC}}}{1 - \frac{1+\text{TGR}}{1+\text{WACC}}} \right) \\
+= \text{PVFCFF} &+ \left( \frac{\text{FCFF}_h}{(1+\text{WACC})^h} \cdot \frac{1+\text{TGR}}{\text{WACC} - \text{TGR}} \right) \\
+= \text{PVFCFF} &+ \left( \frac{\text{FCFF}_h \cdot (1+\text{TGR})}{(\text{WACC} - \text{TGR})} \cdot \frac{1}{(1+\text{WACC})^h} \right) \\ 
+= \text{PVFCFF} &+ \left( \frac{\text{FCFF}_{h+1}}{(\text{WACC} - \text{TGR})} \cdot \frac{1}{(1 + \text{WACC})^h} \right) \\
+= \text{PVFCFF} &+ \left( \frac{\text{TVFCFF}}{(1 + \text{WACC})^h} \right) \\ 
+= \left( \sum_{t=1}^{h} \frac{\text{FCFF}_0 \cdot (1+\text{FCFFGR})^t}{(1+\text{WACC})^t} \right) &+ \left( \frac{\text{FCFF}_h \cdot (1+\text{TGR})}{(\text{WACC} - \text{TGR}) \cdot (1 + \text{WACC})^h} \right)
+\end{aligned}
+$$
+
+\begin{itemize}
+  \item[] $\text{PVF}$: present value of the firm
+  \item[] $\text{PVFCFF}$: present value of free cash flow to firm
+  \item[] $\text{PVTVFCFF}$: present value of terminal value of free cash flow to firm
+  \item[] $\text{TVFCFF}$: terminal value of free cash flow to firm
+\end{itemize}
+
+$$
+\text{PVE} \approx \text{PVF} - \text{B} + \text{CNOA}
+$$
+
+\begin{itemize}
+  \item[] $\text{CNOA}$: cash and non-operating assets
+\end{itemize}
+
+$$
+\text{IVE} = \text{PVE}
+$$
+
+\begin{itemize}
+  \item[] $\text{IVE}$: intrinsic value of equity
+\end{itemize}
+
+$$
+\text{IVE} = \text{PVF} - \text{B} + \text{CNOA}
+$$
+
+$$
+\text{IVPS} = \frac{\text{IVE}}{\text{SO}}
+$$
+
+\begin{itemize}
+  \item[] $\text{IVPS}$: intrinsic value per share
+  \item[] $\text{SO}$: shares outstanding
+\end{itemize}
