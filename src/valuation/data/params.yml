@@ -1,0 +1,24 @@
+# Whether to run a nominal (set to false, i.e., not inflation-adjusted) 
+# or real (set to true, i.e., inflation-adjusted) valuation. 
+inflation_adjusted: false
+
+# Number of years to project cash flows before terminal value. 
+# And for selecting the government bond yields by duration. 
+# 7 years is a good default to use, because it is reasonable
+# for both very mature and high-growth companies. 
+projection_years: 7
+
+# shouldn't exceed the growth rate of the economy
+terminal_growth_rate:
+  default: 0.02
+  United States: 0.02
+  China: 0.045
+  Switzerland: 0.015
+  France: 0.015
+  Italy: 0.012
+  Germany: 0.015
+  United Kingdom: 0.017
+  Canada: 0.018
+  Australia: 0.022
+  India: 0.04
+  Brazil: 0.035

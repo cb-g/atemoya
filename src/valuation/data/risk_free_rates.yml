@@ -1,0 +1,81 @@
+# Risk-free rates (government bond yields)
+USD:
+  fallback: United States
+  United States:
+    1y: 3.99
+    2y: 3.81
+    3y: 3.82
+    5y: 3.95
+    7y: 4.13
+    10y: 4.34
+    20y: 4.82
+    30y: 4.80
+    last_updated: 2025-04-17
+    source: https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value_month=202504
+
+CHF:
+  fallback: Switzerland
+  Switzerland:
+    1y: 0.079
+    2y: 0.103
+    3y: 0.157
+    4y: 0.218
+    5y: 0.279
+    6y: 0.336
+    7y: 0.388
+    8y: 0.435
+    9y: 0.477
+    10y: 0.514
+    15y: 0.636
+    20y: 0.683
+    30y: 0.655
+    last_updated: 2025-04-21
+    source: https://data.snb.ch/en/topics/ziredev/cube/rendoblid?toDate=2025-04-21&fromDate=2025-03-21
+
+EUR:
+  fallback: Germany
+  Germany:
+    2y: 1.79
+    5y: 2.1
+    7y: 2.16
+    10y: 2.53
+    15y: 2.85
+    30y: 2.94
+    last_updated: 2025-04-21
+    source: https://www.bundesbank.de/en/statistics/money-and-capital-markets/interest-rates-and-yields/daily-yields-of-current-federal-securities-772220
+  # France:
+  #   5y: None
+  #   10y: None
+  #   last_updated: None
+  #   source: None 
+
+GBP:
+  fallback: United Kingdom
+  United Kingdom:
+    5y: 4.31
+    10y: 4.68
+    30y: 5.26
+    last_updated: 2025-04-21
+    source: https://www.dmo.gov.uk/data/ExportReport?reportCode=D4H
+
+CNY:
+  fallback: China
+  China:
+    1y: 1.43
+    2y: 1.45
+    3y: 1.48
+    5y: 1.5
+    7y: 1.6
+    10y: 1.65
+    30y: 1.9
+    last_updated: 2025-04-21
+    source: https://yield.chinabond.com.cn/cbweb-czb-web/czb/moreInfo?locale=en_US&nameType=1
+
+HKD:
+  fallback: Hong Kong
+  Hong Kong:
+    5y: 3.23
+    10y: 3.84
+    last_updated: 2025-04-21
+    source_5y: https://www.hkma.gov.hk/eng/news-and-media/press-releases/2025/03/20250305-6/
+    source_10y: https://www.hkma.gov.hk/eng/news-and-media/press-releases/2025/01/20250109-5/

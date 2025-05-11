@@ -1,0 +1,640 @@
+Industry Mapping:
+  Advertising:
+    - Advertising
+    - Marketing Services
+
+  Aerospace/Defense:
+    - Aerospace & Defense
+
+  Air Transport:
+    - Airlines
+    - Air Freight & Logistics
+
+  Apparel:
+    - Apparel Retail
+    - Apparel Manufacturing
+
+  Auto & Truck:
+    - Auto Manufacturers
+
+  Auto Parts:
+    - Auto Parts
+
+  Bank (Money Center):
+    - Banks—Diversified
+    - Banks - Diversified
+    - Banks—Major
+
+  Banks (Regional):
+    - Banks—Regional
+    - Banks - Regional
+
+  Beverage (Alcoholic):
+    - Beverages—Wineries & Distilleries
+    - Alcoholic Beverages
+    - Beverages - Brewers
+    - Beverages - Wineries & Distilleries
+
+  Beverage (Soft):
+    - Beverages—Non-Alcoholic
+    - Beverages - Non-Alcoholic
+    - Soft Drinks
+
+  Broadcasting:
+    - Broadcasting
+    - Media & Entertainment
+
+  Brokerage & Investment Banking:
+    - Capital Markets
+    - Investment Banking & Brokerage
+
+  Building Materials:
+    - Building Materials
+    - Construction Materials
+
+  Business & Consumer Services:
+    - Consulting Services
+    - Staffing & Employment Services
+    - Security & Protection Services
+
+  Cable TV:
+    - Cable & Satellite
+    - Media
+
+  Chemical (Basic):
+    - Chemicals—Specialty
+    - Commodity Chemicals
+
+  Chemical (Diversified):
+    - Diversified Chemicals
+
+  Chemical (Specialty):
+    - Specialty Chemicals
+
+  Coal & Related Energy:
+    - Thermal Coal
+    - Coal
+
+  Computer Services:
+    - Information Technology Services
+    - IT Consulting
+
+  Computers/Peripherals:
+    - Computer Hardware
+    - Consumer Electronics
+
+  Construction Supplies:
+    - Construction
+    - Building Products
+
+  Diversified:
+    - Conglomerates
+    - Multi-Sector Holdings
+
+  Drugs (Biotechnology):
+    - Biotechnology
+
+  Drugs (Pharmaceutical):
+    - Pharmaceuticals
+    - Drug Manufacturers—General
+    - Drug Manufacturers - General
+    - Drug Manufacturers - Specialty & Generic
+
+  Education:
+    - Education & Training Services
+
+  Electrical Equipment:
+    - Electrical Equipment & Parts
+
+  Electronics (Consumer & Office):
+    - Consumer Electronics
+    - Office Equipment
+
+  Electronics (General):
+    - Electronic Components
+    - Industrial Electronics
+
+  Engineering/Construction:
+    - Engineering & Construction
+
+  Entertainment:
+    - Entertainment
+    - Movie Production & Distribution
+
+  Environmental & Waste Services:
+    - Waste Management
+    - Environmental Services
+
+  Farming/Agriculture:
+    - Agricultural Inputs
+    - Farm Products
+
+  Financial Svcs. (Non-bank & Insurance):
+    - Financial Conglomerates
+    - Specialty Finance
+    - Financial Data & Stock Exchanges
+    - Credit Services
+
+  Food Processing:
+    - Packaged Foods
+    - Processed Foods
+
+  Food Wholesalers:
+    - Food Distribution
+
+  Furn/Home Furnishings:
+    - Home Furnishings
+    - Furniture
+
+  Green & Renewable Energy:
+    - Renewable Energy
+    - Solar
+
+  Healthcare Products:
+    - Medical Devices
+    - Medical Instruments & Supplies
+
+  Healthcare Support Services:
+    - Health Care Providers
+    - Medical Care Facilities
+
+  Heathcare Information and Technology:
+    - Health Information Services
+    - Health Care Technology
+
+  Homebuilding:
+    - Residential Construction
+    - Homebuilding
+
+  Hospitals/Healthcare Facilities:
+    - Hospitals
+    - Healthcare Facilities
+
+  Hotel/Gaming:
+    - Hotels, Resorts & Cruise Lines
+    - Casinos & Gaming
+    - Lodging
+
+  Household Products:
+    - Household & Personal Products
+
+  Information Services:
+    - Information Services
+
+  Insurance (General):
+    - Insurance—Diversified
+    - Insurance - Diversified
+    - Insurance Brokers
+
+  Insurance (Life):
+    - Insurance—Life
+    - Insurance — Life
+
+  Insurance (Prop/Cas.):
+    - Insurance—Property & Casualty
+
+  Investments & Asset Management:
+    - Asset Management
+    - Investment Management
+
+  Machinery:
+    - Farm & Heavy Construction Machinery
+    - Industrial Machinery
+
+  Metals & Mining:
+    - Industrial Metals & Mining
+
+  Office Equipment & Services:
+    - Office Equipment
+    - Business Equipment
+
+  Oil/Gas (Integrated):
+    - Oil & Gas Integrated
+
+  Oil/Gas (Production and Exploration):
+    - Oil & Gas E&P
+    - Oil & Gas Equipment & Services
+    - Oil & Gas Refining & Marketing
+
+  Oil/Gas Distribution:
+    - Oil & Gas Midstream
+
+  Oilfield Svcs/Equip.:
+    - Oilfield Services/Equipment
+
+  Packaging & Container:
+    - Packaging & Containers
+
+  Paper/Forest Products:
+    - Paper & Forest Products
+    - Paper & Paper Products
+
+  Power:
+    - Independent Power Producers
+
+  Precious Metals:
+    - Gold
+    - Silver
+
+  Publishing & Newspapers:
+    - Publishing
+    - Newspapers
+
+  R.E.I.T.:
+    - REIT—Residential
+    - REIT—Retail
+    - REIT—Industrial
+
+  Real Estate (Development):
+    - Real Estate—Development
+    - Real Estate — Development
+
+  Real Estate (General/Diversified):
+    - Real Estate—Diversified
+    - Real Estate - Diversified
+
+  Real Estate (Operations & Services):
+    - Real Estate Services
+    - Property Management
+
+  Recreation:
+    - Leisure
+    - Recreational Vehicles
+
+  Reinsurance:
+    - Reinsurance
+
+  Restaurant/Dining:
+    - Restaurants
+    - Dining
+
+  Retail (Automotive):
+    - Auto & Truck Dealerships
+
+  Retail (Building Supply):
+    - Home Improvement Retail
+
+  Retail (Distributors):
+    - Retail Distributors
+
+  Retail (General):
+    - Department Stores
+    - General Merchandise
+    - Internet Retail
+
+  Retail (Grocery and Food):
+    - Grocery Stores
+    - Food Retail
+
+  Retail (REITs):
+    - REIT—Retail
+
+  Retail (Special Lines):
+    - Specialty Retail
+
+  Rubber& Tires:
+    - Tires & Rubber Products
+
+  Semiconductor:
+    - Semiconductors
+
+  Semiconductor Equip:
+    - Semiconductor Equipment & Materials
+
+  Shipbuilding & Marine:
+    - Marine Products
+    - Shipbuilding
+
+  Shoe:
+    - Footwear & Accessories
+
+  Software (Entertainment):
+    - Software—Entertainment
+    - Software — Entertainment
+
+  Software (Internet):
+    - Internet Content & Information
+
+  Software (System & Application):
+    - Software—Application
+    - Software — Application
+    - Software - Application
+    - Software—Infrastructure
+    - Software - Infrastructure
+
+  Steel:
+    - Steel
+
+  Telecom (Wireless):
+    - Wireless Telecommunications Services
+
+  Telecom. Equipment:
+    - Communication Equipment
+
+  Telecom. Services:
+    - Telecom Services
+
+  Tobacco:
+    - Tobacco
+
+  Transportation:
+    - Marine Shipping
+    - Transportation & Logistics
+
+  Transportation (Railroads):
+    - Railroads
+
+  Trucking:
+    - Trucking
+
+  Utility (General):
+    - Utilities - Regulated Electric
+    - Utilities - Renewable
+    - Utilities - Independent Power Producers
+    - Specialty Industrial Machinery
+
+  Utility (Water):
+    - Utilities - Regulated Water
+
+
+
+Industry Data:
+  Advertising:
+    Unlevered Beta: 1.12
+    Effective Tax Rate: 0.0767
+  Aerospace/Defense:
+    Unlevered Beta: 0.77
+    Effective Tax Rate: 0.1102
+  Air Transport:
+    Unlevered Beta: 0.69
+    Effective Tax Rate: 0.1015
+  Apparel:
+    Unlevered Beta: 0.74
+    Effective Tax Rate: 0.0808
+  Auto & Truck:
+    Unlevered Beta: 1.39
+    Effective Tax Rate: 0.0211
+  Auto Parts:
+    Unlevered Beta: 0.91
+    Effective Tax Rate: 0.1277
+  Bank (Money Center):
+    Unlevered Beta: 0.37
+    Effective Tax Rate: 0.181
+  Banks (Regional):
+    Unlevered Beta: 0.36
+    Effective Tax Rate: 0.1684
+  Beverage (Alcoholic):
+    Unlevered Beta: 0.5
+    Effective Tax Rate: 0.0828
+  Beverage (Soft):
+    Unlevered Beta: 0.5
+    Effective Tax Rate: 0.0694
+  Broadcasting:
+    Unlevered Beta: 0.43
+    Effective Tax Rate: 0.1074
+  Brokerage & Investment Banking:
+    Unlevered Beta: 0.4
+    Effective Tax Rate: 0.1442
+  Building Materials:
+    Unlevered Beta: 1.19
+    Effective Tax Rate: 0.1911
+  Business & Consumer Services:
+    Unlevered Beta: 0.89
+    Effective Tax Rate: 0.1248
+  Cable TV:
+    Unlevered Beta: 0.49
+    Effective Tax Rate: 0.1047
+  Chemical (Basic):
+    Unlevered Beta: 0.8
+    Effective Tax Rate: 0.0797
+  Chemical (Diversified):
+    Unlevered Beta: 0.54
+    Effective Tax Rate: 0.0
+  Chemical (Specialty):
+    Unlevered Beta: 0.76
+    Effective Tax Rate: 0.0999
+  Coal & Related Energy:
+    Unlevered Beta: 1.1
+    Effective Tax Rate: 0.0277
+  Computer Services:
+    Unlevered Beta: 1.03
+    Effective Tax Rate: 0.1078
+  Computers/Peripherals:
+    Unlevered Beta: 1.1
+    Effective Tax Rate: 0.0899
+  Construction Supplies:
+    Unlevered Beta: 1.11
+    Effective Tax Rate: 0.1355
+  Diversified:
+    Unlevered Beta: 0.97
+    Effective Tax Rate: 0.0501
+  Drugs (Biotechnology):
+    Unlevered Beta: 1.11
+    Effective Tax Rate: 0.0105
+  Drugs (Pharmaceutical):
+    Unlevered Beta: 0.95
+    Effective Tax Rate: 0.0258
+  Education:
+    Unlevered Beta: 0.86
+    Effective Tax Rate: 0.1189
+  Electrical Equipment:
+    Unlevered Beta: 1.14
+    Effective Tax Rate: 0.0514
+  Electronics (Consumer & Office):
+    Unlevered Beta: 0.84
+    Effective Tax Rate: 0.0
+  Electronics (General):
+    Unlevered Beta: 0.96
+    Effective Tax Rate: 0.0659
+  Engineering/Construction:
+    Unlevered Beta: 0.87
+    Effective Tax Rate: 0.1471
+  Entertainment:
+    Unlevered Beta: 0.9
+    Effective Tax Rate: 0.0206
+  Environmental & Waste Services:
+    Unlevered Beta: 0.8
+    Effective Tax Rate: 0.0684
+  Farming/Agriculture:
+    Unlevered Beta: 0.7
+    Effective Tax Rate: 0.0889
+  Financial Svcs. (Non-bank & Insurance):
+    Unlevered Beta: 0.34
+    Effective Tax Rate: 0.1181
+  Food Processing:
+    Unlevered Beta: 0.37
+    Effective Tax Rate: 0.1012
+  Food Wholesalers:
+    Unlevered Beta: 0.54
+    Effective Tax Rate: 0.1553
+  Furn/Home Furnishings:
+    Unlevered Beta: 0.66
+    Effective Tax Rate: 0.1161
+  Green & Renewable Energy:
+    Unlevered Beta: 0.49
+    Effective Tax Rate: 0.0122
+  Healthcare Products:
+    Unlevered Beta: 0.92
+    Effective Tax Rate: 0.041
+  Healthcare Support Services:
+    Unlevered Beta: 0.76
+    Effective Tax Rate: 0.088
+  Heathcare Information and Technology:
+    Unlevered Beta: 1.09
+    Effective Tax Rate: 0.0382
+  Hotel/Gaming:
+    Unlevered Beta: 0.9
+    Effective Tax Rate: 0.1065
+  Homebuilding:
+    Unlevered Beta: 1.26
+    Effective Tax Rate: 0.1773
+  Household Products:
+    Unlevered Beta: 0.81
+    Effective Tax Rate: 0.08
+  Information Services:
+    Unlevered Beta: 0.77
+    Effective Tax Rate: 0.1537
+  Insurance (General):
+    Unlevered Beta: 0.67
+    Effective Tax Rate: 0.0878
+  Insurance (Life):
+    Unlevered Beta: 0.5
+    Effective Tax Rate: 0.1451
+  Insurance (Prop/Cas.):
+    Unlevered Beta: 0.55
+    Effective Tax Rate: 0.1605
+  Investments & Asset Management:
+    Unlevered Beta: 0.45
+    Effective Tax Rate: 0.0619
+  Machinery:
+    Unlevered Beta: 0.96
+    Effective Tax Rate: 0.1122
+  Metals & Mining:
+    Unlevered Beta: 0.91
+    Effective Tax Rate: 0.018
+  Office Equipment & Services:
+    Unlevered Beta: 0.89
+    Effective Tax Rate: 0.1345
+  Oil/Gas (Integrated):
+    Unlevered Beta: 0.44
+    Effective Tax Rate: 0.2523
+  Oil/Gas (Production and Exploration):
+    Unlevered Beta: 0.73
+    Effective Tax Rate: 0.071
+  Oil/Gas Distribution:
+    Unlevered Beta: 0.54
+    Effective Tax Rate: 0.1248
+  Oilfield Svcs/Equip.:
+    Unlevered Beta: 0.73
+    Effective Tax Rate: 0.0908
+  Packaging & Container:
+    Unlevered Beta: 0.7
+    Effective Tax Rate: 0.1429
+  Paper/Forest Products:
+    Unlevered Beta: 0.92
+    Effective Tax Rate: 0.2369
+  Power:
+    Unlevered Beta: 0.34
+    Effective Tax Rate: 0.1211
+  Precious Metals:
+    Unlevered Beta: 1.08
+    Effective Tax Rate: 0.0199
+  Publishing & Newspapers:
+    Unlevered Beta: 0.53
+    Effective Tax Rate: 0.0976
+  R.E.I.T.:
+    Unlevered Beta: 0.58
+    Effective Tax Rate: 0.018
+  Real Estate (Development):
+    Unlevered Beta: 0.57
+    Effective Tax Rate: 0.0249
+  Real Estate (General/Diversified):
+    Unlevered Beta: 0.65
+    Effective Tax Rate: 0.0545
+  Real Estate (Operations & Services):
+    Unlevered Beta: 0.89
+    Effective Tax Rate: 0.0426
+  Recreation:
+    Unlevered Beta: 0.89
+    Effective Tax Rate: 0.0733
+  Reinsurance:
+    Unlevered Beta: 0.42
+    Effective Tax Rate: 0.2013
+  Restaurant/Dining:
+    Unlevered Beta: 0.86
+    Effective Tax Rate: 0.0884
+  Retail (Automotive):
+    Unlevered Beta: 0.98
+    Effective Tax Rate: 0.1212
+  Retail (Building Supply):
+    Unlevered Beta: 1.55
+    Effective Tax Rate: 0.1366
+  Retail (Distributors):
+    Unlevered Beta: 0.91
+    Effective Tax Rate: 0.135
+  Retail (General):
+    Unlevered Beta: 0.99
+    Effective Tax Rate: 0.1675
+  Retail (Grocery and Food):
+    Unlevered Beta: 0.42
+    Effective Tax Rate: 0.1328
+  Retail (REITs):
+    Unlevered Beta: 0.67
+    Effective Tax Rate: 0.0119
+  Retail (Special Lines):
+    Unlevered Beta: 1.0
+    Effective Tax Rate: 0.0823
+  Rubber& Tires:
+    Unlevered Beta: 0.17
+    Effective Tax Rate: 0.0
+  Semiconductor:
+    Unlevered Beta: 1.45
+    Effective Tax Rate: 0.0419
+  Semiconductor Equip:
+    Unlevered Beta: 1.39
+    Effective Tax Rate: 0.0995
+  Shipbuilding & Marine:
+    Unlevered Beta: 0.51
+    Effective Tax Rate: 0.0578
+  Shoe:
+    Unlevered Beta: 1.32
+    Effective Tax Rate: 0.1106
+  Software (Entertainment):
+    Unlevered Beta: 1.16
+    Effective Tax Rate: 0.0673
+  Software (Internet):
+    Unlevered Beta: 1.56
+    Effective Tax Rate: 0.0218
+  Software (System & Application):
+    Unlevered Beta: 1.2
+    Effective Tax Rate: 0.0444
+  Steel:
+    Unlevered Beta: 0.89
+    Effective Tax Rate: 0.1176
+  Telecom (Wireless):
+    Unlevered Beta: 0.57
+    Effective Tax Rate: 0.149
+  Telecom. Equipment:
+    Unlevered Beta: 0.91
+    Effective Tax Rate: 0.0435
+  Telecom. Services:
+    Unlevered Beta: 0.51
+    Effective Tax Rate: 0.0365
+  Tobacco:
+    Unlevered Beta: 0.81
+    Effective Tax Rate: 0.125
+  Transportation:
+    Unlevered Beta: 0.8
+    Effective Tax Rate: 0.119
+  Transportation (Railroads):
+    Unlevered Beta: 0.82
+    Effective Tax Rate: 0.1714
+  Trucking:
+    Unlevered Beta: 0.94
+    Effective Tax Rate: 0.186
+  Utility (General):
+    Unlevered Beta: 0.25
+    Effective Tax Rate: 0.1065
+  Utility (Water):
+    Unlevered Beta: 0.47
+    Effective Tax Rate: 0.1136

@@ -1,3 +1,7 @@
+# project-specific
+src/valuation/data/valuation_data.json
+*.log
+
 *.annot
 *.cmo
 *.cma

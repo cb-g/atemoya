@@ -9,7 +9,7 @@ opam_file="${pkg_name}.opam"
 
 # abort if file already exists
 if [[ -f "$opam_file" ]]; then
-  echo "⚠️  $opam_file already exists. aborting."
+  echo "$opam_file already exists. aborting."
   exit 1
 fi
 

@@ -4,9 +4,21 @@
 
 \usepackage[dvipsnames]{xcolor}
 % https://github.com/rebelot/kanagawa.nvim/blob/master/lua/kanagawa/colors.lua
-\definecolor{custom_bg}{HTML}{12120f} % dragonBlack1
-\definecolor{custom_fg}{HTML}{c5c9c5} % dragonWhite
-\definecolor{custom_url}{HTML}{b6927b} % dragonOrange
+\definecolor{custom_bg}{HTML}{12120f}   % dragonBlack1
+\definecolor{custom_fg}{HTML}{c5c9c5}   % dragonWhite
+\definecolor{custom_url}{HTML}{b6927b}  % dragonOrange
+\definecolor{StrongBuy}{HTML}{98BB6C}   % springGreen
+\definecolor{Buy}{HTML}{7AA89F}         % waveAqua2
+\definecolor{Hold}{HTML}{DCA561}        % autumnYellow
+\definecolor{Caution}{HTML}{D27E99}     % dustyRose
+\definecolor{Speculative}{HTML}{E46876} % waveRed
+\definecolor{Avoid}{HTML}{C34043}       % autumnRed
+\newcommand{\signalstrongbuy}{\textbf{\textcolor{StrongBuy}{strong buy:}}}
+\newcommand{\signalbuy}{\textbf{\textcolor{Buy}{buy:}}}
+\newcommand{\signalhold}{\textbf{\textcolor{Hold}{hold:}}}
+\newcommand{\signalspeculative}{\textbf{\textcolor{Speculative}{speculative:}}}
+\newcommand{\signalcaution}{\textbf{\textcolor{Caution}{caution:}}}
+\newcommand{\signalavoid}{\textbf{\textcolor{Avoid}{avoid:}}}
 
 \color{custom_fg}
 

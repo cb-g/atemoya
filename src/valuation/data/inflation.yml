@@ -1,0 +1,163 @@
+# PCPIPCH: Inflation, average consumer prices. Annual percentages of average consumer prices are year-on-year changes. Percent change. 
+# Last updated: April 2024: https://www.imf.org/en/Publications/WEO/weo-database/2024/April/download-entire-database 
+United States: 
+  currency: USD
+  inflation: 
+    2029: 2.143
+    2028: 2.117
+    2027: 2.1
+    2026: 2.059
+    2025: 2
+    2024: 2.907
+
+Germany: 
+  currency: EUR
+  inflation: 
+    2029: 2.009
+    2028: 1.988
+    2027: 1.974
+    2026: 1.971
+    2025: 2.019
+    2024: 2.406
+
+Switzerland:
+  currency: CHF
+  inflation: 
+    2029: 1.2
+    2028: 1.2
+    2027: 1.182
+    2026: 1.164
+    2025: 1.2
+    2024: 1.537
+
+Australia: 
+  currency: AUD
+  inflation: 
+    2029: 2.499
+    2028: 2.574
+    2027: 2.677
+    2026: 2.676
+    2025: 2.982
+    2024: 3.53
+
+Canada: 
+  currency: CAD
+  inflation: 
+    2029: 1.987
+    2028: 1.917
+    2027: 1.879
+    2026: 1.894
+    2025: 1.854
+    2024: 2.606
+
+Singapore: 
+  currency: SGD
+  inflation: 
+    2029: 1.964
+    2028: 1.984
+    2027: 1.984
+    2026: 1.978
+    2025: 2.5
+    2024: 2.979
+
+United Kingdom:
+  currency: GBP 
+  inflation: 
+    2029: 2
+    2028: 2
+    2027: 2
+    2026: 2
+    2025: 2.01
+    2024: 2.453
+
+France: 
+  currency: EUR
+  inflation: 
+    2029: 1.714
+    2028: 1.797
+    2027: 1.818
+    2026: 1.785
+    2025: 1.792
+    2024: 2.417
+
+Hong Kong: 
+  currency: HKD
+  inflation: 
+    2029: 2.5
+    2028: 2.5
+    2027: 2.5
+    2026: 2.4
+    2025: 2.25
+    2024: 2.3
+
+Taiwan: 
+  currency: TWD
+  inflation: 
+    2029: 1.491
+    2028: 1.587
+    2027: 1.517
+    2026: 1.511
+    2025: 1.555
+    2024: 1.881
+
+Kuwait: 
+  currency: KWD
+  inflation: 
+    2029: 1.758
+    2028: 1.847
+    2027: 2.132
+    2026: 2.405
+    2025: 2.728
+    2024: 3.168
+
+Japan:
+  currency: JPY
+  inflation: 
+    2029: 2.004
+    2028: 2.004
+    2027: 2.004
+    2026: 2.006
+    2025: 2.097
+    2024: 2.237
+
+China: 
+  currency: CNY
+  inflation: 
+    2029: 1.951
+    2028: 1.951
+    2027: 1.951
+    2026: 1.951
+    2025: 1.993
+    2024: 0.97
+
+India: 
+  currency: INR
+  inflation: 
+    2029: 4
+    2028: 4
+    2027: 4
+    2026: 4.092
+    2025: 4.167
+    2024: 4.563
+
+Italy: 
+  currency: EUR
+  inflation: 
+    2029: 2
+    2028: 2
+    2027: 2
+    2026: 2
+    2025: 2
+    2024: 1.673
+
+Brazil: 
+  currency: BRL
+  inflation: 
+    2029: 2.991
+    2028: 3.015
+    2027: 2.967
+    2026: 3.05
+    2025: 3.039
+    2024: 4.113
+
+# TODO: add more countries
