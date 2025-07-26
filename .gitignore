@@ -1,7 +1,7 @@
 # project-specific
-src/valuation/data/valuation_data.json
-*.log
+TODO.md
 
+#
 *.annot
 *.cmo
 *.cma
@@ -11,9 +11,6 @@ src/valuation/data/valuation_data.json
 *.cmx
 *.cmxs
 *.cmxa
-
-# package metadata
-ocaml_atemoya.opam
 
 # ocamlbuild working directory
 _build/
@@ -93,7 +90,7 @@ cover/
 *.pot
 
 # Django stuff:
-*.log
+# *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -216,7 +213,7 @@ cython_debug/
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
-*.log
+# *.log
 *.lot
 *.fls
 *.out

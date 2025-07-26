@@ -1,3 +1,29 @@
+The tools of valuation empower the investor to judge stocks in a manner that is detached from behavioral biases and therefore from market sentiment. Valuation emphasizes companies' fundamentals and financial health. 
+
+By relying on valuation - regardless of an active or passive investing style - we reject the Efficient Market Hypothesis (EMH) in at least its strong and semi-strong forms.  
+
+\subsection{DCF (deterministic)}
+
+Let us derive a stock's value per share based on discounted free cash flow and regard this value as intrinsic: 
+
+Interest, e.g., on investment streams, compounds to form the future value.
+\[
+\text{FutureValue}_n = \sum_{t=0}^{n} \text{InvestedCash}_t \cdot (1 + \text{InterestRate})^{n - t}
+\]
+
+To calculate the present value, e.g. of a business, we undo the compounding effect. The intrinsic value of a financial asset is the discounted value of its future cash flows. 
+\[
+\text{PresentValue} = \sum_{t=1}^{n} \frac{\text{CashFlow}_t}{(1 + \text{DiscountRate})^t}
+\]
+
+One can go the free-cash-flow-to-equity (FCFE) and/or the free-cash-flow-to-firm (FCFF) route. It will depend on the company's circumstances to which to give modeling precedence. FCFE should lead to a more insightful intrinsic value per share (IVPS), if the debt policy is known and reliable, and FCFF should do so, if the debt structure is uncertain or complex. 
+
+\subsubsection{Sensitivity}
+
+In general, the terminal growth rate and the discount rate (not solely but) significantly affect the model outputs. 
+
+\subsubsection{Mechanics}
+
 $$
 \text{FCFE} = \text{NI} - (1 - \text{TDR}) \cdot (\text{CAPX} - \text{D} - (\text{CA} - \text{CL}))
 $$
@@ -181,6 +207,10 @@ $$
   \item[] $\text{SO}$: shares outstanding
 \end{itemize}
 
+\subsubsection{Interpretation}
+
+Having derived an $\text{IVPS}$, it may serve as a reference point when judging the market price. Supposing that, ideally, both (rather than just one of) the FCFE and FCFF based IVPS have been modeled well and are therefore reliable indicators, we may interpret the nine resulting constellations as follows.
+
 \renewcommand{\arraystretch}{1.8}
 
 \noindent
@@ -209,3 +239,245 @@ $$
 & \signalspeculative{} Equity is fairly priced, but depends on cash flows from a business generating less than what its market price would suggest — any decline in operations could undermine equity value.
 & \signalavoid{} There isn't sufficient cash flow to the business or the equity for the fundamentals to justify the high market price. \\
 \end{tabular}
+
+
+\newpage\subsection{DCF (probabilistic)}
+
+\subsubsection{Sensitivity and mechanics}
+
+\paragraph{Inputs}
+
+The following variables are sampled independently in each simulation: 
+net income ($\text{NI}$), 
+$\text{EBIT}$, 
+capital expenditures ($\text{CAPX}$), 
+depreciation ($\text{D}$), 
+current assets ($\text{CA}$), 
+current liabilities ($\text{CL}$).
+
+We get an empirical mean $\mu$ and standard deviation $\sigma$ from their historical time series. 
+
+We choose the sampling distribution depending on the sign and scale of the variable:
+
+\begin{itemize}
+  \item If $\mu > 0$, the variable is sampled from a log-normal distribution:
+  \[
+  \log\text{-mean} = \log(\max(\mu, 10^{-3})), \quad \log\text{-std} = \sigma / \mu
+  \]
+  \[
+  X^{(i)} \sim \text{LogNormal}(\log\text{-mean}, \log\text{-std})
+  \]
+
+  \item If $\mu \leq 0$, the variable falls back to a normal distribution:
+  \[
+  X^{(i)} \sim \mathcal{N}(\mu, \sigma^2)
+  \]
+\end{itemize}
+
+No additional prior smoothing is applied to these inputs. Their randomness enters directly into the cash flow projection models.
+
+To reduce the impact of outliers, selected variables like $\text{NI}$ and $\text{EBIT}$ are post-processed using a squashing function:
+\[
+x \mapsto 
+\begin{cases}
+x, & x \leq \tau \\
+\tau + \log(1 + (x - \tau)), & x > \tau
+\end{cases}
+\]
+where $\tau$ is the minimum of:
+\begin{itemize}
+  \item three times the historical maximum of the variable, and
+  \item thirty percent of market capitalization.
+\end{itemize}
+
+
+\paragraph{Growth rate}
+
+Two growth rates are sampled in each simulation:
+\begin{itemize}
+  \item FCFE growth rate ($g_{\text{FCFE}}$)
+  \item FCFF growth rate ($g_{\text{FCFF}}$)
+\end{itemize}
+
+Both follow the identity:
+\[
+g = \text{return} \times \text{reinvestment rate}
+\]
+
+For FCFE:
+\begin{itemize}
+  \item Return on equity: $\text{ROE} = \text{NI} / \text{BVE}$
+  \item Retention ratio: $1 - \text{DP} / \text{NI}$
+\end{itemize}
+
+For FCFF:
+\begin{itemize}
+  \item Return on invested capital: $\text{ROIC} = \text{NOPAT} / \text{IC}$, where $\text{NOPAT} = 0.75 \cdot \text{EBIT}$
+  \item Reinvestment rate: $(\text{CAPX} - \text{D} + \Delta \text{WC}) / \text{NOPAT}$
+\end{itemize}
+
+Each return and reinvestment term is blended as:
+\[
+\text{final} = 0.5 \cdot \text{empirical} + 0.5 \cdot \text{prior}
+\]
+
+Priors are sampled from:
+\begin{itemize}
+  \item $\text{Beta}(2, 5)$ scaled to $[0, 0.4]$ for ROE and ROIC
+  \item $\text{Beta}(2, 2)$ scaled to $[0, 1]$ for retention and reinvestment rates
+\end{itemize}
+
+The blended product gives a per-year estimate. Growth rates are then sampled from a normal distribution using the historical mean and standard deviation, and clipped to user-defined bounds.
+
+\[
+g \in [g_{\text{min}},\ g_{\text{max}}]
+\]
+
+This ensures simulated growth is consistent with both financial fundamentals and prior regularization.
+
+
+\paragraph{Discounting and terminal value}
+
+Each simulation projects cash flows over $h$ years using the sampled inputs and growth rate.
+
+For FCFE:
+\[
+\text{FCFE}_t = \text{NI}_t + \text{D}_t - \text{CAPX}_t - \Delta \text{WC}_t + \text{NetBorrowing}_t
+\]
+where $\text{NetBorrowing}_t = \text{TDR} \cdot \text{Reinvestment}_t$
+
+For FCFF:
+\[
+\text{FCFF}_t = \text{NOPAT}_t + \text{D}_t - \text{CAPX}_t - \Delta \text{WC}_t
+\]
+with $\text{NOPAT}_t = (1 - \text{CTR}) \cdot \text{EBIT}_t$
+
+Each cash flow is discounted using the cost of equity:
+\[
+\text{COE} = \text{RFR} + \beta_l \cdot \text{ERP}
+\]
+where $\beta_l$ is the levered beta:
+\[
+\beta_l = \beta_u \cdot \left(1 + (1 - \text{CTR}) \cdot \frac{\text{MVB}}{\text{MVE}} \right)
+\]
+
+The present value of cash flows is:
+\[
+\text{PV}_{\text{years}} = \sum_{t=1}^h \frac{\text{CashFlow}_t}{(1 + \text{COE})^t}
+\]
+
+The terminal value is calculated using a Gordon growth model:
+\[
+\text{TV} = \frac{\text{CashFlow}_h \cdot (1 + g_{\text{terminal}})}{\text{COE} - g_{\text{terminal}}}
+\]
+
+To avoid division by zero or unstable extrapolation, the denominator is lower-bounded:
+\[
+\text{COE} - g_{\text{terminal}} \geq 0.01
+\]
+
+The terminal value is then discounted to present:
+\[
+\text{PV}_{\text{terminal}} = \frac{\text{TV}}{(1 + \text{COE})^h}
+\]
+
+Final present value of the firm:
+\[
+\text{PV}_{\text{firm}} = \text{PV}_{\text{years}} + \text{PV}_{\text{terminal}}
+\]
+
+For FCFF, market value of debt per share is subtracted to get the per-share equity value.
+
+\paragraph{Single-asset value-surplus}
+
+For each asset and valuation model (FCFE, FCFF), we obtain $n$ simulated intrinsic values $V^{(1)}, \ldots, V^{(n)}$.
+
+To estimate the distribution of intrinsic value, we apply a Gaussian kernel density estimator (KDE):
+
+\[
+\hat{f}(v) = \frac{1}{n h} \sum_{i=1}^n K\left(\frac{v - V^{(i)}}{h}\right)
+\]
+where $K(\cdot)$ is the Gaussian kernel, and $h$ is the bandwidth selected using Scott's rule.
+
+The KDE is used in two distinct views:
+
+\begin{itemize}
+  \item Intrinsic Value View:
+  We estimate the probability density $\hat{f}(v)$ of the intrinsic value $V$ directly from the simulation output. This view is used to visualize how likely different valuations are, independent of the current market price.
+
+  \item Surplus Percentage View:
+  Each simulation sample is transformed into a percentage surplus over market price:
+  \[
+  \text{Surplus}^{(i)} = \frac{V^{(i)} - P}{P}
+  \]
+  We then apply KDE on the transformed values to estimate the distribution of relative mispricing. This highlights the extent to which the simulated valuations exceed or fall short of the current price.
+\end{itemize}
+
+From the KDE, we extract:
+\begin{itemize}
+  \item $\mathbb{P}[\text{Surplus} > 0]$: probability the asset is undervalued.
+  \item $\mathbb{P}[\text{Surplus} < 0]$: probability it is overvalued.
+\end{itemize}
+
+These quantities are calculated empirically via:
+\[
+\frac{1}{n} \sum_{i=1}^n \mathbb{I}[V^{(i)} > P]
+\quad \text{and} \quad
+\frac{1}{n} \sum_{i=1}^n \mathbb{I}[V^{(i)} < P]
+\]
+
+\paragraph{Multi-asset value-surplus frontier}
+
+To explore portfolio-level valuation outcomes, we simulate many random portfolios over the set of assets.
+
+Let $n$ be the number of assets and $S^{(j)}_i$ the $j$-th simulation of value surplus (as a percentage of market price) for asset $i$. The simulation matrix is:
+\[
+\mathbf{S} \in \mathbb{R}^{m \times n}, \quad \text{with } S_{ji} = \frac{V^{(j)}_i - P_i}{P_i}
+\]
+
+We generate $N$ random portfolio weight vectors $\mathbf{w}^{(k)} \in \mathbb{R}^n$ using a Dirichlet distribution over the simplex, i.e., $\sum_i w^{(k)}_i = 1$.
+
+For each portfolio $k$:
+\begin{itemize}
+  \item The expected return (mean surplus) is computed as:
+  \[
+  \mu^{(k)} = \mathbb{E}_{j}[\mathbf{w}^{(k)} \cdot \mathbf{S}^{(j)}]
+  \]
+
+  \item The standard deviation (valuation risk) is:
+  \[
+  \sigma^{(k)} = \sqrt{ \mathbf{w}^{(k)T} \, \Sigma \, \mathbf{w}^{(k)} }
+  \]
+  where $\Sigma$ is the empirical covariance of $\mathbf{S}$ across simulations.
+
+  \item The probability of loss is:
+  \[
+  \mathbb{P}^{(k)}[ \mathbf{w}^{(k)} \cdot \mathbf{S}^{(j)} < 0 ]
+  \]
+  computed empirically from the simulation matrix.
+\end{itemize}
+
+Two portfolio views are produced:
+
+\begin{itemize}
+  \item Mean vs Standard Deviation ($\mu$–$\sigma$):
+  Visualizes the valuation return–risk tradeoff. An analytic minimum-risk portfolio is computed from $\Sigma$ via:
+  \[
+  \mathbf{w}_{\text{min-risk}} = \frac{\Sigma^{-1} \mathbf{1}}{\mathbf{1}^T \Sigma^{-1} \mathbf{1}}
+  \]
+
+  \item Mean vs Loss Probability ($\mu$–$p_{\text{loss}}$):
+  Evaluates portfolio robustness under valuation uncertainty. This view emphasizes portfolios that minimize the chance of overvaluation (i.e., surplus $< 0$).
+\end{itemize}
+
+In both plots, efficient frontiers and key labeled portfolios (e.g., maximum return, minimum risk, minimum loss probability) are annotated and saved as PDF and SVG files.
+
+\subsection{Interpretation}
+
+The module yields a summary of valuation statistics and qualitative signals:
+\begin{itemize}
+  \item strong buy: if both models (FCFE and FCFF) yield undervaluation.
+  \item buy: if only one model suggests undervaluation.
+  \item avoid: if both suggest overvaluation.
+  \item hold: if both suggest fair valuation. 
+\end{itemize}

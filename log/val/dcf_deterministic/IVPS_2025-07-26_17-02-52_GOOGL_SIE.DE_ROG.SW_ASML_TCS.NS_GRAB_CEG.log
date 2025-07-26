@@ -1,0 +1,283 @@
+[INFO] Logging to: log/val/dcf_deterministic/IVPS_2025-07-26_17-02-52_GOOGL_SIE.DE_ROG.SW_ASML_TCS.NS_GRAB_CEG.log
+
+
+===============================================================
+==== Valuation for GOOGL (Alphabet Inc.) ====
+[WARN] FCFEGR (0.5000) capped to upper bound (0.5000)
+[WARN] FCFFGR (-0.2000) floored to lower bound (-0.2000)
+
+==== Valuation Debug Info ====
+CE (Cost of Equity): 0.112358
+CB (Cost of Debt): 0.007537
+WACC: 0.110767
+FCFE₀: 78.02B USD
+FCFF₀: 177.84B USD
+FCFEGR: 0.500000
+FCFFGR: -0.200000
+TGR: 0.020000
+Shares Outstanding: 5.82B shares
+
+==== Valuation Results ====
+Intrinsic Value (FCFE): 16675.01B USD
+Intrinsic Value (FCFF): 624.81B USD
+Current Market Price: 193.18 USD
+IVPS (from FCFE): 2866.60 USD; undervalued; margin of safety: 1383.90%
+IVPS (from FCFF): 107.41 USD; overvalued; margin of safety: -44.40%
+
+==== Projected vs Implied Growth Rates (Years 1–7) ====
+→ FCFE:
+   - Empirically derived (used for projection): 50.00% per year
+   - Implied by market price: 6.97% per year
+   - Assessment: Market price implies slower growth; model inputs are more aggressive by comparison
+→ FCFF:
+   - Empirically derived (used for projection): -20.00% per year
+   - Implied by market price: 5.23% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+
+==== Signal Recommendation ====
+Signal: Caution – The business is overvalued, but equity appears
+cheap due to temporarily favorable debt terms — value may
+be unstable under a leveraged structure.
+===============================================================
+
+
+
+===============================================================
+==== Valuation for SIE.DE (Siemens Aktiengesellschaft) ====
+[WARN] FCFFGR (-0.2000) floored to lower bound (-0.2000)
+
+==== Valuation Debug Info ====
+CE (Cost of Equity): 0.040933
+CB (Cost of Debt): 0.031032
+WACC: 0.036242
+FCFE₀: 8.06B EUR
+FCFF₀: 13.04B EUR
+FCFEGR: 0.073847
+FCFFGR: -0.200000
+TGR: 0.015000
+Shares Outstanding: 783.22M shares
+
+==== Valuation Results ====
+Intrinsic Value (FCFE): 660.33B EUR
+Intrinsic Value (FCFF): 203.47B EUR
+Current Market Price: 227.30 EUR
+IVPS (from FCFE): 843.10 EUR; undervalued; margin of safety: 270.92%
+IVPS (from FCFF): 259.79 EUR; undervalued; margin of safety: 14.30%
+
+==== Projected vs Implied Growth Rates (Years 1–7) ====
+→ FCFE:
+   - Empirically derived (used for projection): 7.38% per year
+   - Implied by market price: -7.18% per year
+   - Assessment: Market price implies slower growth; model inputs are more aggressive by comparison
+→ FCFF:
+   - Empirically derived (used for projection): -20.00% per year
+   - Implied by market price: -12.76% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+
+==== Signal Recommendation ====
+Signal: Strong Buy – The firm's assets and operations generate
+more value than what is priced in by the market,
+and equity holders retain it — low leverage or
+efficient debt structure.
+===============================================================
+
+
+
+===============================================================
+==== Valuation for ROG.SW (Roche Holding AG) ====
+[WARN] FCFFGR (-0.2000) floored to lower bound (-0.2000)
+
+==== Valuation Debug Info ====
+CE (Cost of Equity): 0.042463
+CB (Cost of Debt): 0.038566
+WACC: 0.041011
+FCFE₀: 1.56B CHF
+FCFF₀: 14.52B CHF
+FCFEGR: 0.057643
+FCFFGR: -0.200000
+TGR: 0.015000
+Shares Outstanding: 689.63M shares
+
+==== Valuation Results ====
+Intrinsic Value (FCFE): 686.61B CHF
+Intrinsic Value (FCFF): 198.78B CHF
+Current Market Price: 259.20 CHF
+IVPS (from FCFE): 995.62 CHF; undervalued; margin of safety: 284.11%
+IVPS (from FCFF): 288.25 CHF; undervalued; margin of safety: 11.21%
+
+==== Projected vs Implied Growth Rates (Years 1–7) ====
+→ FCFE:
+   - Empirically derived (used for projection): 5.76% per year
+   - Implied by market price: 20.47% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+→ FCFF:
+   - Empirically derived (used for projection): -20.00% per year
+   - Implied by market price: -11.20% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+
+==== Signal Recommendation ====
+Signal: Strong Buy – The firm's assets and operations generate
+more value than what is priced in by the market,
+and equity holders retain it — low leverage or
+efficient debt structure.
+===============================================================
+
+
+
+===============================================================
+==== Valuation for ASML (ASML Holding N.V.) ====
+[WARN] FCFFGR (-0.2000) floored to lower bound (-0.2000)
+
+==== Valuation Debug Info ====
+CE (Cost of Equity): 0.104766
+CB (Cost of Debt): 0.043959
+WACC: 0.103842
+FCFE₀: 3.84B USD
+FCFF₀: 7.27B USD
+FCFEGR: 0.260266
+FCFFGR: -0.200000
+TGR: 0.020000
+Shares Outstanding: 393.20M shares
+
+==== Valuation Results ====
+Intrinsic Value (FCFE): 355.30B USD
+Intrinsic Value (FCFF): 45.44B USD
+Current Market Price: 711.25 USD
+IVPS (from FCFE): 903.61 USD; undervalued; margin of safety: 27.05%
+IVPS (from FCFF): 115.56 USD; overvalued; margin of safety: -83.75%
+
+==== Projected vs Implied Growth Rates (Years 1–7) ====
+→ FCFE:
+   - Empirically derived (used for projection): 26.03% per year
+   - Implied by market price: 37.13% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+→ FCFF:
+   - Empirically derived (used for projection): -20.00% per year
+   - Implied by market price: 10.37% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+
+==== Signal Recommendation ====
+Signal: Caution – The business is overvalued, but equity appears
+cheap due to temporarily favorable debt terms — value may
+be unstable under a leveraged structure.
+===============================================================
+
+
+
+===============================================================
+==== Valuation for TCS.NS (Tata Consultancy Services Limited) ====
+[WARN] FCFFGR (-0.2000) floored to lower bound (-0.2000)
+
+==== Valuation Debug Info ====
+CE (Cost of Equity): 0.131316
+CB (Cost of Debt): 0.082830
+WACC: 0.130750
+FCFE₀: 460.01B INR
+FCFF₀: 516.11B INR
+FCFEGR: 0.270479
+FCFFGR: -0.200000
+TGR: 0.040000
+Shares Outstanding: 3.62B shares
+
+==== Valuation Results ====
+Intrinsic Value (FCFE): 15633.58B INR
+Intrinsic Value (FCFF): 2326.94B INR
+Current Market Price: 3135.80 INR
+IVPS (from FCFE): 4320.95 INR; undervalued; margin of safety: 37.79%
+IVPS (from FCFF): 643.14 INR; overvalued; margin of safety: -79.49%
+
+==== Projected vs Implied Growth Rates (Years 1–7) ====
+→ FCFE:
+   - Empirically derived (used for projection): 27.05% per year
+   - Implied by market price: 18.86% per year
+   - Assessment: Market price implies slower growth; model inputs are more aggressive by comparison
+→ FCFF:
+   - Empirically derived (used for projection): -20.00% per year
+   - Implied by market price: 13.06% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+
+==== Signal Recommendation ====
+Signal: Caution – The business is overvalued, but equity appears
+cheap due to temporarily favorable debt terms — value may
+be unstable under a leveraged structure.
+===============================================================
+
+
+
+===============================================================
+==== Valuation for GRAB (Grab Holdings Limited) ====
+[WARN] FCFFGR (-0.2000) floored to lower bound (-0.2000)
+
+==== Valuation Debug Info ====
+CE (Cost of Equity): 0.096711
+CB (Cost of Debt): 0.106494
+WACC: 0.096569
+FCFE₀: 220.00M USD
+FCFF₀: 506.18M USD
+FCFEGR: -0.016692
+FCFFGR: -0.200000
+TGR: 0.020000
+Shares Outstanding: 4.00B shares
+
+==== Valuation Results ====
+Intrinsic Value (FCFE): 2.08B USD
+Intrinsic Value (FCFF): 4.58B USD
+Current Market Price: 5.36 USD
+IVPS (from FCFE): 0.52 USD; overvalued; margin of safety: -90.30%
+IVPS (from FCFF): 1.14 USD; overvalued; margin of safety: -78.68%
+
+==== Projected vs Implied Growth Rates (Years 1–7) ====
+→ FCFE:
+   - Empirically derived (used for projection): -1.67% per year
+   - Implied by market price: 40.72% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+→ FCFF:
+   - Empirically derived (used for projection): -20.00% per year
+   - Implied by market price: 9.65% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+
+==== Signal Recommendation ====
+Signal: Avoid – There isn't sufficient cash flow to the business or
+the equity for the fundamentals to justify the high market price.
+===============================================================
+
+
+
+===============================================================
+==== Valuation for CEG (Constellation Energy Corporation) ====
+[WARN] FCFFGR (-0.2000) floored to lower bound (-0.2000)
+
+==== Valuation Debug Info ====
+CE (Cost of Equity): 0.055522
+CB (Cost of Debt): 0.060541
+WACC: 0.054942
+FCFE₀: 1.22B USD
+FCFF₀: 6.57B USD
+FCFEGR: 0.251843
+FCFFGR: -0.200000
+TGR: 0.020000
+Shares Outstanding: 313.42M shares
+
+==== Valuation Results ====
+Intrinsic Value (FCFE): 790.74B USD
+Intrinsic Value (FCFF): 65.51B USD
+Current Market Price: 327.35 USD
+IVPS (from FCFE): 2522.97 USD; undervalued; margin of safety: 670.73%
+IVPS (from FCFF): 209.00 USD; overvalued; margin of safety: -36.15%
+
+==== Projected vs Implied Growth Rates (Years 1–7) ====
+→ FCFE:
+   - Empirically derived (used for projection): 25.18% per year
+   - Implied by market price: 20.35% per year
+   - Assessment: Market price implies slower growth; model inputs are more aggressive by comparison
+→ FCFF:
+   - Empirically derived (used for projection): -20.00% per year
+   - Implied by market price: -6.58% per year
+   - Assessment: Market price implies faster growth; model inputs are more conservative by comparison
+
+==== Signal Recommendation ====
+Signal: Caution – The business is overvalued, but equity appears
+cheap due to temporarily favorable debt terms — value may
+be unstable under a leveraged structure.
+===============================================================
+

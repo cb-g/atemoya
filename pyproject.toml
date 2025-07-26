@@ -1,10 +1,14 @@
 [project]
 name = "atemoya"
 version = "0.1.0"
-description = "active investing"
+description = ""
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "matplotlib>=3.10.3",
+    "numpy>=2.3.1",
+    "pandas>=2.3.1",
     "pyyaml>=6.0.2",
-    "yfinance>=0.2.58",
+    "scipy>=1.16.0",
+    "yfinance>=0.2.65",
 ]

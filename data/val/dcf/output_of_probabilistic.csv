@@ -1,0 +1,8 @@
+ticker,price,ivps_fcfe,ivps_fcff,mos_fcfe,mos_fcff,std_fcfe,std_fcff,fcfe_distribution,fcff_distribution
+GOOGL,402.48,311.60,132.00,-22.58,-67.20,90.75,34.09,gaussian,gaussian
+SIE.DE,227.30,610.71,413.33,168.68,81.85,268.96,190.64,gaussian,gaussian
+ROG.SW,299.09,1750.83,891.35,485.39,198.02,844.56,309.10,gaussian,gaussian
+ASML,725.11,562.63,195.53,-22.41,-73.03,440.44,151.10,gaussian,gaussian
+TCS.NS,3411.70,2662.16,1135.08,-21.97,-66.73,744.49,202.29,gaussian,gaussian
+GRAB,5.52,-3.18,-2.94,-157.67,-153.23,4.68,4.90,gaussian,gaussian
+CEG,327.35,707.15,436.25,116.02,33.27,549.44,280.04,gaussian,gaussian

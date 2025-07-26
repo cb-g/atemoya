@@ -1,4 +1,0 @@
-(executable
- (name atemoya)
- (public_name ocaml_atemoya)
- (libraries valuation yojson unix))

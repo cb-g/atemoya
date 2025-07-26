@@ -1,0 +1,175 @@
+Seeing merit in pricing tools is supposing that markets are at least occasionally inefficient. 
+
+\subsection{MPT}
+
+\subsubsection{Mechanics and Interpretation}
+
+\[
+\mathbb{E}[R_p] = \sum_{i=1}^{n} w_i \cdot \mathbb{E}[R_i]
+= 
+\begin{bmatrix}
+w_1 & w_2 & \cdots & w_n
+\end{bmatrix}
+\begin{bmatrix}
+\mathbb{E}[R_1] \\
+\mathbb{E}[R_2] \\
+\vdots \\
+\mathbb{E}[R_n]
+\end{bmatrix} = \mathbf{w}^\top \mathbf{r}
+\]
+
+\begin{itemize}
+  \item[] $\mathbb{E}[R_p]$: expected return of the portfolio  
+  \item[] $w_i$: weight of asset $i$ in the portfolio  
+  \item[] $\mathbb{E}[R_i]$: expected return of asset $i$  
+  \item[] $\mathbf{w}$: vector of portfolio weights  
+  \item[] $\mathbf{r}$: vector of expected asset returns  
+\end{itemize}
+
+\[
+\begin{aligned}
+\mathrm{Var}(R_p) &= \sum_{i=1}^{n} \sum_{j=1}^{n} w_i w_j \cdot \mathrm{Cov}(R_i, R_j) \\
+\sigma_p^2 &= \sum_{i=1}^{n} \sum_{j=1}^{n} w_i w_j \cdot \sigma_{ij} \\
+&= 
+\begin{bmatrix}
+  w_1 & w_2 & \cdots & w_n
+\end{bmatrix}
+\begin{bmatrix}
+  \mathrm{Cov}(R_1, R_1) & \mathrm{Cov}(R_1, R_2) & \cdots & \mathrm{Cov}(R_1, R_n) \\
+  \mathrm{Cov}(R_2, R_1) & \mathrm{Cov}(R_2, R_2) & \cdots & \mathrm{Cov}(R_2, R_n) \\
+  \vdots                & \vdots                & \ddots & \vdots                \\
+  \mathrm{Cov}(R_n, R_1) & \mathrm{Cov}(R_n, R_2) & \cdots & \mathrm{Cov}(R_n, R_n)
+\end{bmatrix}
+\begin{bmatrix}
+  w_1 \\
+  w_2 \\
+  \vdots \\
+  w_n
+\end{bmatrix} \\
+&= 
+\begin{bmatrix}
+  w_1 & w_2 & \cdots & w_n
+\end{bmatrix}
+\begin{bmatrix}
+  \sigma_{11} & \sigma_{12} & \cdots & \sigma_{1n} \\
+  \sigma_{21} & \sigma_{22} & \cdots & \sigma_{2n} \\
+  \vdots      & \vdots      & \ddots & \vdots      \\
+  \sigma_{n1} & \sigma_{n2} & \cdots & \sigma_{nn}
+\end{bmatrix}
+\begin{bmatrix}
+  w_1 \\
+  w_2 \\
+  \vdots \\
+  w_n
+\end{bmatrix}
+= \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w}
+\end{aligned}
+\]
+
+\begin{itemize}
+  \item[] $\mathrm{Var}(R_p) = \sigma_p^2$: variance of the portfolio return  
+  \item[] $\mathrm{Cov}(R_i, R_j) = \sigma_{ij}$: covariance between returns of asset $i$ and asset $j$  
+  \item[] $\boldsymbol{\Sigma}$: covariance matrix of asset returns  
+\end{itemize}
+
+\vspace{0.27cm} We have a quadratic program, i.e., an optimization problem with a quadratic objective function and linear constraints. Specifically, since $\Sigma$ is symmetric and positive semidefinite we have a convex quadratic program. 
+
+\[
+\begin{aligned}
+\text{minimize} \quad & \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} \\
+\text{subject to} \quad & \mathbf{w}^\top \mathbf{r} = \mu \\
+                        & \mathbf{w}^\top \mathbf{1} = 1
+\end{aligned}
+\]
+
+
+\begin{itemize}
+  \item[] $\mathbf{r}$: vector of expected asset returns  
+  \item[] $\mu$: target expected return of the portfolio  
+  \item[] $\mathbf{1}$: vector of ones 
+\end{itemize}
+
+
+\vspace{0.27cm} Alternatively and equivalently, one could formulate the problem as maximizing expected return subject to a fixed level of portfolio variance: 
+
+\[
+\begin{aligned}
+\text{maximize} \quad & \mathbf{w}^\top \mathbf{r} \\
+\text{subject to} \quad & \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} \leq \sigma^2 \\
+                        & \mathbf{w}^\top \mathbf{1} = 1
+\end{aligned}
+\]
+
+\begin{itemize}
+  \item[] $\sigma^2$: upper bound on acceptable portfolio variance
+\end{itemize}
+
+
+\vspace{0.27cm} At the optimum, the gradient of the objective function must lie in the span, i.e., equals a linear combination of the gradients of the constraints:
+
+\[
+\nabla_{\mathbf{w}} \left( \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} \right)
+\in \mathrm{span} \left\{ \nabla_{\mathbf{w}} \left( \mathbf{w}^\top \mathbf{r} \right), \nabla_{\mathbf{w}} \left( \mathbf{w}^\top \mathbf{1} \right) \right\}
+\]
+
+\[
+\nabla_{\mathbf{w}} \left( \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} \right)
+= \lambda \nabla_{\mathbf{w}} \left( \mathbf{w}^\top \mathbf{r} \right)
++ \gamma \nabla_{\mathbf{w}} \left( \mathbf{w}^\top \mathbf{1} \right)
+\]
+
+\begin{itemize}
+  \item[] \( \lambda \): Lagrange multiplier associated with the target expected return constraint \( \mathbf{w}^\top \mathbf{r} = \mu \)
+  \item[] \( \gamma \): Lagrange multiplier associated with the full investment constraint (i.e. size of cash position larger than zero if constraint is relaxed) \( \mathbf{w}^\top \mathbf{1} = 1 \)
+\end{itemize}
+
+\vspace{0.27cm} To enforce that the solution lies on these constraint surfaces (i.e., satisfies the specified values \( \mu \) and 1), we introduce a Lagrangian function:
+
+\[
+\mathcal{L}(\mathbf{w}, \lambda, \gamma) = 
+\mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} 
+- \lambda (\mathbf{w}^\top \mathbf{r} - \mu) 
+- \gamma (\mathbf{w}^\top \mathbf{1} - 1)
+\]
+
+\vspace{0.27cm} Then take gradients with respect to each variable:
+
+\[
+\begin{aligned}
+\nabla_{\mathbf{w}} \mathcal{L} &= 2\boldsymbol{\Sigma} \mathbf{w} - \lambda \mathbf{r} - \gamma \mathbf{1} = 0 \\
+\nabla_{\lambda} \mathcal{L} &= \mathbf{w}^\top \mathbf{r} - \mu = 0 \\
+\nabla_{\gamma} \mathcal{L} &= \mathbf{w}^\top \mathbf{1} - 1 = 0
+\end{aligned}
+\]
+
+\begin{itemize}
+  \item[] \( \mathcal{L} \): scalar function encoding both the objective and the constraints
+  \item[] \( \mu \): target expected return specified by the investor
+\end{itemize}
+
+\vspace{0.27cm} The Lagrangian formulation packages both the directional optimality condition and the feasibility conditions. 
+
+The multiplier \( \lambda \) can be interpreted economically as the marginal increase in portfolio variance required to achieve one additional unit of expected return. In regions of the efficient frontier where \( \lambda \) is small, the investor can obtain significantly higher returns for only a modest increase in risk --- making those portfolios especially attractive. Conversely, where \( \lambda \) is large, the return gains come at the cost of disproportionately higher risk, indicating diminishing trade-off efficiency.
+
+To construct the efficient frontier, we solve the mean-variance optimization problem for a range of target expected returns \( \mu \). Each solution yields an optimal portfolio \( \mathbf{w}^*(\mu) \), along with its corresponding portfolio variance \( \sigma_p^2(\mu) \). Plotting the pairs \( (\sigma_p(\mu), \mu) \) traces out the efficient frontier.
+
+In practice, portfolio optimization under MPT is typically performed using log returns (also called continuously compounded returns), derived from adjusted closing prices. Log returns offer several practical advantages:
+
+\begin{itemize}
+  \item[] Additivity from multiplicative prices: Since asset prices evolve multiplicatively, taking logarithms converts returns into an additive structure. This allows multi-period log returns to be computed by simple summation, simplifying time aggregation and modeling.
+  \item[] Approximate normality: Log returns tend to be more symmetrically distributed and closer to normal than simple returns, especially for short time intervals. This aligns better with MPT's reliance on variance as a risk measure. MPT does not assume returns are normally distributed. But normality is often assumed in applications to justify using only mean and variance — because for normal distributions, these fully describe risk and return.
+  \item[] Covariance stability: When estimating the covariance matrix \( \boldsymbol{\Sigma} \), log returns generally lead to more stable and well-behaved estimates compared to arithmetic returns.
+\end{itemize}
+
+For a time series of adjusted prices \( P_t \), the log return at time \( t \) is defined as:
+
+\[
+r_t = \log\left(\frac{P_t}{P_{t-1}}\right)
+\]
+
+\begin{itemize}
+  \item[] \( P_t \): adjusted closing price of the asset at time \( t \)
+\end{itemize}
+
+\vspace{0.27cm} So far, we have permitted asset weights to become negative in order to reach our optimization goal, i.e., short-selling is allowed in the portfolio. When we require the weights to be non-negative, we are effectively adding an inequality constraint to our quadratic program and so we must apply the Karush-Kuhn-Tucker conditions (stationarity, primal feasibility, dual feasibility, complementary slackness), thereby extending the Lagrangian. 
+
