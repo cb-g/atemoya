@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name regime_downside)
+ (libraries regime_downside owl yojson csv unix))

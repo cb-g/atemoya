@@ -1,0 +1,5 @@
+(library
+ (name dcf_probabilistic)
+ (public_name atemoya.dcf_probabilistic)
+ (libraries yojson unix)
+ (preprocess (pps ppx_deriving.show)))

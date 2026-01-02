@@ -1,0 +1,94 @@
+{
+  "num_simulations": 5000,
+  "projection_years": 7,
+  "terminal_growth_rate": {
+    "default": 0.02,
+    "USA": 0.025,
+    "China": 0.04,
+    "India": 0.05,
+    "Germany": 0.02,
+    "Japan": 0.01
+  },
+  "growth_clamp": {
+    "upper": 0.5,
+    "lower": -0.2
+  },
+  "rfr_duration": 7,
+  "use_bayesian_priors": true,
+  "prior_weight": 0.5,
+  "use_stochastic_discount_rates": true,
+  "rfr_volatility": 0.005,
+  "beta_volatility": 0.15,
+  "erp_volatility": 0.015,
+  "use_time_varying_growth": true,
+  "growth_mean_reversion_speed": 0.3,
+  "use_growth_rate_sampling": true,
+  "use_correlated_discount_rates": true,
+  "discount_rate_correlation": [
+    [
+      1.0,
+      -0.3,
+      0.0
+    ],
+    [
+      -0.3,
+      1.0,
+      0.5
+    ],
+    [
+      0.0,
+      0.5,
+      1.0
+    ]
+  ],
+  "_comment_correlation": "Correlation matrix [RFR, ERP, Beta]: ρ(RFR,ERP)=-0.3 (flight to safety), ρ(ERP,Beta)=0.5 (systematic risk), ρ(RFR,Beta)=0.0",
+  "use_regime_switching": true,
+  "regime_switching": {
+    "crisis_probability": 0.10,
+    "normal_regime": {
+      "rfr_volatility": 0.005,
+      "erp_volatility": 0.015,
+      "beta_volatility": 0.15,
+      "correlation": [
+        [
+          1.0,
+          -0.3,
+          0.0
+        ],
+        [
+          -0.3,
+          1.0,
+          0.5
+        ],
+        [
+          0.0,
+          0.5,
+          1.0
+        ]
+      ]
+    },
+    "crisis_regime": {
+      "rfr_volatility": 0.010,
+      "erp_volatility": 0.030,
+      "beta_volatility": 0.30,
+      "correlation": [
+        [
+          1.0,
+          -0.8,
+          0.1
+        ],
+        [
+          -0.8,
+          1.0,
+          0.9
+        ],
+        [
+          0.1,
+          0.9,
+          1.0
+        ]
+      ]
+    }
+  },
+  "_comment_regime": "Regime-switching: Normal (90%) vs Crisis (10%). Crisis has 2× volatility and stronger correlations to model financial crises (2008, 2020 COVID, etc.)"
+}

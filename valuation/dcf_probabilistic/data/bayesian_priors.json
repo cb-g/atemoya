@@ -1,0 +1,280 @@
+{
+  "default": {
+    "roe_prior": {
+      "alpha": 6.0,
+      "beta": 14.0,
+      "lower_bound": 0.0,
+      "upper_bound": 0.6,
+      "description": "Default for medium-quality companies (mean 18%, mode 16.67%)"
+    },
+    "retention_prior": {
+      "alpha": 3.0,
+      "beta": 3.0,
+      "lower_bound": 0.2,
+      "upper_bound": 0.8,
+      "description": "Default retention ratio (mean 50%, tighter range)"
+    },
+    "roic_prior": {
+      "alpha": 6.0,
+      "beta": 14.0,
+      "lower_bound": 0.0,
+      "upper_bound": 0.6,
+      "description": "Default for medium-quality companies (mean 18%, mode 16.67%)"
+    }
+  },
+  "industries": {
+    "Technology": {
+      "roe_prior": {
+        "alpha": 8.0,
+        "beta": 12.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.8,
+        "description": "High-ROE tech companies (mean 32%, allows for exceptional firms)"
+      },
+      "retention_prior": {
+        "alpha": 7.0,
+        "beta": 3.0,
+        "lower_bound": 0.5,
+        "upper_bound": 0.95,
+        "description": "High retention for growth (mean 75%)"
+      },
+      "roic_prior": {
+        "alpha": 8.0,
+        "beta": 12.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.8,
+        "description": "High-ROIC tech companies (mean 32%)"
+      }
+    },
+    "Communication Services": {
+      "roe_prior": {
+        "alpha": 7.0,
+        "beta": 13.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.7,
+        "description": "Internet/media companies (mean 24.5%)"
+      },
+      "retention_prior": {
+        "alpha": 6.0,
+        "beta": 4.0,
+        "lower_bound": 0.4,
+        "upper_bound": 0.9,
+        "description": "High retention (mean 64%)"
+      },
+      "roic_prior": {
+        "alpha": 7.0,
+        "beta": 13.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.7,
+        "description": "Internet/media companies (mean 24.5%)"
+      }
+    },
+    "Financial Services": {
+      "roe_prior": {
+        "alpha": 8.0,
+        "beta": 12.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.4,
+        "description": "Banks and financial institutions (mean 16%)"
+      },
+      "retention_prior": {
+        "alpha": 3.0,
+        "beta": 5.0,
+        "lower_bound": 0.2,
+        "upper_bound": 0.7,
+        "description": "Lower retention due to dividends (mean 31.25%)"
+      },
+      "roic_prior": {
+        "alpha": 7.0,
+        "beta": 13.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.35,
+        "description": "Financial services ROIC (mean 12.25%)"
+      }
+    },
+    "Healthcare": {
+      "roe_prior": {
+        "alpha": 7.0,
+        "beta": 11.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.6,
+        "description": "Pharma/biotech/devices (mean 23.33%)"
+      },
+      "retention_prior": {
+        "alpha": 5.0,
+        "beta": 3.0,
+        "lower_bound": 0.4,
+        "upper_bound": 0.85,
+        "description": "High retention for R&D (mean 65.63%)"
+      },
+      "roic_prior": {
+        "alpha": 7.0,
+        "beta": 11.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.6,
+        "description": "Healthcare ROIC (mean 23.33%)"
+      }
+    },
+    "Consumer Cyclical": {
+      "roe_prior": {
+        "alpha": 6.0,
+        "beta": 12.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.5,
+        "description": "Retail and cyclical consumer (mean 16.67%)"
+      },
+      "retention_prior": {
+        "alpha": 3.0,
+        "beta": 4.0,
+        "lower_bound": 0.3,
+        "upper_bound": 0.75,
+        "description": "Moderate retention (mean 46.43%)"
+      },
+      "roic_prior": {
+        "alpha": 6.0,
+        "beta": 12.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.5,
+        "description": "Consumer cyclical ROIC (mean 16.67%)"
+      }
+    },
+    "Consumer Defensive": {
+      "roe_prior": {
+        "alpha": 7.0,
+        "beta": 10.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.5,
+        "description": "Consumer staples (mean 20.59%)"
+      },
+      "retention_prior": {
+        "alpha": 4.0,
+        "beta": 4.0,
+        "lower_bound": 0.35,
+        "upper_bound": 0.75,
+        "description": "Moderate retention (mean 55%)"
+      },
+      "roic_prior": {
+        "alpha": 7.0,
+        "beta": 10.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.5,
+        "description": "Consumer staples ROIC (mean 20.59%)"
+      }
+    },
+    "Industrials": {
+      "roe_prior": {
+        "alpha": 6.0,
+        "beta": 13.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.5,
+        "description": "Industrial companies (mean 15.79%)"
+      },
+      "retention_prior": {
+        "alpha": 4.0,
+        "beta": 3.0,
+        "lower_bound": 0.35,
+        "upper_bound": 0.8,
+        "description": "Moderate-high retention (mean 58.57%)"
+      },
+      "roic_prior": {
+        "alpha": 6.0,
+        "beta": 13.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.5,
+        "description": "Industrials ROIC (mean 15.79%)"
+      }
+    },
+    "Energy": {
+      "roe_prior": {
+        "alpha": 5.0,
+        "beta": 12.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.45,
+        "description": "Oil & gas companies (mean 13.24%)"
+      },
+      "retention_prior": {
+        "alpha": 3.0,
+        "beta": 4.0,
+        "lower_bound": 0.25,
+        "upper_bound": 0.7,
+        "description": "Moderate retention (mean 42.86%)"
+      },
+      "roic_prior": {
+        "alpha": 5.0,
+        "beta": 12.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.45,
+        "description": "Energy ROIC (mean 13.24%)"
+      }
+    },
+    "Utilities": {
+      "roe_prior": {
+        "alpha": 7.0,
+        "beta": 13.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.3,
+        "description": "Regulated utilities (mean 10.5%)"
+      },
+      "retention_prior": {
+        "alpha": 2.0,
+        "beta": 5.0,
+        "lower_bound": 0.15,
+        "upper_bound": 0.6,
+        "description": "Low retention, high dividends (mean 23.57%)"
+      },
+      "roic_prior": {
+        "alpha": 7.0,
+        "beta": 13.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.3,
+        "description": "Utilities ROIC (mean 10.5%)"
+      }
+    },
+    "Real Estate": {
+      "roe_prior": {
+        "alpha": 6.0,
+        "beta": 14.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.35,
+        "description": "REITs and real estate (mean 10.5%)"
+      },
+      "retention_prior": {
+        "alpha": 2.0,
+        "beta": 6.0,
+        "lower_bound": 0.1,
+        "upper_bound": 0.55,
+        "description": "Very low retention (REIT requirements) (mean 16.88%)"
+      },
+      "roic_prior": {
+        "alpha": 6.0,
+        "beta": 14.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.35,
+        "description": "Real estate ROIC (mean 10.5%)"
+      }
+    },
+    "Basic Materials": {
+      "roe_prior": {
+        "alpha": 5.0,
+        "beta": 13.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.45,
+        "description": "Materials and mining (mean 12.5%)"
+      },
+      "retention_prior": {
+        "alpha": 3.0,
+        "beta": 4.0,
+        "lower_bound": 0.3,
+        "upper_bound": 0.75,
+        "description": "Moderate retention (mean 47.14%)"
+      },
+      "roic_prior": {
+        "alpha": 5.0,
+        "beta": 13.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.45,
+        "description": "Materials ROIC (mean 12.5%)"
+      }
+    }
+  }
+}

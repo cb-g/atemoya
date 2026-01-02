@@ -1,4 +1,0 @@
-(library
- (name atemoya)
- (public_name atemoya)
- (libraries lacaml csv yojson))

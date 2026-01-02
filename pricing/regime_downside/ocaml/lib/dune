@@ -1,0 +1,6 @@
+(library
+ (name regime_downside)
+ (public_name atemoya.regime_downside)
+ (libraries owl yojson csv unix)
+ (preprocess (pps ppx_deriving.show ppx_deriving.eq))
+ (flags (:standard -w -27)))

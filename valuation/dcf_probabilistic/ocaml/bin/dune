@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name dcf_probabilistic)
+ (libraries dcf_probabilistic))

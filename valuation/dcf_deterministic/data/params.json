@@ -1,0 +1,31 @@
+{
+  "projection_years": 7,
+  "terminal_growth_rate": {
+    "default": 0.02,
+    "United States": 0.02,
+    "USA": 0.02,
+    "Canada": 0.018,
+    "United Kingdom": 0.017,
+    "Germany": 0.015,
+    "France": 0.015,
+    "Italy": 0.012,
+    "Japan": 0.01,
+    "China": 0.045,
+    "India": 0.04,
+    "Brazil": 0.035,
+    "Australia": 0.022,
+    "Singapore": 0.025,
+    "Netherlands": 0.015,
+    "Switzerland": 0.013,
+    "Taiwan": 0.028,
+    "South Korea": 0.030,
+    "Spain": 0.018,
+    "Hong Kong": 0.025,
+    "British Virgin Islands": 0.020
+  },
+  "growth_clamp": {
+    "upper": 0.5,
+    "lower": -0.2
+  },
+  "rfr_duration": 7
+}

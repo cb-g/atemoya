@@ -1,79 +1,260 @@
-# atemoya
+# Atemoya - Quantitative Finance Models
 
-## theory
+A collection of quantitative finance models for investment analysis. Built with OCaml (computation) + Python (data/viz).
 
-[typeset/atemoya.pdf](typeset/atemoya.pdf)
+## Getting Started
 
-## implementation
-
-```zsh
-opam install . --deps-only
-eval $(opam env)
+```bash
+cd atemoya/
+./quickstart.sh
 ```
 
-```zsh
-uv sync
+The interactive quickstart script guides you through installation, compilation, and running any model.
+
+---
+
+## Models Overview
+
+Atemoya contains three models organized into two paradigms:
+
+### Quick Comparison
+
+| Model | Type | Use Case | Execution Time |
+|-------|------|----------|----------------|
+| **[Regime Downside](#regime-downside)** | Portfolio Optimization | Beat S&P 500 with controlled downside risk | 2-30s |
+| **[DCF Deterministic](#dcf-deterministic)** | Equity Valuation | Find intrinsic value per share | 1-3s per stock |
+| **[DCF Probabilistic](#dcf-probabilistic)** | Equity Valuation | Estimate valuation distribution | 5-60s per stock |
+
+### Which Model to Use?
+
+```
+Do you want to value individual stocks?
+├─ YES → Valuation
+│   └─ Do you need probability distributions?
+│       ├─ YES → DCF Probabilistic (Monte Carlo, uncertainty quantification)
+│       └─ NO  → DCF Deterministic (Quick screening, single-point estimates)
+│
+└─ NO → Want to build a portfolio?
+    └─ YES → Regime Downside (Benchmark-relative optimization)
 ```
 
-```zsh
-dune clean && dune build
+---
+
+## Regime Downside
+
+**Portfolio Optimization | Benchmark-Relative**
+
+Beat the S&P 500 while controlling downside and tail risk through regime-aware optimization.
+
+**Key Features:**
+- Minimizes persistent underperformance (LPM1) and tail risk (CVaR)
+- Detects volatility regimes, compresses beta in stress (target: 0.65)
+- Trades infrequently (~30% annual turnover) with transaction cost penalties
+- Spec-compliant LP solver (CVXPY) with weekly scenarios
+
+**Status:** ✅ Complete
+
+**Quick Start:**
+```bash
+./quickstart.sh
+# → Run (3) → Pricing (1) → Regime Downside (1) → Run Full Workflow (5)
 ```
 
-define ticker selection here: [data/tickers.yml](data/tickers.yml)
+**Documentation:** [`pricing/regime_downside/README.md`](pricing/regime_downside/README.md)
 
-### valuation
+**Example Output:**
 
-deterministic computation of selected stocks' intrinsic value per share through discounted free cash flow to equity and to firm - displaying margins of safety, projected and implied growth rates, and including interpretation of the result as can be seen [here](log/val/dcf_deterministic/IVPS_2025-07-26_17-02-52_GOOGL_SIE.DE_ROG.SW_ASML_TCS.NS_GRAB_CEG.log)
-```zsh
-uv run -m prep.val.dcf_deterministic
-dune exec dcf_deterministic
+**Portfolio Weights (Constrained vs Frictionless):**
+
+<img src="./pricing/regime_downside/output/portfolio_weights.png" width="800">
+
+Shows actual portfolio allocation (with transaction costs) vs ideal frictionless allocation.
+
+**Risk Metrics Comparison:**
+
+<img src="./pricing/regime_downside/output/risk_metrics.png" width="800">
+
+Tracks LPM1, CVaR, Beta, and Turnover for both constrained and frictionless portfolios.
+
+**Gap Analysis (Convergence Tracking):**
+
+<img src="./pricing/regime_downside/output/gap_analysis.png" width="800">
+
+Monitors the gap between actual and frictionless portfolios: distance, LPM1 difference, CVaR difference, and Beta difference.
+
+---
+
+## DCF Deterministic
+
+**Equity Valuation | Traditional DCF**
+
+Deterministic discounted cash flow valuation using FCFE and FCFF methods.
+
+**Key Features:**
+- Dual valuation: Free Cash Flow to Equity (FCFE) and Free Cash Flow to Firm (FCFF)
+- 9-category investment signals (Strong Buy → Avoid/Sell)
+- CAPM cost of equity, WACC with leveraged beta (Hamada formula)
+- Implied growth solver (what growth is the market pricing in?)
+- Sensitivity analysis (growth, discount rate, terminal growth)
+- Multi-country support (20+ countries with RFR, ERP, tax rates)
+
+**Status:** ✅ Complete
+
+**Quick Start:**
+```bash
+./quickstart.sh
+# → Run (3) → Valuation (2) → DCF Deterministic (1) → Do Everything (5)
 ```
 
-probabilistic computation of selected stocks' intrinsic value per share ([here](log/val/dcf_probabilistic/IVPS_2025-07-26_17-03-38_GOOGL_SIE.DE_ROG.SW_ASML_TCS.NS_GRAB_CEG.log))
+**Documentation:** [`valuation/dcf_deterministic/README.md`](valuation/dcf_deterministic/README.md)
 
-single-asset value-surplus distributions (FCFE)
+**Example Output:**
 
-<div>
-  <img src="fig/val/dcf_probabilistic/single_asset/CEG_fcfe_2025-07-26_17-03-55.svg" alt="single-asset value-surplus distribution" style="display:inline-block; width:35%;"/>
-  <img src="fig/val/dcf_probabilistic/single_asset/CEG_fcfe_pct_2025-07-26_17-03-55.svg" alt="single-asset value-surplus percentage distribution" style="display:inline-block; width:35%;"/>
-</div>
+**Valuation Comparison (All Tickers):**
 
-single-asset value-surplus distributions (FCFF)
+<img src="./valuation/dcf_deterministic/output/valuation/dcf_comparison_all.png" width="800">
 
-<div>
-  <img src="fig/val/dcf_probabilistic/single_asset/CEG_fcff_2025-07-26_17-03-55.svg" alt="single-asset value-surplus distribution" style="display:inline-block; width:35%;"/>
-  <img src="fig/val/dcf_probabilistic/single_asset/CEG_fcff_pct_2025-07-26_17-03-55.svg" alt="single-asset value-surplus percentage distribution" style="display:inline-block; width:35%;"/>
-</div>
+Comprehensive comparison across all analyzed tickers showing surplus/discount percentages (FCFF top, FCFE bottom, vertically stacked with shared x-axis for direct comparison).
 
-multi-asset value-surplus frontier (based on FCFE)
+**Sensitivity Analysis (Single Ticker):**
 
-<div>
-  <img src="fig/val/dcf_probabilistic/multi_asset/efficient_frontier_stddev_fcfe_2025-07-26_17-03-58.svg" alt="fcfe-based multi-asset value-surplus percentage distribution std" style="display:inline-block; width:49%;"/>
-  <img src="fig/val/dcf_probabilistic/multi_asset/efficient_frontier_probability_fcfe_2025-07-26_17-03-58.svg" alt="fcfe-based multi-asset value-surplus percentage distribution prob" style="display:inline-block; width:49%;"/>
-</div>
+<img src="./valuation/dcf_deterministic/output/sensitivity/plots/dcf_sensitivity_TAC.png" width="800">
 
-multi-asset value-surplus frontier (based on FCFF)
+Four-panel sensitivity analysis showing parameter impact on valuation: growth rate, discount rate, terminal growth, and tornado chart (FCFF shown first in all legends and charts).
 
-<div>
-  <img src="fig/val/dcf_probabilistic/multi_asset/efficient_frontier_stddev_fcff_2025-07-26_17-04-00.svg" alt="fcff-based multi-asset value-surplus percentage distribution std" style="display:inline-block; width:49%;"/>
-  <img src="fig/val/dcf_probabilistic/multi_asset/efficient_frontier_probability_fcff_2025-07-26_17-04-00.svg" alt="fcff-based multi-asset value-surplus percentage distribution prob" style="display:inline-block; width:49%;"/>
-</div>
+---
 
-```zsh
-uv run -m prep.val.dcf_probabilistic
-dune exec dcf_probabilistic
-uv run -m viz.val.dcf_probabilistic
+## DCF Probabilistic
+
+**Equity Valuation | Monte Carlo Simulation**
+
+Advanced DCF with Monte Carlo simulation for uncertainty quantification.
+
+**Key Features:**
+- Monte Carlo simulation (100-10,000 iterations)
+- Stochastic discount rates (samples RFR, beta, ERP each iteration)
+- Time-varying growth rates (exponential mean reversion)
+- Bayesian priors for ROE/ROIC smoothing
+- Portfolio efficient frontier (multi-asset optimization)
+- Distribution statistics (mean, median, percentiles, probability of undervaluation)
+
+**Status:** ✅ Complete
+
+**Quick Start:**
+```bash
+./quickstart.sh
+# → Run (3) → Valuation (2) → DCF Probabilistic (2) → Do Everything (5)
 ```
 
-### pricing
+**Documentation:** [`valuation/dcf_probabilistic/README.md`](valuation/dcf_probabilistic/README.md)
 
-mpt: portfolio weights on efficient frontier in the mean-variance optimization framework
-<div>
-  <img src="fig/pri/mpt/frontier_with_allocations.svg" alt="efficient frontier" style="display:inline-block; width:37%;"/>
-</div>
+**Example Output:**
 
-```zsh
-uv run -m prep.pri.mpt
-dune exec mpt
-uv run -m viz.pri.mpt
+**Intrinsic Value Distribution (KDE):**
+
+<img src="./valuation/dcf_probabilistic/output/single_asset/TAC_kde_combined.png" width="800">
+
+Probability distribution of intrinsic values from Monte Carlo simulation with market price comparison, showing upside potential (green) and downside risk (red) regions (FCFF top, FCFE bottom, shared x-axis for direct comparison).
+
+**Surplus Distribution:**
+
+<img src="./valuation/dcf_probabilistic/output/single_asset/IBKR_surplus_combined.png" width="800">
+
+Distribution of valuation surplus (intrinsic value - market price) showing upside potential (green) and downside risk (red) regions (FCFF top, FCFE bottom, shared x-axis for direct comparison).
+
+**Portfolio Efficient Frontier (Tail Risk):**
+
+<img src="./valuation/dcf_probabilistic/output/multi_asset/efficient_frontier_tail_risk_combined.png" width="800">
+
+Multi-asset portfolio optimization showing expected return vs probability of loss across 5,000 random portfolios, with portfolio compositions for Min P(Loss) and Max Return strategies (FCFF top, FCFE bottom, vertically stacked with shared x-axis for direct comparison).
+
+**Portfolio Efficient Frontier (Calmar Ratio):**
+
+<img src="./valuation/dcf_probabilistic/output/multi_asset/efficient_frontier_drawdown_combined.png" width="800">
+
+Multi-asset portfolio optimization showing expected return vs maximum drawdown across 5,000 random portfolios, with portfolio compositions for Max Calmar, Max Return, and Min Drawdown strategies (FCFF top, FCFE bottom, vertically stacked with shared x-axis for direct comparison).
+
+---
+
+## Project Structure
+
 ```
+atemoya/
+├── README.md                      # This file
+├── ARCHITECTURE.md                # Design principles, tech stack
+├── quickstart.sh                  # Interactive setup and run script
+│
+├── pricing/                       # Short-term pricing models
+│   └── regime_downside/           # Regime-aware downside optimization
+│       ├── README.md              # Complete guide (what/how/interpret)
+│       └── TROUBLESHOOTING.md     # Common issues
+│
+└── valuation/                     # Long-term valuation models
+    ├── dcf_deterministic/         # Traditional DCF valuation
+    │   ├── README.md              # Complete guide
+    │   ├── TROUBLESHOOTING.md     # Common issues
+    │   └── data/
+    │       └── DATA_SOURCES.md    # Config data sources reference
+    │
+    └── dcf_probabilistic/         # Monte Carlo DCF valuation
+        ├── README.md              # Complete guide (includes portfolio theory)
+        └── TROUBLESHOOTING.md     # Common issues
+```
+
+**Documentation Philosophy:** Each model has ONE comprehensive README (what it is, how to use it, how to interpret results) plus a TROUBLESHOOTING guide for practical issues.
+
+---
+
+## Technology Stack
+
+**OCaml (Computation)**
+- Core algorithms and optimizations
+- Functional programming paradigm
+- Type-safe, fast execution
+
+**Python (Data & Visualization)**
+- Data fetching (yfinance and free sources)
+- Visualization and plotting (matplotlib, seaborn)
+- Can use OOP where appropriate
+
+**Build System**
+- Dune (OCaml build system)
+- UV (Python package manager)
+- OPAM (OCaml package manager)
+
+---
+
+## Model Maturity & Testing
+
+| Model | Status | Test Coverage | Documentation |
+|-------|--------|---------------|---------------|
+| **Regime Downside** | ✅ Complete | 35 tests | ✅ Complete |
+| **DCF Deterministic** | ✅ Complete | 15 tests | ✅ Complete |
+| **DCF Probabilistic** | ✅ Complete | 23 tests | ✅ Complete |
+
+**Total:** 73 tests, all passing ✓
+
+---
+
+## Development
+
+Each model is independently developed and maintained:
+- Easy addition of new models without interference
+- Clear separation of concerns
+- Modular code reuse when patterns emerge
+
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for design principles and guidelines.
+
+---
+
+## Quick Links
+
+**Getting Help:**
+- Model-specific: See each model's `README.md` and `TROUBLESHOOTING.md`
+- General setup: Run `./quickstart.sh` for interactive guidance
+- Architecture: See [`ARCHITECTURE.md`](ARCHITECTURE.md)
+
+**Model Documentation:**
+- [Regime Downside (Portfolio Optimization)](pricing/regime_downside/README.md)
+- [DCF Deterministic (Traditional Valuation)](valuation/dcf_deterministic/README.md)
+- [DCF Probabilistic (Monte Carlo Valuation)](valuation/dcf_probabilistic/README.md)

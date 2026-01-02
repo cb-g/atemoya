@@ -1,0 +1,8 @@
+ticker,price,num_sims,fcfe_mean,fcfe_std,fcfe_min,fcfe_max,fcfe_p50,fcfe_class,fcfe_prob_under,fcff_mean,fcff_std,fcff_min,fcff_max,fcff_p50,fcff_class,fcff_prob_under,signal
+AMZN,230.82,10000,56.88,35.13,-42.71,572.31,51.84,Overvalued,0.0016,-21.85,25.98,-183.43,1306.46,-20.17,Overvalued,0.0001,Avoid/Sell
+CBOE,251.00,10000,78.53,58.57,-450.64,902.15,71.84,Overvalued,0.0100,46.65,48.33,-203.75,544.62,42.07,Overvalued,0.0019,Avoid/Sell
+CVX,152.41,10000,380.63,158.39,89.00,3541.66,347.36,Undervalued,0.9948,246.40,102.15,55.73,1597.17,226.05,Undervalued,0.8665,Strong Buy
+IBKR,64.31,10000,-65.97,232.22,-3226.58,2019.70,-51.19,Overvalued,0.2367,-47.63,257.69,-1762.16,1559.27,-48.80,Overvalued,0.2844,Avoid/Sell
+JPM,322.22,10000,221.18,103.09,56.80,1527.23,194.21,Overvalued,0.1188,-380.05,12.18,-406.04,-307.41,-382.59,Overvalued,0.0000,Avoid/Sell
+LLY,1074.68,10000,130.78,162.94,-509.99,5955.37,112.16,Overvalued,0.0007,9.47,119.57,-1036.13,1129.97,2.09,Overvalued,0.0002,Avoid/Sell
+TAC,12.64,10000,51.88,27.34,-7.79,446.51,46.89,Undervalued,0.9871,81.57,48.25,-108.69,349.66,79.00,Undervalued,0.9339,Strong Buy

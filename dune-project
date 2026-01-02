@@ -1,23 +1,23 @@
-(lang dune 3.19)
-
+(lang dune 3.17)
 (name atemoya)
+(version 0.1.0)
 
 (generate_opam_files true)
 
-(source
- (github cb-g/atemoya))
-
-(license MIT)
-
 (package
  (name atemoya)
- (synopsis "active investing")
- (description "")
+ (synopsis "Quantitative finance models for investment analysis")
+ (description "A collection of pricing and valuation models implemented in OCaml, covering portfolio optimization, regime detection, and fundamental valuation.")
+ (license MIT)
+ (maintainers "cb-g")
+ (authors "cb-g")
+ (homepage "https://github.com/cb-g/atemoya")
+ (bug_reports "https://github.com/cb-g/atemoya/issues")
  (depends
-  (ocaml (>= 4.14.0))
+  (ocaml (>= 5.0))
   dune
-  core
-  odoc
-  alcotest)
- (tags
-  ("portfolio optimization" "option pricing" "quantitative finance" "risk management" "value investing" "efficient frontier" "intrinsiv value" "volatility surface" "active investing")))
+  (owl (>= 1.1))
+  (yojson (>= 2.0))
+  (csv (>= 2.4))
+  (ppx_deriving (>= 5.2))
+  (alcotest :with-test)))

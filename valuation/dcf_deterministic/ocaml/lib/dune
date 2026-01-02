@@ -1,0 +1,5 @@
+(library
+ (name dcf_deterministic)
+ (public_name atemoya.dcf_deterministic)
+ (libraries yojson unix)
+ (preprocess (pps ppx_deriving.show)))

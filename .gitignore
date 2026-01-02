@@ -1,5 +1,30 @@
 # project-specific
 TODO.md
+orientation.md
+.last_tickers
+
+# Generated data and logs
+pricing/regime_downside/data/
+pricing/regime_downside/log/
+valuation/dcf_deterministic/log/
+valuation/dcf_probabilistic/log/
+
+# Generated output files (keep only README-referenced plots)
+# Regime Downside
+pricing/regime_downside/output/optimization_results.csv
+
+# DCF Deterministic - keep only README plots, ignore others
+valuation/dcf_deterministic/output/**/*.png
+!valuation/dcf_deterministic/output/valuation/dcf_comparison_all.png
+!valuation/dcf_deterministic/output/sensitivity/plots/dcf_sensitivity_TAC.png
+valuation/dcf_deterministic/output/**/*.csv
+
+# DCF Probabilistic - keep README single-asset plots and ALL multi-asset plots
+valuation/dcf_probabilistic/output/single_asset/*.png
+!valuation/dcf_probabilistic/output/single_asset/TAC_kde_combined.png
+!valuation/dcf_probabilistic/output/single_asset/IBKR_surplus_combined.png
+valuation/dcf_probabilistic/output/**/*.csv
+!valuation/dcf_probabilistic/output/data/*.csv
 
 #
 *.annot

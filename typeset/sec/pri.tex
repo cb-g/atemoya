@@ -1,175 +1,284 @@
-Seeing merit in pricing tools is supposing that markets are at least occasionally inefficient. 
+Pricing tools enable the investor to construct optimal portfolios that systematically adapt to market conditions. Rather than assuming time-invariant risk, we recognize that markets exhibit distinct volatility regimes and that tail risk becomes paramount during periods of stress.
 
-\subsection{MPT}
+\subsection{Regime-Adaptive Downside Optimization}
 
-\subsubsection{Mechanics and Interpretation}
+\subsubsection{Mathematical Framework}
 
+Let $\mathcal{A} = \{1, \ldots, N\}$ denote the universe of $N$ risky assets with returns $R_t = (R_{t,1}, \ldots, R_{t,N})^\top$ observed over periods $t = 1, \ldots, T$. Let $b_t$ denote the benchmark return (e.g., market index) and $r^c_t$ the risk-free cash return at time $t$.
+
+\paragraph{Portfolio Returns}
+
+A portfolio is specified by weight vector $\mathbf{w} = (w_1, \ldots, w_N)^\top$ with $w_i \geq 0$ for all $i \in \mathcal{A}$ and cash weight $w_c \geq 0$, satisfying the full-investment constraint:
 \[
-\mathbb{E}[R_p] = \sum_{i=1}^{n} w_i \cdot \mathbb{E}[R_i]
-= 
-\begin{bmatrix}
-w_1 & w_2 & \cdots & w_n
-\end{bmatrix}
-\begin{bmatrix}
-\mathbb{E}[R_1] \\
-\mathbb{E}[R_2] \\
-\vdots \\
-\mathbb{E}[R_n]
-\end{bmatrix} = \mathbf{w}^\top \mathbf{r}
+\sum_{i=1}^N w_i + w_c = 1
 \]
+
+The portfolio return in scenario $t$ is:
+\[
+p_t = \sum_{i=1}^N w_i R_{t,i} + w_c r^c_t = \mathbf{w}^\top \mathbf{R}_t + w_c r^c_t
+\]
+
+The active return (excess over benchmark) is:
+\[
+a_t = p_t - b_t
+\]
+
+\subsubsection{Regime Detection}
+
+\paragraph{Realized Volatility}
+
+Given a return series $\{r_t\}_{t=1}^{T}$ and rolling window size $h$ (typically 20 trading days), the annualized realized volatility at time $T$ is:
+\[
+\sigma_{\text{realized}}(T) = \sqrt{252} \cdot \sqrt{\frac{1}{h} \sum_{t=T-h+1}^{T} (r_t - \bar{r})^2}
+\]
+where $\bar{r} = \frac{1}{h}\sum_{t=T-h+1}^{T} r_t$ and 252 is the approximate number of trading days per year.
+
+\paragraph{Historical Volatility Distribution}
+
+To establish regime thresholds, we compute rolling volatilities over a lookback period of $L$ years (typically 3--5 years, i.e., $L \times 252$ trading days):
+\[
+\mathcal{V} = \{\sigma_{\text{realized}}(t) : t = h, h+1, \ldots, L \times 252\}
+\]
+
+Let $Q_p(\mathcal{V})$ denote the $p$-th quantile of the volatility distribution $\mathcal{V}$.
+
+\paragraph{Stress Weight Function}
+
+Define lower and upper volatility thresholds:
+\begin{align*}
+\sigma_L &= Q_{0.25}(\mathcal{V}) \\
+\sigma_U &= Q_{0.75}(\mathcal{V})
+\end{align*}
+
+The stress weight at current volatility $\sigma$ is:
+\[
+s(\sigma) = \begin{cases}
+0 & \text{if } \sigma \leq \sigma_L \quad \text{(calm regime)} \\
+\frac{\sigma - \sigma_L}{\sigma_U - \sigma_L} & \text{if } \sigma_L < \sigma < \sigma_U \quad \text{(transition)} \\
+1 & \text{if } \sigma \geq \sigma_U \quad \text{(stress regime)}
+\end{cases}
+\]
+
+This smooth transition function avoids abrupt regime switches and provides a continuous measure $s \in [0, 1]$ of market stress intensity.
+
+\subsubsection{Downside Risk Measures}
+
+\paragraph{Lower Partial Moment of Order 1}
+
+The First Lower Partial Moment (LPM1) measures the expected shortfall below a threshold $\tau < 0$:
+\[
+\text{LPM1}(\mathbf{w}) = \frac{1}{T} \sum_{t=1}^{T} \max(0, \tau - a_t)
+\]
+
+where $a_t$ is the active return in scenario $t$. This captures the average magnitude of underperformance relative to the threshold, providing a convex risk measure suitable for optimization.
+
+\paragraph{Conditional Value-at-Risk}
+
+Conditional Value-at-Risk (CVaR) at confidence level $1 - \alpha$ (typically $\alpha = 0.05$ for 95\% CVaR) is defined as the expected loss conditional on exceeding the Value-at-Risk (VaR) threshold.
+
+Define the loss at scenario $t$ as:
+\[
+\ell_t = \max(0, -a_t)
+\]
+
+The VaR at level $1 - \alpha$ is the $1-\alpha$ quantile of the loss distribution:
+\[
+\text{VaR}_{1-\alpha} = \inf\{\eta : \mathbb{P}[\ell \leq \eta] \geq 1 - \alpha\}
+\]
+
+The CVaR is then:
+\[
+\text{CVaR}_{1-\alpha} = \mathbb{E}[\ell \mid \ell \geq \text{VaR}_{1-\alpha}]
+\]
+
+We use the dual representation (Rockafellar--Uryasev):
+\[
+\text{CVaR}_{1-\alpha}(\mathbf{w}) = \min_{\eta \in \mathbb{R}} \left\{ \eta + \frac{1}{\alpha T} \sum_{t=1}^{T} \max(0, \ell_t - \eta) \right\}
+\]
+
+This formulation allows CVaR to be incorporated directly into a convex optimization problem.
+
+\paragraph{Portfolio Beta}
+
+The portfolio beta relative to the benchmark is the weighted average of individual asset betas:
+\[
+\beta(\mathbf{w}) = \sum_{i=1}^{N} w_i \beta_i
+\]
+
+where $\beta_i$ is the beta of asset $i$, estimated via exponentially-weighted covariance with the benchmark.
+
+\subsubsection{Linear Program Formulation}
+
+The portfolio optimization problem is formulated as a convex linear program with auxiliary slack variables.
+
+\paragraph{Decision Variables}
 
 \begin{itemize}
-  \item[] $\mathbb{E}[R_p]$: expected return of the portfolio  
-  \item[] $w_i$: weight of asset $i$ in the portfolio  
-  \item[] $\mathbb{E}[R_i]$: expected return of asset $i$  
-  \item[] $\mathbf{w}$: vector of portfolio weights  
-  \item[] $\mathbf{r}$: vector of expected asset returns  
+  \item $\mathbf{w} \in \mathbb{R}^N_+$: asset weights
+  \item $w_c \in \mathbb{R}_+$: cash weight
+  \item $\mathbf{s}_{\text{LPM}} \in \mathbb{R}^T_+$: LPM1 slack variables
+  \item $\eta \in \mathbb{R}$: CVaR threshold
+  \item $\mathbf{u} \in \mathbb{R}^T_+$: CVaR excess loss slack variables
+  \item $\mathbf{z} \in \mathbb{R}^N_+$: turnover slack variables
+  \item $v \in \mathbb{R}_+$: beta deviation slack variable
 \end{itemize}
 
+\paragraph{Objective Function}
+
+\begin{multline*}
+\min_{\mathbf{w}, w_c, \mathbf{s}_{\text{LPM}}, \eta, \mathbf{u}, \mathbf{z}, v} \quad
+\underbrace{\frac{\lambda_{\text{LPM}}}{T} \sum_{t=1}^T s_{\text{LPM}, t}}_{\text{LPM1 penalty}} \\
++ \underbrace{\lambda_{\text{CVaR}} \left( \eta + \frac{1}{(1-\alpha) T} \sum_{t=1}^T u_t \right)}_{\text{CVaR penalty}} \\
++ \underbrace{\kappa \sum_{i=1}^N z_i}_{\text{turnover cost}}
++ \underbrace{\lambda_\beta \cdot s(\sigma) \cdot v}_{\text{stress beta penalty}}
+\end{multline*}
+
+where:
+\begin{itemize}
+  \item[] $\lambda_{\text{LPM}} > 0$: LPM1 risk aversion parameter
+  \item[] $\lambda_{\text{CVaR}} > 0$: CVaR risk aversion parameter
+  \item[] $\lambda_\beta > 0$: beta deviation penalty (only active in stress)
+  \item[] $\kappa = c + \gamma$: combined transaction cost and turnover penalty
+  \item[] $s(\sigma) \in [0, 1]$: current stress weight
+\end{itemize}
+
+\paragraph{Constraints}
+
+Let $\mathbf{R} \in \mathbb{R}^{T \times N}$ be the matrix of asset scenario returns, $\mathbf{b} \in \mathbb{R}^T$ the benchmark returns, $\mathbf{r}^c \in \mathbb{R}^T$ the cash returns, and $\mathbf{w}_{\text{prev}} \in \mathbb{R}^N$ the previous portfolio weights.
+
+\textbf{(1) Full investment:}
 \[
-\begin{aligned}
-\mathrm{Var}(R_p) &= \sum_{i=1}^{n} \sum_{j=1}^{n} w_i w_j \cdot \mathrm{Cov}(R_i, R_j) \\
-\sigma_p^2 &= \sum_{i=1}^{n} \sum_{j=1}^{n} w_i w_j \cdot \sigma_{ij} \\
-&= 
-\begin{bmatrix}
-  w_1 & w_2 & \cdots & w_n
-\end{bmatrix}
-\begin{bmatrix}
-  \mathrm{Cov}(R_1, R_1) & \mathrm{Cov}(R_1, R_2) & \cdots & \mathrm{Cov}(R_1, R_n) \\
-  \mathrm{Cov}(R_2, R_1) & \mathrm{Cov}(R_2, R_2) & \cdots & \mathrm{Cov}(R_2, R_n) \\
-  \vdots                & \vdots                & \ddots & \vdots                \\
-  \mathrm{Cov}(R_n, R_1) & \mathrm{Cov}(R_n, R_2) & \cdots & \mathrm{Cov}(R_n, R_n)
-\end{bmatrix}
-\begin{bmatrix}
-  w_1 \\
-  w_2 \\
-  \vdots \\
-  w_n
-\end{bmatrix} \\
-&= 
-\begin{bmatrix}
-  w_1 & w_2 & \cdots & w_n
-\end{bmatrix}
-\begin{bmatrix}
-  \sigma_{11} & \sigma_{12} & \cdots & \sigma_{1n} \\
-  \sigma_{21} & \sigma_{22} & \cdots & \sigma_{2n} \\
-  \vdots      & \vdots      & \ddots & \vdots      \\
-  \sigma_{n1} & \sigma_{n2} & \cdots & \sigma_{nn}
-\end{bmatrix}
-\begin{bmatrix}
-  w_1 \\
-  w_2 \\
-  \vdots \\
-  w_n
-\end{bmatrix}
-= \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w}
-\end{aligned}
+\sum_{i=1}^N w_i + w_c = 1
 \]
+
+\textbf{(2) Active returns:}
+\[
+\mathbf{a} = \mathbf{R} \mathbf{w} + \mathbf{r}^c w_c - \mathbf{b}
+\]
+
+\textbf{(3) LPM1 slack constraints:}
+\[
+s_{\text{LPM}, t} \geq \tau - a_t, \quad s_{\text{LPM}, t} \geq 0, \quad \forall t = 1, \ldots, T
+\]
+
+\textbf{(4) CVaR slack constraints:}
+\[
+u_t \geq -a_t - \eta, \quad u_t \geq 0, \quad \forall t = 1, \ldots, T
+\]
+
+\textbf{(5) Turnover slack constraints (L1 norm):}
+\[
+z_i \geq w_i - w_{\text{prev}, i}, \quad z_i \geq -(w_i - w_{\text{prev}, i}), \quad z_i \geq 0, \quad \forall i = 1, \ldots, N
+\]
+
+\textbf{(6) Beta deviation slack constraints (L1 norm):}
+\[
+v \geq \beta(\mathbf{w}) - \beta_{\text{target}}, \quad v \geq -(\beta(\mathbf{w}) - \beta_{\text{target}}), \quad v \geq 0
+\]
+
+\textbf{(7) Non-negativity:}
+\[
+\mathbf{w} \geq \mathbf{0}, \quad w_c \geq 0
+\]
+
+\paragraph{Problem Structure}
+
+The resulting optimization problem is a convex linear program of the form:
+\begin{align*}
+\min_{\mathbf{x}} \quad & \mathbf{c}^\top \mathbf{x} \\
+\text{subject to} \quad & \mathbf{A} \mathbf{x} \geq \mathbf{b} \\
+& \mathbf{A}_{\text{eq}} \mathbf{x} = \mathbf{b}_{\text{eq}} \\
+& \mathbf{x} \geq \mathbf{0}
+\end{align*}
+
+where $\mathbf{x} = (\mathbf{w}, w_c, \mathbf{s}_{\text{LPM}}, \eta, \mathbf{u}, \mathbf{z}, v)^\top$ is the concatenated decision vector. This can be solved efficiently using interior-point methods (e.g., CLARABEL, SCS, OSQP solvers).
+
+\subsubsection{Regime Adaptation Mechanism}
+
+\paragraph{Stress-Conditional Beta Control}
+
+The key innovation is that the beta penalty term is modulated by the stress weight $s(\sigma)$:
+\[
+\text{Beta Penalty} = \lambda_\beta \cdot s(\sigma) \cdot |\beta(\mathbf{w}) - \beta_{\text{target}}|
+\]
+
+This design has three regimes:
+
+\begin{enumerate}
+  \item \textbf{Calm regime} ($s \approx 0$): Beta penalty is negligible. The optimizer focuses purely on downside risk (LPM1, CVaR) and turnover minimization. Market exposure is unconstrained.
+
+  \item \textbf{Transition regime} ($0 < s < 1$): Beta penalty gradually increases. The portfolio begins defensive positioning while maintaining some market exposure.
+
+  \item \textbf{Stress regime} ($s \approx 1$): Beta penalty is fully active. The portfolio is strongly penalized for deviating from the target beta (typically $\beta_{\text{target}} \in [0.5, 0.7]$), forcing defensive positioning with reduced market sensitivity.
+\end{enumerate}
+
+\paragraph{Economic Rationale}
+
+During calm markets, investors can tolerate higher market beta to capture upside. During stress, systematic market exposure becomes the dominant risk factor, overwhelming idiosyncratic considerations. By dynamically adjusting beta exposure based on volatility regime, the strategy:
 
 \begin{itemize}
-  \item[] $\mathrm{Var}(R_p) = \sigma_p^2$: variance of the portfolio return  
-  \item[] $\mathrm{Cov}(R_i, R_j) = \sigma_{ij}$: covariance between returns of asset $i$ and asset $j$  
-  \item[] $\boldsymbol{\Sigma}$: covariance matrix of asset returns  
+  \item Maintains participation during bull markets
+  \item Reduces drawdowns during bear markets
+  \item Avoids whipsaw from binary regime classification
+  \item Respects transaction costs through turnover penalties
 \end{itemize}
 
-\vspace{0.27cm} We have a quadratic program, i.e., an optimization problem with a quadratic objective function and linear constraints. Specifically, since $\Sigma$ is symmetric and positive semidefinite we have a convex quadratic program. 
+\subsubsection{Solution and Rebalancing}
 
+\paragraph{Optimization Frequency}
+
+The LP is solved at each rebalancing period (typically weekly or monthly). The solution provides:
+\begin{itemize}
+  \item Optimal weights $\mathbf{w}^*$ and cash $w_c^*$
+  \item Realized downside risk: $\text{LPM1}^*$, $\text{CVaR}^*$
+  \item Turnover incurred: $\|\mathbf{w}^* - \mathbf{w}_{\text{prev}}\|_1$
+  \item Portfolio beta: $\beta(\mathbf{w}^*)$
+\end{itemize}
+
+\paragraph{Rebalancing Decision Rule}
+
+To avoid excessive trading, rebalancing is triggered only when:
 \[
-\begin{aligned}
-\text{minimize} \quad & \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} \\
-\text{subject to} \quad & \mathbf{w}^\top \mathbf{r} = \mu \\
-                        & \mathbf{w}^\top \mathbf{1} = 1
-\end{aligned}
+\|\mathbf{w}_{\text{current}} - \mathbf{w}^*\|_1 > \epsilon
 \]
+where $\epsilon$ is a drift tolerance threshold (typically 0.05--0.10).
 
+\subsubsection{Performance Metrics}
+
+\paragraph{Ex-Post Risk Evaluation}
+
+After observing realized returns $\{a_t\}$, we evaluate:
 
 \begin{itemize}
-  \item[] $\mathbf{r}$: vector of expected asset returns  
-  \item[] $\mu$: target expected return of the portfolio  
-  \item[] $\mathbf{1}$: vector of ones 
+  \item \textbf{LPM1}: $\text{LPM1} = \frac{1}{T} \sum_{t=1}^T \max(0, \tau - a_t)$
+  \item \textbf{CVaR}: $\text{CVaR}_{95} = \eta^* + \frac{1}{0.05 \cdot T} \sum_{t=1}^T \max(0, \ell_t - \eta^*)$
+  \item \textbf{Realized volatility}: $\sigma_p = \sqrt{\text{Var}(a_t)}$
+  \item \textbf{Turnover}: $\sum_{i=1}^N |w_{i,t} - w_{i,t-1}|$
 \end{itemize}
 
+\paragraph{Sharpe-Type Ratios}
 
-\vspace{0.27cm} Alternatively and equivalently, one could formulate the problem as maximizing expected return subject to a fixed level of portfolio variance: 
-
-\[
-\begin{aligned}
-\text{maximize} \quad & \mathbf{w}^\top \mathbf{r} \\
-\text{subject to} \quad & \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} \leq \sigma^2 \\
-                        & \mathbf{w}^\top \mathbf{1} = 1
-\end{aligned}
-\]
-
+While the objective minimizes downside risk rather than variance, we can still compute:
 \begin{itemize}
-  \item[] $\sigma^2$: upper bound on acceptable portfolio variance
+  \item \textbf{Sharpe ratio}: $\frac{\mathbb{E}[a_t]}{\sigma_p}$
+  \item \textbf{Sortino ratio}: $\frac{\mathbb{E}[a_t]}{\sqrt{\text{LPM2}}}$ where LPM2 uses squared shortfalls
+  \item \textbf{CVaR ratio}: $\frac{\mathbb{E}[a_t]}{\text{CVaR}_{95}}$
 \end{itemize}
 
+\subsubsection{Interpretation}
 
-\vspace{0.27cm} At the optimum, the gradient of the objective function must lie in the span, i.e., equals a linear combination of the gradients of the constraints:
+The regime-adaptive downside optimization framework provides:
 
-\[
-\nabla_{\mathbf{w}} \left( \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} \right)
-\in \mathrm{span} \left\{ \nabla_{\mathbf{w}} \left( \mathbf{w}^\top \mathbf{r} \right), \nabla_{\mathbf{w}} \left( \mathbf{w}^\top \mathbf{1} \right) \right\}
-\]
+\begin{enumerate}
+  \item \textbf{Tail risk protection}: CVaR directly targets the expected severity of worst-case scenarios, unlike variance-based methods that treat upside and downside equally.
 
-\[
-\nabla_{\mathbf{w}} \left( \mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} \right)
-= \lambda \nabla_{\mathbf{w}} \left( \mathbf{w}^\top \mathbf{r} \right)
-+ \gamma \nabla_{\mathbf{w}} \left( \mathbf{w}^\top \mathbf{1} \right)
-\]
+  \item \textbf{Systematic risk management}: Beta control during stress prevents catastrophic drawdowns from market beta exposure, the primary driver of portfolio losses during crises.
 
-\begin{itemize}
-  \item[] \( \lambda \): Lagrange multiplier associated with the target expected return constraint \( \mathbf{w}^\top \mathbf{r} = \mu \)
-  \item[] \( \gamma \): Lagrange multiplier associated with the full investment constraint (i.e. size of cash position larger than zero if constraint is relaxed) \( \mathbf{w}^\top \mathbf{1} = 1 \)
-\end{itemize}
+  \item \textbf{Continuous adaptation}: The smooth stress weight $s(\sigma) \in [0, 1]$ avoids the instability of binary regime switching while maintaining responsiveness to changing market conditions.
 
-\vspace{0.27cm} To enforce that the solution lies on these constraint surfaces (i.e., satisfies the specified values \( \mu \) and 1), we introduce a Lagrangian function:
+  \item \textbf{Transaction cost awareness}: Turnover penalties and drift thresholds prevent excessive rebalancing, ensuring net-of-cost performance.
 
-\[
-\mathcal{L}(\mathbf{w}, \lambda, \gamma) = 
-\mathbf{w}^\top \boldsymbol{\Sigma} \mathbf{w} 
-- \lambda (\mathbf{w}^\top \mathbf{r} - \mu) 
-- \gamma (\mathbf{w}^\top \mathbf{1} - 1)
-\]
+  \item \textbf{Convex formulation}: The LP structure guarantees global optimality and computational efficiency, enabling real-time portfolio construction even for large asset universes.
+\end{enumerate}
 
-\vspace{0.27cm} Then take gradients with respect to each variable:
-
-\[
-\begin{aligned}
-\nabla_{\mathbf{w}} \mathcal{L} &= 2\boldsymbol{\Sigma} \mathbf{w} - \lambda \mathbf{r} - \gamma \mathbf{1} = 0 \\
-\nabla_{\lambda} \mathcal{L} &= \mathbf{w}^\top \mathbf{r} - \mu = 0 \\
-\nabla_{\gamma} \mathcal{L} &= \mathbf{w}^\top \mathbf{1} - 1 = 0
-\end{aligned}
-\]
-
-\begin{itemize}
-  \item[] \( \mathcal{L} \): scalar function encoding both the objective and the constraints
-  \item[] \( \mu \): target expected return specified by the investor
-\end{itemize}
-
-\vspace{0.27cm} The Lagrangian formulation packages both the directional optimality condition and the feasibility conditions. 
-
-The multiplier \( \lambda \) can be interpreted economically as the marginal increase in portfolio variance required to achieve one additional unit of expected return. In regions of the efficient frontier where \( \lambda \) is small, the investor can obtain significantly higher returns for only a modest increase in risk --- making those portfolios especially attractive. Conversely, where \( \lambda \) is large, the return gains come at the cost of disproportionately higher risk, indicating diminishing trade-off efficiency.
-
-To construct the efficient frontier, we solve the mean-variance optimization problem for a range of target expected returns \( \mu \). Each solution yields an optimal portfolio \( \mathbf{w}^*(\mu) \), along with its corresponding portfolio variance \( \sigma_p^2(\mu) \). Plotting the pairs \( (\sigma_p(\mu), \mu) \) traces out the efficient frontier.
-
-In practice, portfolio optimization under MPT is typically performed using log returns (also called continuously compounded returns), derived from adjusted closing prices. Log returns offer several practical advantages:
-
-\begin{itemize}
-  \item[] Additivity from multiplicative prices: Since asset prices evolve multiplicatively, taking logarithms converts returns into an additive structure. This allows multi-period log returns to be computed by simple summation, simplifying time aggregation and modeling.
-  \item[] Approximate normality: Log returns tend to be more symmetrically distributed and closer to normal than simple returns, especially for short time intervals. This aligns better with MPT's reliance on variance as a risk measure. MPT does not assume returns are normally distributed. But normality is often assumed in applications to justify using only mean and variance — because for normal distributions, these fully describe risk and return.
-  \item[] Covariance stability: When estimating the covariance matrix \( \boldsymbol{\Sigma} \), log returns generally lead to more stable and well-behaved estimates compared to arithmetic returns.
-\end{itemize}
-
-For a time series of adjusted prices \( P_t \), the log return at time \( t \) is defined as:
-
-\[
-r_t = \log\left(\frac{P_t}{P_{t-1}}\right)
-\]
-
-\begin{itemize}
-  \item[] \( P_t \): adjusted closing price of the asset at time \( t \)
-\end{itemize}
-
-\vspace{0.27cm} So far, we have permitted asset weights to become negative in order to reach our optimization goal, i.e., short-selling is allowed in the portfolio. When we require the weights to be non-negative, we are effectively adding an inequality constraint to our quadratic program and so we must apply the Karush-Kuhn-Tucker conditions (stationarity, primal feasibility, dual feasibility, complementary slackness), thereby extending the Lagrangian. 
-
+The framework rejects the mean-variance paradigm in favor of downside-focused objectives that better align with investor utility and observed market behavior during stress episodes.

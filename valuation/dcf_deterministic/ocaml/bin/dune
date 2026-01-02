@@ -1,0 +1,14 @@
+(executable
+ (name main)
+ (public_name dcf_deterministic)
+ (libraries dcf_deterministic))
+
+(executable
+ (name scenarios_main)
+ (public_name dcf_scenarios)
+ (libraries dcf_deterministic))
+
+(executable
+ (name sensitivity_main)
+ (public_name dcf_sensitivity)
+ (libraries dcf_deterministic))

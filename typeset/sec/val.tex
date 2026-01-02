@@ -1,31 +1,31 @@
-The tools of valuation empower the investor to judge stocks in a manner that is detached from behavioral biases and therefore from market sentiment. Valuation emphasizes companies' fundamentals and financial health. 
+The tools of valuation empower the investor to judge stocks in a manner that is detached from behavioral biases and therefore from market sentiment. Valuation emphasizes companies' fundamentals and financial health.
 
-By relying on valuation - regardless of an active or passive investing style - we reject the Efficient Market Hypothesis (EMH) in at least its strong and semi-strong forms.  
+By relying on valuation -- regardless of an active or passive investing style -- we reject the Efficient Market Hypothesis (EMH) in at least its strong and semi-strong forms.
 
-\subsection{DCF (deterministic)}
+\subsection{DCF (Deterministic)}
 
-Let us derive a stock's value per share based on discounted free cash flow and regard this value as intrinsic: 
+\subsubsection{Discounted Cash Flow Foundation}
 
-Interest, e.g., on investment streams, compounds to form the future value.
+Let us derive a stock's value per share based on discounted free cash flow and regard this value as intrinsic.
+
+Interest, e.g., on investment streams, compounds to form the future value:
 \[
 \text{FutureValue}_n = \sum_{t=0}^{n} \text{InvestedCash}_t \cdot (1 + \text{InterestRate})^{n - t}
 \]
 
-To calculate the present value, e.g. of a business, we undo the compounding effect. The intrinsic value of a financial asset is the discounted value of its future cash flows. 
+To calculate the present value, e.g. of a business, we undo the compounding effect. The intrinsic value of a financial asset is the discounted value of its future cash flows:
 \[
 \text{PresentValue} = \sum_{t=1}^{n} \frac{\text{CashFlow}_t}{(1 + \text{DiscountRate})^t}
 \]
 
-One can go the free-cash-flow-to-equity (FCFE) and/or the free-cash-flow-to-firm (FCFF) route. It will depend on the company's circumstances to which to give modeling precedence. FCFE should lead to a more insightful intrinsic value per share (IVPS), if the debt policy is known and reliable, and FCFF should do so, if the debt structure is uncertain or complex. 
+One can go the free-cash-flow-to-equity (FCFE) and/or the free-cash-flow-to-firm (FCFF) route. It will depend on the company's circumstances to which to give modeling precedence. FCFE should lead to a more insightful intrinsic value per share (IVPS), if the debt policy is known and reliable, and FCFF should do so, if the debt structure is uncertain or complex.
 
-\subsubsection{Sensitivity}
+\subsubsection{Cash Flow Mechanics}
 
-In general, the terminal growth rate and the discount rate (not solely but) significantly affect the model outputs. 
-
-\subsubsection{Mechanics}
+\paragraph{Free Cash Flow to Equity}
 
 $$
-\text{FCFE} = \text{NI} - (1 - \text{TDR}) \cdot (\text{CAPX} - \text{D} - (\text{CA} - \text{CL}))
+\text{FCFE} = \text{NI} - (1 - \text{TDR}) \cdot (\text{CAPX} - \text{D} - \Delta \text{WC})
 $$
 
 \begin{itemize}
@@ -33,21 +33,27 @@ $$
   \item[] $\text{NI}$: net income
   \item[] $\text{TDR}$: target debt ratio
   \item[] $\text{CAPX}$: capital expenditure
-  \item[] $\text{D}$: depreciation
+  \item[] $\text{D}$: depreciation \& amortization
+  \item[] $\Delta \text{WC} = \Delta \text{CA} - \Delta \text{CL}$: change in working capital
   \item[] $\text{CA}$: current assets
   \item[] $\text{CL}$: current liabilities
 \end{itemize}
 
+\paragraph{Free Cash Flow to Firm}
+
 $$
-\text{FCFF} = \text{EBIT} \cdot (1 - \text{CTR}) + \text{B} - \text{CAPX} - (\text{CA} - \text{CL}) 
+\text{FCFF} = \text{EBIT} \cdot (1 - \text{CTR}) + \text{D} - \text{CAPX} - \Delta \text{WC}
 $$
 
 \begin{itemize}
   \item[] $\text{FCFF}$: free cash flow to firm
   \item[] $\text{EBIT}$: earnings before interest and taxes
   \item[] $\text{CTR}$: corporate tax rate
-  \item[] $\text{B}$: debt
 \end{itemize}
+
+\subsubsection{Cost of Capital}
+
+\paragraph{Levered Beta}
 
 $$
 \beta_{\text{L}} = \beta_{\text{U}} \cdot \left(1 + (1 - \text{CTR}) \cdot \frac{\text{MVB}}{\text{MVE}}\right)
@@ -60,8 +66,10 @@ $$
   \item[] $\text{MVE}$: market value of equity
 \end{itemize}
 
+\paragraph{Cost of Equity (CAPM)}
+
 $$
-\text{CE} = RFR + \beta_{\text{L}} \cdot \text{ERP}
+\text{CE} = \text{RFR} + \beta_{\text{L}} \cdot \text{ERP}
 $$
 
 \begin{itemize}
@@ -70,16 +78,20 @@ $$
   \item[] $\text{ERP}$: equity risk premium
 \end{itemize}
 
+\paragraph{Currency-Adjusted Equity Risk Premium}
+
 $$
 \text{ERPT} = (1 + \text{ERPS}) \cdot \left( \frac{1 + \text{IT}}{1 + \text{IS}} \right) - 1
 $$
 
 \begin{itemize}
-  \item[] $\text{ERPT}$: equity risk premium of target
-  \item[] $\text{ERPS}$: equity risk premium of source
+  \item[] $\text{ERPT}$: equity risk premium of target currency
+  \item[] $\text{ERPS}$: equity risk premium of source currency
   \item[] $\text{IT}$: inflation of target
   \item[] $\text{IS}$: inflation of source
 \end{itemize}
+
+\paragraph{Weighted Average Cost of Capital}
 
 $$
 \text{WACC} = \frac{\text{MVE}}{\text{MVE} + \text{MVB}} \cdot \text{CE} + \frac{\text{MVB}}{\text{MVE} + \text{MVB}} \cdot \text{CB} \cdot (1 - \text{CTR})
@@ -89,6 +101,10 @@ $$
   \item[] $\text{WACC}$: weighted average cost of capital
   \item[] $\text{CB}$: pre-tax cost of debt
 \end{itemize}
+
+\subsubsection{Growth Rate Estimation}
+
+\paragraph{FCFE Growth Rate}
 
 $$
 \begin{aligned}
@@ -101,16 +117,17 @@ $$
   \item[] $\text{FCFEGR}$: FCFE growth rate estimate
   \item[] $\text{ROE}$: return on equity
   \item[] $\text{FCFERR}$: FCFE retention ratio
-  \item[] $\text{BVE}$: book value of equity 
+  \item[] $\text{BVE}$: book value of equity
   \item[] $\text{DP}$: dividends paid
 \end{itemize}
+
+\paragraph{FCFF Growth Rate}
 
 $$
 \begin{aligned}
 \text{FCFFGR} &= \text{ROIC} \cdot \text{FCFFRR} \\
-&= \left( \frac{\text{NOPAT}}{\text{IC}} \right) \cdot \left( \frac{\text{CAPX} - \text{D} + (\text{CA} - \text{CL})}{\text{NOPAT}} \right) \\
-&= \left( \frac{\text{EBIT} \cdot (1 - \text{ETR})}{\text{IC}} \right) \cdot \left( \frac{\text{CAPX} - \text{D} + (\text{CA} - \text{CL})}{\text{EBIT} \cdot (1 - \text{ETR})} \right) \\
-&= \left( \frac{\text{EBIT} \cdot \left(1 - \frac{\text{ITE}}{\text{EBIT}} \right)}{\text{IC}} \right) \cdot \left( \frac{\text{CAPX} - \text{D} + (\text{CA} - \text{CL})}{\text{EBIT} \cdot \left(1 - \frac{\text{ITE}}{\text{EBIT}} \right) } \right) \\
+&= \left( \frac{\text{NOPAT}}{\text{IC}} \right) \cdot \left( \frac{\text{CAPX} - \text{D} + \Delta \text{WC}}{\text{NOPAT}} \right) \\
+&= \left( \frac{\text{EBIT} \cdot (1 - \text{ETR})}{\text{IC}} \right) \cdot \left( \frac{\text{CAPX} - \text{D} + \Delta \text{WC}}{\text{EBIT} \cdot (1 - \text{ETR})} \right)
 \end{aligned}
 $$
 
@@ -121,12 +138,15 @@ $$
   \item[] $\text{NOPAT}$: net operating profit after taxes
   \item[] $\text{IC}$: invested capital
   \item[] $\text{ETR}$: effective tax rate
-  \item[] $\text{ITE}$: income tax expense
 \end{itemize}
+
+\subsubsection{Present Value Calculation}
+
+\paragraph{FCFE-Based Valuation}
 
 $$
 \begin{aligned}
-\text{PVE} = \text{PVFCFE} &+ \text{PVTVFCFE} \\ 
+\text{PVE} = \text{PVFCFE} &+ \text{PVTVFCFE} \\
 = \left( \sum_{t=1}^{h} \frac{\text{FCFE}_t}{(1 + \text{CE})^t} \right) &+ \text{PVTVFCFE} \\
 = \left( \sum_{t=1}^{h} \frac{\text{FCFE}_0 \cdot (1+\text{FCFEGR})^t}{(1+\text{CE})^t} \right) &+ \text{PVTVFCFE} \\
 = \text{PVFCFE} &+ \left( \sum_{t=h+1}^{\infty} \frac{\text{FCFE}_t}{(1 + \text{CE})^t} \right) \\
@@ -134,11 +154,10 @@ $$
 = \text{PVFCFE} &+ \left( \sum_{t=h+1}^{\infty} \frac{\text{FCFE}_h}{(1+\text{CE})^h} \cdot \left( \frac{1+\text{TGR}}{1+\text{CE}} \right)^{t-h} \right) \\
 = \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h}{(1+\text{CE})^h} \sum_{k=1}^{\infty} \left( \frac{1+\text{TGR}}{1+\text{CE}} \right)^k \right) \\
 \overset{\text{GGM}}{=} \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h}{(1+\text{CE})^h} \cdot \frac{\frac{1+\text{TGR}}{1+\text{CE}}}{1 - \frac{1+\text{TGR}}{1+\text{CE}}} \right) \\
-% = \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h}{(1+\text{CE})^h} \cdot \frac{1+\text{GR}}{(1+\text{CE}) - (1+\text{GR})} \right) \\
 = \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h}{(1+\text{CE})^h} \cdot \frac{1+\text{TGR}}{\text{CE} - \text{TGR}} \right) \\
-= \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h \cdot (1+\text{TGR})}{(\text{CE} - \text{TGR})} \cdot \frac{1}{(1+\text{CE})^h} \right) \\ 
+= \text{PVFCFE} &+ \left( \frac{\text{FCFE}_h \cdot (1+\text{TGR})}{(\text{CE} - \text{TGR})} \cdot \frac{1}{(1+\text{CE})^h} \right) \\
 = \text{PVFCFE} &+ \left(\frac{\text{FCFE}_{h+1}}{(\text{CE} - \text{TGR})} \cdot \frac{1}{(1 + \text{CE})^h} \right) \\
-= \text{PVFCFE} &+ \left(\frac{\text{TVFCFE}}{(1 + \text{CE})^h} \right) \\ 
+= \text{PVFCFE} &+ \left(\frac{\text{TVFCFE}}{(1 + \text{CE})^h} \right) \\
 = \left( \sum_{t=1}^{h} \frac{\text{FCFE}_0 \cdot (1+\text{FCFEGR})^t}{(1+\text{CE})^t} \right) &+ \left(\frac{\text{FCFE}_h \cdot (1+\text{TGR})}{(\text{CE} - \text{TGR}) \cdot (1 + \text{CE})^h} \right)
 \end{aligned}
 $$
@@ -146,16 +165,18 @@ $$
 \begin{itemize}
   \item[] $\text{PVE}$: present value of equity
   \item[] $\text{PVFCFE}$: present value of free cash flow to equity
-  \item[] $\text{PVTVFCFE}$: present value of terminal value of free cash flow to firm
+  \item[] $\text{PVTVFCFE}$: present value of terminal value of FCFE
   \item[] $h$: growth forecast horizon (before terminal growth rate into perpetuity)
   \item[] $\text{GGM}$: Gordon growth model (closed-form solution of infinite geometric series)
   \item[] $\text{TGR}$: terminal growth rate
-  \item[] $\text{TVFCFE}$: terminal value of free cash flow to firm
+  \item[] $\text{TVFCFE}$: terminal value of FCFE
 \end{itemize}
+
+\paragraph{FCFF-Based Valuation}
 
 $$
 \begin{aligned}
-\text{PVF} = \text{PVFCFF} &+ \text{PVTVFCFF} \\ 
+\text{PVF} = \text{PVFCFF} &+ \text{PVTVFCFF} \\
 = \left( \sum_{t=1}^{h} \frac{\text{FCFF}_t}{(1 + \text{WACC})^t} \right) &+ \text{PVTVFCFF} \\
 = \left( \sum_{t=1}^{h} \frac{\text{FCFF}_0 \cdot (1+\text{FCFFGR})^t}{(1+\text{WACC})^t} \right) &+ \text{PVTVFCFF} \\
 = \text{PVFCFF} &+ \left( \sum_{t=h+1}^{\infty} \frac{\text{FCFF}_t}{(1 + \text{WACC})^t} \right) \\
@@ -164,9 +185,9 @@ $$
 = \text{PVFCFF} &+ \left( \frac{\text{FCFF}_h}{(1+\text{WACC})^h} \sum_{k=1}^{\infty} \left( \frac{1+\text{TGR}}{1+\text{WACC}} \right)^k \right) \\
 \overset{\text{GGM}}{=} \text{PVFCFF} &+ \left( \frac{\text{FCFF}_h}{(1+\text{WACC})^h} \cdot \frac{\frac{1+\text{TGR}}{1+\text{WACC}}}{1 - \frac{1+\text{TGR}}{1+\text{WACC}}} \right) \\
 = \text{PVFCFF} &+ \left( \frac{\text{FCFF}_h}{(1+\text{WACC})^h} \cdot \frac{1+\text{TGR}}{\text{WACC} - \text{TGR}} \right) \\
-= \text{PVFCFF} &+ \left( \frac{\text{FCFF}_h \cdot (1+\text{TGR})}{(\text{WACC} - \text{TGR})} \cdot \frac{1}{(1+\text{WACC})^h} \right) \\ 
+= \text{PVFCFF} &+ \left( \frac{\text{FCFF}_h \cdot (1+\text{TGR})}{(\text{WACC} - \text{TGR})} \cdot \frac{1}{(1+\text{WACC})^h} \right) \\
 = \text{PVFCFF} &+ \left( \frac{\text{FCFF}_{h+1}}{(\text{WACC} - \text{TGR})} \cdot \frac{1}{(1 + \text{WACC})^h} \right) \\
-= \text{PVFCFF} &+ \left( \frac{\text{TVFCFF}}{(1 + \text{WACC})^h} \right) \\ 
+= \text{PVFCFF} &+ \left( \frac{\text{TVFCFF}}{(1 + \text{WACC})^h} \right) \\
 = \left( \sum_{t=1}^{h} \frac{\text{FCFF}_0 \cdot (1+\text{FCFFGR})^t}{(1+\text{WACC})^t} \right) &+ \left( \frac{\text{FCFF}_h \cdot (1+\text{TGR})}{(\text{WACC} - \text{TGR}) \cdot (1 + \text{WACC})^h} \right)
 \end{aligned}
 $$
@@ -174,32 +195,24 @@ $$
 \begin{itemize}
   \item[] $\text{PVF}$: present value of the firm
   \item[] $\text{PVFCFF}$: present value of free cash flow to firm
-  \item[] $\text{PVTVFCFF}$: present value of terminal value of free cash flow to firm
-  \item[] $\text{TVFCFF}$: terminal value of free cash flow to firm
+  \item[] $\text{PVTVFCFF}$: present value of terminal value of FCFF
+  \item[] $\text{TVFCFF}$: terminal value of FCFF
 \end{itemize}
 
+\paragraph{Reconciliation}
+
 $$
-\text{PVE} \approx \text{PVF} - \text{B} + \text{CNOA}
+\text{PVE} \approx \text{PVF} - \text{MVB} + \text{CNOA}
 $$
 
 \begin{itemize}
   \item[] $\text{CNOA}$: cash and non-operating assets
 \end{itemize}
 
-$$
-\text{IVE} = \text{PVE}
-$$
-
-\begin{itemize}
-  \item[] $\text{IVE}$: intrinsic value of equity
-\end{itemize}
+\paragraph{Intrinsic Value Per Share}
 
 $$
-\text{IVE} = \text{PVF} - \text{B} + \text{CNOA}
-$$
-
-$$
-\text{IVPS} = \frac{\text{IVE}}{\text{SO}}
+\text{IVPS} = \frac{\text{PVE}}{\text{SO}}
 $$
 
 \begin{itemize}
@@ -219,9 +232,9 @@ Having derived an $\text{IVPS}$, it may serve as a reference point when judging 
                 >{\raggedright\arraybackslash}p{0.28\textwidth}
                 >{\raggedright\arraybackslash}p{0.28\textwidth}}
 
-\textbf{} 
-& \textbf{FCFE $>$ Price} 
-& \textbf{FCFE $\approx$ Price} 
+\textbf{}
+& \textbf{FCFE $>$ Price}
+& \textbf{FCFE $\approx$ Price}
 & \textbf{FCFE $<$ Price} \\
 
 \textbf{FCFF $>$ Price}
@@ -240,244 +253,452 @@ Having derived an $\text{IVPS}$, it may serve as a reference point when judging 
 & \signalavoid{} There isn't sufficient cash flow to the business or the equity for the fundamentals to justify the high market price. \\
 \end{tabular}
 
+\newpage\subsection{DCF (Probabilistic)}
 
-\newpage\subsection{DCF (probabilistic)}
+\subsubsection{Motivation}
 
-\subsubsection{Sensitivity and mechanics}
+The deterministic DCF model relies on point estimates for key inputs (growth rates, discount rates, tax rates). However, these parameters are inherently uncertain. Probabilistic DCF addresses this by:
 
-\paragraph{Inputs}
+\begin{enumerate}
+  \item Treating financial statement line items as random variables
+  \item Propagating uncertainty through the cash flow projection
+  \item Generating a distribution of intrinsic values rather than a single point estimate
+  \item Quantifying valuation confidence via probability metrics
+\end{enumerate}
 
-The following variables are sampled independently in each simulation: 
-net income ($\text{NI}$), 
-$\text{EBIT}$, 
-capital expenditures ($\text{CAPX}$), 
-depreciation ($\text{D}$), 
-current assets ($\text{CA}$), 
-current liabilities ($\text{CL}$).
+\subsubsection{Input Sampling}
 
-We get an empirical mean $\mu$ and standard deviation $\sigma$ from their historical time series. 
+\paragraph{Historical Distributions}
 
-We choose the sampling distribution depending on the sign and scale of the variable:
+The following variables are sampled independently in each simulation iteration $i = 1, \ldots, N$ (typically $N = 5000$):
 
 \begin{itemize}
-  \item If $\mu > 0$, the variable is sampled from a log-normal distribution:
+  \item Net income: $\text{NI}^{(i)}$
+  \item Earnings before interest and taxes: $\text{EBIT}^{(i)}$
+  \item Capital expenditures: $\text{CAPX}^{(i)}$
+  \item Depreciation \& amortization: $\text{D}^{(i)}$
+  \item Current assets: $\text{CA}^{(i)}$
+  \item Current liabilities: $\text{CL}^{(i)}$
+\end{itemize}
+
+For each variable $X$, we compute empirical mean $\mu_X$ and standard deviation $\sigma_X$ from the historical time series (typically 4--8 quarters).
+
+\paragraph{Sampling Distributions}
+
+We choose the sampling distribution based on the sign and scale of the variable:
+
+\begin{itemize}
+  \item If $\mu_X > 0$, the variable is sampled from a log-normal distribution to ensure positivity:
   \[
-  \log\text{-mean} = \log(\max(\mu, 10^{-3})), \quad \log\text{-std} = \sigma / \mu
+  \log\text{-mean} = \log(\max(\mu_X, 10^{-3})), \quad \log\text{-std} = \frac{\sigma_X}{\mu_X}
   \]
   \[
   X^{(i)} \sim \text{LogNormal}(\log\text{-mean}, \log\text{-std})
   \]
 
-  \item If $\mu \leq 0$, the variable falls back to a normal distribution:
+  \item If $\mu_X \leq 0$, the variable falls back to a normal distribution:
   \[
-  X^{(i)} \sim \mathcal{N}(\mu, \sigma^2)
+  X^{(i)} \sim \mathcal{N}(\mu_X, \sigma_X^2)
   \]
 \end{itemize}
 
 No additional prior smoothing is applied to these inputs. Their randomness enters directly into the cash flow projection models.
 
-To reduce the impact of outliers, selected variables like $\text{NI}$ and $\text{EBIT}$ are post-processed using a squashing function:
+\paragraph{Outlier Squashing}
+
+To reduce the impact of extreme outliers, selected variables like $\text{NI}$ and $\text{EBIT}$ are post-processed using a squashing function:
 \[
-x \mapsto 
+x \mapsto
 \begin{cases}
 x, & x \leq \tau \\
 \tau + \log(1 + (x - \tau)), & x > \tau
 \end{cases}
 \]
-where $\tau$ is the minimum of:
-\begin{itemize}
-  \item three times the historical maximum of the variable, and
-  \item thirty percent of market capitalization.
-\end{itemize}
+where the threshold $\tau$ is:
+\[
+\tau = \min\{3 \cdot \max(\text{historical values}), \, 0.3 \cdot \text{MarketCap}\}
+\]
 
+This logarithmic damping prevents unrealistic extrapolation while preserving the shape of the distribution.
 
-\paragraph{Growth rate}
+\subsubsection{Growth Rate Sampling}
+
+\paragraph{Fundamental Growth Identity}
 
 Two growth rates are sampled in each simulation:
 \begin{itemize}
-  \item FCFE growth rate ($g_{\text{FCFE}}$)
-  \item FCFF growth rate ($g_{\text{FCFF}}$)
+  \item FCFE growth rate: $g_{\text{FCFE}}$
+  \item FCFF growth rate: $g_{\text{FCFF}}$
 \end{itemize}
 
-Both follow the identity:
+Both follow the fundamental identity:
 \[
 g = \text{return} \times \text{reinvestment rate}
 \]
 
 For FCFE:
-\begin{itemize}
-  \item Return on equity: $\text{ROE} = \text{NI} / \text{BVE}$
-  \item Retention ratio: $1 - \text{DP} / \text{NI}$
-\end{itemize}
+\begin{align*}
+g_{\text{FCFE}} &= \text{ROE} \times (1 - \text{payout ratio}) \\
+&= \frac{\text{NI}}{\text{BVE}} \times \left(1 - \frac{\text{DP}}{\text{NI}}\right)
+\end{align*}
 
 For FCFF:
-\begin{itemize}
-  \item Return on invested capital: $\text{ROIC} = \text{NOPAT} / \text{IC}$, where $\text{NOPAT} = 0.75 \cdot \text{EBIT}$
-  \item Reinvestment rate: $(\text{CAPX} - \text{D} + \Delta \text{WC}) / \text{NOPAT}$
-\end{itemize}
+\begin{align*}
+g_{\text{FCFF}} &= \text{ROIC} \times \text{reinvestment rate} \\
+&= \frac{\text{NOPAT}}{\text{IC}} \times \frac{\text{CAPX} - \text{D} + \Delta \text{WC}}{\text{NOPAT}}
+\end{align*}
+
+where $\text{NOPAT} = 0.75 \cdot \text{EBIT}$ (approximating $(1 - \text{CTR}) \cdot \text{EBIT}$ with a fixed $25\%$ tax rate).
+
+\paragraph{Bayesian Smoothing with Sector Priors}
 
 Each return and reinvestment term is blended as:
 \[
 \text{final} = 0.5 \cdot \text{empirical} + 0.5 \cdot \text{prior}
 \]
 
-Priors are sampled from:
+Sector-specific priors are sampled from:
 \begin{itemize}
-  \item $\text{Beta}(2, 5)$ scaled to $[0, 0.4]$ for ROE and ROIC
-  \item $\text{Beta}(2, 2)$ scaled to $[0, 1]$ for retention and reinvestment rates
+  \item ROE and ROIC: $\text{Beta}(2, 5)$ scaled to $[0, 0.4]$
+  \item Retention and reinvestment rates: $\text{Beta}(2, 2)$ scaled to $[0, 1]$
 \end{itemize}
 
-The blended product gives a per-year estimate. Growth rates are then sampled from a normal distribution using the historical mean and standard deviation, and clipped to user-defined bounds.
+This regularization prevents overfitting to recent historical data while incorporating industry-level information.
 
+\paragraph{Growth Rate Distribution}
+
+The blended product gives a per-year estimate. Growth rates are then sampled from a normal distribution using the historical mean and standard deviation:
 \[
-g \in [g_{\text{min}},\ g_{\text{max}}]
+g^{(i)} \sim \mathcal{N}(\mu_g, \sigma_g^2)
 \]
+
+and clipped to user-defined bounds:
+\[
+g^{(i)} \in [g_{\min}, g_{\max}]
+\]
+
+Typical bounds are $g_{\min} = -0.05$ (allowing slight contraction) and $g_{\max} = 0.15$ (capping growth at 15\%).
 
 This ensures simulated growth is consistent with both financial fundamentals and prior regularization.
 
+\subsubsection{Stochastic Discount Rates}
 
-\paragraph{Discounting and terminal value}
+In addition to stochastic growth rates, the discount rate components (risk-free rate, beta, and equity risk premium) may also be sampled to capture uncertainty in the cost of capital.
 
-Each simulation projects cash flows over $h$ years using the sampled inputs and growth rate.
+\paragraph{Discount Rate Component Sampling}
+
+For each simulation $i$, the following components are sampled from normal distributions:
+
+\begin{itemize}
+  \item Risk-free rate:
+  \[
+  \text{RFR}^{(i)} \sim \mathcal{N}(\text{RFR}_{\text{base}}, \sigma_{\text{RFR}}^2)
+  \]
+  with typical volatility $\sigma_{\text{RFR}} = 0.005$ (50 basis points).
+
+  \item Leveraged beta:
+  \[
+  \beta_{\text{L}}^{(i)} \sim \mathcal{N}(\beta_{\text{L,base}}, \sigma_{\beta}^2)
+  \]
+  with typical volatility $\sigma_{\beta} = 0.10$.
+
+  \item Equity risk premium:
+  \[
+  \text{ERP}^{(i)} \sim \mathcal{N}(\text{ERP}_{\text{base}}, \sigma_{\text{ERP}}^2)
+  \]
+  with typical volatility $\sigma_{\text{ERP}} = 0.01$ (100 basis points).
+\end{itemize}
+
+\paragraph{Cost of Capital Recomputation}
+
+Using the sampled components, the cost of equity for simulation $i$ is:
+\[
+\text{CE}^{(i)} = \text{RFR}^{(i)} + \beta_{\text{L}}^{(i)} \cdot \text{ERP}^{(i)}
+\]
+
+Similarly, the weighted average cost of capital is recomputed:
+\[
+\text{WACC}^{(i)} = \frac{\text{MVE}}{\text{MVE} + \text{MVB}} \cdot \text{CE}^{(i)} + \frac{\text{MVB}}{\text{MVE} + \text{MVB}} \cdot \text{CB} \cdot (1 - \text{CTR})
+\]
+
+This stochastic treatment of discount rates significantly increases the dispersion of the intrinsic value distribution, providing a more realistic quantification of valuation uncertainty. The feature is controlled by the \texttt{use\_stochastic\_discount\_rates} configuration flag.
+
+\subsubsection{Cash Flow Projection}
+
+\paragraph{Explicit Forecast Period}
+
+For each simulation $i$, cash flows are projected over $h$ years (typically $h = 5$) using the sampled inputs and growth rate.
+
+\paragraph{Time-Varying Growth Rates}
+
+Rather than applying a constant growth rate throughout the projection period, the model implements exponential mean reversion toward the terminal growth rate. This prevents unrealistic perpetual high-growth assumptions.
+
+For each simulation $i$ and forecast year $t \in \{1, \ldots, h\}$, the growth rate decays according to:
+\[
+g_t^{(i)} = g_{\text{terminal}} + \left(g_0^{(i)} - g_{\text{terminal}}\right) \cdot e^{-\lambda t}
+\]
+
+where:
+\begin{itemize}
+  \item $g_0^{(i)}$ is the initial sampled growth rate (FCFE or FCFF growth from the fundamental identity)
+  \item $g_{\text{terminal}}$ is the long-run terminal growth rate (typically 2--3\%)
+  \item $\lambda \in [0, 1]$ is the mean reversion speed parameter (typical value: 0.3)
+  \item $t$ is the year index within the projection period
+\end{itemize}
+
+\textbf{Interpretation of $\lambda$:}
+\begin{itemize}
+  \item $\lambda = 0$: No reversion, constant growth $g_t^{(i)} = g_0^{(i)}$ for all $t$
+  \item $\lambda = 0.3$: Moderate reversion (recommended), growth decays smoothly over 5--7 years
+  \item $\lambda = 1.0$: Fast reversion, growth approaches terminal rate within 3--4 years
+\end{itemize}
+
+This time-varying formulation yields more conservative valuations than constant-growth models, as high initial growth rates gradually moderate to sustainable long-term levels. The feature is controlled by the \texttt{use\_time\_varying\_growth} configuration flag.
+
+\paragraph{Cash Flow Computation}
+
+Using the time-varying growth rates $g_t^{(i)}$, the projected cash flows are:
 
 For FCFE:
 \[
-\text{FCFE}_t = \text{NI}_t + \text{D}_t - \text{CAPX}_t - \Delta \text{WC}_t + \text{NetBorrowing}_t
+\text{FCFE}_t^{(i)} = \text{NI}_t^{(i)} + \text{D}_t^{(i)} - \text{CAPX}_t^{(i)} - \Delta \text{WC}_t^{(i)} + \text{NetBorrowing}_t^{(i)}
 \]
-where $\text{NetBorrowing}_t = \text{TDR} \cdot \text{Reinvestment}_t$
+where $\text{NetBorrowing}_t^{(i)} = \text{TDR} \cdot \text{Reinvestment}_t^{(i)}$
 
 For FCFF:
 \[
-\text{FCFF}_t = \text{NOPAT}_t + \text{D}_t - \text{CAPX}_t - \Delta \text{WC}_t
+\text{FCFF}_t^{(i)} = \text{NOPAT}_t^{(i)} + \text{D}_t^{(i)} - \text{CAPX}_t^{(i)} - \Delta \text{WC}_t^{(i)}
 \]
-with $\text{NOPAT}_t = (1 - \text{CTR}) \cdot \text{EBIT}_t$
+with $\text{NOPAT}_t^{(i)} = (1 - \text{CTR}) \cdot \text{EBIT}_t^{(i)}$
 
-Each cash flow is discounted using the cost of equity:
+\paragraph{Terminal Value}
+
+The terminal value uses a Gordon growth model:
 \[
-\text{COE} = \text{RFR} + \beta_l \cdot \text{ERP}
-\]
-where $\beta_l$ is the levered beta:
-\[
-\beta_l = \beta_u \cdot \left(1 + (1 - \text{CTR}) \cdot \frac{\text{MVB}}{\text{MVE}} \right)
+\text{TV}^{(i)} = \frac{\text{CashFlow}_h^{(i)} \cdot (1 + g_{\text{terminal}})}{r - g_{\text{terminal}}}
 \]
 
-The present value of cash flows is:
-\[
-\text{PV}_{\text{years}} = \sum_{t=1}^h \frac{\text{CashFlow}_t}{(1 + \text{COE})^t}
-\]
-
-The terminal value is calculated using a Gordon growth model:
-\[
-\text{TV} = \frac{\text{CashFlow}_h \cdot (1 + g_{\text{terminal}})}{\text{COE} - g_{\text{terminal}}}
-\]
+where:
+\begin{itemize}
+  \item $r = \text{CE}$ for FCFE or $r = \text{WACC}$ for FCFF
+  \item $g_{\text{terminal}}$ is the terminal growth rate (typically 2--3\%)
+\end{itemize}
 
 To avoid division by zero or unstable extrapolation, the denominator is lower-bounded:
 \[
-\text{COE} - g_{\text{terminal}} \geq 0.01
+r - g_{\text{terminal}} \geq 0.01
 \]
 
 The terminal value is then discounted to present:
 \[
-\text{PV}_{\text{terminal}} = \frac{\text{TV}}{(1 + \text{COE})^h}
+\text{PV}_{\text{terminal}}^{(i)} = \frac{\text{TV}^{(i)}}{(1 + r)^h}
+\]
+
+\paragraph{Present Value}
+
+The present value of cash flows is:
+\[
+\text{PV}_{\text{years}}^{(i)} = \sum_{t=1}^h \frac{\text{CashFlow}_t^{(i)}}{(1 + r)^t}
 \]
 
 Final present value of the firm:
 \[
-\text{PV}_{\text{firm}} = \text{PV}_{\text{years}} + \text{PV}_{\text{terminal}}
+\text{PV}^{(i)} = \text{PV}_{\text{years}}^{(i)} + \text{PV}_{\text{terminal}}^{(i)}
 \]
 
-For FCFF, market value of debt per share is subtracted to get the per-share equity value.
-
-\paragraph{Single-asset value-surplus}
-
-For each asset and valuation model (FCFE, FCFF), we obtain $n$ simulated intrinsic values $V^{(1)}, \ldots, V^{(n)}$.
-
-To estimate the distribution of intrinsic value, we apply a Gaussian kernel density estimator (KDE):
-
+For FCFF, market value of debt per share is subtracted to get the per-share equity value:
 \[
-\hat{f}(v) = \frac{1}{n h} \sum_{i=1}^n K\left(\frac{v - V^{(i)}}{h}\right)
+\text{IVPS}_{\text{FCFF}}^{(i)} = \frac{\text{PV}_{\text{FCFF}}^{(i)} - \text{MVB} + \text{CNOA}}{\text{SO}}
 \]
-where $K(\cdot)$ is the Gaussian kernel, and $h$ is the bandwidth selected using Scott's rule.
 
-The KDE is used in two distinct views:
+\subsubsection{Statistical Analysis}
 
+\paragraph{Simulation Matrix}
+
+After $N$ simulations, we obtain an intrinsic value distribution for each asset and method (FCFE, FCFF):
+\[
+\{V^{(1)}, V^{(2)}, \ldots, V^{(N)}\}
+\]
+
+\paragraph{Kernel Density Estimation}
+
+To estimate the probability density of intrinsic value, we apply a Gaussian kernel density estimator (KDE):
+\[
+\hat{f}(v) = \frac{1}{Nh} \sum_{i=1}^N K\left(\frac{v - V^{(i)}}{h}\right)
+\]
+where $K(\cdot)$ is the Gaussian kernel:
+\[
+K(u) = \frac{1}{\sqrt{2\pi}} e^{-\frac{u^2}{2}}
+\]
+and $h$ is the bandwidth selected using Scott's rule:
+\[
+h = N^{-1/5} \cdot \hat{\sigma}
+\]
+where $\hat{\sigma}$ is the sample standard deviation of $\{V^{(i)}\}$.
+
+\paragraph{Value Surplus View}
+
+Each simulation sample is transformed into a percentage surplus over market price:
+\[
+\text{Surplus}^{(i)} = \frac{V^{(i)} - P}{P}
+\]
+
+We then apply KDE on the transformed values to estimate the distribution of relative mispricing. This highlights the extent to which the simulated valuations exceed or fall short of the current price.
+
+From the KDE and simulation samples, we extract:
 \begin{itemize}
-  \item Intrinsic Value View:
-  We estimate the probability density $\hat{f}(v)$ of the intrinsic value $V$ directly from the simulation output. This view is used to visualize how likely different valuations are, independent of the current market price.
-
-  \item Surplus Percentage View:
-  Each simulation sample is transformed into a percentage surplus over market price:
-  \[
-  \text{Surplus}^{(i)} = \frac{V^{(i)} - P}{P}
-  \]
-  We then apply KDE on the transformed values to estimate the distribution of relative mispricing. This highlights the extent to which the simulated valuations exceed or fall short of the current price.
-\end{itemize}
-
-From the KDE, we extract:
-\begin{itemize}
-  \item $\mathbb{P}[\text{Surplus} > 0]$: probability the asset is undervalued.
-  \item $\mathbb{P}[\text{Surplus} < 0]$: probability it is overvalued.
+  \item $\mathbb{P}[\text{Surplus} > 0]$: probability the asset is undervalued
+  \item $\mathbb{P}[\text{Surplus} < 0]$: probability it is overvalued
 \end{itemize}
 
 These quantities are calculated empirically via:
 \[
-\frac{1}{n} \sum_{i=1}^n \mathbb{I}[V^{(i)} > P]
+\frac{1}{N} \sum_{i=1}^N \mathbb{I}[V^{(i)} > P]
 \quad \text{and} \quad
-\frac{1}{n} \sum_{i=1}^n \mathbb{I}[V^{(i)} < P]
+\frac{1}{N} \sum_{i=1}^N \mathbb{I}[V^{(i)} < P]
 \]
 
-\paragraph{Multi-asset value-surplus frontier}
+\subsubsection{Multi-Asset Portfolio Frontiers}
 
 To explore portfolio-level valuation outcomes, we simulate many random portfolios over the set of assets.
 
+\paragraph{Simulation Matrix}
+
 Let $n$ be the number of assets and $S^{(j)}_i$ the $j$-th simulation of value surplus (as a percentage of market price) for asset $i$. The simulation matrix is:
 \[
-\mathbf{S} \in \mathbb{R}^{m \times n}, \quad \text{with } S_{ji} = \frac{V^{(j)}_i - P_i}{P_i}
+\mathbf{S} \in \mathbb{R}^{N \times n}, \quad \text{with } S_{ji} = \frac{V^{(j)}_i - P_i}{P_i}
 \]
 
-We generate $N$ random portfolio weight vectors $\mathbf{w}^{(k)} \in \mathbb{R}^n$ using a Dirichlet distribution over the simplex, i.e., $\sum_i w^{(k)}_i = 1$.
+\paragraph{Random Portfolio Generation}
+
+We generate $M$ random portfolio weight vectors $\mathbf{w}^{(k)} \in \mathbb{R}^n$ (typically $M = 5000$) using a Dirichlet distribution over the simplex:
+\[
+\mathbf{w}^{(k)} \sim \text{Dir}(\alpha \mathbf{1}), \quad \alpha = 1
+\]
+
+This ensures:
+\[
+\sum_{i=1}^n w^{(k)}_i = 1, \quad w^{(k)}_i \geq 0 \quad \forall i
+\]
+
+and provides uniform sampling over the weight simplex.
+
+\paragraph{Portfolio Return Distribution}
+
+For each portfolio $k$ and simulation $j$, the portfolio surplus is:
+\[
+R^{(k)}_j = \sum_{i=1}^n w^{(k)}_i S_{ji} = (\mathbf{w}^{(k)})^\top \mathbf{S}_j
+\]
+
+where $\mathbf{S}_j$ is the $j$-th row of the simulation matrix.
+
+\paragraph{Portfolio Statistics}
 
 For each portfolio $k$:
-\begin{itemize}
-  \item The expected return (mean surplus) is computed as:
-  \[
-  \mu^{(k)} = \mathbb{E}_{j}[\mathbf{w}^{(k)} \cdot \mathbf{S}^{(j)}]
-  \]
-
-  \item The standard deviation (valuation risk) is:
-  \[
-  \sigma^{(k)} = \sqrt{ \mathbf{w}^{(k)T} \, \Sigma \, \mathbf{w}^{(k)} }
-  \]
-  where $\Sigma$ is the empirical covariance of $\mathbf{S}$ across simulations.
-
-  \item The probability of loss is:
-  \[
-  \mathbb{P}^{(k)}[ \mathbf{w}^{(k)} \cdot \mathbf{S}^{(j)} < 0 ]
-  \]
-  computed empirically from the simulation matrix.
-\end{itemize}
-
-Two portfolio views are produced:
 
 \begin{itemize}
-  \item Mean vs Standard Deviation ($\mu$–$\sigma$):
-  Visualizes the valuation return–risk tradeoff. An analytic minimum-risk portfolio is computed from $\Sigma$ via:
+  \item \textbf{Expected return} (mean surplus):
   \[
-  \mathbf{w}_{\text{min-risk}} = \frac{\Sigma^{-1} \mathbf{1}}{\mathbf{1}^T \Sigma^{-1} \mathbf{1}}
+  \mu^{(k)} = \frac{1}{N} \sum_{j=1}^N R^{(k)}_j
   \]
 
-  \item Mean vs Loss Probability ($\mu$–$p_{\text{loss}}$):
-  Evaluates portfolio robustness under valuation uncertainty. This view emphasizes portfolios that minimize the chance of overvaluation (i.e., surplus $< 0$).
+  \item \textbf{Standard deviation} (valuation risk):
+  \[
+  \sigma^{(k)} = \sqrt{\frac{1}{N-1} \sum_{j=1}^N (R^{(k)}_j - \mu^{(k)})^2}
+  \]
+
+  Alternatively, using the covariance matrix:
+  \[
+  \sigma^{(k)} = \sqrt{(\mathbf{w}^{(k)})^\top \mathbf{\Sigma} \mathbf{w}^{(k)}}
+  \]
+  where $\mathbf{\Sigma}$ is the empirical covariance of $\mathbf{S}$.
+
+  \item \textbf{Probability of loss}:
+  \[
+  p_{\text{loss}}^{(k)} = \frac{1}{N} \sum_{j=1}^N \mathbb{I}[R^{(k)}_j < 0]
+  \]
+
+  \item \textbf{Downside deviation} (Sortino denominator):
+  \[
+  \sigma_{\text{down}}^{(k)} = \sqrt{\frac{1}{N} \sum_{j=1}^N \min(0, R^{(k)}_j)^2}
+  \]
+
+  \item \textbf{Conditional Value-at-Risk} (CVaR at 95\%):
+  Let $\alpha = 0.05$. Sort the portfolio returns: $R^{(k)}_{(1)} \leq R^{(k)}_{(2)} \leq \cdots \leq R^{(k)}_{(N)}$.
+
+  The VaR is:
+  \[
+  \text{VaR}_{95}^{(k)} = R^{(k)}_{(\lfloor \alpha N \rfloor)}
+  \]
+
+  The CVaR is:
+  \[
+  \text{CVaR}_{95}^{(k)} = \frac{1}{\lfloor \alpha N \rfloor} \sum_{j=1}^{\lfloor \alpha N \rfloor} R^{(k)}_{(j)}
+  \]
+
+  \item \textbf{Maximum drawdown}:
+  Compute cumulative returns over the simulation series and measure the largest peak-to-trough decline.
 \end{itemize}
 
-In both plots, efficient frontiers and key labeled portfolios (e.g., maximum return, minimum risk, minimum loss probability) are annotated and saved as PDF and SVG files.
+\paragraph{Efficient Frontier Plots}
 
-\subsection{Interpretation}
+Six distinct frontier views are produced, each optimizing a different risk-return trade-off:
 
-The module yields a summary of valuation statistics and qualitative signals:
+\begin{enumerate}
+  \item \textbf{Mean vs Standard Deviation} ($\mu$--$\sigma$):
+  Mean-variance analysis. Identifies:
+  \begin{itemize}
+    \item Minimum variance portfolio: $\mathbf{w}_{\text{minvar}} = \arg\min_{\mathbf{w}} \mathbf{w}^\top \mathbf{\Sigma} \mathbf{w}$
+    \item Maximum Sharpe portfolio: $\mathbf{w}_{\text{maxSharpe}} = \arg\max_{\mathbf{w}} \frac{\mu(\mathbf{w})}{\sigma(\mathbf{w})}$
+  \end{itemize}
+
+  \item \textbf{Mean vs Probability of Loss} ($\mu$--$p_{\text{loss}}$):
+  Focuses on minimizing the chance of overvaluation. Identifies the portfolio with minimum $p_{\text{loss}}$ for a given expected return.
+
+  \item \textbf{Mean vs Downside Deviation} ($\mu$--$\sigma_{\text{down}}$):
+  Sortino-style frontier. Identifies the portfolio with maximum Sortino ratio:
+  \[
+  \text{Sortino}(\mathbf{w}) = \frac{\mu(\mathbf{w})}{\sigma_{\text{down}}(\mathbf{w})}
+  \]
+
+  \item \textbf{Mean vs CVaR} ($\mu$--$\text{CVaR}$):
+  Tail risk frontier. Identifies the portfolio minimizing expected tail loss.
+
+  \item \textbf{Mean vs VaR} ($\mu$--$\text{VaR}$):
+  Similar to CVaR but focuses on the quantile rather than the conditional expectation.
+
+  \item \textbf{Mean vs Maximum Drawdown} ($\mu$--$\text{MDD}$):
+  Calmar-style frontier. Identifies the portfolio with maximum Calmar ratio:
+  \[
+  \text{Calmar}(\mathbf{w}) = \frac{\mu(\mathbf{w})}{\text{MDD}(\mathbf{w})}
+  \]
+\end{enumerate}
+
+In each plot, the efficient frontier curve and key labeled portfolios (e.g., maximum return, minimum risk, optimal ratio) are annotated. Portfolio composition legends show the top 15 holdings for each optimal portfolio.
+
+\subsubsection{Interpretation}
+
+The probabilistic DCF framework yields a summary of valuation statistics and qualitative signals:
+
 \begin{itemize}
-  \item strong buy: if both models (FCFE and FCFF) yield undervaluation.
-  \item buy: if only one model suggests undervaluation.
-  \item avoid: if both suggest overvaluation.
-  \item hold: if both suggest fair valuation. 
+  \item \textbf{Strong buy}: if both models (FCFE and FCFF) yield undervaluation ($\mathbb{P}[\text{Surplus} > 0] > 0.6$).
+  \item \textbf{Buy}: if only one model suggests undervaluation.
+  \item \textbf{Avoid}: if both suggest overvaluation ($\mathbb{P}[\text{Surplus} < 0] > 0.6$).
+  \item \textbf{Hold}: if both suggest fair valuation.
 \end{itemize}
+
+The probabilistic approach provides several advantages over deterministic DCF:
+
+\begin{enumerate}
+  \item \textbf{Uncertainty quantification}: Rather than a single IVPS point estimate, we obtain a full distribution $\hat{f}(v)$, allowing probabilistic statements about valuation.
+
+  \item \textbf{Confidence calibration}: The probability of undervaluation/overvaluation provides a confidence measure for investment decisions.
+
+  \item \textbf{Portfolio-level analysis}: By combining simulation matrices across assets, we can construct efficient portfolios based on intrinsic value rather than historical prices.
+
+  \item \textbf{Regime-invariant correlations}: The low inter-asset correlations (~0.0) observed in DCF-based returns reflect fundamental independence, unlike market-based returns which exhibit regime-dependent correlation structures.
+
+  \item \textbf{Tail risk visibility}: The CVaR and maximum drawdown frontiers explicitly address worst-case scenarios, aligning with investor risk preferences during stress.
+\end{enumerate}
+
+The framework enables the construction of valuation-based portfolios that systematically exploit mispricing while managing fundamental uncertainty.
