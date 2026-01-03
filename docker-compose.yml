@@ -1,0 +1,52 @@
+services:
+  atemoya:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_UID: 1000
+        USER_GID: 1000
+    image: atemoya:latest
+    container_name: atemoya
+
+    # DNS configuration (fixes resolution issues)
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+    # Mount source code and output directories
+    volumes:
+      # Source code (for development)
+      - .:/app
+
+      # Persist output directories
+      - ./pricing/regime_downside/output:/app/pricing/regime_downside/output
+      - ./pricing/regime_downside/data:/app/pricing/regime_downside/data
+      - ./pricing/regime_downside/log:/app/pricing/regime_downside/log
+      - ./valuation/dcf_deterministic/output:/app/valuation/dcf_deterministic/output
+      - ./valuation/dcf_deterministic/log:/app/valuation/dcf_deterministic/log
+      - ./valuation/dcf_probabilistic/output:/app/valuation/dcf_probabilistic/output
+      - ./valuation/dcf_probabilistic/log:/app/valuation/dcf_probabilistic/log
+
+      # Python cache (for faster uv operations)
+      - uv_cache:/home/atemoya/.cache/uv
+
+    # Environment variables
+    environment:
+      - OPAM_SWITCH_PREFIX=/home/atemoya/.opam/default
+      - PATH=/home/atemoya/.local/bin:/home/atemoya/.opam/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+    # Keep container running for interactive use
+    stdin_open: true
+    tty: true
+
+    # Working directory
+    working_dir: /app
+
+    # Override CMD for interactive shell
+    command: /bin/bash -c "eval $$(opam env) && exec /bin/bash"
+
+# Named volumes for caching
+volumes:
+  uv_cache:
+    name: atemoya_uv_cache

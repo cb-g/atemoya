@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation (can be included if needed)
+*.md
+!README.md
+
+# Build artifacts (will be rebuilt in container)
+_build/
+_opam/
+*.exe
+*.cmo
+*.cmx
+*.cmi
+*.cmt
+*.cmti
+*.o
+*.a
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Output directories (mounted as volumes)
+pricing/regime_downside/output/
+pricing/regime_downside/data/
+pricing/regime_downside/log/
+valuation/dcf_deterministic/output/
+valuation/dcf_deterministic/log/
+valuation/dcf_probabilistic/output/
+valuation/dcf_probabilistic/log/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.log
+*.lock
+!uv.lock
+
+# LaTeX artifacts
+typeset/*.aux
+typeset/*.log
+typeset/*.out
+typeset/*.toc
+typeset/*.pdf

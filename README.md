@@ -4,6 +4,52 @@ A collection of quantitative finance models for investment analysis. Built with 
 
 ## Getting Started
 
+### Option 1: Docker (Recommended for Easy Setup)
+
+**Prerequisites:** Docker and Docker Compose installed ([Install Docker](https://docs.docker.com/get-docker/))
+
+**Interactive Menu (Recommended):**
+```bash
+cd atemoya/
+./docker-run.sh
+
+# Interactive menu appears:
+# 1) Build Docker image
+# 2) Start container
+# 3) Open shell in container
+# 4) Run quickstart menu
+# 5) Stop container
+# 6) View logs
+# 7) Clean up
+# 8) Quit
+```
+
+**Quick Workflow:**
+1. Run `./docker-run.sh` → Choose **1) Build** (first time only, ~5-10 min)
+2. Choose **2) Start container**
+3. Choose **4) Run quickstart menu** → Navigate to your model
+
+**Command-Line Mode (Advanced):**
+```bash
+./docker-run.sh build   # Build image (first time)
+./docker-run.sh up      # Start container
+./docker-run.sh exec    # Run quickstart menu
+# or
+./docker-run.sh shell   # Open shell, then run ./quickstart.sh
+./docker-run.sh down    # Stop container
+./docker-run.sh clean   # Remove everything
+```
+
+**What's included:**
+- ✅ OCaml environment (OPAM, Dune) pre-installed
+- ✅ Python environment (uv, dependencies) pre-installed
+- ✅ All models pre-built and tested
+- ✅ Persistent outputs (saved to host)
+- ✅ Multi-architecture support (ARM64 and x86_64)
+- ✅ No local setup required
+
+### Option 2: Native Installation
+
 ```bash
 cd atemoya/
 ./quickstart.sh
