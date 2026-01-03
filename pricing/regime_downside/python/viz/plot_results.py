@@ -87,33 +87,84 @@ def plot_portfolio_weights(results_csv: Path, output_dir: Path | None = None):
         weights_constrained = df.pivot(
             index="date", columns="ticker", values="weight_constrained"
         )
-        weights_constrained.plot.area(ax=ax1, alpha=0.7, stacked=True, linewidth=0)
-        ax1.set_xlabel("Date", fontsize=12)
-        ax1.set_ylabel("Portfolio Weight", fontsize=12)
-        ax1.set_title("Constrained Portfolio (with turnover penalty)", fontsize=14, fontweight='bold')
-        ax1.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
-        ax1.grid(True, alpha=0.3, linewidth=0.6)
+        # Sort columns by final weight (descending) for consistent stacking order
+        final_weights_constrained = weights_constrained.iloc[-1]
+        sorted_cols_constrained = final_weights_constrained.sort_values(ascending=False).index
 
-        # Frictionless weights
+        # Get all unique tickers across both portfolios
         weights_frictionless = df.pivot(
             index="date", columns="ticker", values="weight_frictionless"
         )
-        weights_frictionless.plot.area(ax=ax2, alpha=0.7, stacked=True, linewidth=0)
+        all_tickers = list(set(weights_constrained.columns) | set(weights_frictionless.columns))
+
+        # Create consistent color map for all tickers
+        ticker_colors = {ticker: colors[i % len(colors)] for i, ticker in enumerate(sorted(all_tickers))}
+
+        # Reverse order so largest appears on top (matplotlib stacks bottom-to-top)
+        weights_constrained = weights_constrained[sorted_cols_constrained[::-1]]
+
+        # Assign colors in the order of columns
+        plot_colors_constrained = [ticker_colors[col] for col in weights_constrained.columns]
+        weights_constrained.plot.area(ax=ax1, alpha=0.7, stacked=True, linewidth=0, color=plot_colors_constrained)
+        ax1.set_xlabel("Date", fontsize=12)
+        ax1.set_ylabel("Portfolio Weight", fontsize=12)
+        ax1.set_title("Constrained Portfolio (with turnover penalty)", fontsize=14, fontweight='bold')
+
+        # Update legend labels with percentages and reverse to show largest first
+        handles1, labels1 = ax1.get_legend_handles_labels()
+        new_labels1 = [f"{ticker} ({final_weights_constrained[ticker]*100:.1f}%)"
+                       for ticker in labels1]
+        # Reverse so largest appears first in legend (matching visual top-to-bottom)
+        ax1.legend(list(reversed(handles1)), list(reversed(new_labels1)), bbox_to_anchor=(1.05, 1),
+                  loc="upper left", fontsize=10, title="Final Allocation")
+        ax1.grid(True, alpha=0.3, linewidth=0.6)
+
+        # Frictionless weights
+        final_weights_frictionless = weights_frictionless.iloc[-1]
+        sorted_cols_frictionless = final_weights_frictionless.sort_values(ascending=False).index
+
+        # Reverse order so largest appears on top (matplotlib stacks bottom-to-top)
+        weights_frictionless = weights_frictionless[sorted_cols_frictionless[::-1]]
+
+        # Assign colors in the order of columns
+        plot_colors_frictionless = [ticker_colors[col] for col in weights_frictionless.columns]
+        weights_frictionless.plot.area(ax=ax2, alpha=0.7, stacked=True, linewidth=0, color=plot_colors_frictionless)
         ax2.set_xlabel("Date", fontsize=12)
         ax2.set_ylabel("Portfolio Weight", fontsize=12)
         ax2.set_title("Frictionless Portfolio (no turnover penalty)", fontsize=14, fontweight='bold')
-        ax2.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
+
+        # Update legend labels with percentages and reverse to show largest first
+        handles2, labels2 = ax2.get_legend_handles_labels()
+        new_labels2 = [f"{ticker} ({final_weights_frictionless[ticker]*100:.1f}%)"
+                       for ticker in labels2]
+        # Reverse so largest appears first in legend (matching visual top-to-bottom)
+        ax2.legend(list(reversed(handles2)), list(reversed(new_labels2)), bbox_to_anchor=(1.05, 1),
+                  loc="upper left", fontsize=10, title="Final Allocation")
         ax2.grid(True, alpha=0.3, linewidth=0.6)
 
     else:
         # Old format: single portfolio
         fig, ax = plt.subplots(figsize=(12, 6))
         weights = df.pivot(index="date", columns="ticker", values="weight")
+        # Sort columns by final weight (descending) for consistent stacking order
+        final_weights = weights.iloc[-1]
+        sorted_cols = final_weights.sort_values(ascending=False).index
+
+        # Reverse order so largest appears on top (matplotlib stacks bottom-to-top)
+        weights = weights[sorted_cols[::-1]]
+
         weights.plot.area(ax=ax, alpha=0.7, stacked=True, linewidth=0)
         ax.set_xlabel("Date", fontsize=12)
         ax.set_ylabel("Portfolio Weight", fontsize=12)
         ax.set_title("Portfolio Allocation Over Time", fontsize=14, fontweight='bold')
-        ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
+
+        # Update legend labels with percentages and reverse to show largest first
+        handles, labels = ax.get_legend_handles_labels()
+        new_labels = [f"{ticker} ({final_weights[ticker]*100:.1f}%)"
+                     for ticker in labels]
+        # Reverse so largest appears first in legend (matching visual top-to-bottom)
+        ax.legend(list(reversed(handles)), list(reversed(new_labels)), bbox_to_anchor=(1.05, 1),
+                 loc="upper left", fontsize=10, title="Final Allocation")
         ax.grid(True, alpha=0.3, linewidth=0.6)
 
     plt.tight_layout()

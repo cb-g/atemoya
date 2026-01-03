@@ -26,36 +26,38 @@ valuation/dcf_probabilistic/output/single_asset/*.png
 valuation/dcf_probabilistic/output/**/*.csv
 !valuation/dcf_probabilistic/output/data/*.csv
 
-#
+# OCaml compiled object files
 *.annot
 *.cmo
 *.cma
 *.cmi
+*.cmt
+*.cmti
 *.a
 *.o
 *.cmx
 *.cmxs
 *.cmxa
 
-# ocamlbuild working directory
-_build/
-
-# ocamlbuild targets
+# OCaml executables
 *.byte
 *.native
+*.exe
 
-# oasis generated files
-setup.data
-setup.log
+# OCaml build directories
+_build/
+_opam/
 
-# Merlin configuring file for Vim and Emacs
-.merlin
-
-# Dune generated files
+# Dune
 *.install
 
-# Local OPAM switch
-_opam/
+# Merlin (OCaml editor support)
+.merlin
+.merlin-conf/
+
+# Oasis (legacy OCaml build tool)
+setup.data
+setup.log
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
