@@ -117,7 +117,8 @@ let run_single_scenario
     ~unlevered_beta
     ~risk_free_rate
     ~equity_risk_premium
-    ~tax_rate in
+    ~tax_rate
+    () in
 
   (* Create projection with adjusted parameters *)
   let projection = Projection.create_projection

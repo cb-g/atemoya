@@ -1,0 +1,35 @@
+{
+  "market": {
+    "risk_free_rate": 0.05,
+    "dividend_yield": 0.0
+  },
+  "options": {
+    "min_expiry_days": 7,
+    "max_expiry_days": 90,
+    "max_bid_ask_spread": 0.3,
+    "min_open_interest": 100
+  },
+  "svi": {
+    "a_bounds": [0.0, 1.0],
+    "b_bounds": [0.0, 1.0],
+    "rho_bounds": [-1.0, 1.0],
+    "m_bounds": [-0.5, 0.5],
+    "sigma_bounds": [0.01, 1.0]
+  },
+  "sabr": {
+    "alpha_bounds": [0.01, 2.0],
+    "beta": 0.5,
+    "rho_bounds": [-0.99, 0.99],
+    "nu_bounds": [0.01, 2.0]
+  },
+  "optimizer": {
+    "method": "differential_evolution",
+    "max_iterations": 1000,
+    "tolerance": 1e-6,
+    "seed": 42
+  },
+  "hedging": {
+    "rebalance_threshold": 0.1,
+    "transaction_cost_bps": 5
+  }
+}

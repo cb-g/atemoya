@@ -1,0 +1,130 @@
+{
+  "metadata": {
+    "description": "Crypto holdings for treasury companies",
+    "last_updated": "2026-01-11",
+    "sources": [
+      "Company 8-K filings",
+      "bitcointreasuries.net",
+      "Company press releases"
+    ]
+  },
+  "holdings": {
+    "MSTR": {
+      "name": "MicroStrategy",
+      "btc_holdings": 450000,
+      "btc_avg_cost": 62503,
+      "eth_holdings": 0,
+      "eth_avg_cost": 0,
+      "last_updated": "2025-01-06",
+      "notes": "Largest corporate BTC holder"
+    },
+    "MARA": {
+      "name": "Marathon Digital",
+      "btc_holdings": 44893,
+      "btc_avg_cost": 31482,
+      "eth_holdings": 0,
+      "eth_avg_cost": 0,
+      "last_updated": "2024-12-31",
+      "notes": "Bitcoin miner"
+    },
+    "RIOT": {
+      "name": "Riot Platforms",
+      "btc_holdings": 17722,
+      "btc_avg_cost": 25327,
+      "eth_holdings": 0,
+      "eth_avg_cost": 0,
+      "last_updated": "2024-12-31",
+      "notes": "Bitcoin miner"
+    },
+    "CLSK": {
+      "name": "CleanSpark",
+      "btc_holdings": 10556,
+      "btc_avg_cost": 28000,
+      "eth_holdings": 0,
+      "eth_avg_cost": 0,
+      "last_updated": "2024-12-31",
+      "notes": "Bitcoin miner"
+    },
+    "HIVE": {
+      "name": "HIVE Digital",
+      "btc_holdings": 2620,
+      "btc_avg_cost": 24000,
+      "eth_holdings": 2000,
+      "eth_avg_cost": 1800,
+      "last_updated": "2024-12-31",
+      "notes": "Bitcoin/Ethereum miner - holds both"
+    },
+    "BITF": {
+      "name": "Bitfarms",
+      "btc_holdings": 1188,
+      "btc_avg_cost": 27000,
+      "eth_holdings": 0,
+      "eth_avg_cost": 0,
+      "last_updated": "2024-12-31",
+      "notes": "Bitcoin miner"
+    },
+    "BMNR": {
+      "name": "Bitmine Immersion Technologies",
+      "btc_holdings": 0,
+      "btc_avg_cost": 0,
+      "eth_holdings": 4802721,
+      "eth_avg_cost": 2500,
+      "last_updated": "2026-01-11",
+      "notes": "Pure ETH play - 4.14M treasury + 659K staked"
+    },
+    "SBET": {
+      "name": "SharpLink Gaming",
+      "btc_holdings": 0,
+      "btc_avg_cost": 0,
+      "eth_holdings": 838727,
+      "eth_avg_cost": 2800,
+      "last_updated": "2026-01-11",
+      "notes": "Pure ETH play - ETH treasury strategy"
+    },
+    "ETHZ": {
+      "name": "ETHZilla Corporation",
+      "btc_holdings": 0,
+      "btc_avg_cost": 0,
+      "eth_holdings": 102237,
+      "eth_avg_cost": 2600,
+      "last_updated": "2026-01-11",
+      "notes": "Pure ETH play - ETH treasury company"
+    },
+    "DYNX": {
+      "name": "The Ether Machine",
+      "btc_holdings": 0,
+      "btc_avg_cost": 0,
+      "eth_holdings": 496712,
+      "eth_avg_cost": 2700,
+      "last_updated": "2026-01-11",
+      "notes": "Pure ETH play - ETH treasury company"
+    },
+    "COIN": {
+      "name": "Coinbase",
+      "btc_holdings": 9480,
+      "btc_avg_cost": 25000,
+      "eth_holdings": 122000,
+      "eth_avg_cost": 2200,
+      "last_updated": "2024-12-31",
+      "notes": "Crypto exchange - holds both BTC and ETH"
+    },
+    "TSLA": {
+      "name": "Tesla",
+      "btc_holdings": 9720,
+      "btc_avg_cost": 32000,
+      "eth_holdings": 0,
+      "eth_avg_cost": 0,
+      "last_updated": "2024-12-31",
+      "notes": "EV company with BTC treasury"
+    },
+    "XYZ": {
+      "name": "Block Inc",
+      "btc_holdings": 8027,
+      "btc_avg_cost": 27407,
+      "eth_holdings": 0,
+      "eth_avg_cost": 0,
+      "last_updated": "2024-12-31",
+      "notes": "Fintech with BTC treasury (formerly SQ)"
+    }
+  }
+}

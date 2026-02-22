@@ -1,0 +1,5 @@
+(library
+ (name crypto_treasury)
+ (public_name crypto_treasury)
+ (libraries yojson)
+ (modules Types Mnav Io))

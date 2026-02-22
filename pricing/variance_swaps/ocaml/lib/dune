@@ -1,0 +1,5 @@
+(library
+ (name variance_swaps_lib)
+ (public_name variance_swaps.lib)
+ (libraries unix yojson)
+ (preprocess (pps ppx_deriving.show)))

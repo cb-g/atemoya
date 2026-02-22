@@ -16,8 +16,8 @@ let () =
 
 (** Get command line arguments *)
 let tickers = ref ["AAPL"; "GOOGL"; "MSFT"; "NVDA"]
-let start_date_idx = ref 1000  (* Start evaluation after 1000 days of history *)
-let lookback_days = ref 252    (* Use 1 year of history for optimization *)
+let start_date_idx = ref 750   (* Start evaluation after 750 days of history *)
+let lookback_days = ref 126    (* Use 6 months of history for optimization *)
 let init_mode = ref "equal_20" (* Initial allocation: cash, equal_20, or equal_0 *)
 
 let () =
@@ -27,9 +27,9 @@ let () =
       tickers := List.map String.trim (String.split_on_char ',' s)),
       "Comma-separated list of tickers (default: AAPL,GOOGL,MSFT,NVDA)");
     ("-start", Arg.Set_int start_date_idx,
-      "Index to start evaluation (default: 1000)");
+      "Index to start evaluation (default: 750)");
     ("-lookback", Arg.Set_int lookback_days,
-      "Lookback days for optimization (default: 252)");
+      "Lookback days for optimization (default: 126)");
     ("-init", Arg.Set_string init_mode,
       "Initial allocation: cash, equal_20, or equal_0 (default: equal_20)");
   ] in
@@ -65,18 +65,20 @@ let () =
     Io.read_returns_csv ~filename ~ticker
   ) !tickers in
 
-  (* Find minimum data length across all assets *)
+  (* Find minimum data length across all assets AND benchmark *)
+  let benchmark_len = Array.length benchmark.returns in
   let data_lengths = List.map (fun (asset : Types.return_series) ->
     (asset.ticker, Array.length asset.returns)
   ) asset_returns_list in
   let n_days = List.fold_left (fun min_len (_, len) ->
     min min_len len
-  ) max_int data_lengths in
+  ) benchmark_len data_lengths in
 
   Printf.printf "  Asset data lengths:\n";
   List.iter (fun (ticker, len) ->
     Printf.printf "    %s: %d days\n" ticker len
   ) data_lengths;
+  Printf.printf "  Benchmark: %d days\n" benchmark_len;
   Printf.printf "  Using minimum: %d days\n" n_days;
   Printf.printf "\n";
 

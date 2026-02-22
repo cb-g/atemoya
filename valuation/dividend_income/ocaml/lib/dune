@@ -1,0 +1,5 @@
+(library
+ (name dividend_income)
+ (public_name atemoya.dividend_income)
+ (libraries yojson unix)
+ (modules types dividend_metrics ddm safety_scoring io))

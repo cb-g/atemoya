@@ -1,0 +1,5 @@
+(library
+ (name normalized_multiples)
+ (public_name atemoya.normalized_multiples)
+ (libraries yojson unix)
+ (modules Types Multiples Benchmarks Io Scoring))

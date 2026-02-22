@@ -1,9 +1,14 @@
-"""Fetch S&P 500 benchmark data using yfinance."""
+"""Fetch S&P 500 benchmark data using unified data_fetcher."""
 
-import yfinance as yf
-import pandas as pd
+import sys
 from pathlib import Path
-from datetime import datetime
+
+import pandas as pd
+
+# Add lib to path
+sys.path.insert(0, str(Path(__file__).parents[4]))
+
+from lib.python.data_fetcher import fetch_ohlcv, get_available_providers
 
 
 def fetch_sp500_returns(
@@ -14,6 +19,8 @@ def fetch_sp500_returns(
     """
     Fetch S&P 500 total return data.
 
+    Uses unified data_fetcher (IBKR if available, yfinance fallback).
+
     Args:
         start_date: Start date in YYYY-MM-DD format
         end_date: End date in YYYY-MM-DD format (None = today)
@@ -22,29 +29,48 @@ def fetch_sp500_returns(
     Returns:
         DataFrame with columns: date, return
     """
+    from datetime import datetime
+
     if end_date is None:
         end_date = datetime.now().strftime("%Y-%m-%d")
 
-    # Fetch S&P 500 data (^GSPC)
-    sp500 = yf.download("^GSPC", start=start_date, end=end_date, progress=False, auto_adjust=False)
+    # Calculate period from dates
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+    days = (end - start).days
 
-    # Calculate daily returns from adjusted close
-    if "Adj Close" in sp500.columns:
-        close_prices = sp500["Adj Close"]
+    if days <= 30:
+        period = "1mo"
+    elif days <= 90:
+        period = "3mo"
+    elif days <= 180:
+        period = "6mo"
+    elif days <= 365:
+        period = "1y"
+    elif days <= 730:
+        period = "2y"
     else:
-        # Fallback to Close if Adj Close not available
-        close_prices = sp500["Close"]
+        period = "5y"
 
-    # Flatten if multi-index
-    if hasattr(close_prices, "squeeze"):
-        close_prices = close_prices.squeeze()
+    print(f"Available providers: {get_available_providers()}")
 
-    returns = close_prices.pct_change().dropna()
+    # Fetch S&P 500 data (^GSPC)
+    ohlcv = fetch_ohlcv("^GSPC", period=period, interval="1d")
+
+    if ohlcv is None:
+        raise RuntimeError("Failed to fetch S&P 500 data")
+
+    # Calculate daily returns from close prices
+    closes = pd.Series(ohlcv.close, index=pd.to_datetime(ohlcv.dates))
+    returns = closes.pct_change().dropna()
+
+    # Filter to date range
+    returns = returns[start_date:end_date]
 
     # Create DataFrame
     df = pd.DataFrame({
         "date": [d.strftime("%Y-%m-%d") for d in returns.index],
-        "return": returns.values.flatten() if hasattr(returns.values, "flatten") else returns.values
+        "return": returns.values
     })
 
     # Save to CSV if output directory specified
@@ -59,7 +85,6 @@ def fetch_sp500_returns(
 
 def main():
     """Fetch S&P 500 data and save to data directory."""
-    # Get the data directory relative to this script
     script_dir = Path(__file__).parent
     data_dir = script_dir.parent.parent / "data"
 

@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name dividend_income)
+ (libraries dividend_income yojson unix))

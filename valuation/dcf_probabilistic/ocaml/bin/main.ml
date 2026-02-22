@@ -5,10 +5,10 @@ open Dcf_probabilistic
 let () =
   (* Parse command line arguments *)
   let ticker = ref "" in
-  let data_dir = ref "../data" in
-  let log_dir = ref "../log" in
-  let output_dir = ref "../output" in
-  let python_script = ref "../python/fetch/fetch_financials_ts.py" in
+  let data_dir = ref "valuation/dcf_probabilistic/data" in
+  let log_dir = ref "valuation/dcf_probabilistic/log" in
+  let output_dir = ref "valuation/dcf_probabilistic/output" in
+  let python_script = ref "valuation/dcf_probabilistic/python/fetch/fetch_financials_ts.py" in
 
   let speclist = [
     ("-ticker", Arg.Set_string ticker, "Ticker symbol to value");
@@ -47,9 +47,19 @@ let () =
 
     Printf.printf "Loading market data...\n";
     let market_data = Io.load_market_data market_data_file in
+    let model_type = Io.load_model_type market_data_file in
+    let specialized_data = Io.load_specialized_data market_data_file in
 
     Printf.printf "Loading time series data...\n";
     let time_series = Io.load_time_series time_series_file in
+
+    let model_label = match model_type with
+      | Types.Standard -> "Standard (FCFE/FCFF)"
+      | Types.Bank -> "Bank (Excess Return)"
+      | Types.Insurance -> "Insurance (Float-Based)"
+      | Types.OilGas -> "Oil & Gas (NAV)"
+    in
+    Printf.printf "Model type: %s\n" model_label;
 
     (* Step 4: Look up configuration parameters *)
     let country = market_data.country in
@@ -108,7 +118,6 @@ let () =
     (* Calculate cost of borrowing *)
     let cb = if market_data.mvb = 0.0 then 0.0
       else
-        (* Estimate from interest expense if available, else use approximation *)
         risk_free_rate +. 0.02
     in
 
@@ -133,24 +142,51 @@ let () =
     Printf.printf "Running Monte Carlo simulations (%d iterations)...\n"
       config.simulation_config.num_simulations;
 
-    Printf.printf "  Simulating FCFE valuations...\n";
-    let simulations_fcfe = Monte_carlo.run_fcfe_simulations
-      ~market_data
-      ~time_series
-      ~cost_of_capital
-      ~config:config.simulation_config
-      ~roe_prior:sector_priors.roe_prior
-      ~retention_prior:sector_priors.retention_prior
-    in
+    let (simulations_fcfe, simulations_fcff) =
+      match model_type, specialized_data with
+      | Types.Bank, Types.BankData bank_data ->
+        Printf.printf "  Simulating bank excess return valuations...\n";
+        let sims = Prob_bank.run_bank_simulations
+          ~bank_data ~market_data ~cost_of_capital ~config:config.simulation_config
+        in
+        (* Both arrays are the same for specialized models *)
+        (sims, sims)
 
-    Printf.printf "  Simulating FCFF valuations...\n";
-    let simulations_fcff = Monte_carlo.run_fcff_simulations
-      ~market_data
-      ~time_series
-      ~cost_of_capital
-      ~config:config.simulation_config
-      ~roic_prior:sector_priors.roic_prior
-      ~tax_rate
+      | Types.Insurance, Types.InsuranceData ins_data ->
+        Printf.printf "  Simulating insurance float-based valuations...\n";
+        let sims = Prob_insurance.run_insurance_simulations
+          ~insurance_data:ins_data ~market_data ~cost_of_capital ~config:config.simulation_config
+        in
+        (sims, sims)
+
+      | Types.OilGas, Types.OilGasData og_data ->
+        Printf.printf "  Simulating O&G NAV valuations...\n";
+        (* Default commodity prices - ideally fetched live *)
+        let oil_price = 75.0 in
+        let gas_price = 3.0 in
+        let sims = Prob_oil_gas.run_oil_gas_simulations
+          ~oil_gas_data:og_data ~market_data ~cost_of_capital
+          ~config:config.simulation_config ~tax_rate ~oil_price ~gas_price
+        in
+        (sims, sims)
+
+      | _ ->
+        (* Standard FCFE/FCFF path *)
+        Printf.printf "  Simulating FCFE valuations...\n";
+        let fcfe = Monte_carlo.run_fcfe_simulations
+          ~market_data ~time_series ~cost_of_capital
+          ~config:config.simulation_config
+          ~roe_prior:sector_priors.roe_prior
+          ~retention_prior:sector_priors.retention_prior
+        in
+        Printf.printf "  Simulating FCFF valuations...\n";
+        let fcff = Monte_carlo.run_fcff_simulations
+          ~market_data ~time_series ~cost_of_capital
+          ~config:config.simulation_config
+          ~roic_prior:sector_priors.roic_prior
+          ~tax_rate
+        in
+        (fcfe, fcff)
     in
 
     (* Step 7: Compute statistics *)
@@ -194,17 +230,19 @@ let () =
       ~price:market_data.price
     in
 
-    (* Generate stress scenarios *)
+    (* Generate stress scenarios (only for standard models) *)
     Printf.printf "Generating stress scenarios...\n";
-    let stress_scenarios = Stress.generate_stress_scenarios
-      ~market_data
-      ~time_series
-      ~cost_of_capital
-      ~config:config.simulation_config
-      ~roe_prior:sector_priors.roe_prior
-      ~retention_prior:sector_priors.retention_prior
-      ~roic_prior:sector_priors.roic_prior
-      ~tax_rate
+    let stress_scenarios =
+      if model_type = Types.Standard then
+        Stress.generate_stress_scenarios
+          ~market_data ~time_series ~cost_of_capital
+          ~config:config.simulation_config
+          ~roe_prior:sector_priors.roe_prior
+          ~retention_prior:sector_priors.retention_prior
+          ~roic_prior:sector_priors.roic_prior
+          ~tax_rate
+      else
+        []  (* No stress scenarios for specialized models *)
     in
 
     (* Create valuation result *)
@@ -212,6 +250,7 @@ let () =
       ticker = market_data.ticker;
       price = market_data.price;
       num_simulations = config.simulation_config.num_simulations;
+      model_type;
       fcfe_stats;
       fcfe_metrics;
       fcfe_class;
@@ -236,10 +275,8 @@ let () =
     Printf.printf "Results written to: %s\n" log_filename;
 
     (* Write CSV outputs to data subdirectory *)
-    (* Create data directory if it doesn't exist *)
     let data_dir = Filename.concat !output_dir "data" in
-    if not (Sys.file_exists data_dir) then
-      Unix.mkdir data_dir 0o755;
+    (try Unix.mkdir data_dir 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
 
     let summary_file = Filename.concat data_dir "probabilistic_summary.csv" in
     let fcfe_matrix_file = Filename.concat data_dir "simulations_fcfe.csv" in

@@ -1,0 +1,13 @@
+(lang dune 3.0)
+(name market_regime_forecast)
+
+(generate_opam_files true)
+
+(package
+ (name market_regime_forecast)
+ (synopsis "Market Regime Forecast - Multi-model regime detection")
+ (description "Detect market regimes using GARCH+HMM, MS-GARCH, BOCPD, and Gaussian Process models")
+ (depends
+  (ocaml (>= 4.14))
+  dune
+  yojson))

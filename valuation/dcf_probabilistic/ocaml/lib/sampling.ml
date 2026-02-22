@@ -58,30 +58,45 @@ let lognormal_sample ~mean ~std =
     let mu_log = log mean -. 0.5 *. sigma_log *. sigma_log in
     exp (gaussian_sample ~mean:mu_log ~std:sigma_log)
 
+(** Sample from Gamma distribution using Marsaglia-Tsang method
+    Gamma(shape, scale) with shape (k) > 0 and scale (θ) > 0
+
+    For shape >= 1: Uses Marsaglia-Tsang method (efficient accept-reject)
+    For shape < 1: Uses Ahrens-Dieter transformation: Gamma(α) = Gamma(1+α) * U^(1/α)
+*)
+let rec gamma_sample ~shape ~scale =
+  if shape <= 0.0 || scale <= 0.0 then 0.0  (* Invalid parameters *)
+  else if shape < 1.0 then begin
+    (* For shape < 1, use transformation: Gamma(α,1) = Gamma(1+α,1) * U^(1/α) *)
+    let u = Random.float 1.0 in
+    let boost = u ** (1.0 /. shape) in
+    let x = gamma_sample ~shape:(shape +. 1.0) ~scale:1.0 in
+    x *. boost *. scale
+  end else begin
+    (* Marsaglia-Tsang method for shape >= 1 *)
+    let d = shape -. 1.0 /. 3.0 in
+    let c = 1.0 /. sqrt (9.0 *. d) in
+    let rec sample () =
+      let z = standard_normal_sample () in
+      let v = (1.0 +. c *. z) in
+      if v <= 0.0 then sample ()
+      else begin
+        let v3 = v *. v *. v in
+        let u = Random.float 1.0 in
+        if log u < 0.5 *. z *. z +. d -. d *. v3 +. d *. log v3 then
+          d *. v3 *. scale
+        else
+          sample ()
+      end
+    in
+    sample ()
+  end
+
 let beta_sample ~alpha ~beta_param =
   (* Sample from Beta distribution using gamma variates
      If X ~ Gamma(α, 1) and Y ~ Gamma(β, 1), then X/(X+Y) ~ Beta(α, β) *)
-
-  (* Simple gamma sampling via accept-reject (for shape > 1) *)
-  let gamma_sample shape =
-    if shape < 1.0 then 1.0  (* Fallback for invalid shape *)
-    else
-      let d = shape -. 1.0 /. 3.0 in
-      let c = 1.0 /. sqrt (9.0 *. d) in
-      let rec sample () =
-        let z = standard_normal_sample () in
-        let v = (1.0 +. c *. z) ** 3.0 in
-        let u = Random.float 1.0 in
-        if v > 0.0 && log u < 0.5 *. z *. z +. d -. d *. v +. d *. log v then
-          d *. v
-        else
-          sample ()
-      in
-      sample ()
-  in
-
-  let x = gamma_sample alpha in
-  let y = gamma_sample beta_param in
+  let x = gamma_sample ~shape:alpha ~scale:1.0 in
+  let y = gamma_sample ~shape:beta_param ~scale:1.0 in
   x /. (x +. y)
 
 (** Bayesian smoothing *)

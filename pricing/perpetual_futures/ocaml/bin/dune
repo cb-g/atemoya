@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name perpetual_futures)
+ (libraries perpetual_futures))

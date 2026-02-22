@@ -5,16 +5,19 @@ Implements the full specification with all slack variables.
 
 import json
 import sys
+from pathlib import Path
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
 
-try:
-    import cvxpy as cp
-except ImportError:
-    print("Error: cvxpy not installed. Install with: uv pip install cvxpy", file=sys.stderr)
-    sys.exit(1)
+import cvxpy as cp
 
 
-def solve_portfolio_lp(problem_file, solution_file):
+def solve_portfolio_lp(
+    problem_file: str | Path,
+    solution_file: str | Path
+) -> dict[str, Any]:
     """
     Solve portfolio optimization LP per specification.
 
@@ -140,13 +143,20 @@ def solve_portfolio_lp(problem_file, solution_file):
 
     try:
         # Try solvers in order of preference: CLARABEL > SCS > OSQP
-        try:
-            problem.solve(solver=cp.CLARABEL, verbose=False)
-        except:
+        solver_errors = []
+        solved = False
+
+        for solver, solver_name in [(cp.CLARABEL, "CLARABEL"), (cp.SCS, "SCS"), (cp.OSQP, "OSQP")]:
             try:
-                problem.solve(solver=cp.SCS, verbose=False)
-            except:
-                problem.solve(solver=cp.OSQP, verbose=False)
+                problem.solve(solver=solver, verbose=False)
+                solved = True
+                break
+            except (cp.error.SolverError, Exception) as e:
+                solver_errors.append(f"{solver_name}: {e}")
+                continue
+
+        if not solved and solver_errors:
+            print(f"All solvers failed: {'; '.join(solver_errors)}", file=sys.stderr)
 
         if problem.status not in ["optimal", "optimal_inaccurate"]:
             print(f"Solver status: {problem.status}", file=sys.stderr)

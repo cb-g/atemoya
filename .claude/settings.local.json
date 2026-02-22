@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(dune build:*)",
+      "Bash(dune clean:*)",
+      "Bash(ls:*)",
+      "Bash(pdflatex:*)",
+      "Bash(opam list:*)",
+      "Bash(grep:*)",
+      "Bash(docker compose exec:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(/app/.env)",
+      "Read(/app/.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)"
+    ]
+  }
+}

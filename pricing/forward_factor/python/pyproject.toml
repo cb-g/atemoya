@@ -1,0 +1,14 @@
+[project]
+name = "forward-factor"
+version = "0.1.0"
+description = "Forward Factor Strategy - Calendar Spread Scanner"
+requires-python = ">=3.11"
+dependencies = [
+    "yfinance>=0.2.40",
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

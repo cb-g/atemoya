@@ -1,0 +1,18 @@
+(lang dune 3.0)
+(name fx_hedging)
+(version 0.1.0)
+
+(generate_opam_files true)
+
+(source (github anthropics/atemoya))
+(license MIT)
+(authors "Atemoya Contributors")
+(maintainers "Atemoya Contributors")
+
+(package
+ (name fx_hedging)
+ (synopsis "FX Hedging & Futures Options")
+ (description "Currency hedging using forwards, futures, and futures options with Black's model, margin calculations, and hedge optimization")
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))))

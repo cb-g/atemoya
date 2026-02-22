@@ -12,6 +12,9 @@ val gaussian_sample : mean:float -> std:float -> float
     If X ~ Normal(μ_log, σ_log²), then exp(X) ~ Lognormal *)
 val lognormal_sample : mean:float -> std:float -> float
 
+(** Sample from Gamma distribution using Marsaglia-Tsang method *)
+val gamma_sample : shape:float -> scale:float -> float
+
 (** Sample from Beta distribution using gamma functions *)
 val beta_sample : alpha:float -> beta_param:float -> float
 

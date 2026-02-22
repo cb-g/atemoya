@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (libraries systematic_risk_signals unix)
+ (public_name systematic_risk_signals))

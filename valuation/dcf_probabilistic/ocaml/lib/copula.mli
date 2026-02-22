@@ -2,9 +2,15 @@
 
 open Types
 
+(** Copula type: Gaussian (thin tails) or Student-t (fat tails for tail dependence) *)
+type copula_type =
+  | Gaussian
+  | StudentT of float  (** degrees of freedom, typically 3-10 for financial data *)
+
 (** Configuration for copula-based sampling of financial metrics *)
 type copula_config = {
   use_copula : bool;  (** Enable copula-based sampling *)
+  copula_type : copula_type;  (** Type of copula to use *)
   correlation_matrix : float array array;  (** Correlation matrix for financial metrics *)
 }
 
@@ -41,3 +47,27 @@ val sample_correlated_financials :
     - Working capital: CA-CL (0.7)
 *)
 val default_correlation_matrix : unit -> float array array
+
+(** Default copula configuration using Gaussian copula *)
+val default_copula_config : float array array -> copula_config
+
+(** Sample from Student-t distribution with df degrees of freedom *)
+val student_t_sample : df:float -> float
+
+(** Sample from multivariate Student-t with correlation matrix *)
+val sample_multivariate_student_t : correlation:float array array -> df:float -> float array
+
+(** Sample correlated financials with configurable copula type *)
+val sample_correlated_financials_with_copula :
+  time_series:time_series ->
+  correlation:float array array ->
+  copula_type:copula_type ->
+  (float * float * float * float * float * float)
+
+(** Compute tail dependence coefficient for a copula
+    Returns 0.0 for Gaussian (no tail dependence)
+    Returns positive value for Student-t (symmetric tail dependence) *)
+val tail_dependence_coefficient :
+  copula_type:copula_type ->
+  correlation_coef:float ->
+  float

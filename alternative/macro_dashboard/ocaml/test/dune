@@ -1,0 +1,4 @@
+(test
+ (name test_macro_dashboard)
+ (libraries macro_dashboard alcotest)
+ (package macro_dashboard))

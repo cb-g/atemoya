@@ -1,0 +1,171 @@
+Monitoring tools detect shifts in market microstructure before they manifest as realized losses. Rather than reacting to drawdowns, we track leading indicators embedded in the covariance structure and network topology of asset returns.
+
+\subsection{Systematic Risk Early-Warning Signals}
+
+\subsubsection{Covariance Decomposition}
+
+\paragraph{Sample Covariance Matrix}
+
+Let $\mathcal{A} = \{1, \ldots, N\}$ denote a universe of $N$ assets with return series $\{r_{i,t}\}_{t=1}^{T}$. The sample covariance matrix $\Sigma \in \mathbb{R}^{N \times N}$ has entries:
+\[
+\Sigma_{ij} = \frac{1}{T-1} \sum_{t=1}^{T} (r_{i,t} - \bar{r}_i)(r_{j,t} - \bar{r}_j)
+\]
+
+where $\bar{r}_i = \frac{1}{T}\sum_{t=1}^{T} r_{i,t}$ is the sample mean return of asset $i$.
+
+\paragraph{Eigenvalue Decomposition}
+
+The eigenvalues $\lambda_1 \geq \lambda_2 \geq \cdots \geq \lambda_N \geq 0$ of $\Sigma$ are extracted via power iteration with Hotelling deflation. Given an initial random vector $\mathbf{v}^{(0)}$, the $k$-th eigenvalue--eigenvector pair $(\lambda_k, \mathbf{v}_k)$ is found by iterating:
+\[
+\mathbf{v}^{(m+1)} = \frac{\Sigma^{(k)} \mathbf{v}^{(m)}}{\|\Sigma^{(k)} \mathbf{v}^{(m)}\|}
+\]
+
+until convergence, where $\Sigma^{(1)} = \Sigma$ and subsequent matrices are deflated:
+\[
+\Sigma^{(k+1)} = \Sigma^{(k)} - \lambda_k \mathbf{v}_k \mathbf{v}_k^\top
+\]
+
+The eigenvalue is recovered as $\lambda_k = (\mathbf{v}_k)^\top \Sigma^{(k)} \mathbf{v}_k$. Deflation removes each found component from the matrix, exposing the next largest eigenvalue in successive iterations.
+
+\paragraph{Signal 1: Variance Explained by First Eigenvalue}
+
+The fraction of total variance captured by the dominant eigenvalue is:
+\[
+\text{VEF} = \frac{\lambda_1}{\sum_{j=1}^{N} \lambda_j}
+\]
+
+A high VEF indicates that a single factor drives the cross-section of returns. During crises, assets move in lockstep and VEF spikes as diversification breaks down.
+
+\paragraph{Signal 2: Variance Explained by Eigenvalues 2--5}
+
+\[
+\text{VE}_{2\text{--}5} = \frac{\sum_{j=2}^{\min(5,N)} \lambda_j}{\sum_{j=1}^{N} \lambda_j}
+\]
+
+When secondary eigenvalues also concentrate, multiple systemic risk channels are simultaneously active (e.g., rates, credit, and equity stress co-occurring).
+
+\subsubsection{Distance and Graph Construction}
+
+\paragraph{Correlation-Based Distance}
+
+The sample correlation matrix $\rho_{ij} = \Sigma_{ij} / \sqrt{\Sigma_{ii} \Sigma_{jj}}$ is transformed into a distance metric:
+\[
+d_{ij} = \sqrt{1 - \rho_{ij}^2}
+\]
+
+This metric satisfies $d_{ij} = 0$ when assets are perfectly correlated (or anti-correlated) and $d_{ij} = 1$ when uncorrelated, capturing the strength of linear dependence regardless of sign.
+
+\paragraph{Minimum Spanning Tree}
+
+The minimum spanning tree (MST) of the complete graph with edge weights $\{d_{ij}\}$ is constructed via Kruskal's algorithm:
+
+\begin{enumerate}
+  \item Sort all $\binom{N}{2}$ edges by weight in ascending order
+  \item For each edge $(i, j)$ in sorted order: if $i$ and $j$ belong to different connected components, add the edge to the MST (cycle detection via Union-Find with path compression and union by rank)
+  \item Terminate after $N - 1$ edges
+\end{enumerate}
+
+The MST retains the $N - 1$ strongest pairwise connections while eliminating redundancy, revealing the backbone of the correlation network.
+
+\subsubsection{Eigenvector Centrality}
+
+\paragraph{MST Adjacency Matrix}
+
+The MST is represented as a weighted adjacency matrix $A \in \mathbb{R}^{N \times N}$ with inverse-distance edge weights:
+\[
+A_{ij} = \begin{cases}
+1 / d_{ij} & \text{if } (i, j) \in \text{MST} \\
+0 & \text{otherwise}
+\end{cases}
+\]
+
+Inverse-distance weighting assigns higher strength to edges between more correlated assets.
+
+\paragraph{Centrality Computation}
+
+Eigenvector centrality $\mathbf{c} = (c_1, \ldots, c_N)^\top$ satisfies the eigenvalue equation:
+\[
+A \mathbf{c} = \lambda_{\max} \mathbf{c}
+\]
+
+where $\lambda_{\max}$ is the largest eigenvalue of $A$. The centrality is computed via power iteration on $A$ until the iterate converges within tolerance $\varepsilon = 10^{-8}$, then normalized to unit length. A node with high centrality is connected to other high-centrality nodes, identifying systemically important assets.
+
+\paragraph{Signal 3: Mean Eigenvector Centrality}
+
+\[
+\bar{c} = \frac{1}{N} \sum_{i=1}^{N} c_i
+\]
+
+High mean centrality indicates a tightly interconnected MST -- contagion pathways are dense and shocks propagate rapidly across the network.
+
+\paragraph{Signal 4: Standard Deviation of Centrality}
+
+\[
+\sigma_c = \sqrt{\frac{1}{N-1} \sum_{i=1}^{N} (c_i - \bar{c})^2}
+\]
+
+High dispersion reveals a hub-and-spoke topology where a few nodes dominate -- the ``too-connected-to-fail'' configuration where stress in a hub propagates to all spokes.
+
+\subsubsection{Regime Classification}
+
+\paragraph{Composite Scoring}
+
+Each signal is scored on a scale of 0 to 4 based on empirical thresholds:
+
+\begin{center}
+\begin{tabular}{c|cccc}
+Score & VEF & VE$_{2\text{--}5}$ & $\bar{c}$ & $\sigma_c$ \\
+\hline
+4 & $> 0.60$ & $> 0.25$ & $> 0.25$ & $> 0.15$ \\
+3 & $> 0.50$ & $> 0.20$ & $> 0.20$ & $> 0.10$ \\
+2 & $> 0.40$ & $> 0.15$ & $> 0.15$ & $> 0.07$ \\
+1 & $> 0.30$ & $> 0.10$ & $> 0.10$ & $> 0.04$ \\
+0 & $\leq 0.30$ & $\leq 0.10$ & $\leq 0.10$ & $\leq 0.04$
+\end{tabular}
+\end{center}
+
+The total score $S = s_1 + s_2 + s_3 + s_4 \in \{0, \ldots, 16\}$ determines the risk regime:
+\[
+\text{Regime}(S) = \begin{cases}
+\textit{Crisis} & \text{if } S \geq 12 \\
+\textit{High Risk} & \text{if } 9 \leq S < 12 \\
+\textit{Elevated} & \text{if } 6 \leq S < 9 \\
+\textit{Normal} & \text{if } 3 \leq S < 6 \\
+\textit{Low Risk} & \text{if } S < 3
+\end{cases}
+\]
+
+The composite scoring approach avoids false alarms from any single indicator by requiring corroborating evidence across structurally different signals (spectral and topological).
+
+\subsubsection{Transition Probability}
+
+\paragraph{Signal Normalization}
+
+Each signal is normalized to $[0, 1]$ by dividing by an empirical upper bound:
+\begin{align*}
+x_1 &= \min\!\left(1,\; \text{VEF} \,/\, 0.7\right) \\
+x_2 &= \min\!\left(1,\; \text{VE}_{2\text{--}5} \,/\, 0.35\right) \\
+x_3 &= \min\!\left(1,\; \bar{c} \,/\, 0.3\right) \\
+x_4 &= \min\!\left(1,\; \sigma_c \,/\, 0.2\right)
+\end{align*}
+
+\paragraph{Logistic Combination}
+
+The probability of transitioning to a higher-risk regime is:
+\[
+P(\text{transition}) = \sigma(z) = \frac{1}{1 + e^{-z}}
+\]
+
+where:
+\[
+z = -2.0 + 2.0\,x_1 + 1.5\,x_2 + 2.5\,x_3 + 1.5\,x_4
+\]
+
+\begin{itemize}
+  \item[] $x_1$: normalized eigenvalue concentration (weight 2.0)
+  \item[] $x_2$: normalized secondary eigenvalue share (weight 1.5)
+  \item[] $x_3$: normalized mean centrality (weight 2.5)
+  \item[] $x_4$: normalized centrality dispersion (weight 1.5)
+\end{itemize}
+
+The intercept of $-2.0$ centers the function such that $P \approx 0.5$ when signals are at moderate levels. Higher weights on VEF and mean centrality reflect their stronger empirical predictive power for systemic events.

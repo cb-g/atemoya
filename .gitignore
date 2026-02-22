@@ -2,29 +2,352 @@
 TODO.md
 orientation.md
 .last_tickers
+papers/
+check_menu.sh
+test_functions.sh
+*_report_*.txt
 
-# Generated data and logs
+# LaTeX build artifacts
+typeset/atemoya.log
+
+# Output images — only SVGs are showcase files, PNGs are generated
+**/output/**/*.png
+
+# =============================================================================
+# Generated/fetched data (keep reference data, ignore fetched data)
+# =============================================================================
+**/log/
+
+# Root-level output directories (misplaced outputs - use explicit paths)
+/output/
+/pricing/output/
+
+# Fetched data patterns (ignore ticker-specific fetched data)
+**/data/*_financial_data_*.json
+**/data/*_market_data_*.json
+**/data/*_time_series_*.json
+**/data/*_data_*.json
+**/data/intraday_*.json
+**/data/ticker_data*.json
+**/data/etf_data_*.json
+**/data/garp_data_*.json
+**/data/dividend_data_*.json
+**/data/growth_data_*.json
+**/data/peer_data_*.json
+**/data/reit_data_*.json
+**/data/crypto_data_*.json
+**/data/option_chain_*.json
+**/data/historical_*.json
+**/data/assets_*.json
+**/data/benchmark_*.json
+
+# Module-specific data directories that are entirely fetched
+pricing/pairs_trading/data/
 pricing/regime_downside/data/
-pricing/regime_downside/log/
-valuation/dcf_deterministic/log/
-valuation/dcf_probabilistic/log/
+pricing/market_regime_forecast/data/
+pricing/dispersion_trading/data/
+pricing/gamma_scalping/data/
+pricing/volatility_arbitrage/data/
+pricing/variance_swaps/data/
+pricing/skew_trading/data/
+pricing/earnings_vol/data/
+pricing/forward_factor/data/
+pricing/pre_earnings_straddle/data/
+pricing/skew_verticals/data/
+pricing/options_hedging/data/
+pricing/fx_hedging/data/*
+!pricing/fx_hedging/data/portfolio.csv
+pricing/liquidity/data/
+pricing/tail_risk_forecast/data/
+pricing/perpetual_futures/data/
+alternative/macro_dashboard/data/*
+!alternative/macro_dashboard/data/.gitkeep
+alternative/macro_dashboard/output/*
+!alternative/macro_dashboard/output/.gitkeep
+monitoring/watchlist/data/*
+!monitoring/watchlist/data/portfolio.json
+pricing/systematic_risk_signals/data/
+alternative/insider_trading/data/*
+!alternative/insider_trading/data/.gitkeep
+alternative/options_flow/data/*
+!alternative/options_flow/data/.gitkeep
+alternative/short_interest/data/*
+!alternative/short_interest/data/.gitkeep
+alternative/sec_filings/data/*
+!alternative/sec_filings/data/.gitkeep
+alternative/nlp_sentiment/data/*
+!alternative/nlp_sentiment/data/.gitkeep
+!alternative/nlp_sentiment/data/discord/
+alternative/nlp_sentiment/data/discord/*
+!alternative/nlp_sentiment/data/discord/.gitkeep
+!alternative/nlp_sentiment/data/discord_exports/
+alternative/nlp_sentiment/data/discord_exports/*
+!alternative/nlp_sentiment/data/discord_exports/.gitkeep
+alternative/google_trends/data/*
+!alternative/google_trends/data/.gitkeep
+!alternative/google_trends/data/keyword_map.json
 
-# Generated output files (keep only README-referenced plots)
-# Regime Downside
-pricing/regime_downside/output/optimization_results.csv
+# =============================================================================
+# Output directories - ignore all content, whitelist showcase files
+# Each module with showcase files: ignore all, then whitelist specific files
+# Modules without showcase files: ignore entire output/
+# =============================================================================
 
-# DCF Deterministic - keep only README plots, ignore others
-valuation/dcf_deterministic/output/**/*.png
-!valuation/dcf_deterministic/output/valuation/dcf_comparison_all.png
-!valuation/dcf_deterministic/output/sensitivity/plots/dcf_sensitivity_TAC.png
-valuation/dcf_deterministic/output/**/*.csv
+# --- Valuation modules ---
 
-# DCF Probabilistic - keep README single-asset plots and ALL multi-asset plots
-valuation/dcf_probabilistic/output/single_asset/*.png
-!valuation/dcf_probabilistic/output/single_asset/TAC_kde_combined.png
-!valuation/dcf_probabilistic/output/single_asset/IBKR_surplus_combined.png
-valuation/dcf_probabilistic/output/**/*.csv
-!valuation/dcf_probabilistic/output/data/*.csv
+# DCF Deterministic: ignore everything, whitelist showcase SVGs
+valuation/dcf_deterministic/output/valuation/*
+!valuation/dcf_deterministic/output/valuation/dcf_comparison_all.svg
+!valuation/dcf_deterministic/output/valuation/bank_comparison_all.svg
+!valuation/dcf_deterministic/output/valuation/insurance_comparison_all.svg
+!valuation/dcf_deterministic/output/valuation/oil_gas_comparison_all.svg
+valuation/dcf_deterministic/output/sensitivity/plots/*
+!valuation/dcf_deterministic/output/sensitivity/plots/dcf_sensitivity_TAC.svg
+!valuation/dcf_deterministic/output/sensitivity/plots/dcf_sensitivity_JPM.svg
+!valuation/dcf_deterministic/output/sensitivity/plots/dcf_sensitivity_ALL.svg
+!valuation/dcf_deterministic/output/sensitivity/plots/dcf_sensitivity_CVX.svg
+valuation/dcf_deterministic/output/sensitivity/data/
+
+# DCF Probabilistic: ignore everything, whitelist showcase SVGs
+valuation/dcf_probabilistic/output/data/
+valuation/dcf_probabilistic/output/single_asset/*
+!valuation/dcf_probabilistic/output/single_asset/TAC_kde_combined.svg
+!valuation/dcf_probabilistic/output/single_asset/TAC_surplus_combined.svg
+!valuation/dcf_probabilistic/output/single_asset/JPM_kde_combined.svg
+!valuation/dcf_probabilistic/output/single_asset/PGR_kde_combined.svg
+!valuation/dcf_probabilistic/output/single_asset/XOM_kde_combined.svg
+valuation/dcf_probabilistic/output/multi_asset/**
+!valuation/dcf_probabilistic/output/multi_asset/fcfe/
+!valuation/dcf_probabilistic/output/multi_asset/fcfe/efficient_frontier_risk_return_fcfe.svg
+!valuation/dcf_probabilistic/output/multi_asset/fcfe/efficient_frontier_tail_risk_fcfe.svg
+!valuation/dcf_probabilistic/output/multi_asset/fcfe/efficient_frontier_downside_fcfe.svg
+!valuation/dcf_probabilistic/output/multi_asset/fcfe/efficient_frontier_cvar_fcfe.svg
+!valuation/dcf_probabilistic/output/multi_asset/fcfe/efficient_frontier_var_fcfe.svg
+!valuation/dcf_probabilistic/output/multi_asset/fcfe/efficient_frontier_drawdown_fcfe.svg
+
+# DCF REIT: ignore everything, whitelist showcase SVGs
+valuation/dcf_reit/output/data/
+valuation/dcf_reit/output/plots/*
+!valuation/dcf_reit/output/plots/PLD_reit_valuation.svg
+!valuation/dcf_reit/output/plots/PLD_reit_fundamentals.svg
+!valuation/dcf_reit/output/plots/O_reit_valuation.svg
+!valuation/dcf_reit/output/plots/O_reit_fundamentals.svg
+!valuation/dcf_reit/output/plots/EQIX_reit_valuation.svg
+!valuation/dcf_reit/output/plots/EQIX_reit_fundamentals.svg
+!valuation/dcf_reit/output/plots/STWD_mreit_valuation.svg
+!valuation/dcf_reit/output/plots/STWD_mreit_fundamentals.svg
+
+# Crypto Treasury: showcase file referenced in README
+valuation/crypto_treasury/output/**
+!valuation/crypto_treasury/output/crypto_treasury_comparison.svg
+
+# GARP / PEG: ignore everything, whitelist showcase SVGs
+valuation/garp_peg/output/*
+!valuation/garp_peg/output/META_garp_analysis.svg
+!valuation/garp_peg/output/SFM_garp_analysis.svg
+!valuation/garp_peg/output/AAPL_garp_analysis.svg
+!valuation/garp_peg/output/PLTR_garp_analysis.svg
+!valuation/garp_peg/output/COST_garp_analysis.svg
+!valuation/garp_peg/output/garp_comparison.svg
+
+# Normalized Multiples: ignore everything, whitelist showcase SVGs
+valuation/normalized_multiples/output/*
+!valuation/normalized_multiples/output/plots/
+valuation/normalized_multiples/output/plots/*
+!valuation/normalized_multiples/output/plots/CAT_multiples_valuation.svg
+!valuation/normalized_multiples/output/plots/CAT_multiples_quality.svg
+!valuation/normalized_multiples/output/plots/DE_multiples_valuation.svg
+!valuation/normalized_multiples/output/plots/DE_multiples_quality.svg
+!valuation/normalized_multiples/output/plots/GE_multiples_valuation.svg
+!valuation/normalized_multiples/output/plots/GE_multiples_quality.svg
+!valuation/normalized_multiples/output/plots/HON_multiples_valuation.svg
+!valuation/normalized_multiples/output/plots/HON_multiples_quality.svg
+!valuation/normalized_multiples/output/plots/multiples_comparison.svg
+
+# Analyst Upside: ignore everything, whitelist showcase SVG
+valuation/analyst_upside/output/*
+valuation/analyst_upside/data/*
+!valuation/analyst_upside/output/analyst_upside.svg
+
+# Dividend Income: showcase files
+valuation/dividend_income/output/**
+valuation/dividend_income/data/**
+!valuation/dividend_income/output/plots/
+!valuation/dividend_income/output/plots/JNJ_dividend_analysis.svg
+!valuation/dividend_income/output/plots/VZ_dividend_analysis.svg
+
+# Growth Analysis: ignore everything, whitelist showcase SVGs
+valuation/growth_analysis/output/*
+!valuation/growth_analysis/output/plots/
+valuation/growth_analysis/output/plots/*
+!valuation/growth_analysis/output/plots/NVDA_growth_analysis.svg
+!valuation/growth_analysis/output/plots/PLTR_growth_analysis.svg
+!valuation/growth_analysis/output/plots/CRWD_growth_analysis.svg
+!valuation/growth_analysis/output/plots/SFM_growth_analysis.svg
+!valuation/growth_analysis/output/plots/JNJ_growth_analysis.svg
+!valuation/growth_analysis/output/plots/growth_comparison.svg
+
+# Relative Valuation: ignore everything, whitelist showcase SVGs
+valuation/relative_valuation/output/**
+!valuation/relative_valuation/output/plots/
+!valuation/relative_valuation/output/plots/AMZN_relative_valuation.svg
+!valuation/relative_valuation/output/plots/TAC_relative_valuation.svg
+!valuation/relative_valuation/output/plots/JPM_relative_valuation.svg
+!valuation/relative_valuation/output/plots/MET_relative_valuation.svg
+!valuation/relative_valuation/output/plots/XOM_relative_valuation.svg
+!valuation/relative_valuation/output/plots/O_relative_valuation.svg
+
+# ETF Analysis: showcase file
+valuation/etf_analysis/output/**
+valuation/etf_analysis/data/**
+!valuation/etf_analysis/output/plots/
+!valuation/etf_analysis/output/plots/JEPI_etf_analysis.svg
+!valuation/etf_analysis/output/plots/SPY_etf_analysis.svg
+
+# --- Pricing modules ---
+
+# Regime Downside: showcase files referenced in README
+pricing/regime_downside/output/**
+!pricing/regime_downside/output/portfolio_weights.svg
+!pricing/regime_downside/output/risk_metrics.svg
+!pricing/regime_downside/output/gap_analysis.svg
+
+# Pairs Trading: showcase files referenced in README
+pricing/pairs_trading/output/**
+!pricing/pairs_trading/output/GLD_GDX_pairs_analysis.svg
+!pricing/pairs_trading/output/CCJ_URA_pairs_analysis.svg
+
+# Liquidity: showcase file referenced in README
+pricing/liquidity/output/**
+!pricing/liquidity/output/liquidity_dashboard.svg
+
+# Dispersion Trading: showcase file referenced in README
+pricing/dispersion_trading/output/**
+!pricing/dispersion_trading/output/dispersion_analysis.svg
+
+# Gamma Scalping: showcase files referenced in README
+pricing/gamma_scalping/output/**
+!pricing/gamma_scalping/output/plots/
+!pricing/gamma_scalping/output/plots/SPY_pnl_attribution.svg
+!pricing/gamma_scalping/output/plots/SPY_summary_metrics.svg
+
+# Volatility Arbitrage: showcase file referenced in README
+pricing/volatility_arbitrage/output/**
+!pricing/volatility_arbitrage/output/plots/
+!pricing/volatility_arbitrage/output/plots/TSLA_rv_analysis.svg
+
+# Variance Swaps: showcase files referenced in README
+pricing/variance_swaps/output/**
+!pricing/variance_swaps/output/SPY_vrp_cc_historical_plot.svg
+!pricing/variance_swaps/output/SPY_signal_cc_historical_plot.svg
+!pricing/variance_swaps/output/SPY_vrp_yz_garch_plot.svg
+!pricing/variance_swaps/output/SPY_signal_yz_garch_plot.svg
+
+# Skew Trading: showcase files referenced in README
+pricing/skew_trading/output/**
+!pricing/skew_trading/output/SPY_vol_smile.svg
+!pricing/skew_trading/output/SPY_skew_timeseries.svg
+!pricing/skew_trading/output/SPY_backtest_pnl.svg
+!pricing/skew_trading/output/TSLA_vol_smile.svg
+!pricing/skew_trading/output/TSLA_skew_timeseries.svg
+!pricing/skew_trading/output/TSLA_backtest_pnl.svg
+
+# Market Regime Forecast: showcase file referenced in README
+pricing/market_regime_forecast/output/**
+!pricing/market_regime_forecast/output/SPY_regime_analysis.svg
+
+# Options Hedging: showcase files referenced in README
+pricing/options_hedging/output/**
+!pricing/options_hedging/output/plots/
+!pricing/options_hedging/output/plots/vol_surface_svi.svg
+!pricing/options_hedging/output/plots/vol_surface_sabr.svg
+!pricing/options_hedging/output/plots/pareto_frontier.svg
+!pricing/options_hedging/output/plots/strategy_payoff.svg
+!pricing/options_hedging/output/plots/greeks_summary.svg
+
+# FX Hedging: showcase files referenced in README
+pricing/fx_hedging/output/**
+!pricing/fx_hedging/output/exposure_analysis.svg
+!pricing/fx_hedging/output/M6S_hedge_performance.svg
+!pricing/fx_hedging/output/MET_hedge_performance.svg
+!pricing/fx_hedging/output/ETH_hedge_performance.svg
+
+# Earnings Vol: showcase file referenced in README
+pricing/earnings_vol/output/**
+!pricing/earnings_vol/output/plots/
+!pricing/earnings_vol/output/plots/NVDA_earnings_vol.svg
+!pricing/earnings_vol/output/plots/AVGO_earnings_vol.svg
+
+# Forward Factor: showcase file referenced in README
+pricing/forward_factor/output/**
+!pricing/forward_factor/output/plots/
+!pricing/forward_factor/output/plots/AAPL_forward_factor.svg
+
+# Pre-Earnings Straddle: showcase file referenced in README
+pricing/pre_earnings_straddle/output/**
+!pricing/pre_earnings_straddle/output/plots/
+!pricing/pre_earnings_straddle/output/plots/NVDA_straddle_analysis.svg
+!pricing/pre_earnings_straddle/output/plots/AVGO_straddle_analysis.svg
+
+# Skew Verticals: showcase file referenced in README
+pricing/skew_verticals/output/**
+!pricing/skew_verticals/output/plots/
+!pricing/skew_verticals/output/plots/AAPL_spread_analysis.svg
+!pricing/skew_verticals/output/plots/PYPL_spread_analysis.svg
+
+# Perpetual Futures: showcase file
+pricing/perpetual_futures/output/**
+!pricing/perpetual_futures/output/plots/
+!pricing/perpetual_futures/output/plots/BTCUSDT_perpetual_analysis.svg
+
+# Tail Risk Forecast: showcase file
+pricing/tail_risk_forecast/output/**
+!pricing/tail_risk_forecast/output/plots/
+!pricing/tail_risk_forecast/output/plots/SPY_tail_risk.svg
+!pricing/tail_risk_forecast/output/plots/SOXL_tail_risk.svg
+
+# --- Monitoring modules ---
+
+# Watchlist: showcase file
+monitoring/watchlist/output/**
+!monitoring/watchlist/output/watchlist_dashboard.svg
+
+# Earnings Calendar
+monitoring/earnings_calendar/data/
+monitoring/earnings_calendar/output/**
+!monitoring/earnings_calendar/output/earnings_calendar.svg
+
+# --- Pricing: Systematic Risk Signals ---
+pricing/systematic_risk_signals/output/**
+!pricing/systematic_risk_signals/output/plots/
+!pricing/systematic_risk_signals/output/plots/risk_signals_dashboard.svg
+
+# --- Alternative modules ---
+
+# Alt Data submodule outputs
+alternative/insider_trading/output/*
+!alternative/insider_trading/output/.gitkeep
+alternative/options_flow/output/*
+!alternative/options_flow/output/.gitkeep
+alternative/short_interest/output/*
+!alternative/short_interest/output/.gitkeep
+alternative/google_trends/output/*
+!alternative/google_trends/output/.gitkeep
+alternative/sec_filings/output/*
+!alternative/sec_filings/output/.gitkeep
+alternative/nlp_sentiment/output/*
+!alternative/nlp_sentiment/output/data/
+alternative/nlp_sentiment/output/data/*
+!alternative/nlp_sentiment/output/data/.gitkeep
+
+# Alt Data combined
+alternative/output/*
+!alternative/output/.gitkeep
+
+# =============================================================================
+# NLP Sentiment - credentials and imported data
+# =============================================================================
+alternative/nlp_sentiment/data/.discord_config
 
 # OCaml compiled object files
 *.annot
@@ -190,6 +513,7 @@ celerybeat.pid
 
 # Environments
 .env
+!.env.example
 .venv
 env/
 venv/
@@ -549,3 +873,7 @@ TSWLatexianTemp*
 # system files
 .DS_Store
 Thumbs.db
+
+# Claude Code
+CLAUDE.md
+# .claude/

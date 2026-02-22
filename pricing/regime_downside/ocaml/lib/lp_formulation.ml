@@ -106,9 +106,12 @@ let import_solution_from_json filename =
 
 (** Solve LP problem using Python solver *)
 let solve_lp problem =
-  (* Export problem *)
-  let problem_file = "/tmp/lp_problem.json" in
-  let solution_file = "/tmp/lp_solution.json" in
+  (* Use unique temp files to avoid race conditions *)
+  let pid = Unix.getpid () in
+  let timestamp = Unix.gettimeofday () in
+  let suffix = Printf.sprintf "%d_%.0f" pid (timestamp *. 1000000.) in
+  let problem_file = Printf.sprintf "/tmp/lp_problem_%s.json" suffix in
+  let solution_file = Printf.sprintf "/tmp/lp_solution_%s.json" suffix in
 
   export_to_json problem problem_file;
 
@@ -119,10 +122,19 @@ let solve_lp problem =
 
   let exit_code = Sys.command cmd in
 
-  if exit_code <> 0 then
+  if exit_code <> 0 then begin
+    (* Cleanup on failure *)
+    (try Sys.remove problem_file with _ -> ());
+    (try Sys.remove solution_file with _ -> ());
     failwith "LP solver failed"
-  else
-    import_solution_from_json solution_file
+  end
+  else begin
+    let solution = import_solution_from_json solution_file in
+    (* Cleanup temp files *)
+    (try Sys.remove problem_file with _ -> ());
+    (try Sys.remove solution_file with _ -> ());
+    solution
+  end
 
 (** Build LP problem from current state *)
 let build_problem

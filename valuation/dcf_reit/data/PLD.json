@@ -1,0 +1,33 @@
+{
+  "market": {
+    "ticker": "PLD",
+    "price": 141.51,
+    "shares_outstanding": 928867000,
+    "market_cap": 131443965952,
+    "dividend_yield": 0.0302,
+    "dividend_per_share": 4.28,
+    "currency": "USD",
+    "sector": "industrial"
+  },
+  "financial": {
+    "revenue": 8790127000.0,
+    "net_income": 3328231000.0,
+    "depreciation": 2494726600.0,
+    "amortization": 131301400.0,
+    "gains_on_sales": 0,
+    "impairments": 0,
+    "straight_line_rent_adj": 87901270.0,
+    "stock_compensation": 185466000.0,
+    "maintenance_capex": 0.0,
+    "development_capex": 0.0,
+    "total_debt": 35680534000.0,
+    "cash": 1145647000.0,
+    "total_assets": 98724256000.0,
+    "total_equity": 53193178000.0,
+    "noi": 6262462550.0,
+    "occupancy_rate": 0.97,
+    "same_store_noi_growth": 0.025,
+    "weighted_avg_lease_term": 5.5,
+    "lease_expiration_1yr": 0.1
+  }
+}

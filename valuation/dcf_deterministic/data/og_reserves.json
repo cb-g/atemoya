@@ -1,0 +1,122 @@
+{
+  "_comment": "Static O&G reserve/production/cost data from 2024 10-K filings and earnings releases. Updated annually. Lifting/finding costs are estimates from supplemental disclosures where exact per-BOE figures are not publicly available.",
+  "_sources": "SEC 10-K filings, company earnings releases, investor presentations (FY2024)",
+  "_last_updated": "2025-01",
+  "companies": {
+    "XOM": {
+      "name": "Exxon Mobil Corporation",
+      "proven_reserves_mmboe": 19900,
+      "production_boe_day": 4300000,
+      "oil_pct": 0.55,
+      "lifting_cost": 9.50,
+      "finding_cost": 7.00
+    },
+    "CVX": {
+      "name": "Chevron Corporation",
+      "proven_reserves_mmboe": 9800,
+      "production_boe_day": 3300000,
+      "oil_pct": 0.55,
+      "lifting_cost": 11.00,
+      "finding_cost": 8.00
+    },
+    "COP": {
+      "name": "ConocoPhillips",
+      "proven_reserves_mmboe": 7800,
+      "production_boe_day": 1987000,
+      "oil_pct": 0.50,
+      "lifting_cost": 8.50,
+      "finding_cost": 6.50
+    },
+    "SHEL": {
+      "name": "Shell plc",
+      "proven_reserves_mmboe": 9600,
+      "production_boe_day": 2800000,
+      "oil_pct": 0.45,
+      "lifting_cost": 12.00,
+      "finding_cost": 9.00
+    },
+    "BP": {
+      "name": "BP plc",
+      "proven_reserves_mmboe": 6250,
+      "production_boe_day": 2358000,
+      "oil_pct": 0.45,
+      "lifting_cost": 12.50,
+      "finding_cost": 9.50
+    },
+    "TTE": {
+      "name": "TotalEnergies SE",
+      "proven_reserves_mmboe": 11200,
+      "production_boe_day": 2500000,
+      "oil_pct": 0.48,
+      "lifting_cost": 5.00,
+      "finding_cost": 7.00
+    },
+    "OXY": {
+      "name": "Occidental Petroleum",
+      "proven_reserves_mmboe": 4600,
+      "production_boe_day": 1330000,
+      "oil_pct": 0.60,
+      "lifting_cost": 10.00,
+      "finding_cost": 8.00
+    },
+    "HES": {
+      "name": "Hess Corporation",
+      "proven_reserves_mmboe": 1440,
+      "production_boe_day": 480000,
+      "oil_pct": 0.70,
+      "lifting_cost": 12.00,
+      "finding_cost": 19.67
+    },
+    "DVN": {
+      "name": "Devon Energy",
+      "proven_reserves_mmboe": 2155,
+      "production_boe_day": 848000,
+      "oil_pct": 0.73,
+      "lifting_cost": 9.00,
+      "finding_cost": 7.50
+    },
+    "EOG": {
+      "name": "EOG Resources",
+      "proven_reserves_mmboe": 4748,
+      "production_boe_day": 1063000,
+      "oil_pct": 0.55,
+      "lifting_cost": 7.50,
+      "finding_cost": 6.00
+    },
+    "FANG": {
+      "name": "Diamondback Energy",
+      "proven_reserves_mmboe": 3557,
+      "production_boe_day": 883000,
+      "oil_pct": 0.50,
+      "lifting_cost": 8.50,
+      "finding_cost": 7.00
+    },
+    "MPC": {
+      "name": "Marathon Petroleum",
+      "proven_reserves_mmboe": 0,
+      "production_boe_day": 0,
+      "oil_pct": 0.50,
+      "lifting_cost": 0.00,
+      "finding_cost": 0.00,
+      "_note": "Refiner, not E&P — no upstream reserves"
+    },
+    "SLB": {
+      "name": "Schlumberger (SLB)",
+      "proven_reserves_mmboe": 0,
+      "production_boe_day": 0,
+      "oil_pct": 0.50,
+      "lifting_cost": 0.00,
+      "finding_cost": 0.00,
+      "_note": "Oilfield services — no upstream reserves"
+    },
+    "ENB": {
+      "name": "Enbridge Inc.",
+      "proven_reserves_mmboe": 0,
+      "production_boe_day": 0,
+      "oil_pct": 0.50,
+      "lifting_cost": 0.00,
+      "finding_cost": 0.00,
+      "_note": "Midstream — no upstream reserves"
+    }
+  }
+}

@@ -1,0 +1,3 @@
+(library
+ (name earnings_vol_lib)
+ (modules types term_structure filters kelly_sizing backtest))

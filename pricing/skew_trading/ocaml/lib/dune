@@ -1,0 +1,5 @@
+(library
+ (name skew_trading_lib)
+ (public_name skew_trading.lib)
+ (libraries unix yojson)
+ (preprocess (pps ppx_deriving.show)))

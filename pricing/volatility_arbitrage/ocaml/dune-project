@@ -1,0 +1,9 @@
+(lang dune 3.0)
+(name volatility_arbitrage)
+(generate_opam_files true)
+
+(package
+ (name volatility_arbitrage)
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))))

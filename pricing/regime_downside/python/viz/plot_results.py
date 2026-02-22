@@ -1,42 +1,13 @@
 """Visualization utilities for regime downside optimization results."""
 
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
 
-
-# Kanagawa Dragon color palette (dark mode)
-KANAGAWA_DRAGON = {
-    'bg': '#181616',
-    'fg': '#c5c9c5',
-    'black': '#0d0c0c',
-    'red': '#c4746e',
-    'green': '#8a9a7b',
-    'yellow': '#c4b28a',
-    'blue': '#8ba4b0',
-    'magenta': '#a292a3',
-    'cyan': '#8ea4a2',
-    'white': '#c5c9c5',
-    'gray': '#625e5a',
-}
-
-
-def setup_dark_mode():
-    """Configure matplotlib for Kanagawa Dragon dark mode."""
-    plt.style.use('dark_background')
-    plt.rcParams.update({
-        'figure.facecolor': KANAGAWA_DRAGON['bg'],
-        'axes.facecolor': KANAGAWA_DRAGON['bg'],
-        'axes.edgecolor': KANAGAWA_DRAGON['gray'],
-        'axes.labelcolor': KANAGAWA_DRAGON['fg'],
-        'text.color': KANAGAWA_DRAGON['fg'],
-        'xtick.color': KANAGAWA_DRAGON['fg'],
-        'ytick.color': KANAGAWA_DRAGON['fg'],
-        'grid.color': KANAGAWA_DRAGON['gray'],
-        'legend.facecolor': KANAGAWA_DRAGON['bg'],
-        'legend.edgecolor': KANAGAWA_DRAGON['gray'],
-    })
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from lib.python.theme import setup_dark_mode, save_figure, KANAGAWA_DRAGON
 
 
 def plot_portfolio_weights(results_csv: Path, output_dir: Path | None = None):
@@ -172,8 +143,7 @@ def plot_portfolio_weights(results_csv: Path, output_dir: Path | None = None):
     if output_dir is not None:
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / "portfolio_weights.png"
-        plt.savefig(output_path, dpi=300, bbox_inches="tight")
-        print(f"Saved plot to {output_path}")
+        save_figure(fig, output_path, dpi=300)
 
 
 def plot_risk_metrics(results_csv: Path, output_dir: Path | None = None):
@@ -324,8 +294,7 @@ def plot_risk_metrics(results_csv: Path, output_dir: Path | None = None):
     if output_dir is not None:
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / "risk_metrics.png"
-        plt.savefig(output_path, dpi=300, bbox_inches="tight")
-        print(f"Saved plot to {output_path}")
+        save_figure(fig, output_path, dpi=300)
 
 
 def plot_gap_analysis(results_csv: Path, output_dir: Path | None = None):
@@ -404,8 +373,7 @@ def plot_gap_analysis(results_csv: Path, output_dir: Path | None = None):
     if output_dir is not None:
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / "gap_analysis.png"
-        plt.savefig(output_path, dpi=300, bbox_inches="tight")
-        print(f"Saved plot to {output_path}")
+        save_figure(fig, output_path, dpi=300)
 
 
 def main():

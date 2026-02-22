@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name etf_analysis)
+ (libraries etf_analysis unix))

@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name variance_swaps)
+ (libraries variance_swaps_lib unix))

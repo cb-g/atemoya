@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name gamma_scalping)
+ (libraries gamma_scalping_lib unix))

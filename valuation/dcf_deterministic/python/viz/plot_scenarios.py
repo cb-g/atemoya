@@ -8,9 +8,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from lib.python.theme import setup_dark_mode, KANAGAWA_DRAGON as COLORS, save_figure
 
 # Set plotting style
-sns.set_style("whitegrid")
+setup_dark_mode()
 plt.rcParams['figure.figsize'] = (12, 8)
 plt.rcParams['font.size'] = 10
 
@@ -78,7 +82,7 @@ def plot_valuation_comparison(df, ticker, price, output_dir):
 
     # Save
     output_path = Path(output_dir) / f'{ticker}_scenarios.png'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_path, dpi=300)
     print(f"Saved: {output_path}")
     plt.close()
 
@@ -135,7 +139,7 @@ def plot_sensitivity_ranges(df, ticker, price, output_dir):
 
     # Save
     output_path = Path(output_dir) / f'{ticker}_scenario_ranges.png'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_path, dpi=300)
     print(f"Saved: {output_path}")
     plt.close()
 
@@ -209,7 +213,7 @@ def plot_parameter_comparison(df, ticker, output_dir):
 
     # Save
     output_path = Path(output_dir) / f'{ticker}_scenario_parameters.png'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_path, dpi=300)
     print(f"Saved: {output_path}")
     plt.close()
 
@@ -218,7 +222,7 @@ def main():
     parser.add_argument('--csv', required=True, help='Path to scenario CSV file')
     parser.add_argument('--ticker', required=True, help='Ticker symbol')
     parser.add_argument('--price', required=True, type=float, help='Market price')
-    parser.add_argument('--output', default='../output', help='Output directory for plots')
+    parser.add_argument('--output', default='valuation/dcf_deterministic/output', help='Output directory for plots')
 
     args = parser.parse_args()
 

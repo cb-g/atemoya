@@ -27,5 +27,17 @@
     "upper": 0.5,
     "lower": -0.2
   },
-  "rfr_duration": 7
+  "rfr_duration": 7,
+  "mean_reversion": {
+    "enabled": true,
+    "lambda": 0.25,
+    "_comment": "Mean reversion causes growth rates to decay toward terminal growth. lambda controls speed: 0.1=slow (reaches terminal ~year 10), 0.25=moderate (~year 4), 0.5=fast (~year 2). Set enabled=false for constant growth (legacy behavior)."
+  },
+  "erp": {
+    "mode": "static",
+    "vix_mean": 19.5,
+    "vix_sensitivity": 0.4,
+    "_comment_mode": "Options: 'static' (Damodaran, from equity_risk_premiums.json) or 'dynamic' (VIX-adjusted). Dynamic mode fetches current VIX and adjusts base ERP: ERP_dynamic = ERP_base × (VIX/VIX_mean)^sensitivity.",
+    "_comment_vix": "VIX historical mean ~19.5. Sensitivity 0.3-0.5 typical. Higher sensitivity = more reactive to VIX changes. Example: VIX=30, mean=20, sens=0.4 → adjustment=1.18 (18% higher ERP)."
+  }
 }

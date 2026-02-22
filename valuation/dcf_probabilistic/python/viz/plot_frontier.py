@@ -19,79 +19,30 @@ import argparse
 import sys
 from pathlib import Path
 
-try:
-    import pandas as pd
-    import numpy as np
-    import matplotlib.pyplot as plt
-except ImportError:
-    print("Error: Required packages not installed.", file=sys.stderr)
-    print("Run: pip install pandas numpy matplotlib scipy", file=sys.stderr)
-    sys.exit(1)
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from lib.python.theme import setup_dark_mode, KANAGAWA_DRAGON, save_figure
 
-# Kanagawa Dragon color palette (dark mode)
-KANAGAWA_DRAGON = {
-    'bg': '#181616',
-    'fg': '#c5c9c5',
-    'black': '#0d0c0c',
-    'red': '#c4746e',
-    'green': '#8a9a7b',
-    'yellow': '#c4b28a',
-    'blue': '#8ba4b0',
-    'magenta': '#a292a3',
-    'cyan': '#8ea4a2',
-    'white': '#c5c9c5',
-    'gray': '#625e5a',
-}
+# Annotation box colors using Kanagawa palette
+BOX_GOLD = {'boxstyle': 'round,pad=0.5', 'facecolor': KANAGAWA_DRAGON['yellow'], 'alpha': 0.8,
+            'edgecolor': KANAGAWA_DRAGON['gray'], 'linewidth': 1.5}
+BOX_GREEN = {'boxstyle': 'round,pad=0.5', 'facecolor': KANAGAWA_DRAGON['green'], 'alpha': 0.8,
+             'edgecolor': KANAGAWA_DRAGON['gray'], 'linewidth': 1.5}
+BOX_BLUE = {'boxstyle': 'round,pad=0.5', 'facecolor': KANAGAWA_DRAGON['blue'], 'alpha': 0.8,
+            'edgecolor': KANAGAWA_DRAGON['gray'], 'linewidth': 1.5}
+BOX_TEXT_COLOR = KANAGAWA_DRAGON['black']
 
-# Kanagawa Lotus color palette (light mode)
-KANAGAWA_LOTUS = {
-    'bg': '#f2ecbc',
-    'fg': '#545464',
-    'black': '#1f1f28',
-    'red': '#c84053',
-    'green': '#6f894e',
-    'yellow': '#77713f',
-    'blue': '#4d699b',
-    'magenta': '#b35b79',
-    'cyan': '#597b75',
-    'white': '#545464',
-    'gray': '#b8b5b9',
-}
-
-
-def setup_dark_mode():
-    """Configure matplotlib for Kanagawa Dragon dark mode."""
-    plt.style.use('dark_background')
-    plt.rcParams.update({
-        'figure.facecolor': KANAGAWA_DRAGON['bg'],
-        'axes.facecolor': KANAGAWA_DRAGON['bg'],
-        'axes.edgecolor': KANAGAWA_DRAGON['gray'],
-        'axes.labelcolor': KANAGAWA_DRAGON['fg'],
-        'text.color': KANAGAWA_DRAGON['fg'],
-        'xtick.color': KANAGAWA_DRAGON['fg'],
-        'ytick.color': KANAGAWA_DRAGON['fg'],
-        'grid.color': KANAGAWA_DRAGON['gray'],
-        'legend.facecolor': KANAGAWA_DRAGON['bg'],
-        'legend.edgecolor': KANAGAWA_DRAGON['gray'],
-    })
-
-
-def setup_light_mode():
-    """Configure matplotlib for Kanagawa Lotus light mode."""
-    plt.style.use('default')
-    plt.rcParams.update({
-        'figure.facecolor': KANAGAWA_LOTUS['bg'],
-        'axes.facecolor': KANAGAWA_LOTUS['bg'],
-        'axes.edgecolor': KANAGAWA_LOTUS['gray'],
-        'axes.labelcolor': KANAGAWA_LOTUS['fg'],
-        'text.color': KANAGAWA_LOTUS['fg'],
-        'xtick.color': KANAGAWA_LOTUS['fg'],
-        'ytick.color': KANAGAWA_LOTUS['fg'],
-        'grid.color': KANAGAWA_LOTUS['gray'],
-        'legend.facecolor': KANAGAWA_LOTUS['bg'],
-        'legend.edgecolor': KANAGAWA_LOTUS['gray'],
-    })
+# Kanagawa-based colormap for scatter plots (red → magenta → white)
+# Uses red/magenta/purple range to avoid overlap with legend markers (blue, green, yellow)
+from matplotlib.colors import LinearSegmentedColormap
+KANAGAWA_CMAP = LinearSegmentedColormap.from_list('kanagawa', [
+    KANAGAWA_DRAGON['red'],
+    KANAGAWA_DRAGON['magenta'],
+    KANAGAWA_DRAGON['white'],
+])
 
 
 def generate_random_portfolios(n_assets, n_portfolios=5000):
@@ -329,7 +280,7 @@ def plot_efficient_frontier(portfolio_stats, output_file, tickers=None, title="E
     rf_rate = 2.0
     sharpe_ratios = [(m - rf_rate) / s if s > 0 else 0 for m, s in zip(means, stds)]
 
-    scatter = ax.scatter(stds, means, c=sharpe_ratios, cmap='RdPu',
+    scatter = ax.scatter(stds, means, c=sharpe_ratios, cmap=KANAGAWA_CMAP,
                         alpha=0.6, s=20, edgecolors='none')
 
     # Mark special portfolios
@@ -338,13 +289,13 @@ def plot_efficient_frontier(portfolio_stats, output_file, tickers=None, title="E
     max_sharpe_idx = np.argmax(sharpe_ratios)
 
     ax.scatter(stds[min_risk_idx], means[min_risk_idx],
-              marker='*', s=250, c='blue', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Min Variance', zorder=10)
     ax.scatter(stds[max_return_idx], means[max_return_idx],
-              marker='*', s=250, c='green', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Return', zorder=10)
     ax.scatter(stds[max_sharpe_idx], means[max_sharpe_idx],
-              marker='*', s=250, c='gold', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Sharpe', zorder=10)
 
     # Add portfolio composition legends (if tickers provided)
@@ -357,9 +308,8 @@ def plot_efficient_frontier(portfolio_stats, output_file, tickers=None, title="E
         textstr_sharpe = f"Max Sharpe\nPortfolio:\n{sharpe_comp}"
         # Position at (1.25, 1.0) - past colorbar, aligned with top
         ax.text(1.25, 1.0, textstr_sharpe, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         # Max Return portfolio composition (right side, middle)
         maxret_comp = format_portfolio_composition(
@@ -368,9 +318,8 @@ def plot_efficient_frontier(portfolio_stats, output_file, tickers=None, title="E
         textstr_maxret = f"Max Return\nPortfolio:\n{maxret_comp}"
         # Position at (1.25, 0.7) - past colorbar, middle
         ax.text(1.25, 0.7, textstr_maxret, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         # Min Variance portfolio composition (right side, bottom)
         minvar_comp = format_portfolio_composition(
@@ -379,9 +328,8 @@ def plot_efficient_frontier(portfolio_stats, output_file, tickers=None, title="E
         textstr_minvar = f"Min Variance\nPortfolio:\n{minvar_comp}"
         # Position at (1.25, 0.4) - past colorbar, bottom
         ax.text(1.25, 0.4, textstr_minvar, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     # Determine best legend location based on star positions
     star_positions = [
@@ -405,10 +353,8 @@ def plot_efficient_frontier(portfolio_stats, output_file, tickers=None, title="E
     cbar.set_label('Sharpe Ratio', fontsize=10)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Risk-return frontier saved: {output_file}")
 
     # Print stats for special portfolios
     print(f"\nMin Variance Portfolio:")
@@ -429,7 +375,7 @@ def plot_tail_risk_frontier(portfolio_stats, output_file, tickers=None, title="T
     prob_losses = [p['prob_loss'] * 100 for p in portfolio_stats]
 
     # Color by mean return
-    scatter = ax.scatter(prob_losses, means, c=means, cmap='RdPu',
+    scatter = ax.scatter(prob_losses, means, c=means, cmap=KANAGAWA_CMAP,
                         alpha=0.6, s=20, edgecolors='none')
 
     # Mark special portfolios
@@ -437,10 +383,10 @@ def plot_tail_risk_frontier(portfolio_stats, output_file, tickers=None, title="T
     max_return_idx = np.argmax(means)
 
     ax.scatter(prob_losses[min_loss_idx], means[min_loss_idx],
-              marker='*', s=250, c='blue', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Min P(Loss)', zorder=10)
     ax.scatter(prob_losses[max_return_idx], means[max_return_idx],
-              marker='*', s=250, c='green', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Return', zorder=10)
 
     # Add portfolio composition legends (if tickers provided)
@@ -451,18 +397,16 @@ def plot_tail_risk_frontier(portfolio_stats, output_file, tickers=None, title="T
         textstr = f"Min P(Loss)\nPortfolio:\n{comp}"
         # Position at (1.25, 1.0) - past colorbar, aligned with top
         ax.text(1.25, 1.0, textstr, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
         # Max Return portfolio composition (bottom)
         maxret_comp = format_portfolio_composition(portfolio_stats[max_return_idx]['weights'], tickers, top_n=15)
         textstr_maxret = f"Max Return\nPortfolio:\n{maxret_comp}"
         # Position at (1.25, 0.7) - past colorbar, bottom
         ax.text(1.25, 0.7, textstr_maxret, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
     # Determine best legend location based on star positions
     star_positions = [
@@ -485,10 +429,8 @@ def plot_tail_risk_frontier(portfolio_stats, output_file, tickers=None, title="T
     cbar.set_label('Expected Return (%)', fontsize=10)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Tail risk frontier saved: {output_file}")
 
     # Print stats
     print(f"\nMin P(Loss) Portfolio:")
@@ -507,7 +449,7 @@ def plot_downside_deviation_frontier(portfolio_stats, output_file, tickers=None,
     rf_rate = 2.0
     sortino_ratios = [(m - rf_rate) / dd if dd > 0 else 0 for m, dd in zip(means, downside_devs)]
 
-    scatter = ax.scatter(downside_devs, means, c=sortino_ratios, cmap='RdPu',
+    scatter = ax.scatter(downside_devs, means, c=sortino_ratios, cmap=KANAGAWA_CMAP,
                         alpha=0.6, s=20, edgecolors='none')
 
     # Mark special portfolios
@@ -516,13 +458,13 @@ def plot_downside_deviation_frontier(portfolio_stats, output_file, tickers=None,
     max_sortino_idx = np.argmax(sortino_ratios)
 
     ax.scatter(downside_devs[min_downside_idx], means[min_downside_idx],
-              marker='*', s=250, c='blue', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Min Downside Risk', zorder=10)
     ax.scatter(downside_devs[max_return_idx], means[max_return_idx],
-              marker='*', s=250, c='green', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Return', zorder=10)
     ax.scatter(downside_devs[max_sortino_idx], means[max_sortino_idx],
-              marker='*', s=250, c='gold', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Sortino', zorder=10)
 
     # Add portfolio composition legends (if tickers provided)
@@ -534,17 +476,15 @@ def plot_downside_deviation_frontier(portfolio_stats, output_file, tickers=None,
         # Position at (1.25, 1.0) - past colorbar, aligned with top
         ax.text(1.25, 1.0, textstr, transform=ax.transAxes, fontsize=7,
                 verticalalignment='top', family='monospace',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                bbox=BOX_GOLD)
 
         # Max Return portfolio composition (middle)
         maxret_comp = format_portfolio_composition(portfolio_stats[max_return_idx]['weights'], tickers, top_n=15)
         textstr_maxret = f"Max Return\nPortfolio:\n{maxret_comp}"
         # Position at (1.25, 0.7) - past colorbar, middle
         ax.text(1.25, 0.7, textstr_maxret, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         # Min Downside Risk portfolio composition (bottom)
         mindown_comp = format_portfolio_composition(portfolio_stats[min_downside_idx]['weights'], tickers, top_n=15)
@@ -552,8 +492,7 @@ def plot_downside_deviation_frontier(portfolio_stats, output_file, tickers=None,
         # Position at (1.25, 0.4) - past colorbar, bottom
         ax.text(1.25, 0.4, textstr_mindown, transform=ax.transAxes, fontsize=7,
                 verticalalignment='top', family='monospace',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                bbox=BOX_BLUE)
 
     # Determine best legend location based on star positions
     star_positions = [
@@ -577,10 +516,8 @@ def plot_downside_deviation_frontier(portfolio_stats, output_file, tickers=None,
     cbar.set_label('Sortino Ratio', fontsize=10)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Downside deviation frontier saved: {output_file}")
 
     # Print stats
     print(f"\nMax Sortino Portfolio:")
@@ -600,7 +537,7 @@ def plot_cvar_frontier(portfolio_stats, output_file, tickers=None, title="CVaR E
     # Color by return/CVaR ratio
     cvar_ratios = [m / cv if cv > 0 else 0 for m, cv in zip(means, cvars)]
 
-    scatter = ax.scatter(cvars, means, c=cvar_ratios, cmap='RdPu',
+    scatter = ax.scatter(cvars, means, c=cvar_ratios, cmap=KANAGAWA_CMAP,
                         alpha=0.6, s=20, edgecolors='none')
 
     # Mark special portfolios
@@ -609,13 +546,13 @@ def plot_cvar_frontier(portfolio_stats, output_file, tickers=None, title="CVaR E
     max_ratio_idx = np.argmax(cvar_ratios)
 
     ax.scatter(cvars[min_cvar_idx], means[min_cvar_idx],
-              marker='*', s=250, c='blue', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Min CVaR', zorder=10)
     ax.scatter(cvars[max_return_idx], means[max_return_idx],
-              marker='*', s=250, c='green', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Return', zorder=10)
     ax.scatter(cvars[max_ratio_idx], means[max_ratio_idx],
-              marker='*', s=250, c='gold', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Return/CVaR', zorder=10)
 
     # Add portfolio composition legends (if tickers provided)
@@ -627,17 +564,15 @@ def plot_cvar_frontier(portfolio_stats, output_file, tickers=None, title="CVaR E
         # Position at (1.25, 1.0) - past colorbar, aligned with top
         ax.text(1.25, 1.0, textstr, transform=ax.transAxes, fontsize=7,
                 verticalalignment='top', family='monospace',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                bbox=BOX_GOLD)
 
         # Max Return portfolio composition (middle)
         maxret_comp = format_portfolio_composition(portfolio_stats[max_return_idx]['weights'], tickers, top_n=15)
         textstr_maxret = f"Max Return\nPortfolio:\n{maxret_comp}"
         # Position at (1.25, 0.7) - past colorbar, middle
         ax.text(1.25, 0.7, textstr_maxret, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         # Min CVaR portfolio composition (bottom)
         mincvar_comp = format_portfolio_composition(portfolio_stats[min_cvar_idx]['weights'], tickers, top_n=15)
@@ -645,8 +580,7 @@ def plot_cvar_frontier(portfolio_stats, output_file, tickers=None, title="CVaR E
         # Position at (1.25, 0.4) - past colorbar, bottom
         ax.text(1.25, 0.4, textstr_mincvar, transform=ax.transAxes, fontsize=7,
                 verticalalignment='top', family='monospace',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                bbox=BOX_BLUE)
 
     # Determine best legend location based on star positions
     star_positions = [
@@ -670,10 +604,8 @@ def plot_cvar_frontier(portfolio_stats, output_file, tickers=None, title="CVaR E
     cbar.set_label('Return/CVaR Ratio', fontsize=10)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"CVaR frontier saved: {output_file}")
 
     # Print stats
     print(f"\nMin CVaR Portfolio:")
@@ -692,7 +624,7 @@ def plot_var_frontier(portfolio_stats, output_file, tickers=None, title="VaR Eff
     # Color by return/VaR ratio
     var_ratios = [m / v if v > 0 else 0 for m, v in zip(means, vars)]
 
-    scatter = ax.scatter(vars, means, c=var_ratios, cmap='RdPu',
+    scatter = ax.scatter(vars, means, c=var_ratios, cmap=KANAGAWA_CMAP,
                         alpha=0.6, s=20, edgecolors='none')
 
     # Mark special portfolios
@@ -701,13 +633,13 @@ def plot_var_frontier(portfolio_stats, output_file, tickers=None, title="VaR Eff
     max_ratio_idx = np.argmax(var_ratios)
 
     ax.scatter(vars[min_var_idx], means[min_var_idx],
-              marker='*', s=250, c='blue', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Min VaR', zorder=10)
     ax.scatter(vars[max_return_idx], means[max_return_idx],
-              marker='*', s=250, c='green', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Return', zorder=10)
     ax.scatter(vars[max_ratio_idx], means[max_ratio_idx],
-              marker='*', s=250, c='gold', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Return/VaR', zorder=10)
 
     # Add portfolio composition legends (if tickers provided)
@@ -719,17 +651,15 @@ def plot_var_frontier(portfolio_stats, output_file, tickers=None, title="VaR Eff
         # Position at (1.25, 1.0) - past colorbar, aligned with top
         ax.text(1.25, 1.0, textstr, transform=ax.transAxes, fontsize=7,
                 verticalalignment='top', family='monospace',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                bbox=BOX_GOLD)
 
         # Max Return portfolio composition (middle)
         maxret_comp = format_portfolio_composition(portfolio_stats[max_return_idx]['weights'], tickers, top_n=15)
         textstr_maxret = f"Max Return\nPortfolio:\n{maxret_comp}"
         # Position at (1.25, 0.7) - past colorbar, middle
         ax.text(1.25, 0.7, textstr_maxret, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         # Min VaR portfolio composition (bottom)
         minvar_comp = format_portfolio_composition(portfolio_stats[min_var_idx]['weights'], tickers, top_n=15)
@@ -737,8 +667,7 @@ def plot_var_frontier(portfolio_stats, output_file, tickers=None, title="VaR Eff
         # Position at (1.25, 0.4) - past colorbar, bottom
         ax.text(1.25, 0.4, textstr_minvar, transform=ax.transAxes, fontsize=7,
                 verticalalignment='top', family='monospace',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                bbox=BOX_BLUE)
 
     # Determine best legend location based on star positions
     star_positions = [
@@ -762,10 +691,8 @@ def plot_var_frontier(portfolio_stats, output_file, tickers=None, title="VaR Eff
     cbar.set_label('Return/VaR Ratio', fontsize=10)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"VaR frontier saved: {output_file}")
 
     # Print stats
     print(f"\nMin VaR Portfolio:")
@@ -783,7 +710,7 @@ def plot_max_drawdown_frontier(portfolio_stats, output_file, tickers=None, title
     # Color by Calmar ratio (return per unit drawdown)
     calmar_ratios = [m / dd if dd > 0 else 0 for m, dd in zip(means, max_drawdowns)]
 
-    scatter = ax.scatter(max_drawdowns, means, c=calmar_ratios, cmap='RdPu',
+    scatter = ax.scatter(max_drawdowns, means, c=calmar_ratios, cmap=KANAGAWA_CMAP,
                         alpha=0.6, s=20, edgecolors='none')
 
     # Mark special portfolios
@@ -792,13 +719,13 @@ def plot_max_drawdown_frontier(portfolio_stats, output_file, tickers=None, title
     max_calmar_idx = np.argmax(calmar_ratios)
 
     ax.scatter(max_drawdowns[min_dd_idx], means[min_dd_idx],
-              marker='*', s=250, c='blue', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Min Drawdown', zorder=10)
     ax.scatter(max_drawdowns[max_return_idx], means[max_return_idx],
-              marker='*', s=250, c='green', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Return', zorder=10)
     ax.scatter(max_drawdowns[max_calmar_idx], means[max_calmar_idx],
-              marker='*', s=250, c='gold', edgecolors='black',
+              marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
               linewidths=0.8, label='Max Calmar', zorder=10)
 
     # Add portfolio composition legends (if tickers provided)
@@ -810,17 +737,15 @@ def plot_max_drawdown_frontier(portfolio_stats, output_file, tickers=None, title
         # Position at (1.25, 1.0) - past colorbar, aligned with top
         ax.text(1.25, 1.0, textstr, transform=ax.transAxes, fontsize=7,
                 verticalalignment='top', family='monospace',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                bbox=BOX_GOLD)
 
         # Max Return portfolio composition (middle)
         maxret_comp = format_portfolio_composition(portfolio_stats[max_return_idx]['weights'], tickers, top_n=15)
         textstr_maxret = f"Max Return\nPortfolio:\n{maxret_comp}"
         # Position at (1.25, 0.7) - past colorbar, middle
         ax.text(1.25, 0.7, textstr_maxret, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         # Min Drawdown portfolio composition (bottom)
         mindd_comp = format_portfolio_composition(portfolio_stats[min_dd_idx]['weights'], tickers, top_n=15)
@@ -828,8 +753,7 @@ def plot_max_drawdown_frontier(portfolio_stats, output_file, tickers=None, title
         # Position at (1.25, 0.4) - past colorbar, bottom
         ax.text(1.25, 0.4, textstr_mindd, transform=ax.transAxes, fontsize=7,
                 verticalalignment='top', family='monospace',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                bbox=BOX_BLUE)
 
     # Determine best legend location based on star positions
     star_positions = [
@@ -853,10 +777,8 @@ def plot_max_drawdown_frontier(portfolio_stats, output_file, tickers=None, title
     cbar.set_label('Calmar Ratio', fontsize=10)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Max drawdown frontier saved: {output_file}")
 
     # Print stats
     print(f"\nMax Calmar Portfolio:")
@@ -876,7 +798,7 @@ def plot_combined_efficient_frontier(portfolio_stats_fcff, portfolio_stats_fcfe,
     stds_fcff = [p['std_return'] * 100 for p in portfolio_stats_fcff]
     sharpe_ratios_fcff = [(m - rf_rate) / s if s > 0 else 0 for m, s in zip(means_fcff, stds_fcff)]
 
-    scatter1 = ax1.scatter(stds_fcff, means_fcff, c=sharpe_ratios_fcff, cmap='RdPu',
+    scatter1 = ax1.scatter(stds_fcff, means_fcff, c=sharpe_ratios_fcff, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_risk_idx_fcff = np.argmin(stds_fcff)
@@ -884,13 +806,13 @@ def plot_combined_efficient_frontier(portfolio_stats_fcff, portfolio_stats_fcfe,
     max_sharpe_idx_fcff = np.argmax(sharpe_ratios_fcff)
 
     ax1.scatter(stds_fcff[min_risk_idx_fcff], means_fcff[min_risk_idx_fcff],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min Variance', zorder=10)
     ax1.scatter(stds_fcff[max_return_idx_fcff], means_fcff[max_return_idx_fcff],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax1.scatter(stds_fcff[max_sharpe_idx_fcff], means_fcff[max_sharpe_idx_fcff],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Sharpe', zorder=10)
 
     ax1.set_ylabel('Expected Return (%) - FCFF', fontsize=12)
@@ -906,30 +828,27 @@ def plot_combined_efficient_frontier(portfolio_stats_fcff, portfolio_stats_fcfe,
         sharpe_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_sharpe_idx_fcff]['weights'], tickers, top_n=15)
         textstr_sharpe_fcff = f"Max Sharpe (FCFF):\n{sharpe_comp_fcff}"
         ax1.text(1.25, 1.0, textstr_sharpe_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_return_idx_fcff]['weights'], tickers, top_n=15)
         textstr_maxret_fcff = f"Max Return (FCFF):\n{maxret_comp_fcff}"
         ax1.text(1.25, 0.65, textstr_maxret_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         minvar_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[min_risk_idx_fcff]['weights'], tickers, top_n=15)
         textstr_minvar_fcff = f"Min Variance (FCFF):\n{minvar_comp_fcff}"
         ax1.text(1.25, 0.3, textstr_minvar_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     # FCFE (bottom)
     means_fcfe = [p['mean_return'] * 100 for p in portfolio_stats_fcfe]
     stds_fcfe = [p['std_return'] * 100 for p in portfolio_stats_fcfe]
     sharpe_ratios_fcfe = [(m - rf_rate) / s if s > 0 else 0 for m, s in zip(means_fcfe, stds_fcfe)]
 
-    scatter2 = ax2.scatter(stds_fcfe, means_fcfe, c=sharpe_ratios_fcfe, cmap='RdPu',
+    scatter2 = ax2.scatter(stds_fcfe, means_fcfe, c=sharpe_ratios_fcfe, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_risk_idx_fcfe = np.argmin(stds_fcfe)
@@ -937,13 +856,13 @@ def plot_combined_efficient_frontier(portfolio_stats_fcff, portfolio_stats_fcfe,
     max_sharpe_idx_fcfe = np.argmax(sharpe_ratios_fcfe)
 
     ax2.scatter(stds_fcfe[min_risk_idx_fcfe], means_fcfe[min_risk_idx_fcfe],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min Variance', zorder=10)
     ax2.scatter(stds_fcfe[max_return_idx_fcfe], means_fcfe[max_return_idx_fcfe],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax2.scatter(stds_fcfe[max_sharpe_idx_fcfe], means_fcfe[max_sharpe_idx_fcfe],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Sharpe', zorder=10)
 
     ax2.set_xlabel('Portfolio Risk (Std Dev of Return, %)', fontsize=12)
@@ -959,29 +878,24 @@ def plot_combined_efficient_frontier(portfolio_stats_fcff, portfolio_stats_fcfe,
         sharpe_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_sharpe_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_sharpe_fcfe = f"Max Sharpe (FCFE):\n{sharpe_comp_fcfe}"
         ax2.text(1.25, 1.0, textstr_sharpe_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_return_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_maxret_fcfe = f"Max Return (FCFE):\n{maxret_comp_fcfe}"
         ax2.text(1.25, 0.65, textstr_maxret_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         minvar_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[min_risk_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_minvar_fcfe = f"Min Variance (FCFE):\n{minvar_comp_fcfe}"
         ax2.text(1.25, 0.3, textstr_minvar_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Combined risk-return frontier saved: {output_file}")
 
 
 def plot_combined_tail_risk_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, output_file, tickers=None):
@@ -992,17 +906,17 @@ def plot_combined_tail_risk_frontier(portfolio_stats_fcff, portfolio_stats_fcfe,
     means_fcff = [p['mean_return'] * 100 for p in portfolio_stats_fcff]
     prob_losses_fcff = [p['prob_loss'] * 100 for p in portfolio_stats_fcff]
 
-    scatter1 = ax1.scatter(prob_losses_fcff, means_fcff, c=means_fcff, cmap='RdPu',
+    scatter1 = ax1.scatter(prob_losses_fcff, means_fcff, c=means_fcff, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_loss_idx_fcff = np.argmin(prob_losses_fcff)
     max_return_idx_fcff = np.argmax(means_fcff)
 
     ax1.scatter(prob_losses_fcff[min_loss_idx_fcff], means_fcff[min_loss_idx_fcff],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min P(Loss)', zorder=10)
     ax1.scatter(prob_losses_fcff[max_return_idx_fcff], means_fcff[max_return_idx_fcff],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
 
     ax1.set_ylabel('Expected Return (%) - FCFF', fontsize=12)
@@ -1018,32 +932,30 @@ def plot_combined_tail_risk_frontier(portfolio_stats_fcff, portfolio_stats_fcfe,
         minloss_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[min_loss_idx_fcff]['weights'], tickers, top_n=15)
         textstr_minloss_fcff = f"Min P(Loss) (FCFF):\n{minloss_comp_fcff}"
         ax1.text(1.25, 1.0, textstr_minloss_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
         maxret_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_return_idx_fcff]['weights'], tickers, top_n=15)
         textstr_maxret_fcff = f"Max Return (FCFF):\n{maxret_comp_fcff}"
         ax1.text(1.25, 0.6, textstr_maxret_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
     # FCFE (bottom)
     means_fcfe = [p['mean_return'] * 100 for p in portfolio_stats_fcfe]
     prob_losses_fcfe = [p['prob_loss'] * 100 for p in portfolio_stats_fcfe]
 
-    scatter2 = ax2.scatter(prob_losses_fcfe, means_fcfe, c=means_fcfe, cmap='RdPu',
+    scatter2 = ax2.scatter(prob_losses_fcfe, means_fcfe, c=means_fcfe, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_loss_idx_fcfe = np.argmin(prob_losses_fcfe)
     max_return_idx_fcfe = np.argmax(means_fcfe)
 
     ax2.scatter(prob_losses_fcfe[min_loss_idx_fcfe], means_fcfe[min_loss_idx_fcfe],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min P(Loss)', zorder=10)
     ax2.scatter(prob_losses_fcfe[max_return_idx_fcfe], means_fcfe[max_return_idx_fcfe],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
 
     ax2.set_xlabel('Probability of Loss (%)', fontsize=12)
@@ -1059,22 +971,18 @@ def plot_combined_tail_risk_frontier(portfolio_stats_fcff, portfolio_stats_fcfe,
         minloss_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[min_loss_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_minloss_fcfe = f"Min P(Loss) (FCFE):\n{minloss_comp_fcfe}"
         ax2.text(1.25, 1.0, textstr_minloss_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
         maxret_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_return_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_maxret_fcfe = f"Max Return (FCFE):\n{maxret_comp_fcfe}"
         ax2.text(1.25, 0.6, textstr_maxret_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Combined tail risk frontier saved: {output_file}")
 
 
 def plot_combined_downside_deviation_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, output_file, tickers=None):
@@ -1088,7 +996,7 @@ def plot_combined_downside_deviation_frontier(portfolio_stats_fcff, portfolio_st
     downside_devs_fcff = [p['downside_deviation'] * 100 for p in portfolio_stats_fcff]
     sortino_ratios_fcff = [(m - rf_rate) / dd if dd > 0 else 0 for m, dd in zip(means_fcff, downside_devs_fcff)]
 
-    scatter1 = ax1.scatter(downside_devs_fcff, means_fcff, c=sortino_ratios_fcff, cmap='RdPu',
+    scatter1 = ax1.scatter(downside_devs_fcff, means_fcff, c=sortino_ratios_fcff, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_downside_idx_fcff = np.argmin(downside_devs_fcff)
@@ -1096,13 +1004,13 @@ def plot_combined_downside_deviation_frontier(portfolio_stats_fcff, portfolio_st
     max_sortino_idx_fcff = np.argmax(sortino_ratios_fcff)
 
     ax1.scatter(downside_devs_fcff[min_downside_idx_fcff], means_fcff[min_downside_idx_fcff],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min Downside Risk', zorder=10)
     ax1.scatter(downside_devs_fcff[max_return_idx_fcff], means_fcff[max_return_idx_fcff],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax1.scatter(downside_devs_fcff[max_sortino_idx_fcff], means_fcff[max_sortino_idx_fcff],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Sortino', zorder=10)
 
     ax1.set_ylabel('Expected Return (%) - FCFF', fontsize=12)
@@ -1118,30 +1026,27 @@ def plot_combined_downside_deviation_frontier(portfolio_stats_fcff, portfolio_st
         sortino_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_sortino_idx_fcff]['weights'], tickers, top_n=15)
         textstr_sortino_fcff = f"Max Sortino (FCFF):\n{sortino_comp_fcff}"
         ax1.text(1.25, 1.0, textstr_sortino_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_return_idx_fcff]['weights'], tickers, top_n=15)
         textstr_maxret_fcff = f"Max Return (FCFF):\n{maxret_comp_fcff}"
         ax1.text(1.25, 0.65, textstr_maxret_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         mindown_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[min_downside_idx_fcff]['weights'], tickers, top_n=15)
         textstr_mindown_fcff = f"Min Downside Risk (FCFF):\n{mindown_comp_fcff}"
         ax1.text(1.25, 0.3, textstr_mindown_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     # FCFE (bottom)
     means_fcfe = [p['mean_return'] * 100 for p in portfolio_stats_fcfe]
     downside_devs_fcfe = [p['downside_deviation'] * 100 for p in portfolio_stats_fcfe]
     sortino_ratios_fcfe = [(m - rf_rate) / dd if dd > 0 else 0 for m, dd in zip(means_fcfe, downside_devs_fcfe)]
 
-    scatter2 = ax2.scatter(downside_devs_fcfe, means_fcfe, c=sortino_ratios_fcfe, cmap='RdPu',
+    scatter2 = ax2.scatter(downside_devs_fcfe, means_fcfe, c=sortino_ratios_fcfe, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_downside_idx_fcfe = np.argmin(downside_devs_fcfe)
@@ -1149,13 +1054,13 @@ def plot_combined_downside_deviation_frontier(portfolio_stats_fcff, portfolio_st
     max_sortino_idx_fcfe = np.argmax(sortino_ratios_fcfe)
 
     ax2.scatter(downside_devs_fcfe[min_downside_idx_fcfe], means_fcfe[min_downside_idx_fcfe],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min Downside Risk', zorder=10)
     ax2.scatter(downside_devs_fcfe[max_return_idx_fcfe], means_fcfe[max_return_idx_fcfe],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax2.scatter(downside_devs_fcfe[max_sortino_idx_fcfe], means_fcfe[max_sortino_idx_fcfe],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Sortino', zorder=10)
 
     ax2.set_xlabel('Downside Deviation (Semi-Std Dev, %)', fontsize=12)
@@ -1171,29 +1076,24 @@ def plot_combined_downside_deviation_frontier(portfolio_stats_fcff, portfolio_st
         sortino_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_sortino_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_sortino_fcfe = f"Max Sortino (FCFE):\n{sortino_comp_fcfe}"
         ax2.text(1.25, 1.0, textstr_sortino_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_return_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_maxret_fcfe = f"Max Return (FCFE):\n{maxret_comp_fcfe}"
         ax2.text(1.25, 0.65, textstr_maxret_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         mindown_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[min_downside_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_mindown_fcfe = f"Min Downside Risk (FCFE):\n{mindown_comp_fcfe}"
         ax2.text(1.25, 0.3, textstr_mindown_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Combined downside deviation frontier saved: {output_file}")
 
 
 def plot_combined_cvar_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, output_file, tickers=None):
@@ -1205,7 +1105,7 @@ def plot_combined_cvar_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outp
     cvars_fcff = [-p['cvar_5'] * 100 for p in portfolio_stats_fcff]
     cvar_ratios_fcff = [m / cv if cv > 0 else 0 for m, cv in zip(means_fcff, cvars_fcff)]
 
-    scatter1 = ax1.scatter(cvars_fcff, means_fcff, c=cvar_ratios_fcff, cmap='RdPu',
+    scatter1 = ax1.scatter(cvars_fcff, means_fcff, c=cvar_ratios_fcff, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_cvar_idx_fcff = np.argmin(cvars_fcff)
@@ -1213,13 +1113,13 @@ def plot_combined_cvar_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outp
     max_ratio_idx_fcff = np.argmax(cvar_ratios_fcff)
 
     ax1.scatter(cvars_fcff[min_cvar_idx_fcff], means_fcff[min_cvar_idx_fcff],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min CVaR', zorder=10)
     ax1.scatter(cvars_fcff[max_return_idx_fcff], means_fcff[max_return_idx_fcff],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax1.scatter(cvars_fcff[max_ratio_idx_fcff], means_fcff[max_ratio_idx_fcff],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return/CVaR', zorder=10)
 
     ax1.set_ylabel('Expected Return (%) - FCFF', fontsize=12)
@@ -1235,30 +1135,27 @@ def plot_combined_cvar_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outp
         ratio_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_ratio_idx_fcff]['weights'], tickers, top_n=15)
         textstr_ratio_fcff = f"Max Return/CVaR (FCFF):\n{ratio_comp_fcff}"
         ax1.text(1.25, 1.0, textstr_ratio_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_return_idx_fcff]['weights'], tickers, top_n=15)
         textstr_maxret_fcff = f"Max Return (FCFF):\n{maxret_comp_fcff}"
         ax1.text(1.25, 0.65, textstr_maxret_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         mincvar_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[min_cvar_idx_fcff]['weights'], tickers, top_n=15)
         textstr_mincvar_fcff = f"Min CVaR (FCFF):\n{mincvar_comp_fcff}"
         ax1.text(1.25, 0.3, textstr_mincvar_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     # FCFE (bottom)
     means_fcfe = [p['mean_return'] * 100 for p in portfolio_stats_fcfe]
     cvars_fcfe = [-p['cvar_5'] * 100 for p in portfolio_stats_fcfe]
     cvar_ratios_fcfe = [m / cv if cv > 0 else 0 for m, cv in zip(means_fcfe, cvars_fcfe)]
 
-    scatter2 = ax2.scatter(cvars_fcfe, means_fcfe, c=cvar_ratios_fcfe, cmap='RdPu',
+    scatter2 = ax2.scatter(cvars_fcfe, means_fcfe, c=cvar_ratios_fcfe, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_cvar_idx_fcfe = np.argmin(cvars_fcfe)
@@ -1266,13 +1163,13 @@ def plot_combined_cvar_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outp
     max_ratio_idx_fcfe = np.argmax(cvar_ratios_fcfe)
 
     ax2.scatter(cvars_fcfe[min_cvar_idx_fcfe], means_fcfe[min_cvar_idx_fcfe],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min CVaR', zorder=10)
     ax2.scatter(cvars_fcfe[max_return_idx_fcfe], means_fcfe[max_return_idx_fcfe],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax2.scatter(cvars_fcfe[max_ratio_idx_fcfe], means_fcfe[max_ratio_idx_fcfe],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return/CVaR', zorder=10)
 
     ax2.set_xlabel('CVaR (5%, Expected Loss in Worst 5%, %)', fontsize=12)
@@ -1288,29 +1185,24 @@ def plot_combined_cvar_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outp
         ratio_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_ratio_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_ratio_fcfe = f"Max Return/CVaR (FCFE):\n{ratio_comp_fcfe}"
         ax2.text(1.25, 1.0, textstr_ratio_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_return_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_maxret_fcfe = f"Max Return (FCFE):\n{maxret_comp_fcfe}"
         ax2.text(1.25, 0.65, textstr_maxret_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         mincvar_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[min_cvar_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_mincvar_fcfe = f"Min CVaR (FCFE):\n{mincvar_comp_fcfe}"
         ax2.text(1.25, 0.3, textstr_mincvar_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Combined CVaR frontier saved: {output_file}")
 
 
 def plot_combined_var_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, output_file, tickers=None):
@@ -1322,7 +1214,7 @@ def plot_combined_var_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outpu
     vars_fcff = [-p['var_5'] * 100 for p in portfolio_stats_fcff]
     var_ratios_fcff = [m / v if v > 0 else 0 for m, v in zip(means_fcff, vars_fcff)]
 
-    scatter1 = ax1.scatter(vars_fcff, means_fcff, c=var_ratios_fcff, cmap='RdPu',
+    scatter1 = ax1.scatter(vars_fcff, means_fcff, c=var_ratios_fcff, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_var_idx_fcff = np.argmin(vars_fcff)
@@ -1330,13 +1222,13 @@ def plot_combined_var_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outpu
     max_ratio_idx_fcff = np.argmax(var_ratios_fcff)
 
     ax1.scatter(vars_fcff[min_var_idx_fcff], means_fcff[min_var_idx_fcff],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min VaR', zorder=10)
     ax1.scatter(vars_fcff[max_return_idx_fcff], means_fcff[max_return_idx_fcff],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax1.scatter(vars_fcff[max_ratio_idx_fcff], means_fcff[max_ratio_idx_fcff],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return/VaR', zorder=10)
 
     ax1.set_ylabel('Expected Return (%) - FCFF', fontsize=12)
@@ -1352,30 +1244,27 @@ def plot_combined_var_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outpu
         ratio_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_ratio_idx_fcff]['weights'], tickers, top_n=15)
         textstr_ratio_fcff = f"Max Return/VaR (FCFF):\n{ratio_comp_fcff}"
         ax1.text(1.25, 1.0, textstr_ratio_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_return_idx_fcff]['weights'], tickers, top_n=15)
         textstr_maxret_fcff = f"Max Return (FCFF):\n{maxret_comp_fcff}"
         ax1.text(1.25, 0.65, textstr_maxret_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         minvar_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[min_var_idx_fcff]['weights'], tickers, top_n=15)
         textstr_minvar_fcff = f"Min VaR (FCFF):\n{minvar_comp_fcff}"
         ax1.text(1.25, 0.3, textstr_minvar_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     # FCFE (bottom)
     means_fcfe = [p['mean_return'] * 100 for p in portfolio_stats_fcfe]
     vars_fcfe = [-p['var_5'] * 100 for p in portfolio_stats_fcfe]
     var_ratios_fcfe = [m / v if v > 0 else 0 for m, v in zip(means_fcfe, vars_fcfe)]
 
-    scatter2 = ax2.scatter(vars_fcfe, means_fcfe, c=var_ratios_fcfe, cmap='RdPu',
+    scatter2 = ax2.scatter(vars_fcfe, means_fcfe, c=var_ratios_fcfe, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_var_idx_fcfe = np.argmin(vars_fcfe)
@@ -1383,13 +1272,13 @@ def plot_combined_var_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outpu
     max_ratio_idx_fcfe = np.argmax(var_ratios_fcfe)
 
     ax2.scatter(vars_fcfe[min_var_idx_fcfe], means_fcfe[min_var_idx_fcfe],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min VaR', zorder=10)
     ax2.scatter(vars_fcfe[max_return_idx_fcfe], means_fcfe[max_return_idx_fcfe],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax2.scatter(vars_fcfe[max_ratio_idx_fcfe], means_fcfe[max_ratio_idx_fcfe],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return/VaR', zorder=10)
 
     ax2.set_xlabel('VaR (5%, 5th Percentile Loss, %)', fontsize=12)
@@ -1405,29 +1294,24 @@ def plot_combined_var_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, outpu
         ratio_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_ratio_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_ratio_fcfe = f"Max Return/VaR (FCFE):\n{ratio_comp_fcfe}"
         ax2.text(1.25, 1.0, textstr_ratio_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_return_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_maxret_fcfe = f"Max Return (FCFE):\n{maxret_comp_fcfe}"
         ax2.text(1.25, 0.65, textstr_maxret_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         minvar_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[min_var_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_minvar_fcfe = f"Min VaR (FCFE):\n{minvar_comp_fcfe}"
         ax2.text(1.25, 0.3, textstr_minvar_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Combined VaR frontier saved: {output_file}")
 
 
 def plot_combined_max_drawdown_frontier(portfolio_stats_fcff, portfolio_stats_fcfe, output_file, tickers=None):
@@ -1439,7 +1323,7 @@ def plot_combined_max_drawdown_frontier(portfolio_stats_fcff, portfolio_stats_fc
     max_drawdowns_fcff = [p['max_drawdown'] * 100 for p in portfolio_stats_fcff]
     calmar_ratios_fcff = [m / dd if dd > 0 else 0 for m, dd in zip(means_fcff, max_drawdowns_fcff)]
 
-    scatter1 = ax1.scatter(max_drawdowns_fcff, means_fcff, c=calmar_ratios_fcff, cmap='RdPu',
+    scatter1 = ax1.scatter(max_drawdowns_fcff, means_fcff, c=calmar_ratios_fcff, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_dd_idx_fcff = np.argmin(max_drawdowns_fcff)
@@ -1447,13 +1331,13 @@ def plot_combined_max_drawdown_frontier(portfolio_stats_fcff, portfolio_stats_fc
     max_calmar_idx_fcff = np.argmax(calmar_ratios_fcff)
 
     ax1.scatter(max_drawdowns_fcff[min_dd_idx_fcff], means_fcff[min_dd_idx_fcff],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min Drawdown', zorder=10)
     ax1.scatter(max_drawdowns_fcff[max_return_idx_fcff], means_fcff[max_return_idx_fcff],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax1.scatter(max_drawdowns_fcff[max_calmar_idx_fcff], means_fcff[max_calmar_idx_fcff],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Calmar', zorder=10)
 
     ax1.set_ylabel('Expected Return (%) - FCFF', fontsize=12)
@@ -1469,30 +1353,27 @@ def plot_combined_max_drawdown_frontier(portfolio_stats_fcff, portfolio_stats_fc
         calmar_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_calmar_idx_fcff]['weights'], tickers, top_n=15)
         textstr_calmar_fcff = f"Max Calmar (FCFF):\n{calmar_comp_fcff}"
         ax1.text(1.25, 1.0, textstr_calmar_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[max_return_idx_fcff]['weights'], tickers, top_n=15)
         textstr_maxret_fcff = f"Max Return (FCFF):\n{maxret_comp_fcff}"
         ax1.text(1.25, 0.65, textstr_maxret_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         mindd_comp_fcff = format_portfolio_composition(portfolio_stats_fcff[min_dd_idx_fcff]['weights'], tickers, top_n=15)
         textstr_mindd_fcff = f"Min Drawdown (FCFF):\n{mindd_comp_fcff}"
         ax1.text(1.25, 0.3, textstr_mindd_fcff, transform=ax1.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     # FCFE (bottom)
     means_fcfe = [p['mean_return'] * 100 for p in portfolio_stats_fcfe]
     max_drawdowns_fcfe = [p['max_drawdown'] * 100 for p in portfolio_stats_fcfe]
     calmar_ratios_fcfe = [m / dd if dd > 0 else 0 for m, dd in zip(means_fcfe, max_drawdowns_fcfe)]
 
-    scatter2 = ax2.scatter(max_drawdowns_fcfe, means_fcfe, c=calmar_ratios_fcfe, cmap='RdPu',
+    scatter2 = ax2.scatter(max_drawdowns_fcfe, means_fcfe, c=calmar_ratios_fcfe, cmap=KANAGAWA_CMAP,
                           alpha=0.6, s=20, edgecolors='none')
 
     min_dd_idx_fcfe = np.argmin(max_drawdowns_fcfe)
@@ -1500,13 +1381,13 @@ def plot_combined_max_drawdown_frontier(portfolio_stats_fcff, portfolio_stats_fc
     max_calmar_idx_fcfe = np.argmax(calmar_ratios_fcfe)
 
     ax2.scatter(max_drawdowns_fcfe[min_dd_idx_fcfe], means_fcfe[min_dd_idx_fcfe],
-               marker='*', s=250, c='blue', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['blue'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Min Drawdown', zorder=10)
     ax2.scatter(max_drawdowns_fcfe[max_return_idx_fcfe], means_fcfe[max_return_idx_fcfe],
-               marker='*', s=250, c='green', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['green'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Return', zorder=10)
     ax2.scatter(max_drawdowns_fcfe[max_calmar_idx_fcfe], means_fcfe[max_calmar_idx_fcfe],
-               marker='*', s=250, c='gold', edgecolors='black',
+               marker='*', s=250, c=KANAGAWA_DRAGON['yellow'], edgecolors=KANAGAWA_DRAGON['bg'],
                linewidths=0.8, label='Max Calmar', zorder=10)
 
     ax2.set_xlabel('Max Drawdown (Median to Worst Case, %)', fontsize=12)
@@ -1522,29 +1403,24 @@ def plot_combined_max_drawdown_frontier(portfolio_stats_fcff, portfolio_stats_fc
         calmar_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_calmar_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_calmar_fcfe = f"Max Calmar (FCFE):\n{calmar_comp_fcfe}"
         ax2.text(1.25, 1.0, textstr_calmar_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='gold', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GOLD)
 
         maxret_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[max_return_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_maxret_fcfe = f"Max Return (FCFE):\n{maxret_comp_fcfe}"
         ax2.text(1.25, 0.65, textstr_maxret_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgreen', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_GREEN)
 
         mindd_comp_fcfe = format_portfolio_composition(portfolio_stats_fcfe[min_dd_idx_fcfe]['weights'], tickers, top_n=15)
         textstr_mindd_fcfe = f"Min Drawdown (FCFE):\n{mindd_comp_fcfe}"
         ax2.text(1.25, 0.3, textstr_mindd_fcfe, transform=ax2.transAxes, fontsize=7,
-                verticalalignment='top', family='monospace', color='black',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8,
-                         edgecolor='black', linewidth=1.5))
+                verticalalignment='top', family='monospace', color=BOX_TEXT_COLOR,
+                bbox=BOX_BLUE)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Combined max drawdown frontier saved: {output_file}")
 
 
 def print_correlation_summary(correlation_matrix):
@@ -1585,8 +1461,7 @@ def print_correlation_summary(correlation_matrix):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate portfolio efficient frontier plots")
-    parser.add_argument("--output-dir", default="../output", help="Output directory with CSV files")
-    parser.add_argument("--viz-dir", default="../output", help="Directory to save visualizations")
+    parser.add_argument("--output-dir", default="valuation/dcf_probabilistic/output", help="Base output directory")
     parser.add_argument("--n-portfolios", type=int, default=5000,
                        help="Number of random portfolios to generate")
     parser.add_argument("--method", default="fcfe", choices=["fcfe", "fcff", "combined"],
@@ -1595,7 +1470,7 @@ def main():
 
     output_dir = Path(args.output_dir)
 
-    # Create organized directory structure
+    # Create organized directory structure under base output dir
     data_dir = output_dir / "data"
 
     # For combined mode, put directly in multi_asset/
@@ -1607,18 +1482,6 @@ def main():
 
     data_dir.mkdir(parents=True, exist_ok=True)
     multi_asset_dir.mkdir(parents=True, exist_ok=True)
-
-    # For backward compatibility, also accept old viz_dir argument
-    # but use it as the base output directory
-    if args.viz_dir != "../output":
-        output_dir = Path(args.viz_dir)
-        data_dir = output_dir / "data"
-        if args.method == "combined":
-            multi_asset_dir = output_dir / "multi_asset"
-        else:
-            multi_asset_dir = output_dir / "multi_asset" / args.method
-        data_dir.mkdir(parents=True, exist_ok=True)
-        multi_asset_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         # Load data (try data directory first, fall back to output_dir for backward compatibility)
@@ -1669,6 +1532,24 @@ def main():
 
             simulations = pd.read_csv(sim_file)
 
+        # Step 0: Exclude specialized model tickers (bank, insurance, oil_gas)
+        # Their valuation outputs are not commensurable with standard FCFE/FCFF
+        summary_file = data_dir / "probabilistic_summary.csv"
+        if not summary_file.exists():
+            summary_file = output_dir / "probabilistic_summary.csv"
+        if summary_file.exists():
+            summary_df = pd.read_csv(summary_file)
+            if 'model_type' in summary_df.columns:
+                specialized = summary_df[summary_df['model_type'] != 'standard']['ticker'].tolist()
+                if specialized:
+                    print(f"\nExcluding specialized model tickers from frontier: {specialized}")
+                    standard_tickers = [t for t in simulations.columns if t not in specialized]
+                    simulations = simulations[standard_tickers]
+                    if args.method == "combined":
+                        simulations_fcfe = simulations_fcfe[standard_tickers]
+                        simulations_fcff = simulations_fcff[standard_tickers]
+                    prices = prices[~prices['ticker'].isin(specialized)]
+
         # Step 1: Handle misaligned simulations
         # For portfolio analysis, we need aligned simulations across all tickers
         all_valid_mask = simulations.notna().all(axis=1)
@@ -1702,19 +1583,32 @@ def main():
             # Check 2: Extreme outliers
             try:
                 price = prices[prices['ticker'] == ticker]['price'].values[0]
-                returns = (simulations[ticker].dropna() - price) / price
+                valid_sims = simulations[ticker].dropna()
 
-                # Filter tickers with extreme outliers (>50x or <-10x)
+                # Filter out zero/negative IVPS (failed DCF calculations where
+                # discount_rate <= terminal_growth or no cash flows)
+                valid_sims = valid_sims[valid_sims > 0]
+                if len(valid_sims) < len(simulations) * 0.25:
+                    tickers_to_remove.append((ticker, f"too many failed simulations ({len(valid_sims)}/{len(simulations)} valid)"))
+                    continue
+
+                returns = (valid_sims - price) / price
+
+                # Winsorize extreme tails (clip to 1st/99th percentile)
+                p1, p99 = returns.quantile(0.01), returns.quantile(0.99)
+                returns = returns.clip(lower=p1, upper=p99)
+
+                # Filter tickers with extreme outliers (>100x or <-10x)
                 max_return = returns.max()
                 min_return = returns.min()
 
-                if max_return > 50 or min_return < -10:
+                if max_return > 100 or min_return < -10:
                     tickers_to_remove.append((ticker, f"extreme returns [{min_return:.1f}, {max_return:.1f}]"))
                     continue
 
                 tickers_to_keep.append(ticker)
-            except:
-                tickers_to_remove.append((ticker, "price lookup failed"))
+            except (IndexError, KeyError, ValueError, ZeroDivisionError) as e:
+                tickers_to_remove.append((ticker, f"price lookup failed: {type(e).__name__}"))
                 continue
 
         # Report filtering results

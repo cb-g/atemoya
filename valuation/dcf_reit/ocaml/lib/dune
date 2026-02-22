@@ -1,0 +1,5 @@
+(library
+ (name dcf_reit)
+ (public_name atemoya.dcf_reit)
+ (libraries yojson unix)
+ (preprocess (pps ppx_deriving.show)))

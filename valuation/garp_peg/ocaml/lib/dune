@@ -1,0 +1,5 @@
+(library
+ (name garp_peg)
+ (public_name atemoya.garp_peg)
+ (libraries yojson unix)
+ (preprocess (pps ppx_deriving.show)))

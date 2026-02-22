@@ -1,0 +1,9 @@
+(lang dune 3.0)
+(name tail_risk_forecast)
+(generate_opam_files true)
+
+(package
+ (name tail_risk_forecast)
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))))

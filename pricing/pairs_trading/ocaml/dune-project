@@ -1,0 +1,12 @@
+(lang dune 3.0)
+(name pairs_trading)
+
+(generate_opam_files true)
+
+(package
+ (name pairs_trading)
+ (synopsis "Statistical Arbitrage Pairs Trading")
+ (description "Trade mean-reverting spreads between cointegrated assets")
+ (depends
+  (ocaml (>= 4.14))
+  dune))

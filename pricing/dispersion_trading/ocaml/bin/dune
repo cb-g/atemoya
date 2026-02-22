@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name dispersion_trading)
+ (libraries dispersion_trading_lib))

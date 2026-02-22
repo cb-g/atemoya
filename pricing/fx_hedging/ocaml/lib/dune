@@ -1,0 +1,4 @@
+(library
+ (name fx_hedging_lib)
+ (public_name fx_hedging.lib)
+ (libraries unix))

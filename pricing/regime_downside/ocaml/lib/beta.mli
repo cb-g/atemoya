@@ -25,3 +25,36 @@ val estimate_all_betas :
   ?halflife:float ->
   unit ->
   asset_betas
+
+(** Filter arrays to only include downside observations *)
+val filter_downside :
+  asset_returns:float array ->
+  benchmark_returns:float array ->
+  threshold:float ->
+  float array * float array
+
+(** Estimate downside beta (only considers negative benchmark returns)
+    Downside beta captures asset sensitivity during market declines *)
+val estimate_downside_beta :
+  asset_returns:float array ->
+  benchmark_returns:float array ->
+  halflife:float ->
+  threshold:float ->
+  float
+
+(** Estimate upside beta (only considers positive benchmark returns) *)
+val estimate_upside_beta :
+  asset_returns:float array ->
+  benchmark_returns:float array ->
+  halflife:float ->
+  threshold:float ->
+  float
+
+(** Calculate beta asymmetry: (β_down - β_up) / β
+    Positive value = asset hurts more in down markets than it helps in up markets *)
+val calculate_beta_asymmetry :
+  asset_returns:float array ->
+  benchmark_returns:float array ->
+  halflife:float ->
+  threshold:float ->
+  float

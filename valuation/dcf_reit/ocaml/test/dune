@@ -1,0 +1,4 @@
+(test
+ (name test_dcf_reit)
+ (libraries dcf_reit alcotest)
+ (preprocess (pps ppx_deriving.show)))

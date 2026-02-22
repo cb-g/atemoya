@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name forward_factor)
+ (libraries forward_factor))

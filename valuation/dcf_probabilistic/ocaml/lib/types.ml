@@ -171,10 +171,18 @@ type investment_signal =
   | Avoid
 [@@deriving show]
 
+type model_type =
+  | Standard
+  | Bank
+  | Insurance
+  | OilGas
+[@@deriving show]
+
 type valuation_result = {
   ticker : ticker;
   price : float;
   num_simulations : int;
+  model_type : model_type;
   fcfe_stats : valuation_statistics;
   fcfe_metrics : probability_metrics;
   fcfe_class : valuation_class;
@@ -199,4 +207,48 @@ type config = {
   simulation_config : simulation_config;
   industry_priors : (sector * sector_priors) list;
 }
+[@@deriving show]
+
+type bank_data = {
+  bank_book_value : float;
+  bank_net_income : float;
+  bank_tangible_book_value : float;
+  bank_roe_history : float array;
+  bank_net_interest_income : float;
+  bank_non_interest_income : float;
+  bank_non_interest_expense : float;
+  bank_total_deposits : float;
+  bank_total_loans : float;
+}
+[@@deriving show]
+
+type insurance_data = {
+  ins_book_value : float;
+  ins_premiums : float;
+  ins_float_amount : float;
+  ins_investment_income : float;
+  ins_combined_ratio : float;
+  ins_loss_ratio : float;
+  ins_expense_ratio : float;
+  ins_cr_history : float array;
+  ins_yield_history : float array;
+}
+[@@deriving show]
+
+type oil_gas_data = {
+  og_proven_reserves : float;  (** MMBOE *)
+  og_production_boe_day : float;
+  og_oil_pct : float;
+  og_lifting_cost : float;
+  og_finding_cost : float;
+  og_book_value : float;
+  og_debt : float;
+}
+[@@deriving show]
+
+type specialized_data =
+  | BankData of bank_data
+  | InsuranceData of insurance_data
+  | OilGasData of oil_gas_data
+  | NoSpecializedData
 [@@deriving show]

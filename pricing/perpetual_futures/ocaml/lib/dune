@@ -1,0 +1,4 @@
+(library
+ (name perpetual_futures)
+ (public_name perpetual_futures)
+ (libraries yojson))

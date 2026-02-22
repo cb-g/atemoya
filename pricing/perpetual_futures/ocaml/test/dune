@@ -1,0 +1,4 @@
+(test
+ (name test_perpetual_futures)
+ (libraries perpetual_futures alcotest)
+ (package perpetual_futures))

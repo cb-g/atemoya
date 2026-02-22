@@ -1,0 +1,14 @@
+(lang dune 3.0)
+(name variance_swaps)
+
+(generate_opam_files true)
+
+(package
+ (name variance_swaps)
+ (synopsis "Variance Swaps and Variance Risk Premium Trading")
+ (description "Price variance swaps using Carr-Madan replication, compute VRP, and generate trading signals")
+ (depends
+  (ocaml (>= 4.14))
+  dune
+  yojson
+  ppx_deriving))

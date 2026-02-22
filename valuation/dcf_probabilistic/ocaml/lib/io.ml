@@ -15,13 +15,15 @@ let load_simulation_config filename =
   (* Helper to get optional bool with default *)
   let get_bool_opt key default_val =
     try json |> member key |> to_bool
-    with _ -> default_val
+    with
+    | Yojson.Basic.Util.Type_error _ | Not_found -> default_val
   in
 
   (* Helper to get optional float with default *)
   let get_float_opt key default_val =
     try json |> member key |> to_number
-    with _ -> default_val
+    with
+    | Yojson.Basic.Util.Type_error _ | Not_found -> default_val
   in
 
   (* Helper to parse 2D array (correlation matrix) *)
@@ -31,7 +33,8 @@ let load_simulation_config filename =
       Array.of_list (List.map (fun row ->
         Array.of_list (List.map to_number (to_list row))
       ) matrix_json)
-    with _ ->
+    with
+    | Yojson.Basic.Util.Type_error _ | Not_found ->
       (* Default correlation matrix based on key *)
       if key = "financials_correlation" then
         (* 6×6 matrix for [NI, EBIT, CapEx, Depr, CA, CL] - from copula module *)
@@ -61,7 +64,8 @@ let load_simulation_config filename =
         Array.of_list (List.map (fun row ->
           Array.of_list (List.map to_number (to_list row))
         ) matrix_json)
-      with _ ->
+      with
+      | Yojson.Basic.Util.Type_error _ | Not_found ->
         [| [| 1.0; 0.0; 0.0 |];
            [| 0.0; 1.0; 0.0 |];
            [| 0.0; 0.0; 1.0 |] |]
@@ -84,7 +88,8 @@ let load_simulation_config filename =
         normal_regime = parse_regime_parameters (regime_json |> member "normal_regime");
         crisis_regime = parse_regime_parameters (regime_json |> member "crisis_regime");
       }
-    with _ -> None
+    with
+    | Yojson.Basic.Util.Type_error _ | Not_found -> None
   in
 
   {
@@ -207,6 +212,71 @@ let load_market_data filename =
     industry = json |> member "industry" |> to_string;
   }
 
+let load_model_type filename =
+  let json = Yojson.Basic.from_file filename in
+  let open Types in
+  let model_str =
+    try json |> member "model_type" |> to_string
+    with _ -> "standard"
+  in
+  match model_str with
+  | "bank" -> Bank
+  | "insurance" -> Insurance
+  | "oil_gas" -> OilGas
+  | _ -> Standard
+
+let load_specialized_data filename =
+  let json = Yojson.Basic.from_file filename in
+  let open Types in
+  let model_str =
+    try json |> member "model_type" |> to_string
+    with _ -> "standard"
+  in
+  let get_float key default =
+    try json |> member key |> to_number
+    with _ -> default
+  in
+  let get_float_array key =
+    try json |> member key |> to_list |> List.map to_number |> Array.of_list
+    with _ -> [||]
+  in
+  match model_str with
+  | "bank" ->
+    BankData {
+      bank_book_value = get_float "book_value_equity" 0.0;
+      bank_net_income = get_float "net_income" 0.0;
+      bank_tangible_book_value = get_float "tangible_book_value" 0.0;
+      bank_roe_history = get_float_array "roe_history";
+      bank_net_interest_income = get_float "net_interest_income" 0.0;
+      bank_non_interest_income = get_float "non_interest_income" 0.0;
+      bank_non_interest_expense = get_float "non_interest_expense" 0.0;
+      bank_total_deposits = get_float "total_deposits" 0.0;
+      bank_total_loans = get_float "total_loans" 0.0;
+    }
+  | "insurance" ->
+    InsuranceData {
+      ins_book_value = get_float "book_value_equity" 0.0;
+      ins_premiums = get_float "premiums_earned" 0.0;
+      ins_float_amount = get_float "float_amount" 0.0;
+      ins_investment_income = get_float "investment_income" 0.0;
+      ins_combined_ratio = get_float "combined_ratio" 0.0;
+      ins_loss_ratio = get_float "loss_ratio" 0.0;
+      ins_expense_ratio = get_float "expense_ratio" 0.0;
+      ins_cr_history = get_float_array "cr_history";
+      ins_yield_history = get_float_array "yield_history";
+    }
+  | "oil_gas" ->
+    OilGasData {
+      og_proven_reserves = get_float "proven_reserves" 0.0;
+      og_production_boe_day = get_float "production_boe_day" 0.0;
+      og_oil_pct = get_float "oil_pct" 0.5;
+      og_lifting_cost = get_float "lifting_cost" 10.0;
+      og_finding_cost = get_float "finding_cost" 15.0;
+      og_book_value = get_float "book_value_equity" 0.0;
+      og_debt = get_float "debt" 0.0;
+    }
+  | _ -> NoSpecializedData
+
 let load_time_series filename =
   let json = Yojson.Basic.from_file filename in
   let ts = json |> member "time_series" in
@@ -246,7 +316,7 @@ let read_csv_lines filename =
 
 let write_summary_csv ~filename ~results =
   let existing_lines = read_csv_lines filename in
-  let header = "ticker,price,num_sims,fcfe_mean,fcfe_std,fcfe_min,fcfe_max,fcfe_p50,fcfe_class,fcfe_prob_under,fcff_mean,fcff_std,fcff_min,fcff_max,fcff_p50,fcff_class,fcff_prob_under,signal" in
+  let header = "ticker,price,num_sims,model_type,fcfe_mean,fcfe_std,fcfe_min,fcfe_max,fcfe_p50,fcfe_class,fcfe_prob_under,fcff_mean,fcff_std,fcff_min,fcff_max,fcff_p50,fcff_class,fcff_prob_under,signal" in
 
   (* Filter out duplicate tickers if file exists *)
   let filtered_results =
@@ -261,10 +331,17 @@ let write_summary_csv ~filename ~results =
       List.filter (fun r -> not (List.mem r.Types.ticker existing_tickers)) results
   in
 
+  let model_type_string mt = match mt with
+    | Types.Standard -> "standard"
+    | Types.Bank -> "bank"
+    | Types.Insurance -> "insurance"
+    | Types.OilGas -> "oil_gas"
+  in
   let data_lines = List.map (fun result ->
     let open Types in
-    Printf.sprintf "%s,%.2f,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%.4f,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%.4f,%s"
+    Printf.sprintf "%s,%.2f,%d,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%.4f,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%.4f,%s"
       result.ticker result.price result.num_simulations
+      (model_type_string result.model_type)
       result.fcfe_stats.mean result.fcfe_stats.std result.fcfe_stats.min
       result.fcfe_stats.max result.fcfe_stats.percentile_50
       (Statistics.class_to_string result.fcfe_class)
@@ -444,8 +521,15 @@ let format_valuation_result result =
   let buffer = Buffer.create 2048 in
   let bprintf = Buffer.add_string buffer in
 
+  let model_label = match result.model_type with
+    | Types.Standard -> "DCF"
+    | Types.Bank -> "Excess Return"
+    | Types.Insurance -> "Float-Based"
+    | Types.OilGas -> "NAV"
+  in
+
   bprintf (sprintf "\n========================================\n");
-  bprintf (sprintf "Probabilistic DCF Valuation: %s\n" result.ticker);
+  bprintf (sprintf "Probabilistic %s Valuation: %s\n" model_label result.ticker);
   bprintf (sprintf "========================================\n\n");
 
   bprintf (sprintf "Simulation Parameters:\n");
@@ -459,43 +543,73 @@ let format_valuation_result result =
   bprintf (sprintf "  Leveraged Beta: %.2f\n" result.cost_of_capital.leveraged_beta);
   bprintf (sprintf "\n");
 
-  bprintf (sprintf "FCFE Valuation (Equity Method):\n");
-  bprintf (sprintf "  Mean IVPS: $%.2f\n" result.fcfe_stats.mean);
-  bprintf (sprintf "  Std Dev: $%.2f\n" result.fcfe_stats.std);
-  bprintf (sprintf "  Median: $%.2f\n" result.fcfe_stats.percentile_50);
-  bprintf (sprintf "  Range: $%.2f - $%.2f\n" result.fcfe_stats.min result.fcfe_stats.max);
-  bprintf (sprintf "  90%% Confidence: $%.2f - $%.2f\n"
-    result.fcfe_stats.percentile_5 result.fcfe_stats.percentile_95);
-  bprintf (sprintf "  Classification: %s\n" (Statistics.class_to_string result.fcfe_class));
-  bprintf (sprintf "  P(Undervalued): %.1f%%\n" (result.fcfe_metrics.prob_undervalued *. 100.0));
-  bprintf (sprintf "  Expected Surplus: $%.2f (%.1f%%)\n"
-    result.fcfe_metrics.expected_surplus
-    (result.fcfe_metrics.expected_surplus_pct *. 100.0));
-  bprintf (sprintf "  Tail Risk Metrics:\n");
-  bprintf (sprintf "    VaR (5%%): $%.2f\n" result.fcfe_tail_risk.var_5);
-  bprintf (sprintf "    CVaR (5%%): $%.2f\n" result.fcfe_tail_risk.cvar_5);
-  bprintf (sprintf "    Max Drawdown: $%.2f\n" result.fcfe_tail_risk.max_drawdown);
-  bprintf (sprintf "    Downside Deviation: $%.2f\n" result.fcfe_tail_risk.downside_deviation);
-  bprintf (sprintf "\n");
+  let is_specialized = result.model_type <> Types.Standard in
 
-  bprintf (sprintf "FCFF Valuation (Firm Method):\n");
-  bprintf (sprintf "  Mean IVPS: $%.2f\n" result.fcff_stats.mean);
-  bprintf (sprintf "  Std Dev: $%.2f\n" result.fcff_stats.std);
-  bprintf (sprintf "  Median: $%.2f\n" result.fcff_stats.percentile_50);
-  bprintf (sprintf "  Range: $%.2f - $%.2f\n" result.fcff_stats.min result.fcff_stats.max);
-  bprintf (sprintf "  90%% Confidence: $%.2f - $%.2f\n"
-    result.fcff_stats.percentile_5 result.fcff_stats.percentile_95);
-  bprintf (sprintf "  Classification: %s\n" (Statistics.class_to_string result.fcff_class));
-  bprintf (sprintf "  P(Undervalued): %.1f%%\n" (result.fcff_metrics.prob_undervalued *. 100.0));
-  bprintf (sprintf "  Expected Surplus: $%.2f (%.1f%%)\n"
-    result.fcff_metrics.expected_surplus
-    (result.fcff_metrics.expected_surplus_pct *. 100.0));
-  bprintf (sprintf "  Tail Risk Metrics:\n");
-  bprintf (sprintf "    VaR (5%%): $%.2f\n" result.fcff_tail_risk.var_5);
-  bprintf (sprintf "    CVaR (5%%): $%.2f\n" result.fcff_tail_risk.cvar_5);
-  bprintf (sprintf "    Max Drawdown: $%.2f\n" result.fcff_tail_risk.max_drawdown);
-  bprintf (sprintf "    Downside Deviation: $%.2f\n" result.fcff_tail_risk.downside_deviation);
-  bprintf (sprintf "\n");
+  if is_specialized then begin
+    (* Specialized models: single fair value distribution *)
+    let fv_label = match result.model_type with
+      | Types.Bank -> "Excess Return Fair Value"
+      | Types.Insurance -> "Float-Based Fair Value"
+      | Types.OilGas -> "NAV Fair Value"
+      | Types.Standard -> "Fair Value"
+    in
+    bprintf (sprintf "%s Distribution:\n" fv_label);
+    bprintf (sprintf "  Mean IVPS: $%.2f\n" result.fcfe_stats.mean);
+    bprintf (sprintf "  Std Dev: $%.2f\n" result.fcfe_stats.std);
+    bprintf (sprintf "  Median: $%.2f\n" result.fcfe_stats.percentile_50);
+    bprintf (sprintf "  Range: $%.2f - $%.2f\n" result.fcfe_stats.min result.fcfe_stats.max);
+    bprintf (sprintf "  90%% Confidence: $%.2f - $%.2f\n"
+      result.fcfe_stats.percentile_5 result.fcfe_stats.percentile_95);
+    bprintf (sprintf "  Classification: %s\n" (Statistics.class_to_string result.fcfe_class));
+    bprintf (sprintf "  P(Undervalued): %.1f%%\n" (result.fcfe_metrics.prob_undervalued *. 100.0));
+    bprintf (sprintf "  Expected Surplus: $%.2f (%.1f%%)\n"
+      result.fcfe_metrics.expected_surplus
+      (result.fcfe_metrics.expected_surplus_pct *. 100.0));
+    bprintf (sprintf "  Tail Risk Metrics:\n");
+    bprintf (sprintf "    VaR (5%%): $%.2f\n" result.fcfe_tail_risk.var_5);
+    bprintf (sprintf "    CVaR (5%%): $%.2f\n" result.fcfe_tail_risk.cvar_5);
+    bprintf (sprintf "    Max Drawdown: $%.2f\n" result.fcfe_tail_risk.max_drawdown);
+    bprintf (sprintf "    Downside Deviation: $%.2f\n" result.fcfe_tail_risk.downside_deviation);
+    bprintf (sprintf "\n");
+  end else begin
+    bprintf (sprintf "FCFE Valuation (Equity Method):\n");
+    bprintf (sprintf "  Mean IVPS: $%.2f\n" result.fcfe_stats.mean);
+    bprintf (sprintf "  Std Dev: $%.2f\n" result.fcfe_stats.std);
+    bprintf (sprintf "  Median: $%.2f\n" result.fcfe_stats.percentile_50);
+    bprintf (sprintf "  Range: $%.2f - $%.2f\n" result.fcfe_stats.min result.fcfe_stats.max);
+    bprintf (sprintf "  90%% Confidence: $%.2f - $%.2f\n"
+      result.fcfe_stats.percentile_5 result.fcfe_stats.percentile_95);
+    bprintf (sprintf "  Classification: %s\n" (Statistics.class_to_string result.fcfe_class));
+    bprintf (sprintf "  P(Undervalued): %.1f%%\n" (result.fcfe_metrics.prob_undervalued *. 100.0));
+    bprintf (sprintf "  Expected Surplus: $%.2f (%.1f%%)\n"
+      result.fcfe_metrics.expected_surplus
+      (result.fcfe_metrics.expected_surplus_pct *. 100.0));
+    bprintf (sprintf "  Tail Risk Metrics:\n");
+    bprintf (sprintf "    VaR (5%%): $%.2f\n" result.fcfe_tail_risk.var_5);
+    bprintf (sprintf "    CVaR (5%%): $%.2f\n" result.fcfe_tail_risk.cvar_5);
+    bprintf (sprintf "    Max Drawdown: $%.2f\n" result.fcfe_tail_risk.max_drawdown);
+    bprintf (sprintf "    Downside Deviation: $%.2f\n" result.fcfe_tail_risk.downside_deviation);
+    bprintf (sprintf "\n");
+
+    bprintf (sprintf "FCFF Valuation (Firm Method):\n");
+    bprintf (sprintf "  Mean IVPS: $%.2f\n" result.fcff_stats.mean);
+    bprintf (sprintf "  Std Dev: $%.2f\n" result.fcff_stats.std);
+    bprintf (sprintf "  Median: $%.2f\n" result.fcff_stats.percentile_50);
+    bprintf (sprintf "  Range: $%.2f - $%.2f\n" result.fcff_stats.min result.fcff_stats.max);
+    bprintf (sprintf "  90%% Confidence: $%.2f - $%.2f\n"
+      result.fcff_stats.percentile_5 result.fcff_stats.percentile_95);
+    bprintf (sprintf "  Classification: %s\n" (Statistics.class_to_string result.fcff_class));
+    bprintf (sprintf "  P(Undervalued): %.1f%%\n" (result.fcff_metrics.prob_undervalued *. 100.0));
+    bprintf (sprintf "  Expected Surplus: $%.2f (%.1f%%)\n"
+      result.fcff_metrics.expected_surplus
+      (result.fcff_metrics.expected_surplus_pct *. 100.0));
+    bprintf (sprintf "  Tail Risk Metrics:\n");
+    bprintf (sprintf "    VaR (5%%): $%.2f\n" result.fcff_tail_risk.var_5);
+    bprintf (sprintf "    CVaR (5%%): $%.2f\n" result.fcff_tail_risk.cvar_5);
+    bprintf (sprintf "    Max Drawdown: $%.2f\n" result.fcff_tail_risk.max_drawdown);
+    bprintf (sprintf "    Downside Deviation: $%.2f\n" result.fcff_tail_risk.downside_deviation);
+    bprintf (sprintf "\n");
+  end;
 
   (* Stress test scenarios *)
   if List.length result.stress_scenarios > 0 then begin

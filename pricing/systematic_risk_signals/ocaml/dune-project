@@ -1,0 +1,9 @@
+(lang dune 3.0)
+(name systematic_risk_signals)
+(generate_opam_files true)
+
+(package
+ (name systematic_risk_signals)
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))))

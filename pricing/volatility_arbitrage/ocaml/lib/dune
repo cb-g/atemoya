@@ -1,0 +1,5 @@
+(library
+ (name volatility_arbitrage)
+ (public_name volatility_arbitrage)
+ (libraries owl yojson csv)
+ (preprocess (pps ppx_deriving.show ppx_deriving.ord)))

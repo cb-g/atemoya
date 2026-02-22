@@ -186,11 +186,21 @@ type investment_signal =
   | Avoid  (** Both methods overvalued *)
 [@@deriving show]
 
+(** Specialized model types *)
+
+type model_type =
+  | Standard
+  | Bank
+  | Insurance
+  | OilGas
+[@@deriving show]
+
 (** Complete probabilistic valuation result *)
 type valuation_result = {
   ticker : ticker;
   price : float;
   num_simulations : int;
+  model_type : model_type;
 
   (** FCFE method statistics *)
   fcfe_stats : valuation_statistics;
@@ -228,4 +238,52 @@ type config = {
   (** Industry-specific Bayesian priors (sector -> priors mapping) *)
   industry_priors : (sector * sector_priors) list;
 }
+[@@deriving show]
+
+(** Bank-specific data for excess return model *)
+type bank_data = {
+  bank_book_value : float;
+  bank_net_income : float;
+  bank_tangible_book_value : float;
+  bank_roe_history : float array;
+  bank_net_interest_income : float;
+  bank_non_interest_income : float;
+  bank_non_interest_expense : float;
+  bank_total_deposits : float;
+  bank_total_loans : float;
+}
+[@@deriving show]
+
+(** Insurance-specific data for float-based model *)
+type insurance_data = {
+  ins_book_value : float;
+  ins_premiums : float;
+  ins_float_amount : float;
+  ins_investment_income : float;
+  ins_combined_ratio : float;
+  ins_loss_ratio : float;
+  ins_expense_ratio : float;
+  ins_cr_history : float array;
+  ins_yield_history : float array;
+}
+[@@deriving show]
+
+(** Oil & Gas specific data for NAV model *)
+type oil_gas_data = {
+  og_proven_reserves : float;  (** MMBOE *)
+  og_production_boe_day : float;
+  og_oil_pct : float;
+  og_lifting_cost : float;
+  og_finding_cost : float;
+  og_book_value : float;
+  og_debt : float;
+}
+[@@deriving show]
+
+(** Variant for specialized sector data *)
+type specialized_data =
+  | BankData of bank_data
+  | InsuranceData of insurance_data
+  | OilGasData of oil_gas_data
+  | NoSpecializedData
 [@@deriving show]

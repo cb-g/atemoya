@@ -1,0 +1,4 @@
+(test
+ (name test_risk_signals)
+ (libraries systematic_risk_signals alcotest)
+ (package systematic_risk_signals))

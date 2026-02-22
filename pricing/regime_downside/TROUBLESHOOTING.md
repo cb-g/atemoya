@@ -85,6 +85,17 @@ opam list | grep owl
 **Cause**: Historical returns CSV files not fetched
 
 **Solution**:
+
+**Docker:**
+```bash
+# Fetch returns data for all tickers (from project root: atemoya/)
+docker compose exec -w /app atemoya /bin/bash -c "uv run pricing/regime_downside/python/fetch/fetch_assets.py AAPL,GOOGL,MSFT,TSLA,AMZN"
+
+# Fetch benchmark (S&P 500) returns
+docker compose exec -w /app atemoya /bin/bash -c "uv run pricing/regime_downside/python/fetch/fetch_benchmark.py"
+```
+
+**Native:**
 ```bash
 # Fetch returns data for all tickers (from project root: atemoya/)
 uv run pricing/regime_downside/python/fetch/fetch_assets.py AAPL,GOOGL,MSFT,TSLA,AMZN
@@ -206,6 +217,14 @@ uv run pricing/regime_downside/python/fetch/fetch_benchmark.py
 **Cause**: Less than 60 days of historical data
 
 **Solution**:
+
+**Docker:**
+```bash
+# Fetch longer history (from project root: atemoya/)
+docker compose exec -w /app atemoya /bin/bash -c "uv run pricing/regime_downside/python/fetch/fetch_assets.py AAPL,GOOGL"
+```
+
+**Native:**
 ```bash
 # Fetch longer history (from project root: atemoya/)
 uv run pricing/regime_downside/python/fetch/fetch_assets.py AAPL,GOOGL
@@ -224,7 +243,7 @@ uv run pricing/regime_downside/python/fetch/fetch_assets.py AAPL,GOOGL
 1. **Re-fetch data** from clean source:
    ```bash
    rm data/*_returns.csv  # Remove old data
-   uv run python fetch/fetch_assets.py --tickers AAPL  # Re-fetch
+   uv run python/fetch/fetch_assets.py --tickers AAPL  # Re-fetch
    ```
 
 2. **Check data/log** for warnings about missing dates
@@ -401,12 +420,23 @@ grep -i "nan\|inf" data/*.csv
 ```
 
 ### Test with minimal example
+
+**Docker:**
+```bash
+# Run with just 2 assets (from project root: atemoya/)
+docker compose exec -w /app atemoya /bin/bash -c "uv run pricing/regime_downside/python/fetch/fetch_assets.py AAPL,GOOGL"
+
+# Run optimization with minimal backtest
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune exec regime_downside -- -tickers AAPL,GOOGL -start 500 -lookback 252"
+```
+
+**Native:**
 ```bash
 # Run with just 2 assets (from project root: atemoya/)
 uv run pricing/regime_downside/python/fetch/fetch_assets.py AAPL,GOOGL
 
 # Run optimization with minimal backtest
-opam exec -- dune exec regime_downside -- -tickers AAPL,GOOGL -start 500 -lookback 252
+eval $(opam env) && dune exec regime_downside -- -tickers AAPL,GOOGL -start 500 -lookback 252
 ```
 
 ---

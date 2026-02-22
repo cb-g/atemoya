@@ -1,0 +1,5 @@
+(library
+ (name relative_valuation)
+ (public_name atemoya.relative_valuation)
+ (libraries yojson unix)
+ (modules types multiples peer_selection scoring io))

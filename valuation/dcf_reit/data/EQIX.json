@@ -1,0 +1,33 @@
+{
+  "market": {
+    "ticker": "EQIX",
+    "price": 928.11,
+    "shares_outstanding": 98254928,
+    "market_cap": 91191377920,
+    "dividend_yield": 0.0207,
+    "dividend_per_share": 19.23,
+    "currency": "USD",
+    "sector": "datacenter"
+  },
+  "financial": {
+    "revenue": 9217000000.0,
+    "net_income": 1350000000.0,
+    "depreciation": 1962700000.0,
+    "amortization": 103300000.0,
+    "gains_on_sales": 0,
+    "impairments": 0,
+    "straight_line_rent_adj": 92170000.0,
+    "stock_compensation": 498000000.0,
+    "maintenance_capex": 646650000.0,
+    "development_capex": 3664350000.0,
+    "total_debt": 22726000000.0,
+    "cash": 1727000000.0,
+    "total_assets": 40141000000.0,
+    "total_equity": 14156000000.0,
+    "noi": 3485850000.0,
+    "occupancy_rate": 0.91,
+    "same_store_noi_growth": 0.025,
+    "weighted_avg_lease_term": 4.0,
+    "lease_expiration_1yr": 0.1
+  }
+}

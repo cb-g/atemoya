@@ -1,0 +1,9 @@
+(lang dune 3.0)
+(name crypto_treasury)
+(generate_opam_files true)
+
+(package
+ (name crypto_treasury)
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))))

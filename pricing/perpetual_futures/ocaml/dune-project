@@ -1,0 +1,9 @@
+(lang dune 3.0)
+(name perpetual_futures)
+(generate_opam_files true)
+
+(package
+ (name perpetual_futures)
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))))

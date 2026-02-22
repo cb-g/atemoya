@@ -1,0 +1,9 @@
+(lang dune 3.0)
+(name regime_downside)
+(generate_opam_files true)
+
+(package
+ (name regime_downside)
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))))

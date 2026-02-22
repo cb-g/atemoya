@@ -21,6 +21,12 @@ val get_sector_priors : Types.config -> Types.sector -> Types.sector_priors
 (** Load market data from JSON *)
 val load_market_data : string -> Types.market_data
 
+(** Load model type from market data JSON *)
+val load_model_type : string -> Types.model_type
+
+(** Load specialized sector data from market data JSON *)
+val load_specialized_data : string -> Types.specialized_data
+
 (** Load time series data from JSON *)
 val load_time_series : string -> Types.time_series
 

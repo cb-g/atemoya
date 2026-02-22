@@ -1,7 +1,7 @@
 # Atemoya - Quantitative Finance Models
 # Multi-stage Docker build for OCaml + Python environment
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -34,7 +34,9 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     # System utilities
     ca-certificates \
+    cron \
     sudo \
+    vim \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -42,10 +44,22 @@ ARG USERNAME=atemoya
 ARG USER_UID=1000
 ARG USER_GID=1000
 
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME
+# Handle existing user/group with same UID/GID (common in Ubuntu 24.04)
+RUN existing_user=$(getent passwd $USER_UID | cut -d: -f1) && \
+    existing_group=$(getent group $USER_GID | cut -d: -f1) && \
+    # If user exists with different name, delete it
+    if [ -n "$existing_user" ] && [ "$existing_user" != "$USERNAME" ]; then \
+        userdel -r $existing_user 2>/dev/null || true; \
+    fi && \
+    # If group exists with different name, delete it
+    if [ -n "$existing_group" ] && [ "$existing_group" != "$USERNAME" ]; then \
+        groupdel $existing_group 2>/dev/null || true; \
+    fi && \
+    # Create our group and user
+    groupadd --gid $USER_GID $USERNAME 2>/dev/null || true && \
+    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME 2>/dev/null || true && \
+    echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME && \
+    chmod 0440 /etc/sudoers.d/$USERNAME
 
 # Set working directory
 WORKDIR /app
@@ -61,16 +75,21 @@ RUN opam init --disable-sandboxing --auto-setup --yes \
     && eval $(opam env) \
     && opam update
 
-# Set up OPAM environment variables
-ENV OPAM_SWITCH_PREFIX=/home/atemoya/.opam/default
-ENV PATH="${OPAM_SWITCH_PREFIX}/bin:${PATH}"
-
 # Copy project dependency files
 COPY --chown=$USERNAME:$USERNAME atemoya.opam dune-project ./
 COPY --chown=$USERNAME:$USERNAME pyproject.toml uv.lock ./
 
-# Install OCaml dependencies
-RUN eval $(opam env) && opam install . --deps-only --with-test --yes
+# Create a named switch for this project (not a local "." switch which auto-installs)
+RUN opam switch create atemoya-build 5.2.1 --yes && eval $(opam env --switch=atemoya-build)
+
+# Pin the project and install only dependencies (not the package itself yet)
+RUN eval $(opam env --switch=atemoya-build) && \
+    opam pin add atemoya . --no-action --yes && \
+    opam install atemoya --deps-only --with-test --yes
+
+# Set up OPAM environment variables to use this switch
+ENV OPAM_SWITCH_PREFIX=/home/atemoya/.opam/atemoya-build
+ENV PATH="/home/atemoya/.opam/atemoya-build/bin:${PATH}"
 
 # Install uv (Python package manager) and verify it works
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
@@ -78,8 +97,12 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
 
 ENV PATH="/home/atemoya/.local/bin:${PATH}"
 
-# Install Python dependencies
-RUN uv sync
+# Configure uv to use copy mode (hardlinks don't work across Docker volumes on macOS)
+ENV UV_LINK_MODE=copy
+
+# Install Python dependencies using system Python
+# Remove any existing .venv first to avoid stale/broken environments
+RUN rm -rf .venv && uv sync --python $(which python3)
 
 # Copy rest of project files (source code)
 COPY --chown=$USERNAME:$USERNAME . .

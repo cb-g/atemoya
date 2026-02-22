@@ -1,8 +1,15 @@
-ticker,price,num_sims,fcfe_mean,fcfe_std,fcfe_min,fcfe_max,fcfe_p50,fcfe_class,fcfe_prob_under,fcff_mean,fcff_std,fcff_min,fcff_max,fcff_p50,fcff_class,fcff_prob_under,signal
-AMZN,230.82,10000,56.88,35.13,-42.71,572.31,51.84,Overvalued,0.0016,-21.85,25.98,-183.43,1306.46,-20.17,Overvalued,0.0001,Avoid/Sell
-CBOE,251.00,10000,78.53,58.57,-450.64,902.15,71.84,Overvalued,0.0100,46.65,48.33,-203.75,544.62,42.07,Overvalued,0.0019,Avoid/Sell
-CVX,152.41,10000,380.63,158.39,89.00,3541.66,347.36,Undervalued,0.9948,246.40,102.15,55.73,1597.17,226.05,Undervalued,0.8665,Strong Buy
-IBKR,64.31,10000,-65.97,232.22,-3226.58,2019.70,-51.19,Overvalued,0.2367,-47.63,257.69,-1762.16,1559.27,-48.80,Overvalued,0.2844,Avoid/Sell
-JPM,322.22,10000,221.18,103.09,56.80,1527.23,194.21,Overvalued,0.1188,-380.05,12.18,-406.04,-307.41,-382.59,Overvalued,0.0000,Avoid/Sell
-LLY,1074.68,10000,130.78,162.94,-509.99,5955.37,112.16,Overvalued,0.0007,9.47,119.57,-1036.13,1129.97,2.09,Overvalued,0.0002,Avoid/Sell
-TAC,12.64,10000,51.88,27.34,-7.79,446.51,46.89,Undervalued,0.9871,81.57,48.25,-108.69,349.66,79.00,Undervalued,0.9339,Strong Buy
+ticker,price,num_sims,model_type,fcfe_mean,fcfe_std,fcfe_min,fcfe_max,fcfe_p50,fcfe_class,fcfe_prob_under,fcff_mean,fcff_std,fcff_min,fcff_max,fcff_p50,fcff_class,fcff_prob_under,signal
+AMZN,210.11,5000,standard,91.53,61.67,-47.54,2308.19,81.84,Overvalued,0.0304,4.10,38.79,-144.45,249.35,1.40,Overvalued,0.0008,Avoid/Sell
+ALL,206.37,5000,insurance,198.55,88.86,82.44,1360.11,179.33,Fairly Valued,0.3662,198.55,88.86,82.44,1360.11,179.33,Fairly Valued,0.3662,Hold
+CBOE,288.68,5000,standard,79.71,58.91,-79.68,666.05,71.80,Overvalued,0.0050,47.27,48.19,-95.77,691.81,43.64,Overvalued,0.0016,Avoid/Sell
+COP,110.53,5000,oil_gas,65.17,23.34,9.72,182.05,62.15,Overvalued,0.0436,65.17,23.34,9.72,182.05,62.15,Overvalued,0.0436,Avoid/Sell
+CVX,183.93,5000,oil_gas,58.46,22.85,2.41,173.94,55.66,Overvalued,0.0000,58.46,22.85,2.41,173.94,55.66,Overvalued,0.0000,Avoid/Sell
+GS,922.24,5000,bank,328.12,102.04,99.54,1007.31,313.98,Overvalued,0.0006,328.12,102.04,99.54,1007.31,313.98,Overvalued,0.0006,Avoid/Sell
+IBKR,74.39,5000,bank,13.63,5.16,3.26,51.16,12.96,Overvalued,0.0000,13.63,5.16,3.26,51.16,12.96,Overvalued,0.0000,Avoid/Sell
+JPM,310.79,5000,bank,157.72,34.57,62.46,427.71,152.68,Overvalued,0.0018,157.72,34.57,62.46,427.71,152.68,Overvalued,0.0018,Avoid/Sell
+LLY,1009.52,5000,standard,-2.87,257.71,-1912.01,1242.13,28.63,Overvalued,0.0006,-47.16,204.26,-1048.59,2355.30,-27.68,Overvalued,0.0004,Avoid/Sell
+MET,79.10,5000,insurance,222.73,84.01,41.88,847.73,202.15,Undervalued,0.9990,222.73,84.01,41.88,847.73,202.15,Undervalued,0.9990,Strong Buy
+PGR,204.08,5000,insurance,65.51,12.41,43.66,206.98,63.48,Overvalued,0.0002,65.51,12.41,43.66,206.98,63.48,Overvalued,0.0002,Avoid/Sell
+SFM,67.48,5000,standard,101.85,46.59,25.77,1373.14,92.82,Undervalued,0.8654,56.17,26.15,5.15,371.30,51.72,Overvalued,0.2578,Hold
+TAC,13.50,5000,standard,53.65,27.99,-1.96,483.70,48.19,Undervalued,0.9896,80.46,49.87,-73.45,506.40,77.50,Undervalued,0.9254,Strong Buy
+XOM,147.28,5000,oil_gas,47.87,17.09,2.43,145.60,45.70,Overvalued,0.0000,47.87,17.09,2.43,145.60,45.70,Overvalued,0.0000,Avoid/Sell

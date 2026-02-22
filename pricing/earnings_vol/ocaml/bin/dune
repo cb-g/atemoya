@@ -1,0 +1,4 @@
+(executables
+ (names main backtest_main)
+ (public_names earnings_vol earnings_vol_backtest)
+ (libraries earnings_vol_lib))

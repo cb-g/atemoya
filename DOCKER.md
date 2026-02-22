@@ -83,7 +83,7 @@ docker rmi atemoya:latest
 - All dependencies work on both architectures
 
 **Dockerfile:**
-- Base: Ubuntu 22.04 (multi-architecture)
+- Base: Ubuntu 24.04 (multi-architecture)
 - OCaml: OPAM 2.x + Dune
 - Python: uv package manager
 - Dependencies: Pre-installed for all three models
@@ -143,7 +143,7 @@ volumes:
 # Edit code on host (in your IDE)
 # Run inside container:
 opam exec -- dune build        # Rebuild OCaml
-uv run python/script.py        # Run Python scripts
+uv run path/to/script.py       # Run Python scripts
 ./quickstart.sh                # Test via menu
 ```
 
@@ -300,7 +300,7 @@ These survive `docker-compose down` (but not `down -v`).
 ### 3. Pre-pull Base Image
 
 ```bash
-docker pull ubuntu:22.04
+docker pull ubuntu:24.04
 ```
 
 ---

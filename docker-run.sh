@@ -37,6 +37,7 @@ show_usage() {
     echo ""
     echo "Commands:"
     echo "  build       Build the Docker image"
+    echo "  rebuild     Build the Docker image without cache (fresh build)"
     echo "  up          Start the container (build if needed)"
     echo "  shell       Open interactive shell in container"
     echo "  exec        Execute quickstart.sh in container"
@@ -45,6 +46,8 @@ show_usage() {
     echo "  clean       Remove all Docker resources (containers, volumes, images)"
     echo ""
     echo "Examples:"
+    echo "  $0 build      # Build image"
+    echo "  $0 rebuild    # Build image without cache"
     echo "  $0 up         # Start container"
     echo "  $0 shell      # Get interactive shell"
     echo "  $0 exec       # Run quickstart menu"
@@ -58,14 +61,16 @@ show_menu() {
     echo -e "${BLUE}║                                              ║${NC}"
     echo -e "${BLUE}╚══════════════════════════════════════════════╝${NC}"
     echo ""
-    echo "1) Build Docker image"
-    echo "2) Start container"
-    echo "3) Open shell in container"
-    echo "4) Run quickstart menu directly"
-    echo "5) Stop container"
-    echo "6) View logs"
-    echo "7) Clean up (remove all Docker resources)"
-    echo "8) Quit"
+    echo -e "${GREEN}1)${NC} Build Docker image"
+    echo -e "${GREEN}2)${NC} Build Docker image (no cache)"
+    echo -e "${GREEN}3)${NC} Start container"
+    echo -e "${GREEN}4)${NC} Open shell in container"
+    echo -e "${GREEN}5)${NC} Run quickstart menu directly (default)"
+    echo -e "${GREEN}6)${NC} Stop container"
+    echo -e "${GREEN}7)${NC} View logs"
+    echo -e "${GREEN}8)${NC} Clean up (remove all Docker resources)"
+    echo ""
+    echo -e "${GREEN}0)${NC} Quit"
     echo ""
 }
 
@@ -73,7 +78,8 @@ show_menu() {
 if [ $# -eq 0 ]; then
     while true; do
         show_menu
-        read -p "Enter your choice: " choice
+        read -p "Enter your choice (default 5): " choice
+        choice=${choice:-5}
         echo ""
 
         case $choice in
@@ -84,40 +90,47 @@ if [ $# -eq 0 ]; then
                 read -p "Press Enter to continue..."
                 ;;
             2)
-                echo -e "${GREEN}Starting Atemoya container...${NC}"
-                $COMPOSE_CMD up -d
-                echo -e "${GREEN}✓ Container started!${NC}"
-                echo ""
-                echo "Next steps:"
-                echo "  - Option 3: Open shell"
-                echo "  - Option 4: Run quickstart menu"
+                echo -e "${GREEN}Building Atemoya Docker image (no cache)...${NC}"
+                echo -e "${YELLOW}This will rebuild from scratch, ignoring cached layers${NC}"
+                $COMPOSE_CMD build --no-cache
                 echo ""
                 read -p "Press Enter to continue..."
                 ;;
             3)
+                echo -e "${GREEN}Starting Atemoya container...${NC}"
+                $COMPOSE_CMD up -d --no-build
+                echo -e "${GREEN}✓ Container started!${NC}"
+                echo ""
+                echo "Next steps:"
+                echo "  - Option 4: Open shell"
+                echo "  - Option 5: Run quickstart menu"
+                echo ""
+                read -p "Press Enter to continue..."
+                ;;
+            4)
                 echo -e "${GREEN}Opening shell in Atemoya container...${NC}"
                 echo -e "${YELLOW}Tip: Run './quickstart.sh' inside the container${NC}"
                 echo ""
                 $COMPOSE_CMD exec atemoya /bin/bash -c "eval \$(opam env) && exec /bin/bash"
                 ;;
-            4)
+            5)
                 echo -e "${GREEN}Running quickstart in Atemoya container...${NC}"
                 echo ""
                 $COMPOSE_CMD exec atemoya /bin/bash -c "eval \$(opam env) && ./quickstart.sh"
                 ;;
-            5)
+            6)
                 echo -e "${YELLOW}Stopping Atemoya container...${NC}"
                 $COMPOSE_CMD down
                 echo -e "${GREEN}✓ Container stopped${NC}"
                 echo ""
                 read -p "Press Enter to continue..."
                 ;;
-            6)
+            7)
                 echo -e "${GREEN}Showing container logs (Ctrl+C to exit)...${NC}"
                 echo ""
                 $COMPOSE_CMD logs -f atemoya
                 ;;
-            7)
+            8)
                 echo -e "${YELLOW}=== Docker Cleanup ===${NC}\n"
                 echo "This will remove:"
                 echo "  - Atemoya container"
@@ -146,12 +159,12 @@ if [ $# -eq 0 ]; then
                 echo ""
                 read -p "Press Enter to continue..."
                 ;;
-            8)
+            0)
                 echo -e "${GREEN}Goodbye!${NC}"
                 exit 0
                 ;;
             *)
-                echo -e "${YELLOW}Invalid choice. Please enter 1-8.${NC}"
+                echo -e "${YELLOW}Invalid choice. Please enter 1-8 or 0.${NC}"
                 echo ""
                 read -p "Press Enter to continue..."
                 ;;
@@ -168,9 +181,15 @@ case "$COMMAND" in
         $COMPOSE_CMD build
         ;;
 
+    rebuild)
+        echo -e "${GREEN}Building Atemoya Docker image (no cache)...${NC}"
+        echo -e "${YELLOW}This will rebuild from scratch, ignoring cached layers${NC}"
+        $COMPOSE_CMD build --no-cache
+        ;;
+
     up)
         echo -e "${GREEN}Starting Atemoya container...${NC}"
-        $COMPOSE_CMD up -d
+        $COMPOSE_CMD up -d --no-build
         echo -e "${GREEN}Container started!${NC}"
         echo -e "Run: ${BLUE}$0 shell${NC} to enter the container"
         echo -e "Or:  ${BLUE}$0 exec${NC} to run the quickstart menu"

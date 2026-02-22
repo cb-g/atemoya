@@ -1,0 +1,9 @@
+(lang dune 3.0)
+(name watchlist)
+(generate_opam_files true)
+
+(package
+ (name watchlist)
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))))

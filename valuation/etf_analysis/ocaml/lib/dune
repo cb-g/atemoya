@@ -1,0 +1,4 @@
+(library
+ (name etf_analysis)
+ (public_name etf_analysis)
+ (libraries yojson))

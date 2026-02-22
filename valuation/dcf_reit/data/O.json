@@ -1,0 +1,33 @@
+{
+  "market": {
+    "ticker": "O",
+    "price": 66.14,
+    "shares_outstanding": 918105765,
+    "market_cap": 60723515392,
+    "dividend_yield": 0.049,
+    "dividend_per_share": 3.24,
+    "currency": "USD",
+    "sector": "retail"
+  },
+  "financial": {
+    "revenue": 5271142000.0,
+    "net_income": 860772000.0,
+    "depreciation": 2275861800.0,
+    "amortization": 119782200.0,
+    "gains_on_sales": 0,
+    "impairments": 0,
+    "straight_line_rent_adj": 52711420.0,
+    "stock_compensation": 57493000.0,
+    "maintenance_capex": 0.0,
+    "development_capex": 0.0,
+    "total_debt": 26757140000.0,
+    "cash": 444962000.0,
+    "total_assets": 68835039000.0,
+    "total_equity": 38840738000.0,
+    "noi": 3678536500.0,
+    "occupancy_rate": 0.95,
+    "same_store_noi_growth": 0.025,
+    "weighted_avg_lease_term": 8.0,
+    "lease_expiration_1yr": 0.1
+  }
+}

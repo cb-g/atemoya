@@ -87,9 +87,18 @@ opam install . --deps-only --with-test --yes
 
 # Python dependencies
 uv sync
+```
 
-# Verify build
-opam exec -- dune build
+Verify build:
+
+**Docker:**
+```bash
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune build valuation/dcf_deterministic"
+```
+
+**Native:**
+```bash
+eval $(opam env) && dune build valuation/dcf_deterministic
 ```
 
 ### Interactive Menu (Recommended)
@@ -107,18 +116,31 @@ This will:
 
 ### Manual Execution
 
+**Docker:**
 ```bash
 # Single ticker
-opam exec -- dune exec dcf_deterministic -- -ticker AAPL
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune exec dcf_deterministic -- -ticker AAPL"
 
 # With custom paths
-opam exec -- dune exec dcf_deterministic -- \
-  -ticker MSFT \
-  -data-dir valuation/dcf_deterministic/data \
-  -log-dir valuation/dcf_deterministic/log
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune exec dcf_deterministic -- -ticker MSFT -data-dir valuation/dcf_deterministic/data -log-dir valuation/dcf_deterministic/log"
 
 # Run sensitivity analysis
-opam exec -- dune exec dcf_sensitivity -- -ticker AAPL
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune exec dcf_sensitivity -- -ticker AAPL"
+
+# Generate visualizations
+docker compose exec -w /app atemoya /bin/bash -c "uv run valuation/dcf_deterministic/python/viz/plot_results.py --ticker AAPL"
+```
+
+**Native:**
+```bash
+# Single ticker
+eval $(opam env) && dune exec dcf_deterministic -- -ticker AAPL
+
+# With custom paths
+eval $(opam env) && dune exec dcf_deterministic -- -ticker MSFT -data-dir valuation/dcf_deterministic/data -log-dir valuation/dcf_deterministic/log
+
+# Run sensitivity analysis
+eval $(opam env) && dune exec dcf_sensitivity -- -ticker AAPL
 
 # Generate visualizations
 uv run valuation/dcf_deterministic/python/viz/plot_results.py --ticker AAPL

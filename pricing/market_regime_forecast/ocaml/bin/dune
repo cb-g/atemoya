@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name market_regime_forecast)
+ (libraries market_regime_forecast))

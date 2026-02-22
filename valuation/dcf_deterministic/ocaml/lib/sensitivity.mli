@@ -44,3 +44,79 @@ val write_sensitivity_csv :
   results:sensitivity_results ->
   market_price:float ->
   unit
+
+(** Specialized sensitivity point (single fair value, not FCFE/FCFF pair) *)
+type specialized_point = {
+  param_value : float;
+  fair_value : float;
+}
+
+(** Bank sensitivity results *)
+type bank_sensitivity_results = {
+  roe : specialized_point list;
+  cost_of_equity : specialized_point list;
+  growth : specialized_point list;
+}
+
+(** Insurance sensitivity results *)
+type insurance_sensitivity_results = {
+  combined_ratio : specialized_point list;
+  investment_yield : specialized_point list;
+  ins_cost_of_equity : specialized_point list;
+}
+
+(** Oil & Gas sensitivity results *)
+type oil_gas_sensitivity_results = {
+  oil_price : specialized_point list;
+  lifting_cost : specialized_point list;
+  og_discount_rate : specialized_point list;
+}
+
+val run_bank_sensitivity :
+  financial:Types.financial_data ->
+  market:Types.market_data ->
+  risk_free_rate:float ->
+  equity_risk_premium:float ->
+  terminal_growth_rate:float ->
+  projection_years:int ->
+  bank_sensitivity_results
+
+val write_bank_sensitivity_csv :
+  output_dir:string ->
+  ticker:string ->
+  results:bank_sensitivity_results ->
+  market_price:float ->
+  unit
+
+val run_insurance_sensitivity :
+  financial:Types.financial_data ->
+  market:Types.market_data ->
+  risk_free_rate:float ->
+  equity_risk_premium:float ->
+  terminal_growth_rate:float ->
+  projection_years:int ->
+  insurance_sensitivity_results
+
+val write_insurance_sensitivity_csv :
+  output_dir:string ->
+  ticker:string ->
+  results:insurance_sensitivity_results ->
+  market_price:float ->
+  unit
+
+val run_oil_gas_sensitivity :
+  financial:Types.financial_data ->
+  market:Types.market_data ->
+  risk_free_rate:float ->
+  equity_risk_premium:float ->
+  tax_rate:float ->
+  oil_price:float ->
+  gas_price:float ->
+  oil_gas_sensitivity_results
+
+val write_oil_gas_sensitivity_csv :
+  output_dir:string ->
+  ticker:string ->
+  results:oil_gas_sensitivity_results ->
+  market_price:float ->
+  unit

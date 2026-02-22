@@ -137,12 +137,42 @@ let test_calculate_cost_of_capital_integration () =
     book_value_equity = 60_000_000_000.0;
     invested_capital = 150_000_000_000.0;
     is_bank = false;
+    is_insurance = false;
+    (* Bank fields *)
+    net_interest_income = 0.0;
+    non_interest_income = 0.0;
+    non_interest_expense = 0.0;
+    provision_for_loan_losses = 0.0;
+    tangible_book_value = 0.0;
+    total_loans = 0.0;
+    total_deposits = 0.0;
+    tier1_capital_ratio = 0.0;
+    npl_ratio = 0.0;
+    (* Insurance fields *)
+    premiums_earned = 0.0;
+    losses_incurred = 0.0;
+    underwriting_expenses = 0.0;
+    investment_income = 0.0;
+    float_amount = 0.0;
+    loss_ratio = 0.0;
+    expense_ratio = 0.0;
+    combined_ratio = 0.0;
+    (* Oil & Gas fields *)
+    is_oil_gas = false;
+    proven_reserves = 0.0;
+    production_boe_day = 0.0;
+    ebitdax = 0.0;
+    exploration_expense = 0.0;
+    dd_and_a = 0.0;
+    finding_cost = 0.0;
+    lifting_cost = 0.0;
+    oil_pct = 0.0;
   } in
 
   let coc = Capital_structure.calculate_cost_of_capital
     ~market_data ~financial_data
     ~unlevered_beta:1.1 ~risk_free_rate:0.04
-    ~equity_risk_premium:0.06 ~tax_rate:0.21 in
+    ~equity_risk_premium:0.06 ~tax_rate:0.21 () in
 
   (* Verify all components are reasonable *)
   Alcotest.(check bool) "CE is positive and reasonable"

@@ -17,11 +17,21 @@ This guide helps resolve common issues when using the probabilistic discounted c
 **Cause**: SciPy (required for KDE plots) not in environment
 
 **Solution**:
+
+**Docker:**
+```bash
+docker compose exec -w /app atemoya /bin/bash -c "uv sync"  # Installs all dependencies including scipy
+
+# Verify installation
+docker compose exec -w /app atemoya /bin/bash -c "uv run -c \"import scipy; print(scipy.__version__)\""
+```
+
+**Native:**
 ```bash
 uv sync  # Installs all dependencies including scipy
 
 # Verify installation
-uv run python -c "import scipy; print(scipy.__version__)"
+uv run -c "import scipy; print(scipy.__version__)"
 ```
 
 ---
@@ -34,6 +44,16 @@ uv run python -c "import scipy; print(scipy.__version__)"
 **Cause**: Historical time series (4-year) not fetched
 
 **Solution**:
+
+**Docker:**
+```bash
+# Fetch 4-year time series data (from project root: atemoya/)
+docker compose exec -w /app atemoya /bin/bash -c "uv run valuation/dcf_probabilistic/python/fetch/fetch_financials_ts.py --ticker AAPL --years 4"
+
+# Output will be in /tmp/dcf_prob_time_series_AAPL.json
+```
+
+**Native:**
 ```bash
 # Fetch 4-year time series data (from project root: atemoya/)
 uv run valuation/dcf_probabilistic/python/fetch/fetch_financials_ts.py --ticker AAPL --years 4
@@ -413,11 +433,18 @@ fig, ax = plt.subplots(figsize=(14, 10))  # Larger canvas
 ```bash
 # Check output directory exists
 ls valuation/dcf_probabilistic/output/
+```
 
+**Docker:**
+```bash
 # Run visualization with explicit path (from project root: atemoya/)
-uv run valuation/dcf_probabilistic/python/viz/plot_results.py \
-  --output-dir valuation/dcf_probabilistic/output \
-  --viz-dir valuation/dcf_probabilistic/output
+docker compose exec -w /app atemoya /bin/bash -c "uv run valuation/dcf_probabilistic/python/viz/plot_results.py --output-dir valuation/dcf_probabilistic/output --viz-dir valuation/dcf_probabilistic/output"
+```
+
+**Native:**
+```bash
+# Run visualization with explicit path (from project root: atemoya/)
+uv run valuation/dcf_probabilistic/python/viz/plot_results.py --output-dir valuation/dcf_probabilistic/output --viz-dir valuation/dcf_probabilistic/output
 ```
 
 ---
@@ -453,10 +480,21 @@ uv run valuation/dcf_probabilistic/python/viz/plot_results.py \
 **Status**: Parallelization is planned enhancement. Currently sequential.
 
 **Workaround**: Run multiple tickers in parallel using shell:
+
+**Docker:**
 ```bash
 # Run 4 tickers in parallel (from project root: atemoya/)
 for ticker in AAPL GOOGL MSFT AMZN; do
-  opam exec -- dune exec dcf_probabilistic -- -ticker $ticker &
+  docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune exec dcf_probabilistic -- -ticker $ticker" &
+done
+wait
+```
+
+**Native:**
+```bash
+# Run 4 tickers in parallel (from project root: atemoya/)
+for ticker in AAPL GOOGL MSFT AMZN; do
+  eval $(opam env) && dune exec dcf_probabilistic -- -ticker $ticker &
 done
 wait
 ```

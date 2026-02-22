@@ -7,6 +7,8 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
+MODULE_ROOT = Path(__file__).resolve().parent.parent
+
 
 def run_backtest(params_dict, output_suffix=""):
     """
@@ -20,7 +22,7 @@ def run_backtest(params_dict, output_suffix=""):
         Dictionary with performance metrics
     """
     # Write parameters to temp file
-    params_file = Path("pricing/regime_downside/data/params_temp.json")
+    params_file = MODULE_ROOT / "data" / "params_temp.json"
     with open(params_file, 'w') as f:
         json.dump(params_dict, f, indent=2)
 
@@ -33,8 +35,8 @@ def run_backtest(params_dict, output_suffix=""):
 
     try:
         # Temporarily replace params.json
-        original_params = Path("pricing/regime_downside/data/params.json")
-        backup_params = Path("pricing/regime_downside/data/params_backup.json")
+        original_params = MODULE_ROOT / "data" / "params.json"
+        backup_params = MODULE_ROOT / "data" / "params_backup.json"
 
         # Backup original
         if original_params.exists():
@@ -90,7 +92,7 @@ def parse_results(stdout, params):
             metrics['avg_turnover'] = float(line.split(':')[1].strip())
 
     # Read results CSV for more detailed metrics
-    results_file = Path("pricing/regime_downside/output/optimization_results.csv")
+    results_file = MODULE_ROOT / "output" / "optimization_results.csv"
     if results_file.exists():
         df = pd.read_csv(results_file)
 
@@ -150,7 +152,7 @@ def parameter_grid_search():
 
     # Save results
     results_df = pd.DataFrame(results)
-    results_file = Path("pricing/regime_downside/output/tuning_results.csv")
+    results_file = MODULE_ROOT / "output" / "tuning_results.csv"
     results_df.to_csv(results_file, index=False)
 
     print("\n" + "=" * 60)
@@ -207,7 +209,7 @@ def parameter_grid_search():
                 print(f"     {k}: {v}")
 
             # Save best parameters
-            best_params_file = Path("pricing/regime_downside/data/params_tuned.json")
+            best_params_file = MODULE_ROOT / "data" / "params_tuned.json"
             with open(best_params_file, 'w') as f:
                 json.dump(best_params, f, indent=2)
             print(f"\n   Saved to: {best_params_file}")
@@ -260,7 +262,7 @@ def quick_tune():
     # Save and analyze
     if results:
         results_df = pd.DataFrame(results)
-        results_file = Path("pricing/regime_downside/output/quick_tuning_results.csv")
+        results_file = MODULE_ROOT / "output" / "quick_tuning_results.csv"
         results_df.to_csv(results_file, index=False)
 
         print("\n" + "=" * 60)
@@ -276,7 +278,7 @@ def quick_tune():
                 print(f"  {k}: {v}")
 
             # Save
-            best_file = Path("pricing/regime_downside/data/params_tuned.json")
+            best_file = MODULE_ROOT / "data" / "params_tuned.json"
             with open(best_file, 'w') as f:
                 json.dump(best_params, f, indent=2)
 

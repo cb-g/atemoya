@@ -3,10 +3,11 @@
 let calculate_fcfe ~financial_data ~market_data =
   let open Types in
 
-  (* Calculate reinvestment: CapEx + ΔWC - Depreciation *)
-  let reinvestment =
-    financial_data.capex +. financial_data.delta_wc -. financial_data.depreciation
-  in
+  (* Calculate gross reinvestment: CapEx + ΔWC
+     Note: We use gross reinvestment here because we add back depreciation
+     separately in the FCFE formula below. Using net reinvestment
+     (CapEx + ΔWC - D) would double-count depreciation. *)
+  let reinvestment = financial_data.capex +. financial_data.delta_wc in
 
   (* Calculate Target Debt Ratio (TDR) = MVB / (MVE + MVB) *)
   let total_value = market_data.mve +. market_data.mvb in

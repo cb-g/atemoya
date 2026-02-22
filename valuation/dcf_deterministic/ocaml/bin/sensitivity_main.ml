@@ -5,9 +5,9 @@ open Dcf_deterministic
 let () =
   (* Parse command line arguments *)
   let ticker = ref "" in
-  let data_dir = ref "../data" in
-  let output_dir = ref "../output" in
-  let python_script = ref "../python/fetch_financials.py" in
+  let data_dir = ref "valuation/dcf_deterministic/data" in
+  let output_dir = ref "valuation/dcf_deterministic/output" in
+  let python_script = ref "valuation/dcf_deterministic/python/fetch_financials.py" in
 
   (* Optional parameter overrides *)
   let projection_years_override = ref None in
@@ -15,17 +15,21 @@ let () =
   let growth_clamp_upper_override = ref None in
   let growth_clamp_lower_override = ref None in
   let rfr_duration_override = ref None in
+  let oil_price_override = ref None in
+  let gas_price_override = ref None in
 
   let speclist = [
     ("-ticker", Arg.Set_string ticker, "Ticker symbol to analyze");
-    ("-data-dir", Arg.Set_string data_dir, "Data directory path (default: ../data)");
-    ("-output-dir", Arg.Set_string output_dir, "Output directory for CSV files (default: ../output)");
+    ("-data-dir", Arg.Set_string data_dir, "Data directory path (default: valuation/dcf_deterministic/data)");
+    ("-output-dir", Arg.Set_string output_dir, "Output directory for CSV files (default: valuation/dcf_deterministic/output)");
     ("-python", Arg.Set_string python_script, "Python fetcher script path");
     ("-projection-years", Arg.Int (fun x -> projection_years_override := Some x), "Override projection years (default: from config)");
     ("-terminal-growth", Arg.Float (fun x -> terminal_growth_override := Some x), "Override terminal growth rate (default: from config)");
     ("-growth-clamp-upper", Arg.Float (fun x -> growth_clamp_upper_override := Some x), "Override upper growth clamp (default: from config)");
     ("-growth-clamp-lower", Arg.Float (fun x -> growth_clamp_lower_override := Some x), "Override lower growth clamp (default: from config)");
     ("-rfr-duration", Arg.Int (fun x -> rfr_duration_override := Some x), "Override risk-free rate duration in years (default: from config)");
+    ("-oil-price", Arg.Float (fun x -> oil_price_override := Some x), "Override oil price USD/bbl (default: 75.0)");
+    ("-gas-price", Arg.Float (fun x -> gas_price_override := Some x), "Override gas price USD/MMBtu (default: 3.0)");
   ] in
 
   let usage_msg = "DCF Sensitivity Analysis Tool\nUsage: dcf_sensitivity -ticker TICKER [options]" in
@@ -60,6 +64,9 @@ let () =
         growth_clamp_upper = (match !growth_clamp_upper_override with Some x -> x | None -> params.growth_clamp_upper);
         growth_clamp_lower = (match !growth_clamp_lower_override with Some x -> x | None -> params.growth_clamp_lower);
         rfr_duration = (match !rfr_duration_override with Some x -> x | None -> params.rfr_duration);
+        mean_reversion_enabled = params.mean_reversion_enabled;
+        mean_reversion_lambda = params.mean_reversion_lambda;
+        erp_params = params.erp_params;
       } in
       { base_config with params = overridden_params }
     in
@@ -117,37 +124,67 @@ let () =
           exit 1
     in
 
-    (* Step 5: Calculate cost of capital *)
-    Printf.printf "Calculating cost of capital...\n";
-    let cost_of_capital = Capital_structure.calculate_cost_of_capital
-      ~market_data
-      ~financial_data
-      ~unlevered_beta
-      ~risk_free_rate
-      ~equity_risk_premium
-      ~tax_rate
-    in
-
-    (* Step 6: Run sensitivity analysis *)
+    (* Step 5: Route by model type *)
     Printf.printf "\n========================================\n";
     Printf.printf "SENSITIVITY ANALYSIS: %s\n" !ticker;
     Printf.printf "========================================\n\n";
 
-    let results = Sensitivity.run_sensitivity_analysis
-      ~market_data
-      ~financial_data
-      ~config
-      ~cost_of_capital
-      ~tax_rate
-    in
+    let projection_years = config.params.projection_years in
+    let terminal_growth_rate = config.params.terminal_growth_rate in
 
-    (* Step 7: Write results to CSV *)
-    Printf.printf "\nWriting sensitivity results to CSV files...\n";
-    Sensitivity.write_sensitivity_csv
-      ~output_dir:!output_dir
-      ~ticker:!ticker
-      ~results
-      ~market_price:market_data.price;
+    if financial_data.is_bank then begin
+      Printf.printf "Model: Bank (Excess Return)\n\n";
+      let results = Sensitivity.run_bank_sensitivity
+        ~financial:financial_data ~market:market_data
+        ~risk_free_rate ~equity_risk_premium
+        ~terminal_growth_rate ~projection_years
+      in
+      Printf.printf "\nWriting bank sensitivity results to CSV files...\n";
+      Sensitivity.write_bank_sensitivity_csv
+        ~output_dir:!output_dir ~ticker:!ticker
+        ~results ~market_price:market_data.price
+    end
+    else if financial_data.is_insurance then begin
+      Printf.printf "Model: Insurance (Float-Based)\n\n";
+      let results = Sensitivity.run_insurance_sensitivity
+        ~financial:financial_data ~market:market_data
+        ~risk_free_rate ~equity_risk_premium
+        ~terminal_growth_rate ~projection_years
+      in
+      Printf.printf "\nWriting insurance sensitivity results to CSV files...\n";
+      Sensitivity.write_insurance_sensitivity_csv
+        ~output_dir:!output_dir ~ticker:!ticker
+        ~results ~market_price:market_data.price
+    end
+    else if financial_data.is_oil_gas then begin
+      let oil_price = match !oil_price_override with Some x -> x | None -> 75.0 in
+      let gas_price = match !gas_price_override with Some x -> x | None -> 3.0 in
+      Printf.printf "Model: Oil & Gas (NAV)\n";
+      Printf.printf "Oil Price: $%.2f/bbl, Gas Price: $%.2f/MMBtu\n\n" oil_price gas_price;
+      let results = Sensitivity.run_oil_gas_sensitivity
+        ~financial:financial_data ~market:market_data
+        ~risk_free_rate ~equity_risk_premium
+        ~tax_rate ~oil_price ~gas_price
+      in
+      Printf.printf "\nWriting O&G sensitivity results to CSV files...\n";
+      Sensitivity.write_oil_gas_sensitivity_csv
+        ~output_dir:!output_dir ~ticker:!ticker
+        ~results ~market_price:market_data.price
+    end
+    else begin
+      Printf.printf "Model: Standard DCF (FCFE/FCFF)\n\n";
+      let cost_of_capital = Capital_structure.calculate_cost_of_capital
+        ~market_data ~financial_data ~unlevered_beta
+        ~risk_free_rate ~equity_risk_premium ~tax_rate ()
+      in
+      let results = Sensitivity.run_sensitivity_analysis
+        ~market_data ~financial_data ~config ~cost_of_capital ~tax_rate
+      in
+      Printf.printf "\nWriting sensitivity results to CSV files...\n";
+      Sensitivity.write_sensitivity_csv
+        ~output_dir:!output_dir ~ticker:!ticker
+        ~results ~market_price:market_data.price
+    end;
 
     Printf.printf "\n========================================\n";
     Printf.printf "Sensitivity analysis complete for %s\n" !ticker;

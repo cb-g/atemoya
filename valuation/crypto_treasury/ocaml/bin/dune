@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name crypto_treasury)
+ (libraries crypto_treasury unix))

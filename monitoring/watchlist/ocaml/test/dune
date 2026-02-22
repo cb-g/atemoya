@@ -1,0 +1,4 @@
+(test
+ (name test_watchlist)
+ (libraries watchlist alcotest)
+ (package watchlist))

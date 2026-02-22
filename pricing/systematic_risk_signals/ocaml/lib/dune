@@ -1,0 +1,4 @@
+(library
+ (name systematic_risk_signals)
+ (libraries yojson unix)
+ (modules Types Covariance Graph Signals Io))

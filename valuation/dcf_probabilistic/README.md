@@ -93,9 +93,18 @@ opam install . --deps-only --with-test --yes
 
 # Python dependencies (including scipy for KDE)
 uv sync
+```
 
-# Verify build
-opam exec -- dune build
+Verify build:
+
+**Docker:**
+```bash
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune build valuation/dcf_probabilistic"
+```
+
+**Native:**
+```bash
+eval $(opam env) && dune build valuation/dcf_probabilistic
 ```
 
 ### Interactive Menu (Recommended)
@@ -113,17 +122,32 @@ This will:
 
 ### Manual Execution
 
+**Docker:**
 ```bash
 # Single ticker (default: 1000 simulations)
-opam exec -- dune exec dcf_probabilistic -- -ticker AAPL
-
-# Custom simulation count
-opam exec -- dune exec dcf_probabilistic -- -ticker GOOGL -num-sims 5000
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune exec dcf_probabilistic -- -ticker AAPL"
 
 # Multiple tickers (for portfolio frontier)
-opam exec -- dune exec dcf_probabilistic -- -ticker AAPL
-opam exec -- dune exec dcf_probabilistic -- -ticker MSFT
-opam exec -- dune exec dcf_probabilistic -- -ticker GOOGL
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune exec dcf_probabilistic -- -ticker AAPL"
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune exec dcf_probabilistic -- -ticker MSFT"
+docker compose exec -w /app atemoya /bin/bash -c "eval \$(opam env) && dune exec dcf_probabilistic -- -ticker GOOGL"
+
+# Generate visualizations
+docker compose exec -w /app atemoya /bin/bash -c "uv run valuation/dcf_probabilistic/python/viz/plot_results.py --ticker AAPL --method fcfe"
+
+# Generate portfolio frontier (requires 2+ tickers already run)
+docker compose exec -w /app atemoya /bin/bash -c "uv run valuation/dcf_probabilistic/python/viz/plot_frontier.py --method fcfe --num-portfolios 5000"
+```
+
+**Native:**
+```bash
+# Single ticker (default: 1000 simulations)
+eval $(opam env) && dune exec dcf_probabilistic -- -ticker AAPL
+
+# Multiple tickers (for portfolio frontier)
+eval $(opam env) && dune exec dcf_probabilistic -- -ticker AAPL
+eval $(opam env) && dune exec dcf_probabilistic -- -ticker MSFT
+eval $(opam env) && dune exec dcf_probabilistic -- -ticker GOOGL
 
 # Generate visualizations
 uv run valuation/dcf_probabilistic/python/viz/plot_results.py --ticker AAPL --method fcfe

@@ -1,0 +1,19 @@
+(lang dune 3.0)
+(name gamma_scalping)
+(version 0.1.0)
+
+(generate_opam_files true)
+
+(source (github anthropics/atemoya))
+(license MIT)
+(authors "Atemoya Contributors")
+(maintainers "Atemoya Contributors")
+
+(package
+ (name gamma_scalping)
+ (synopsis "Gamma Scalping - Volatility Trading Strategy")
+ (description "Simulate gamma scalping strategies with delta-hedging, track P&L attribution (gamma/theta/vega), and evaluate hedging strategies")
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))
+  ppx_deriving))

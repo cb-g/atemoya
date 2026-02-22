@@ -5,14 +5,14 @@ open Dcf_deterministic
 let () =
   (* Parse command line arguments *)
   let ticker = ref "" in
-  let data_dir = ref "../data" in
-  let output_dir = ref "../output" in
-  let python_script = ref "../python/fetch_financials.py" in
+  let data_dir = ref "valuation/dcf_deterministic/data" in
+  let output_dir = ref "valuation/dcf_deterministic/output" in
+  let python_script = ref "valuation/dcf_deterministic/python/fetch_financials.py" in
 
   let speclist = [
     ("-ticker", Arg.Set_string ticker, "Ticker symbol to analyze");
-    ("-data-dir", Arg.Set_string data_dir, "Data directory path (default: ../data)");
-    ("-output-dir", Arg.Set_string output_dir, "Output directory path (default: ../output)");
+    ("-data-dir", Arg.Set_string data_dir, "Data directory path (default: valuation/dcf_deterministic/data)");
+    ("-output-dir", Arg.Set_string output_dir, "Output directory path (default: valuation/dcf_deterministic/output)");
     ("-python", Arg.Set_string python_script, "Python fetcher script path");
   ] in
 
@@ -65,7 +65,7 @@ let () =
         (* Step 7: Generate visualizations *)
         Printf.printf "Generating visualizations...\n";
         let viz_cmd = Printf.sprintf
-          "uv run ../python/viz/plot_scenarios.py --csv %s --ticker %s --price %.2f --output %s"
+          "uv run valuation/dcf_deterministic/python/viz/plot_scenarios.py --csv %s --ticker %s --price %.2f --output %s"
           csv_filename !ticker market_data.price !output_dir in
         let viz_status = Sys.command viz_cmd in
         if viz_status = 0 then

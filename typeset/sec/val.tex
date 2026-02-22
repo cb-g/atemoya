@@ -253,6 +253,115 @@ Having derived an $\text{IVPS}$, it may serve as a reference point when judging 
 & \signalavoid{} There isn't sufficient cash flow to the business or the equity for the fundamentals to justify the high market price. \\
 \end{tabular}
 
+\subsubsection{Sector-Specific Models}
+
+The standard FCFE/FCFF framework breaks down for three categories of companies whose economics fundamentally differ from the general corporate model. For each, we derive a purpose-built valuation and sensitivity analysis.
+
+\paragraph{Bank Valuation (Excess Return Model)}
+
+For banks, interest expense is an operating cost (not a financing cost), and deposits -- the primary source of debt -- are the raw material of the business. FCFE and FCFF are therefore not meaningful. Instead, we value banks through the excess return model:
+
+$$
+\text{FV}_{\text{bank}} = \text{BVE} + \sum_{t=1}^{h} \frac{(\text{ROE}_t - \text{CE}) \cdot \text{BVE}_t}{(1 + \text{CE})^t} + \frac{(\text{ROE}_{\infty} - \text{CE}) \cdot \text{BVE}_{h}}{(\text{CE} - \text{TGR}) \cdot (1 + \text{CE})^h}
+$$
+
+where ROE mean-reverts toward the cost of equity at rate $\lambda$:
+
+$$
+\text{ROE}_{t+1} = \text{ROE}_t + \lambda \cdot (\text{CE} - \text{ROE}_t)
+$$
+
+\begin{itemize}
+  \item[] $\text{BVE}$: book value of equity
+  \item[] $\text{ROE}_t$: return on equity in year $t$
+  \item[] $\text{ROE}_{\infty}$: terminal ROE (cost of equity plus sustainable spread)
+  \item[] $\lambda$: mean-reversion speed (typically $\approx 0.15$)
+\end{itemize}
+
+The model's implied P/BV follows a Gordon-growth-style identity:
+
+$$
+\frac{P}{B} = \frac{\text{ROE} - g}{\text{CE} - g}
+$$
+
+When $\text{ROE} = \text{CE}$, the stock should trade at book value. The sensitivity analysis sweeps ROE ($5\text{--}25\%$), cost of equity ($6\text{--}12\%$), and sustainable growth ($0\text{--}6\%$).
+
+\paragraph{Insurance Valuation (Float-Based Model)}
+
+Insurers collect premiums before paying claims, creating a pool of investable capital called \emph{float}. If underwriting is profitable (combined ratio $< 100\%$), this float is obtained at negative cost -- policyholders effectively pay the insurer to hold their money.
+
+$$
+\text{FV}_{\text{ins}} = \text{BVE} + \text{UW}_{\text{PV}} + \text{Float}_{\text{PV}}
+$$
+
+where the present value of underwriting profits is:
+
+$$
+\text{UW}_{\text{PV}} = \sum_{t=1}^{h} \frac{P_t \cdot (1 - \text{CR}_t)}{(1 + \text{CE})^t} + \frac{P_{h} \cdot (1 - \text{CR}_{\infty})}{(\text{CE} - \text{TGR}) \cdot (1 + \text{CE})^h}
+$$
+
+and the float value is a perpetuity of net investment income:
+
+$$
+\text{Float}_{\text{PV}} = \frac{F \cdot (\text{IY} - \text{CoF})}{\text{CE} - \text{TGR}}
+$$
+
+\begin{itemize}
+  \item[] $P_t$: premiums earned in year $t$
+  \item[] $\text{CR}_t$: combined ratio (loss ratio + expense ratio)
+  \item[] $F$: float (unearned premiums + loss reserves)
+  \item[] $\text{IY}$: investment yield on float
+  \item[] $\text{CoF}$: cost of float ($= \text{CR} - 1$ if $\text{CR} > 1$; 0 otherwise)
+\end{itemize}
+
+The combined ratio mean-reverts toward the industry average ($\approx 98\%$). The sensitivity analysis sweeps combined ratio ($85\text{--}110\%$), investment yield ($1\text{--}6\%$), and cost of equity ($6\text{--}12\%$).
+
+\paragraph{Oil \& Gas E\&P Valuation (NAV Model)}
+
+Exploration and production companies are valued on the net asset value of their proven reserves, projected using a decline-curve model:
+
+$$
+\text{FV}_{\text{og}} = \frac{1}{2}\left(\text{NAV} + \text{PV}_{10}\right)
+$$
+
+where
+
+$$
+\text{NAV} = \sum_{t=1}^{T_{\text{res}}} \frac{Q_t \cdot (\text{NB}_t) \cdot (1 - \tau)}{(1 + r)^t} - D
+$$
+
+\begin{itemize}
+  \item[] $Q_t = Q_0 \cdot (1 - d)^t$: production in year $t$ with decline rate $d$
+  \item[] $\text{NB} = p_{\text{oil}} \cdot \alpha + p_{\text{gas}} \cdot 6 \cdot (1 - \alpha) - c_{\text{lift}}$: netback per BOE
+  \item[] $\alpha$: oil production fraction
+  \item[] $c_{\text{lift}}$: lifting cost per BOE
+  \item[] $T_{\text{res}}$: reserve life (capped at 30 years)
+  \item[] $\text{PV}_{10}$: SEC-standard valuation at $r = 10\%$
+  \item[] $D$: net debt
+\end{itemize}
+
+The blended fair value averages NAV (company-specific discount rate) and PV-10 (standard 10\% rate). The sensitivity analysis sweeps oil price (\$40--\$120/bbl), lifting cost (\$5--\$25/BOE), and discount rate ($6\text{--}14\%$).
+
+\subsubsection{Sensitivity Analysis}
+
+Each valuation model produces a four-panel sensitivity plot: three line charts showing fair value as a function of one swept parameter (with the market price as a reference line and the implied parameter value marked), and a tornado diagram ranking parameters by their impact on fair value.
+
+\renewcommand{\arraystretch}{1.4}
+
+\noindent
+\begin{tabular}{lll}
+\textbf{Model} & \textbf{Parameter Axes} & \textbf{Output} \\
+\hline
+Standard DCF & Growth rate, Discount rate, Terminal growth & FCFE \& FCFF IVPS \\
+Bank & ROE, Cost of equity, Sustainable growth & Fair value \\
+Insurance & Combined ratio, Investment yield, Cost of equity & Fair value \\
+Oil \& Gas & Oil price, Lifting cost, Discount rate & Blended NAV \\
+\end{tabular}
+
+\vspace{0.5em}
+
+The implied parameter value at which fair value equals the market price reveals what the market is pricing in. For banks, this is the implied ROE; for insurers, the implied combined ratio; for O\&G companies, the implied oil price. Deviation between the actual and implied parameter indicates the degree to which the market under- or over-prices the asset.
+
 \newpage\subsection{DCF (Probabilistic)}
 
 \subsubsection{Motivation}
@@ -702,3 +811,888 @@ The probabilistic approach provides several advantages over deterministic DCF:
 \end{enumerate}
 
 The framework enables the construction of valuation-based portfolios that systematically exploit mispricing while managing fundamental uncertainty.
+
+\newpage\subsection{GARP / PEG Analysis}
+
+Growth at a Reasonable Price (GARP) bridges value and growth investing by seeking companies with solid growth prospects trading at reasonable valuations. The PEG ratio is the primary metric.
+
+\subsubsection{PEG Ratio}
+
+The Price/Earnings-to-Growth ratio normalizes valuation by growth rate:
+\[
+\text{PEG} = \frac{\text{P/E}}{\text{Growth Rate} \times 100}
+\]
+
+where Growth Rate is expressed as a decimal (e.g., 15\% = 0.15). A PEG of 1.0 implies fair value; below 1.0 suggests undervaluation relative to growth.
+
+\paragraph{Growth Rate Selection}
+
+The model selects growth rate with the following priority:
+\begin{enumerate}
+  \item 1-year EPS growth (most recent)
+  \item Revenue growth (fallback)
+  \item Earnings growth (secondary fallback)
+  \item 5-year analyst estimate (last resort)
+\end{enumerate}
+
+All growth rates are capped at 50\% to prevent distortion from outliers.
+
+\paragraph{PEGY Ratio}
+
+For dividend-paying stocks, the dividend-adjusted PEG accounts for yield:
+\[
+\text{PEGY} = \frac{\text{P/E}}{\text{Growth Rate}(\%) + \text{Dividend Yield}(\%)}
+\]
+
+\paragraph{Fair Value Estimation}
+
+Assuming a fair PEG of 1.0:
+\[
+\text{Fair P/E} = \text{Growth Rate} \times 100
+\]
+\[
+\text{Fair Price} = \text{Fair P/E} \times \text{EPS}
+\]
+
+\subsubsection{GARP Scoring}
+
+The composite GARP score (0--100) aggregates five components:
+
+\begin{center}
+\begin{tabular}{lcc}
+\textbf{Component} & \textbf{Weight} & \textbf{Criteria} \\
+\hline
+PEG Score & 30 & PEG $< 0.5$: 30; $< 1.0$: 25; $< 1.5$: 15; $< 2.0$: 5 \\
+Growth Score & 25 & $> 25\%$: 25; $> 15\%$: 20; $> 10\%$: 15; $> 5\%$: 10 \\
+FCF Conversion & 20 & FCF/NI $> 1.0$: 20; $> 0.8$: 15; $> 0.5$: 10 \\
+Balance Sheet & 15 & D/E $< 0.3$: 15; $< 0.5$: 10; $< 1.0$: 5 \\
+ROE Score & 10 & $> 20\%$: 10; $> 15\%$: 7; $> 10\%$: 5 \\
+\end{tabular}
+\end{center}
+
+\subsubsection{PEG Assessment}
+
+\begin{itemize}
+  \item[] PEG $< 0.5$: Very Undervalued
+  \item[] PEG $0.5$--$1.0$: Undervalued
+  \item[] PEG $1.0$--$1.5$: Fairly Valued
+  \item[] PEG $1.5$--$2.0$: Moderately Expensive
+  \item[] PEG $> 2.0$: Expensive
+\end{itemize}
+
+\newpage\subsection{Growth Analysis}
+
+Growth analysis evaluates companies from a pure growth investing perspective, focusing on revenue acceleration, margin trajectory, and capital efficiency.
+
+\subsubsection{Rule of 40}
+
+The Rule of 40 is a benchmark for growth companies, particularly in technology and SaaS:
+\[
+\text{Rule of 40} = \text{Revenue Growth}(\%) + \text{Operating Margin}(\%)
+\]
+
+Companies exceeding 40 demonstrate efficient growth---either growing rapidly with acceptable margins or growing moderately with strong profitability.
+
+\begin{itemize}
+  \item[] $\geq 40$: Excellent
+  \item[] $30$--$40$: Good
+  \item[] $20$--$30$: Moderate
+  \item[] $< 20$: Concerning
+\end{itemize}
+
+\subsubsection{Operating Leverage}
+
+Operating leverage measures how earnings growth amplifies revenue growth:
+\[
+\text{Operating Leverage} = \frac{\text{Earnings Growth}}{\text{Revenue Growth}}
+\]
+
+Leverage $> 1$ indicates positive operating leverage (margins expanding with scale).
+
+\subsubsection{EV/Revenue Efficiency}
+
+Normalized valuation per unit of growth:
+\[
+\text{EV/Rev per Growth} = \frac{\text{EV/Revenue}}{\text{Revenue Growth}(\%)}
+\]
+
+Lower values indicate more attractive valuations relative to growth rate.
+
+\subsubsection{Implied Growth Rate}
+
+The market-implied growth rate from current valuation:
+\[
+g_{\text{implied}} = r - \frac{1}{\text{Forward P/E}}
+\]
+
+where $r$ is the required return (typically 10\%). This reveals what growth rate the market is pricing in.
+
+\subsubsection{Growth Classification}
+
+\begin{itemize}
+  \item[] $> 40\%$: Hypergrowth
+  \item[] $20$--$40\%$: High Growth
+  \item[] $10$--$20\%$: Moderate Growth
+  \item[] $5$--$10\%$: Slow Growth
+  \item[] $< 5\%$: No Growth / Declining
+\end{itemize}
+
+\subsubsection{Growth Scoring}
+
+The composite growth score (0--100) weights five factors:
+
+\begin{center}
+\begin{tabular}{lcc}
+\textbf{Component} & \textbf{Weight} & \textbf{Key Thresholds} \\
+\hline
+Revenue Growth & 25 & $> 40\%$: 25; $> 20\%$: 18; $> 10\%$: 10 \\
+Earnings Growth & 20 & $> 50\%$: 20; $> 30\%$: 16; $> 20\%$: 12 \\
+Margin Quality & 20 & Gross $> 60\%$, Op $> 25\%$, FCF $> 20\%$ \\
+Efficiency & 20 & Rule of 40, Operating Leverage \\
+Quality (ROE/ROIC) & 15 & ROE $> 25\%$, ROIC $> 20\%$ \\
+\end{tabular}
+\end{center}
+
+\newpage\subsection{Relative Valuation}
+
+Relative valuation compares a target company against peer companies using standardized multiples, deriving fair value from comparable company analysis.
+
+\subsubsection{Peer Similarity Scoring}
+
+Peers are weighted by similarity across four dimensions (0--100 total):
+
+\begin{center}
+\begin{tabular}{lcc}
+\textbf{Dimension} & \textbf{Weight} & \textbf{Scoring} \\
+\hline
+Industry & 30 & Same industry: 30; Same sector: 15 \\
+Size & 25 & Market cap ratio $0.5$--$2.0\times$: 25 \\
+Growth & 25 & Growth differential $< 5\%$: 25 \\
+Profitability & 20 & EBITDA margin diff $< 5$pp: 20 \\
+\end{tabular}
+\end{center}
+
+\subsubsection{Multiple Analysis}
+
+For each valuation multiple $M$, we compute:
+
+\paragraph{Premium/Discount}
+\[
+\text{Premium}(\%) = \frac{M_{\text{target}} - M_{\text{peer median}}}{M_{\text{peer median}}} \times 100
+\]
+
+\paragraph{Implied Valuation}
+
+For equity multiples (P/E, P/B, P/S, P/FCF):
+\[
+\text{Implied Price} = \text{Metric} \times M_{\text{peer median}}
+\]
+
+For enterprise value multiples (EV/EBITDA, EV/Revenue):
+\[
+\text{Implied EV} = \text{Metric} \times M_{\text{peer median}}
+\]
+\[
+\text{Implied Price} = \frac{\text{Implied EV} - \text{Debt} + \text{Cash}}{\text{Shares}}
+\]
+
+\subsubsection{Fair Premium Adjustment}
+
+Companies with superior fundamentals deserve a premium:
+\[
+\text{Fair Premium} = \text{Growth Premium} + \text{Margin Premium}
+\]
+
+where:
+\begin{itemize}
+  \item[] Growth Premium: Each 5pp growth advantage $\rightarrow$ 10\% premium
+  \item[] Margin Premium: Each 5pp margin advantage $\rightarrow$ 5\% premium
+  \item[] Capped at: $-30\%$ to $+50\%$
+\end{itemize}
+
+\subsubsection{Relative Score}
+
+The relative score (0--100) measures undervaluation:
+\[
+\text{Score} = 50 - \text{Average Premium}(\%)
+\]
+
+Higher scores indicate greater undervaluation relative to peers.
+
+\subsubsection{Multiples Analyzed}
+
+\begin{itemize}
+  \item \textbf{Equity multiples}: P/E (trailing, forward), P/B, P/S, P/FCF
+  \item \textbf{EV multiples}: EV/EBITDA, EV/EBIT, EV/Revenue
+\end{itemize}
+
+\newpage\subsection{Normalized Multiples}
+
+Normalized multiples analysis compares a company's valuation multiples against sector benchmarks using percentile-based scoring with quality adjustments. Unlike relative valuation, which operates on a small peer group, this framework benchmarks against the full sector distribution.
+
+\subsubsection{Multiple Extraction}
+
+Ten valuation multiples are computed:
+
+\paragraph{Price Multiples}
+
+\begin{itemize}
+  \item P/E (TTM, NTM): Price / Earnings per share
+  \item P/S (TTM): Price / Revenue per share
+  \item P/B (TTM): Price / Book value per share
+  \item P/FCF (TTM): Price / Free cash flow per share
+  \item PEG: P/E / Earnings growth rate
+\end{itemize}
+
+\paragraph{Enterprise Value Multiples}
+
+\begin{itemize}
+  \item EV/EBITDA (TTM): Enterprise value / EBITDA
+  \item EV/EBIT (TTM): Enterprise value / EBIT
+  \item EV/Sales (TTM): Enterprise value / Revenue
+  \item EV/FCF (TTM): Enterprise value / Free cash flow
+\end{itemize}
+
+A multiple is considered valid when both the numerator and denominator are positive.
+
+\subsubsection{Percentile Ranking}
+
+Each multiple is ranked against the sector distribution using piecewise linear interpolation through three known quantiles ($Q_{25}$, $Q_{50}$, $Q_{75}$):
+
+\[
+\text{Pct}(x) = \begin{cases}
+25 \cdot \dfrac{x}{Q_{25}} & \text{if } x \leq Q_{25} \\[8pt]
+25 + 25 \cdot \dfrac{x - Q_{25}}{Q_{50} - Q_{25}} & \text{if } Q_{25} < x \leq Q_{50} \\[8pt]
+50 + 25 \cdot \dfrac{x - Q_{50}}{Q_{75} - Q_{50}} & \text{if } Q_{50} < x \leq Q_{75} \\[8pt]
+\min\!\left(100, \; 75 + 25 \cdot \dfrac{x - Q_{75}}{Q_{75} - Q_{50}}\right) & \text{if } x > Q_{75}
+\end{cases}
+\]
+
+A percentile of 50 means the company trades at the sector median; lower percentiles indicate cheaper valuation.
+
+\subsubsection{Premium/Discount and Implied Price}
+
+\paragraph{Premium/Discount}
+
+\[
+\text{Premium}(\%) = \frac{M_{\text{company}} - M_{\text{sector median}}}{M_{\text{sector median}}} \times 100
+\]
+
+\paragraph{Implied Price}
+
+For equity multiples (P/E, P/B, P/S, P/FCF):
+\[
+\text{Implied Price} = \text{Underlying Metric Per Share} \times M_{\text{sector median}}
+\]
+
+For enterprise value multiples (EV/EBITDA, EV/EBIT, EV/Sales, EV/FCF):
+\[
+\text{Implied Price} = \frac{(\text{Underlying Metric} \times M_{\text{sector median}}) - \text{Net Debt}}{\text{Shares Outstanding}} \times \frac{\text{Current Price}}{\text{Market Cap / Shares Outstanding}}
+\]
+
+\subsubsection{Quality Adjustment}
+
+Companies with superior fundamentals deserve a premium; quality adjustment shifts the composite percentile accordingly:
+
+\paragraph{Growth Premium}
+
+\[
+\text{Growth Premium}(\%) = \frac{g_{\text{company}} - g_{\text{sector median}}}{g_{\text{sector median}}} \times 10
+\]
+
+where $g$ is revenue growth (TTM). Clamped to $[-20\%, +20\%]$.
+
+\paragraph{Margin Premium}
+
+\[
+\text{Margin Premium}(\%) = \frac{m_{\text{company}} - m_{\text{sector median}}}{m_{\text{sector median}}} \times 10
+\]
+
+where $m$ is the EBITDA margin. Clamped to $[-20\%, +20\%]$.
+
+\paragraph{Return Premium}
+
+\[
+\text{Return Premium}(\%) = \frac{\text{ROE}_{\text{company}} - \text{ROE}_{\text{sector}}}{\text{ROE}_{\text{sector}}} \times 5
+\]
+
+Clamped to $[-20\%, +20\%]$.
+
+\paragraph{Total Fair Premium}
+
+\[
+\text{Fair Premium}(\%) = \text{Growth} + \text{Margin} + \text{Return}
+\]
+
+\subsubsection{Composite Scoring}
+
+\paragraph{Raw Composite Percentile}
+
+The arithmetic mean of all valid multiples' percentile ranks:
+\[
+\overline{\text{Pct}} = \frac{1}{|\mathcal{M}|} \sum_{m \in \mathcal{M}} \text{Pct}(m)
+\]
+
+where $\mathcal{M}$ is the set of valid multiples.
+
+\paragraph{Quality-Adjusted Percentile}
+
+\[
+\overline{\text{Pct}}_{\text{adj}} = \text{clamp}\!\left( \overline{\text{Pct}} - \text{Fair Premium}(\%), \; 0, \; 100 \right)
+\]
+
+A company deserving a 15\% quality premium has its percentile reduced by 15 points, making it appear cheaper on a quality-adjusted basis.
+
+\paragraph{Confidence Score}
+
+Confidence (0--100) combines data coverage and agreement:
+\[
+\text{Confidence} = \underbrace{\min(50, \; |\mathcal{M}| \times 5)}_{\text{Data score}} + \underbrace{\max(0, \; 50 - \sigma_{\text{Pct}})}_{\text{Agreement score}}
+\]
+
+where $\sigma_{\text{Pct}}$ is the standard deviation of percentile ranks across multiples. Low dispersion means multiples agree, yielding higher confidence.
+
+\paragraph{Value Score}
+
+The value score inverts the percentile:
+\[
+\text{Value Score} = 100 - \overline{\text{Pct}}_{\text{adj}}
+\]
+
+Higher value scores indicate deeper undervaluation after quality adjustment.
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Sector context}: All comparisons are sector-relative; a ``cheap'' P/E in tech would be expensive in utilities. Sector benchmarks provide the appropriate reference frame.
+
+  \item \textbf{Quality matters}: A company at the 80th percentile of P/E might be fairly valued if its growth and margins are also at the 80th percentile; the quality adjustment captures this.
+
+  \item \textbf{Multiple agreement}: When P/E says cheap but EV/EBITDA says expensive, the confidence score drops, signaling caution.
+
+  \item \textbf{Cyclicality}: Trailing multiples are distorted near cycle peaks and troughs. PEG and forward P/E provide partial correction.
+\end{enumerate}
+
+\newpage\subsection{Dividend Income Analysis}
+
+Dividend income analysis evaluates stocks from an income investor's perspective, emphasizing yield sustainability, dividend growth, and payout safety.
+
+\subsubsection{Dividend Discount Models}
+
+\paragraph{Gordon Growth Model (Constant Growth DDM)}
+
+For stocks with stable, perpetual dividend growth:
+\[
+\text{Fair Value} = \frac{D_1}{r - g} = \frac{D_0 (1 + g)}{r - g}
+\]
+
+where $D_0$ is the current dividend, $r$ is the required return, and $g$ is the dividend growth rate. Validity requires $r > g$.
+
+\paragraph{Two-Stage DDM}
+
+For companies transitioning from high growth to stable growth:
+\[
+\text{Fair Value} = \sum_{t=1}^{n} \frac{D_t}{(1+r)^t} + \frac{D_{n+1}}{(r - g_{\text{terminal}})} \cdot \frac{1}{(1+r)^n}
+\]
+
+\paragraph{H-Model (Gradual Growth Decline)}
+\[
+\text{Fair Value} = \frac{D_0 (1 + g_L)}{r - g_L} + \frac{D_0 \cdot H \cdot (g_S - g_L)}{r - g_L}
+\]
+
+where $H$ is the half-life of the high-growth period, $g_S$ is short-term growth, and $g_L$ is long-term sustainable growth.
+
+\subsubsection{Dividend Coverage}
+
+\[
+\text{EPS Coverage} = \frac{\text{EPS}}{\text{DPS}}
+\]
+\[
+\text{FCF Coverage} = \frac{\text{FCF per Share}}{\text{DPS}}
+\]
+
+Coverage $> 1.5\times$ is considered safe; $< 1.0\times$ indicates the dividend exceeds earnings.
+
+\subsubsection{Chowder Number}
+
+A metric for income-focused investors:
+\[
+\text{Chowder} = \text{Dividend Yield}(\%) + \text{Avg Dividend Growth}(\%)
+\]
+
+Values $> 12$--$14\%$ are attractive for total return from dividends.
+
+\subsubsection{Dividend Aristocrat Classification}
+
+\begin{itemize}
+  \item[] \textbf{Dividend King}: 50+ years of consecutive increases
+  \item[] \textbf{Dividend Aristocrat}: 25+ years
+  \item[] \textbf{Dividend Achiever}: 10--24 years
+  \item[] \textbf{Dividend Contender}: 5--9 years
+  \item[] \textbf{Dividend Challenger}: 1--4 years
+\end{itemize}
+
+\subsubsection{Payout Ratio Assessment}
+
+\begin{itemize}
+  \item[] $< 50\%$: Very Safe
+  \item[] $50$--$60\%$: Safe
+  \item[] $60$--$75\%$: Moderate
+  \item[] $75$--$90\%$: Elevated
+  \item[] $> 90\%$: Unsustainable
+  \item[] $> 100\%$: Paying from reserves
+\end{itemize}
+
+\subsubsection{Dividend Safety Scoring}
+
+The dividend safety score (0--100) aggregates:
+
+\begin{center}
+\begin{tabular}{lcc}
+\textbf{Component} & \textbf{Weight} & \textbf{Key Thresholds} \\
+\hline
+Payout Ratio & 25 & $< 50\%$: 25; $< 60\%$: 20; $< 75\%$: 15 \\
+Coverage & 25 & EPS $> 1.5\times$: 25; $> 1.3\times$: 18 \\
+Streak & 25 & Based on consecutive years \\
+Balance Sheet & 15 & D/E $< 0.5$: 15; $< 1.0$: 10 \\
+Stability & 10 & ROE/ROA quality metrics \\
+\end{tabular}
+\end{center}
+
+\newpage\subsection{REIT Valuation}
+
+Real Estate Investment Trusts require specialized valuation metrics due to significant non-cash depreciation charges and the asset-intensive nature of real estate.
+
+\subsubsection{Funds From Operations (FFO)}
+
+FFO is the REIT-standard earnings metric:
+\[
+\text{FFO} = \text{Net Income} + \text{Depreciation} + \text{Amortization} + \text{Impairments} - \text{Gains on Sales}
+\]
+
+FFO adds back non-cash real estate depreciation, which often exceeds economic depreciation for well-maintained properties.
+
+\subsubsection{Adjusted FFO (AFFO)}
+
+AFFO provides a more conservative view of recurring cash flow:
+\[
+\text{AFFO} = \text{FFO} - \text{Maintenance CapEx} - \text{Straight-Line Rent Adj} - \text{Stock Comp}
+\]
+
+AFFO better approximates true free cash flow available for distribution.
+
+\subsubsection{Net Asset Value (NAV)}
+
+NAV values the underlying real estate portfolio:
+\[
+\text{Property Value} = \frac{\text{NOI}}{\text{Cap Rate}}
+\]
+\[
+\text{NAV} = \text{Property Value} + \text{Cash} + \text{Other Assets} - \text{Total Debt}
+\]
+\[
+\text{NAV per Share} = \frac{\text{NAV}}{\text{Shares Outstanding}}
+\]
+
+\paragraph{Sector Cap Rates}
+
+\begin{center}
+\begin{tabular}{lclc}
+\textbf{Sector} & \textbf{Cap Rate} & \textbf{Sector} & \textbf{Cap Rate} \\
+\hline
+Industrial & 5.0\% & Healthcare & 6.5\% \\
+Data Center & 5.5\% & Office & 7.0\% \\
+Self Storage & 5.5\% & Retail & 7.0\% \\
+Residential & 5.0\% & Hotel & 8.0\% \\
+\end{tabular}
+\end{center}
+
+\subsubsection{Valuation Multiples}
+
+\[
+\text{P/FFO} = \frac{\text{Price}}{\text{FFO per Share}}
+\]
+\[
+\text{P/AFFO} = \frac{\text{Price}}{\text{AFFO per Share}}
+\]
+\[
+\text{Premium/Discount to NAV} = \frac{\text{Price} - \text{NAV per Share}}{\text{NAV per Share}}
+\]
+
+\subsubsection{REIT Payout Analysis}
+
+REITs must distribute $\geq 90\%$ of taxable income. The AFFO payout ratio indicates sustainability:
+\[
+\text{AFFO Payout Ratio} = \frac{\text{Annual Dividend}}{\text{AFFO per Share}}
+\]
+
+\begin{itemize}
+  \item[] $< 75\%$: Very Safe (room for growth)
+  \item[] $75$--$85\%$: Healthy
+  \item[] $85$--$95\%$: Tight
+  \item[] $> 95\%$: At Risk
+\end{itemize}
+
+\subsubsection{Mortgage REIT Metrics}
+
+Mortgage REITs (mREITs) invest in mortgages rather than properties:
+\[
+\text{Net Interest Income} = \text{Interest Income} - \text{Interest Expense}
+\]
+\[
+\text{Net Interest Margin} = \frac{\text{NII}}{\text{Average Earning Assets}}
+\]
+\[
+\text{Price/Book} = \frac{\text{Price}}{\text{Book Value per Share}}
+\]
+
+For mREITs, P/B near 1.0 is typical; significant discounts may indicate credit concerns.
+
+\newpage\subsection{ETF Analysis}
+
+ETF analysis evaluates exchange-traded funds on cost efficiency, tracking quality, liquidity, and structural characteristics.
+
+\subsubsection{Premium/Discount to NAV}
+
+\[
+\text{Premium/Discount} = \frac{\text{Price} - \text{NAV}}{\text{NAV}} \times 100
+\]
+
+ETFs should trade near NAV; persistent premiums or discounts indicate inefficiencies or structural issues.
+
+\subsubsection{Tracking Error}
+
+Tracking error measures deviation from the benchmark:
+\[
+\text{Tracking Error} = \sqrt{\text{Var}(R_{\text{ETF}} - R_{\text{Benchmark}})}
+\]
+
+\begin{itemize}
+  \item[] $< 0.10\%$: Excellent
+  \item[] $0.10$--$0.25\%$: Good
+  \item[] $0.25$--$0.50\%$: Acceptable
+  \item[] $> 0.50\%$: Poor
+\end{itemize}
+
+\subsubsection{Total Cost of Ownership}
+
+Beyond expense ratio, total cost includes:
+\[
+\text{TCO} = \text{Expense Ratio} + \text{Bid-Ask Spread} + \text{Tracking Drag}
+\]
+
+\subsubsection{ETF Quality Scoring}
+
+The ETF quality score (0--100) aggregates:
+
+\begin{center}
+\begin{tabular}{lcc}
+\textbf{Component} & \textbf{Weight} & \textbf{Key Thresholds} \\
+\hline
+Cost & 25 & ER $< 0.05\%$: 25; $< 0.10\%$: 20; $< 0.20\%$: 15 \\
+NAV Gap & 10 & Gap $< 0.05\%$: 10; $< 0.10\%$: 8; $< 0.25\%$: 6 \\
+Tracking & 25 & TE $< 0.10\%$: 25; $< 0.25\%$: 20; $< 0.50\%$: 15 \\
+Liquidity & 20 & Spread, volume, AUM \\
+Size (AUM) & 20 & $> \$100$B: 20; $> \$10$B: 15; $> \$1$B: 10 \\
+\end{tabular}
+\end{center}
+
+\subsubsection{Derivatives ETF Analysis}
+
+Specialized metrics for options-based and leveraged ETFs:
+
+\paragraph{Capture Ratios}
+
+Capture ratios measure how much of the benchmark's return is captured in up and down markets:
+\[
+\text{Upside Capture} = \frac{\sum_{t \in U} R_{\text{ETF},t}}{\sum_{t \in U} R_{\text{bench},t}} \times 100, \qquad
+\text{Downside Capture} = \frac{\sum_{t \in D} R_{\text{ETF},t}}{\sum_{t \in D} R_{\text{bench},t}} \times 100
+\]
+
+where $U = \{t : R_{\text{bench},t} > 0\}$ and $D = \{t : R_{\text{bench},t} < 0\}$.
+
+Capture efficiency isolates the asymmetry:
+\[
+\text{Capture Efficiency} = \text{Upside Capture} - \text{Downside Capture}
+\]
+
+Positive efficiency means the ETF captures more upside than downside---desirable for covered call strategies.
+
+\paragraph{Covered Call ETFs}
+
+Covered call ETFs (e.g., JEPI, QYLD) sacrifice upside for income. Key metrics:
+\begin{itemize}
+  \item Distribution Yield: annualized income as \% of NAV
+  \item Yield vs Benchmark: $\text{Yield}_{\text{ETF}} / \text{Yield}_{\text{benchmark}}$
+  \item Scoring sweet spot: 7--10\% yield with upside capture $\geq 60\%$
+\end{itemize}
+
+\paragraph{Volatility ETF Decay}
+
+Volatility ETFs that hold VIX futures suffer from contango roll yield:
+\[
+\text{Roll Yield (monthly)} \approx \frac{R_{\text{1Y}}}{12}
+\]
+
+where $R_{\text{1Y}}$ is the 1-year return. Persistent contango (front futures $<$ back futures) causes compounding erosion. An ETF with $R_{\text{1Y}} < -30\%$ is flagged as severely decaying and unsuitable for buy-and-hold.
+
+\paragraph{Leveraged ETF Volatility Drag}
+
+Daily-rebalanced leveraged ETFs suffer from volatility drag:
+\[
+R_{\text{leveraged}} \approx L \cdot R_{\text{index}} - \frac{L(L-1)}{2} \sigma^2
+\]
+
+where $L$ is the leverage factor and $\sigma$ is realized volatility. Higher volatility accelerates decay; ETFs with $\sigma_{\text{1Y}} > 50\%$ score lowest.
+
+\paragraph{Buffer ETFs}
+
+Buffer (defined-outcome) ETFs use options collars to provide downside protection up to a buffer level in exchange for a capped upside:
+\begin{itemize}
+  \item Buffer Level: starting point of downside protection
+  \item Cap Level: maximum upside participation
+  \item Remaining Buffer / Cap: current effective levels within the outcome period
+  \item Days to Outcome Period Reset
+\end{itemize}
+
+Mid-period entry alters effective buffer and cap levels; best entered near period start.
+
+\newpage\subsection{Crypto Treasury Valuation}
+
+Crypto treasury valuation applies to companies holding significant cryptocurrency assets on their balance sheet, using a multiple of Net Asset Value (mNAV) framework.
+
+\subsubsection{Net Asset Value}
+
+\[
+\text{NAV} = (\text{BTC Holdings} \times P_{\text{BTC}}) + (\text{ETH Holdings} \times P_{\text{ETH}})
+\]
+\[
+\text{NAV per Share} = \frac{\text{NAV}}{\text{Shares Outstanding}}
+\]
+
+\subsubsection{Multiple of NAV (mNAV)}
+
+The key valuation metric:
+\[
+\text{mNAV} = \frac{\text{Market Cap}}{\text{NAV}}
+\]
+
+\begin{itemize}
+  \item[] mNAV $< 0.8$: Strong Buy (20\%+ discount to holdings)
+  \item[] mNAV $0.8$--$1.0$: Buy (discount)
+  \item[] mNAV $1.0$--$1.2$: Hold (fair to slight premium)
+  \item[] mNAV $1.2$--$1.5$: Caution (meaningful premium)
+  \item[] mNAV $> 1.5$: Overvalued (speculative premium)
+\end{itemize}
+
+\subsubsection{Premium/Discount}
+
+\[
+\text{Premium}(\%) = (\text{mNAV} - 1) \times 100
+\]
+
+Negative values indicate the stock trades at a discount to its crypto holdings.
+
+\subsubsection{Per-Share Exposure}
+
+\[
+\text{BTC per Share} = \frac{\text{BTC Holdings}}{\text{Shares Outstanding}}
+\]
+
+This metric shows the crypto exposure obtained per share purchased.
+
+\subsubsection{Implied Crypto Prices}
+
+The market-implied crypto price embedded in the stock valuation:
+\[
+\text{Implied BTC Price} = P_{\text{BTC}} \times \text{mNAV}
+\]
+
+If mNAV $> 1$, the market implicitly values the company's BTC holdings above spot price.
+
+\subsubsection{Unrealized Gains}
+
+\[
+\text{Unrealized Gain} = (P_{\text{current}} - P_{\text{avg cost}}) \times \text{Holdings}
+\]
+
+Significant unrealized gains may create tax overhang if liquidated.
+
+\newpage\subsection{NLP Sentiment Analysis}
+
+Natural language processing analyzes corporate communications to detect narrative shifts before they manifest in financial results.
+
+\subsubsection{Document Sources}
+
+\begin{itemize}
+  \item \textbf{SEC Filings}: MD\&A (Item 7/Item 5), Risk Factors (Item 1A/Item 3D)
+  \item \textbf{Earnings Calls}: Prepared remarks, Q\&A transcripts
+  \item \textbf{Comparison}: Current vs prior quarter, current vs historical centroid
+\end{itemize}
+
+\subsubsection{Embedding-Based Change Detection}
+
+Documents are converted to dense vector embeddings using transformer models. Change is measured via cosine distance:
+\[
+\Delta = 1 - \cos(\mathbf{e}_{\text{current}}, \mathbf{e}_{\text{prior}})
+\]
+
+Higher $\Delta$ indicates greater semantic shift in language.
+
+\subsubsection{Historical Centroid}
+
+A weighted average of past embeddings with exponential decay:
+\[
+\mathbf{c} = \frac{\sum_{t} w_t \cdot \mathbf{e}_t}{\sum_{t} w_t}, \quad w_t = e^{-\lambda (T - t)}
+\]
+
+where $\lambda$ controls decay speed and $T$ is the current period. Recent quarters receive higher weight.
+
+\subsubsection{Hedging Language Detection}
+
+Count of uncertainty-indicating words and phrases:
+\begin{itemize}
+  \item \textbf{Hedging words}: ``may'', ``might'', ``could'', ``uncertain'', ``risk''
+  \item \textbf{Evasive phrases}: ``as I mentioned'', ``too early to say'', ``time will tell''
+\end{itemize}
+
+Increasing hedging language signals growing management uncertainty.
+
+\subsubsection{Commitment Strength Scoring}
+
+Management commitment is scored on a ladder (0--1):
+
+\begin{center}
+\begin{tabular}{lclc}
+\textbf{Word} & \textbf{Score} & \textbf{Word} & \textbf{Score} \\
+\hline
+``will'' & 1.0 & ``intend'' & 0.5 \\
+``expect'' & 0.8 & ``target'' & 0.4 \\
+``anticipate'' & 0.7 & ``hope'' & 0.3 \\
+``believe'' & 0.6 & ``monitor'' & 0.2 \\
+\end{tabular}
+\end{center}
+
+Declining commitment scores indicate weakening conviction.
+
+\subsubsection{Signal Ontology}
+
+Fixed categories for narrative signals (each with UP/DOWN direction):
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Category} & \textbf{Interpretation} \\
+\hline
+Pricing Power & Ability to raise/maintain prices \\
+Margin Pressure & Cost/competitive pressure on margins \\
+Demand Visibility & Clarity on demand outlook \\
+Competitive Threat & New or intensifying competition \\
+Guidance Confidence & Management confidence in outlook \\
+Management Tone & Overall tone shift \\
+Regulatory Overhang & Regulatory risk exposure \\
+Execution Risk & Ability to execute initiatives \\
+\end{tabular}
+\end{center}
+
+\subsubsection{Composite Scoring}
+
+Snippets are ranked by composite score:
+\[
+\text{Score} = w_{\Delta} \cdot \Delta_{\text{embedding}} + w_h \cdot \Delta_{\text{hedging}} + w_c \cdot \Delta_{\text{commitment}}
+\]
+
+where typical weights are $w_{\Delta} = 0.5$, $w_h = 0.25$, $w_c = 0.25$.
+
+\subsubsection{Interpretation}
+
+\begin{itemize}
+  \item \textbf{High $\Delta$ + Decreasing Commitment}: Deteriorating narrative
+  \item \textbf{Increasing Hedging}: Growing uncertainty/caution
+  \item \textbf{Risk Factor Changes}: New risks emerging
+  \item \textbf{Q\&A Tone Shift}: Management becoming defensive
+\end{itemize}
+
+\newpage\subsection{Tail Risk Forecast}
+
+Tail risk forecasting estimates Value-at-Risk (VaR) and Expected Shortfall (ES) using realized variance computed from high-frequency intraday returns.
+
+\subsubsection{Realized Variance}
+
+Daily realized variance is computed from intraday returns:
+\[
+RV_t = \sum_{i=1}^{n} r_{t,i}^2
+\]
+
+where $r_{t,i}$ are intraday log returns (typically 5-minute intervals). This provides a more accurate volatility measure than close-to-close returns by capturing intraday price movements.
+
+\subsubsection{HAR-RV Model}
+
+The Heterogeneous Autoregressive Realized Volatility (HAR-RV) model captures volatility persistence at multiple horizons:
+\[
+RV_{t+1} = c + \beta_d \cdot RV_t + \beta_w \cdot RV_t^{(w)} + \beta_m \cdot RV_t^{(m)} + \varepsilon_t
+\]
+
+where:
+\begin{itemize}
+  \item $RV_t^{(w)} = \frac{1}{5}\sum_{i=0}^{4} RV_{t-i}$ is the weekly (5-day) average
+  \item $RV_t^{(m)} = \frac{1}{22}\sum_{i=0}^{21} RV_{t-i}$ is the monthly (22-day) average
+\end{itemize}
+
+The HAR structure captures heterogeneous market participants operating at different frequencies (daily traders, weekly rebalancers, monthly allocators).
+
+\subsubsection{Jump Detection}
+
+Variance jumps are identified using a threshold approach:
+\[
+J_t = \mathbf{1}\left\{ RV_t > \mu_{RV} + k \cdot \sigma_{RV} \right\}
+\]
+
+where $\mu_{RV}$ and $\sigma_{RV}$ are the rolling mean and standard deviation of realized variance, and $k = 2.5$ is the threshold multiplier. When recent jumps are detected, the forecast includes a risk premium adjustment.
+
+\subsubsection{Value-at-Risk}
+
+VaR at confidence level $\alpha$ estimates the maximum loss that will not be exceeded with probability $\alpha$:
+\[
+\text{VaR}_\alpha = t_\alpha(\nu) \cdot \sigma_{\text{forecast}}
+\]
+
+where $t_\alpha(\nu)$ is the quantile of the Student-t distribution with $\nu = 6$ degrees of freedom, accounting for fat tails in return distributions.
+
+\begin{center}
+\begin{tabular}{lcc}
+\textbf{Confidence} & \textbf{t(6) Quantile} & \textbf{Interpretation} \\
+\hline
+95\% & 1.943 & 5\% chance of exceeding \\
+99\% & 3.143 & 1\% chance of exceeding \\
+\end{tabular}
+\end{center}
+
+\subsubsection{Expected Shortfall}
+
+Expected Shortfall (Conditional VaR) estimates the average loss in the worst scenarios:
+\[
+\text{ES}_\alpha = \text{VaR}_\alpha \times m_\alpha
+\]
+
+where the multiplier $m_\alpha$ accounts for the tail weight:
+\begin{itemize}
+  \item $m_{0.95} = 1.25$ for 95\% confidence
+  \item $m_{0.99} = 1.35$ for 99\% confidence
+\end{itemize}
+
+ES is more conservative than VaR and better captures tail risk for non-normal distributions.
+
+\subsubsection{Interpretation}
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Metric} & \textbf{Meaning} \\
+\hline
+VaR 95\% = 2\% & 5\% chance of losing more than 2\% tomorrow \\
+VaR 99\% = 3.5\% & 1\% chance of losing more than 3.5\% tomorrow \\
+ES 95\% = 2.5\% & Average loss in worst 5\% of days is 2.5\% \\
+Jump-adjusted & Recent variance jumps detected; forecast conservative \\
+\end{tabular}
+\end{center}
+
+Higher volatility stocks (e.g., NVDA: VaR 99\% $\approx$ 7.5\%) require larger position sizing buffers than lower volatility names (e.g., SPY: VaR 99\% $\approx$ 2.3\%).

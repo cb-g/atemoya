@@ -1,0 +1,224 @@
+{
+  "positions": [
+    {
+      "ticker": "NVDA",
+      "name": "NVDA",
+      "position": {
+        "type": "long",
+        "shares": 100.0,
+        "avg_cost": 125.0
+      },
+      "levels": {
+        "sell_target": 250.0,
+        "stop_loss": 160.0
+      },
+      "bull": [
+        {
+          "arg": "Data center demand accelerating",
+          "weight": 9
+        }
+      ],
+      "bear": [
+        {
+          "arg": "Valuation stretched at 60x PE",
+          "weight": 6
+        }
+      ],
+      "catalysts": [],
+      "notes": ""
+    },
+    {
+      "ticker": "AVGO",
+      "name": "AVGO",
+      "position": {
+        "type": "long",
+        "shares": 40.0,
+        "avg_cost": 180.0
+      },
+      "levels": {
+        "sell_target": 500.0,
+        "stop_loss": 280.0
+      },
+      "bull": [],
+      "bear": [],
+      "catalysts": [],
+      "notes": ""
+    },
+    {
+      "ticker": "PLTR",
+      "name": "PLTR",
+      "position": {
+        "type": "long",
+        "shares": 200.0,
+        "avg_cost": 25.0
+      },
+      "levels": {
+        "sell_target": 200.0,
+        "stop_loss": 100.0
+      },
+      "bull": [
+        {
+          "arg": "Government AI contracts expanding",
+          "weight": 8
+        }
+      ],
+      "bear": [
+        {
+          "arg": "Stock-based compensation dilution",
+          "weight": 5
+        }
+      ],
+      "catalysts": [],
+      "notes": ""
+    },
+    {
+      "ticker": "META",
+      "name": "META",
+      "position": {
+        "type": "long",
+        "shares": 30.0,
+        "avg_cost": 320.0
+      },
+      "levels": {
+        "sell_target": 900.0,
+        "stop_loss": 550.0
+      },
+      "bull": [
+        {
+          "arg": "AI monetization via ads",
+          "weight": 8
+        }
+      ],
+      "bear": [
+        {
+          "arg": "Metaverse capex drag",
+          "weight": 5
+        }
+      ],
+      "catalysts": [],
+      "notes": ""
+    },
+    {
+      "ticker": "COST",
+      "name": "COST",
+      "position": {
+        "type": "long",
+        "shares": 15.0,
+        "avg_cost": 800.0
+      },
+      "levels": {
+        "sell_target": 1100.0,
+        "stop_loss": 900.0
+      },
+      "bull": [],
+      "bear": [],
+      "catalysts": [],
+      "notes": ""
+    },
+    {
+      "ticker": "XOM",
+      "name": "XOM",
+      "position": {
+        "type": "long",
+        "shares": 80.0,
+        "avg_cost": 95.0
+      },
+      "levels": {
+        "sell_target": 130.0,
+        "stop_loss": 90.0
+      },
+      "bull": [],
+      "bear": [],
+      "catalysts": [],
+      "notes": ""
+    },
+    {
+      "ticker": "SMCI",
+      "name": "SMCI",
+      "position": {
+        "type": "short",
+        "shares": 50.0,
+        "avg_cost": 35.0
+      },
+      "levels": {
+        "buy_target": 20.0,
+        "stop_loss": 55.0
+      },
+      "bull": [
+        {
+          "arg": "AI server demand tailwind",
+          "weight": 4
+        }
+      ],
+      "bear": [
+        {
+          "arg": "Accounting concerns and audit risk",
+          "weight": 8
+        }
+      ],
+      "catalysts": [],
+      "notes": ""
+    },
+    {
+      "ticker": "INTC",
+      "name": "INTC",
+      "position": {
+        "type": "short",
+        "shares": 100.0,
+        "avg_cost": 50.0
+      },
+      "levels": {
+        "buy_target": 30.0,
+        "stop_loss": 55.0
+      },
+      "bull": [
+        {
+          "arg": "CHIPS Act subsidies",
+          "weight": 4
+        }
+      ],
+      "bear": [
+        {
+          "arg": "Foundry losses mounting",
+          "weight": 9
+        }
+      ],
+      "catalysts": [],
+      "notes": ""
+    },
+    {
+      "ticker": "AMD",
+      "name": "AMD",
+      "position": {
+        "type": "watching",
+        "shares": 0,
+        "avg_cost": 0
+      },
+      "levels": {
+        "buy_target": 160.0,
+        "sell_target": 300.0
+      },
+      "bull": [],
+      "bear": [],
+      "catalysts": [],
+      "notes": ""
+    },
+    {
+      "ticker": "CRWD",
+      "name": "CRWD",
+      "position": {
+        "type": "watching",
+        "shares": 0,
+        "avg_cost": 0
+      },
+      "levels": {
+        "buy_target": 300.0,
+        "sell_target": 600.0
+      },
+      "bull": [],
+      "bear": [],
+      "catalysts": [],
+      "notes": ""
+    }
+  ]
+}

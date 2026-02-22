@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name relative_valuation)
+ (libraries relative_valuation yojson unix))

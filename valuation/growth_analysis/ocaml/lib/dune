@@ -1,0 +1,5 @@
+(library
+ (name growth_analysis)
+ (public_name atemoya.growth_analysis)
+ (libraries yojson unix)
+ (modules types growth_metrics scoring io))

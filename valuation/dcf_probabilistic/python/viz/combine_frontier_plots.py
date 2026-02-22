@@ -62,7 +62,7 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("valuation/dcf_probabilistic/output"),
+        default=Path(__file__).resolve().parent.parent.parent / "output",
         help="Directory containing the plots"
     )
 

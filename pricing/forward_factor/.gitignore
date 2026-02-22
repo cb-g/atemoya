@@ -1,0 +1,17 @@
+# Data files
+data/*.json
+data/*.csv
+
+# Output files
+output/*.json
+output/*.csv
+output/*.png
+
+# OCaml build artifacts
+ocaml/_build/
+ocaml/**/*.exe
+
+# Python
+python/__pycache__/
+python/*.pyc
+python/.venv/

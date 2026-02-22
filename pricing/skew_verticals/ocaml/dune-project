@@ -1,0 +1,9 @@
+(lang dune 3.0)
+(name skew_verticals)
+(generate_opam_files true)
+
+(package
+ (name skew_verticals)
+ (depends
+  (ocaml (>= 4.14))
+  (dune (>= 3.0))))

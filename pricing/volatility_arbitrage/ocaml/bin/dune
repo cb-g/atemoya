@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name volatility_arbitrage)
+ (libraries volatility_arbitrage unix))

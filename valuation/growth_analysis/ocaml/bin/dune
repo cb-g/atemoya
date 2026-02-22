@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name growth_analysis)
+ (libraries growth_analysis yojson unix))

@@ -1,9 +1,17 @@
-"""Fetch asset return data using yfinance."""
+"""Fetch asset return data using unified data_fetcher.
 
-import yfinance as yf
+Uses IBKR if available, falls back to yfinance.
+"""
+
+import sys
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+
+# Add lib to path
+sys.path.insert(0, str(Path(__file__).parents[4]))
+
+from lib.python.data_fetcher import fetch_multiple_ohlcv, get_available_providers
 
 
 def fetch_asset_returns(
@@ -14,6 +22,8 @@ def fetch_asset_returns(
 ) -> dict[str, pd.DataFrame]:
     """
     Fetch return data for multiple assets.
+
+    Uses unified data_fetcher (IBKR if available, yfinance fallback).
 
     Args:
         tickers: List of ticker symbols
@@ -27,30 +37,51 @@ def fetch_asset_returns(
     if end_date is None:
         end_date = datetime.now().strftime("%Y-%m-%d")
 
+    print(f"Available providers: {get_available_providers()}")
+
+    # Calculate period from dates
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+    days = (end - start).days
+
+    if days <= 30:
+        period = "1mo"
+    elif days <= 90:
+        period = "3mo"
+    elif days <= 180:
+        period = "6mo"
+    elif days <= 365:
+        period = "1y"
+    elif days <= 730:
+        period = "2y"
+    else:
+        period = "5y"
+
+    # Fetch all tickers using batch download
+    ohlcv_data = fetch_multiple_ohlcv(tickers, period=period, interval="1d")
+
     results = {}
 
     for ticker in tickers:
-        print(f"Fetching {ticker}...", end=" ")
+        print(f"Processing {ticker}...", end=" ")
         try:
-            # Fetch asset data
-            data = yf.download(ticker, start=start_date, end=end_date, progress=False, auto_adjust=False)
+            if ticker not in ohlcv_data:
+                print(f"✗ No data returned")
+                continue
 
-            # Calculate daily returns
-            if "Adj Close" in data.columns:
-                close_prices = data["Adj Close"]
-            else:
-                close_prices = data["Close"]
+            ohlcv = ohlcv_data[ticker]
 
-            # Flatten if multi-index
-            if hasattr(close_prices, "squeeze"):
-                close_prices = close_prices.squeeze()
+            # Calculate daily returns from close prices
+            closes = pd.Series(ohlcv.close, index=pd.to_datetime(ohlcv.dates))
+            returns = closes.pct_change().dropna()
 
-            returns = close_prices.pct_change().dropna()
+            # Filter to date range
+            returns = returns[start_date:end_date]
 
             # Create DataFrame
             df = pd.DataFrame({
                 "date": [d.strftime("%Y-%m-%d") for d in returns.index],
-                "return": returns.values.flatten() if hasattr(returns.values, "flatten") else returns.values
+                "return": returns.values
             })
 
             results[ticker] = df

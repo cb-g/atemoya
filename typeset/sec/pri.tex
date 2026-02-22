@@ -282,3 +282,3103 @@ The regime-adaptive downside optimization framework provides:
 \end{enumerate}
 
 The framework rejects the mean-variance paradigm in favor of downside-focused objectives that better align with investor utility and observed market behavior during stress episodes.
+
+\subsection{Market Regime Forecast}
+
+Market regime detection is fundamental to adaptive portfolio management. Different market environments---bull trends, bear trends, sideways consolidation, high volatility, low volatility---call for different strategies. This section presents four complementary approaches to regime classification, ranging from classical econometric models to Bayesian online methods.
+
+\subsubsection{GARCH(1,1) Volatility Model}
+
+The Generalized Autoregressive Conditional Heteroskedasticity model captures volatility clustering---the empirical observation that large returns tend to be followed by large returns (of either sign).
+
+\paragraph{Model Specification}
+
+Let $r_t$ denote the log return at time $t$. The GARCH(1,1) model specifies:
+\begin{align}
+  r_t &= \mu + \varepsilon_t, \quad \varepsilon_t = \sigma_t z_t, \quad z_t \stackrel{\text{iid}}{\sim} \mathcal{N}(0, 1) \\
+  \sigma_t^2 &= \omega + \alpha \varepsilon_{t-1}^2 + \beta \sigma_{t-1}^2
+\end{align}
+where:
+\begin{itemize}
+  \item $\omega > 0$: baseline variance (intercept)
+  \item $\alpha \geq 0$: ARCH coefficient (shock reaction)
+  \item $\beta \geq 0$: GARCH coefficient (persistence)
+  \item $\alpha + \beta < 1$: stationarity condition
+\end{itemize}
+
+\paragraph{Key Properties}
+
+The \textbf{persistence} $\rho = \alpha + \beta$ measures how long volatility shocks persist. Values near 1 indicate highly persistent volatility clustering. The \textbf{unconditional (long-run) volatility} is:
+\begin{equation}
+  \bar{\sigma} = \sqrt{\frac{\omega}{1 - \alpha - \beta}}
+\end{equation}
+
+The model implies an exponential decay of volatility shocks:
+\begin{equation}
+  \mathbb{E}[\sigma_{t+h}^2 | \mathcal{F}_t] = \bar{\sigma}^2 + \rho^h (\sigma_t^2 - \bar{\sigma}^2)
+\end{equation}
+
+\paragraph{Maximum Likelihood Estimation}
+
+Parameters $\theta = (\omega, \alpha, \beta)$ are estimated by maximizing the log-likelihood:
+\begin{equation}
+  \mathcal{L}(\theta) = -\frac{1}{2} \sum_{t=1}^{T} \left[ \log(2\pi) + \log(\sigma_t^2) + \frac{(r_t - \mu)^2}{\sigma_t^2} \right]
+\end{equation}
+subject to $\omega > 0$, $\alpha, \beta \geq 0$, and $\alpha + \beta < 1$. Optimization uses Nelder-Mead or BFGS with penalty terms for constraint violations.
+
+\paragraph{Volatility Regime Classification}
+
+Current volatility is classified relative to historical percentiles:
+\begin{equation}
+  \text{Vol Regime} = \begin{cases}
+    \text{High Vol} & \text{if } \sigma_t > P_{80}(\sigma_{1:T}) \\
+    \text{Low Vol} & \text{if } \sigma_t < P_{20}(\sigma_{1:T}) \\
+    \text{Normal Vol} & \text{otherwise}
+  \end{cases}
+\end{equation}
+
+\subsubsection{Hidden Markov Model for Trend Detection}
+
+While GARCH captures volatility dynamics, trend classification requires modeling the latent market state. A Hidden Markov Model (HMM) with Gaussian emissions provides a principled approach.
+
+\paragraph{Model Specification}
+
+Let $S_t \in \{1, 2, 3\}$ denote the hidden state (Bull, Bear, Sideways) at time $t$. The HMM specifies:
+\begin{align}
+  P(S_t = j | S_{t-1} = i) &= A_{ij} \quad \text{(transition probabilities)} \\
+  r_t | S_t = k &\sim \mathcal{N}(\mu_k, \sigma_k^2) \quad \text{(emission distributions)}
+\end{align}
+
+The transition matrix $\mathbf{A}$ is row-stochastic: $\sum_j A_{ij} = 1$ for all $i$.
+
+\paragraph{Baum-Welch Algorithm (EM)}
+
+Parameters $\theta = (\mathbf{A}, \boldsymbol{\mu}, \boldsymbol{\sigma}^2, \boldsymbol{\pi})$ are estimated via Expectation-Maximization.
+
+\textbf{E-step (Forward-Backward):}
+
+Define forward probabilities $\alpha_t(i) = P(r_{1:t}, S_t = i)$ and backward probabilities $\beta_t(i) = P(r_{t+1:T} | S_t = i)$:
+\begin{align}
+  \alpha_t(j) &= \left[ \sum_{i=1}^{K} \alpha_{t-1}(i) A_{ij} \right] b_j(r_t) \\
+  \beta_t(i) &= \sum_{j=1}^{K} A_{ij} b_j(r_{t+1}) \beta_{t+1}(j)
+\end{align}
+where $b_j(r) = \mathcal{N}(r; \mu_j, \sigma_j^2)$ is the emission density.
+
+The posterior state probabilities are:
+\begin{equation}
+  \gamma_t(i) = P(S_t = i | r_{1:T}) = \frac{\alpha_t(i) \beta_t(i)}{\sum_{j=1}^{K} \alpha_t(j) \beta_t(j)}
+\end{equation}
+
+\textbf{M-step (Parameter Update):}
+\begin{align}
+  \hat{\mu}_k &= \frac{\sum_{t=1}^{T} \gamma_t(k) r_t}{\sum_{t=1}^{T} \gamma_t(k)} \\
+  \hat{\sigma}_k^2 &= \frac{\sum_{t=1}^{T} \gamma_t(k) (r_t - \hat{\mu}_k)^2}{\sum_{t=1}^{T} \gamma_t(k)} \\
+  \hat{A}_{ij} &= \frac{\sum_{t=1}^{T-1} \xi_t(i, j)}{\sum_{t=1}^{T-1} \gamma_t(i)}
+\end{align}
+where $\xi_t(i, j) = P(S_t = i, S_{t+1} = j | r_{1:T})$.
+
+\paragraph{Viterbi Decoding}
+
+The most likely state sequence is found via dynamic programming:
+\begin{equation}
+  \delta_t(j) = \max_{i} \left[ \delta_{t-1}(i) A_{ij} \right] b_j(r_t)
+\end{equation}
+with backtracking to recover $\hat{S}_{1:T}$.
+
+\paragraph{State Relabeling}
+
+HMM states are arbitrary---state 1 is not inherently ``Bull.'' Post-fitting, states are relabeled by sorting emission means: $\mu_{\text{Bull}} > \mu_{\text{Sideways}} > \mu_{\text{Bear}}$.
+
+\subsubsection{Markov-Switching GARCH (MS-GARCH)}
+
+MS-GARCH integrates regime switching directly into volatility dynamics, allowing GARCH parameters to vary across regimes.
+
+\paragraph{Model Specification}
+
+Let $S_t \in \{1, \ldots, K\}$ be the latent regime. The MS-GARCH model specifies:
+\begin{align}
+  r_t &= \mu_{S_t} + \varepsilon_t, \quad \varepsilon_t = \sigma_t z_t \\
+  \sigma_t^2 &= \omega_{S_t} + \alpha_{S_t} \varepsilon_{t-1}^2 + \beta_{S_t} \sigma_{t-1}^2 \\
+  P(S_t = j | S_{t-1} = i) &= P_{ij}
+\end{align}
+
+Each regime $k$ has its own parameter vector $(\mu_k, \omega_k, \alpha_k, \beta_k)$, capturing regime-specific volatility dynamics.
+
+\paragraph{Interpretation}
+
+For a 3-regime model (Low/Normal/High volatility):
+\begin{itemize}
+  \item \textbf{Low Vol Regime}: Small $\omega_k$, high $\beta_k$ (calm, persistent)
+  \item \textbf{Normal Vol Regime}: Moderate parameters
+  \item \textbf{High Vol Regime}: Large $\omega_k$, high $\alpha_k$ (reactive to shocks)
+\end{itemize}
+
+\paragraph{Estimation}
+
+Estimation uses EM with the forward algorithm adapted for GARCH dynamics:
+\begin{equation}
+  \alpha_t(j) \propto \left[ \sum_{i=1}^{K} \alpha_{t-1}(i) P_{ij} \right] \cdot \phi\left( \frac{r_t - \mu_j}{\sigma_t^{(j)}} \right) / \sigma_t^{(j)}
+\end{equation}
+where $\sigma_t^{(j)}$ is the conditional volatility under regime $j$, computed using regime-weighted lagged values.
+
+\paragraph{Regime Classification}
+
+Regimes are relabeled by unconditional volatility:
+\begin{equation}
+  \bar{\sigma}_k = \sqrt{\frac{\omega_k}{1 - \alpha_k - \beta_k}}
+\end{equation}
+The regime with smallest $\bar{\sigma}_k$ is labeled ``Low Vol,'' etc.
+
+\subsubsection{Bayesian Online Changepoint Detection (BOCPD)}
+
+BOCPD provides real-time regime change detection by maintaining a posterior distribution over \textit{run lengths}---the time since the last changepoint.
+
+\paragraph{Run Length Formulation}
+
+Let $r_t$ denote the run length at time $t$ (time since last regime change). The key recursion is:
+\begin{equation}
+  P(r_t | x_{1:t}) \propto \sum_{r_{t-1}} P(r_t | r_{t-1}) \cdot P(x_t | r_{t-1}, x_{1:t-1}) \cdot P(r_{t-1} | x_{1:t-1})
+\end{equation}
+
+\paragraph{Hazard Function}
+
+The prior probability of a changepoint is given by the hazard function $H(r)$. A constant hazard $H(r) = 1/\lambda$ implies geometric run lengths with expected duration $\lambda$:
+\begin{equation}
+  P(r_t | r_{t-1}) = \begin{cases}
+    H(r_{t-1}) & \text{if } r_t = 0 \text{ (changepoint)} \\
+    1 - H(r_{t-1}) & \text{if } r_t = r_{t-1} + 1 \text{ (growth)}
+  \end{cases}
+\end{equation}
+
+\paragraph{Underlying Predictive Model}
+
+Within each regime segment, observations are modeled using a conjugate Normal-Inverse-Gamma prior:
+\begin{align}
+  \mu | \sigma^2 &\sim \mathcal{N}(\mu_0, \sigma^2 / \kappa_0) \\
+  \sigma^2 &\sim \text{Inv-Gamma}(\alpha_0, \beta_0)
+\end{align}
+
+The predictive distribution for a new observation given sufficient statistics $(n, \bar{x}, S)$ is Student-$t$:
+\begin{equation}
+  x_{\text{new}} | x_{1:n} \sim t_{2\alpha_n}\left( \mu_n, \frac{\beta_n(\kappa_n + 1)}{\alpha_n \kappa_n} \right)
+\end{equation}
+where the posterior parameters update via:
+\begin{align}
+  \kappa_n &= \kappa_0 + n, \quad \mu_n = \frac{\kappa_0 \mu_0 + n\bar{x}}{\kappa_n} \\
+  \alpha_n &= \alpha_0 + \frac{n}{2}, \quad \beta_n = \beta_0 + \frac{S}{2} + \frac{\kappa_0 n (\bar{x} - \mu_0)^2}{2\kappa_n}
+\end{align}
+
+\paragraph{Online Update Algorithm}
+
+For each new observation $x_t$:
+\begin{enumerate}
+  \item Compute predictive probabilities $P(x_t | r_{t-1})$ for each run length
+  \item Compute growth probabilities: $P(r_t = r_{t-1} + 1) \propto (1 - H) \cdot P(x_t | r_{t-1}) \cdot P(r_{t-1})$
+  \item Compute changepoint probability: $P(r_t = 0) \propto \sum_{r_{t-1}} H \cdot P(x_t | r_{t-1}) \cdot P(r_{t-1})$
+  \item Normalize and update sufficient statistics
+\end{enumerate}
+
+\paragraph{Changepoint Detection}
+
+A changepoint is detected when:
+\begin{equation}
+  P(r_t \leq \tau | x_{1:t}) > \theta
+\end{equation}
+for threshold $\tau$ (recent changepoint) and detection threshold $\theta$ (e.g., 0.5).
+
+\paragraph{Regime Statistics}
+
+Current regime characteristics are computed as expectations over the run length distribution:
+\begin{align}
+  \hat{\mu}_{\text{regime}} &= \sum_{r} P(r_t = r | x_{1:t}) \cdot \bar{x}^{(r)} \\
+  \hat{\sigma}_{\text{regime}}^2 &= \sum_{r} P(r_t = r | x_{1:t}) \cdot s^{2(r)}
+\end{align}
+where $\bar{x}^{(r)}$ and $s^{2(r)}$ are the sample mean and variance for run length $r$.
+
+\subsubsection{Gaussian Process Regression}
+
+Gaussian Processes provide a non-parametric approach to regime detection with full uncertainty quantification. The GP posterior mean captures the underlying trend, while posterior variance indicates regime stability.
+
+\paragraph{Model Specification}
+
+A Gaussian Process defines a distribution over functions:
+\begin{equation}
+  f(\mathbf{x}) \sim \mathcal{GP}(m(\mathbf{x}), k(\mathbf{x}, \mathbf{x}'))
+\end{equation}
+where $m(\mathbf{x})$ is the mean function (typically zero) and $k(\mathbf{x}, \mathbf{x}')$ is the covariance (kernel) function.
+
+For return modeling with time index $t$, observations are:
+\begin{equation}
+  r_t = f(t) + \varepsilon, \quad \varepsilon \sim \mathcal{N}(0, \sigma_n^2)
+\end{equation}
+
+\paragraph{Kernel Functions}
+
+The kernel encodes assumptions about function smoothness:
+
+\textbf{Squared Exponential (RBF):}
+\begin{equation}
+  k_{\text{SE}}(t, t') = \sigma_f^2 \exp\left( -\frac{(t - t')^2}{2\ell^2} \right)
+\end{equation}
+
+\textbf{Mat\'ern 5/2} (moderate smoothness, recommended):
+\begin{equation}
+  k_{\text{M52}}(t, t') = \sigma_f^2 \left(1 + \frac{\sqrt{5}|t-t'|}{\ell} + \frac{5(t-t')^2}{3\ell^2}\right) \exp\left(-\frac{\sqrt{5}|t-t'|}{\ell}\right)
+\end{equation}
+
+\textbf{Rational Quadratic:}
+\begin{equation}
+  k_{\text{RQ}}(t, t') = \sigma_f^2 \left(1 + \frac{(t-t')^2}{2\alpha\ell^2}\right)^{-\alpha}
+\end{equation}
+
+Parameters: $\ell$ (length scale), $\sigma_f^2$ (signal variance), $\sigma_n^2$ (noise variance).
+
+\paragraph{GP Posterior}
+
+Given training data $\mathbf{X}, \mathbf{y}$ and test points $\mathbf{X}_*$, the posterior is:
+\begin{align}
+  \mathbf{f}_* | \mathbf{X}, \mathbf{y}, \mathbf{X}_* &\sim \mathcal{N}(\bar{\mathbf{f}}_*, \text{cov}(\mathbf{f}_*)) \\
+  \bar{\mathbf{f}}_* &= \mathbf{K}_*^T (\mathbf{K} + \sigma_n^2 \mathbf{I})^{-1} \mathbf{y} \\
+  \text{cov}(\mathbf{f}_*) &= \mathbf{K}_{**} - \mathbf{K}_*^T (\mathbf{K} + \sigma_n^2 \mathbf{I})^{-1} \mathbf{K}_*
+\end{align}
+where $\mathbf{K} = k(\mathbf{X}, \mathbf{X})$, $\mathbf{K}_* = k(\mathbf{X}, \mathbf{X}_*)$, $\mathbf{K}_{**} = k(\mathbf{X}_*, \mathbf{X}_*)$.
+
+\paragraph{Hyperparameter Optimization}
+
+Hyperparameters $\theta = (\ell, \sigma_f, \sigma_n)$ are optimized by maximizing the log marginal likelihood:
+\begin{equation}
+  \log p(\mathbf{y} | \mathbf{X}, \theta) = -\frac{1}{2}\mathbf{y}^T \mathbf{K}_y^{-1} \mathbf{y} - \frac{1}{2}\log|\mathbf{K}_y| - \frac{n}{2}\log(2\pi)
+\end{equation}
+where $\mathbf{K}_y = \mathbf{K} + \sigma_n^2\mathbf{I}$.
+
+\paragraph{Regime Classification}
+
+\textbf{Trend} is classified from the posterior mean at the current time:
+\begin{equation}
+  \text{Trend} = \begin{cases}
+    \text{Bull} & \text{if } \bar{f}_T \times 252 > 10\% \\
+    \text{Bear} & \text{if } \bar{f}_T \times 252 < -5\% \\
+    \text{Sideways} & \text{otherwise}
+  \end{cases}
+\end{equation}
+
+\textbf{Volatility regime} is classified by comparing GP uncertainty to historical volatility:
+\begin{equation}
+  \text{Vol Regime} = \begin{cases}
+    \text{High Vol} & \text{if } \sqrt{\text{var}(f_T)} > 1.5 \times \sigma_{\text{hist}} \\
+    \text{Low Vol} & \text{if } \sqrt{\text{var}(f_T)} < 0.7 \times \sigma_{\text{hist}} \\
+    \text{Normal Vol} & \text{otherwise}
+  \end{cases}
+\end{equation}
+
+\textbf{Anomaly score} measures how far the current observation deviates from the GP prediction:
+\begin{equation}
+  z = \frac{|r_T - \bar{f}_T|}{\sqrt{\text{var}(f_T)}}
+\end{equation}
+High anomaly scores suggest potential regime change or unusual market behavior.
+
+\subsubsection{Model Comparison and Application}
+
+\paragraph{Summary of Approaches}
+
+\begin{center}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Model} & \textbf{Primary Focus} & \textbf{Estimation} & \textbf{Online?} & \textbf{Uncertainty?} \\
+\hline
+GARCH(1,1) & Volatility dynamics & MLE & No & No \\
+HMM & Trend classification & Baum-Welch & No & Probabilities \\
+MS-GARCH & Regime-dependent vol & EM & No & Probabilities \\
+BOCPD & Changepoint detection & Bayesian & Yes & Run length dist. \\
+GP & Trend + uncertainty & MLE & No & Full posterior \\
+\hline
+\end{tabular}
+\end{center}
+
+\paragraph{Covered Call Suitability}
+
+For income-generating covered call ETFs, regime classification determines strategy suitability. The optimal environment is \textit{sideways trend} with \textit{high volatility}---premium income is maximized while directional risk (opportunity cost from capped upside, or loss from declining underlying) is minimized.
+
+\begin{center}
+\begin{tabular}{lcc}
+\hline
+\textbf{Trend $\times$ Vol Regime} & \textbf{Suitability} & \textbf{Rationale} \\
+\hline
+Sideways + High Vol & 5/5 & Optimal: high premium, low directional risk \\
+Sideways + Normal Vol & 4/5 & Good: decent premium, range-bound \\
+Bear + High Vol & 4/5 & Premium cushions losses \\
+Bull + High Vol & 3/5 & High premium but opportunity cost \\
+Sideways + Low Vol & 3/5 & Compressed premiums \\
+Bear + Normal Vol & 3/5 & Moderate cushion \\
+Bull + Normal Vol & 2/5 & Opportunity cost dominates \\
+Bear + Low Vol & 2/5 & Low premium, downside risk \\
+Bull + Low Vol & 1/5 & Worst: low premium + capped upside \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Options Hedging}
+
+\subsubsection{Motivation}
+
+Portfolio protection requires hedging downside risk while managing cost. Traditional portfolio insurance involves buying protective puts, but this can be expensive. This framework explores the **Pareto frontier** of cost vs protection across four hedging strategies, enabling investors to select optimal trade-offs based on their risk tolerance and budget constraints.
+
+\paragraph{Hedging Strategies}
+
+\begin{enumerate}
+  \item \textbf{Protective Put}: Maximum downside protection (buy put options at strike $K_{\text{put}}$)
+  \item \textbf{Collar}: Bounded risk/reward (buy put + sell call for lower net cost)
+  \item \textbf{Vertical Spread}: Limited protection at reduced cost (buy/sell puts at different strikes)
+  \item \textbf{Covered Call}: Income generation with slight protection (sell call against holdings)
+\end{enumerate}
+
+\subsubsection{Black-Scholes-Merton Pricing}
+
+\paragraph{European Call and Put}
+
+Let $S$ denote the current stock price, $K$ the strike price, $T$ the time to expiry, $r$ the risk-free rate, $q$ the dividend yield, and $\sigma$ the volatility.
+
+\textbf{Call price:}
+\[
+C(S, K, T, r, q, \sigma) = S e^{-qT} N(d_1) - K e^{-rT} N(d_2)
+\]
+
+\textbf{Put price:}
+\[
+P(S, K, T, r, q, \sigma) = K e^{-rT} N(-d_2) - S e^{-qT} N(-d_1)
+\]
+
+where:
+\begin{align*}
+d_1 &= \frac{\ln(S/K) + (r - q + \sigma^2/2)T}{\sigma \sqrt{T}} \\
+d_2 &= d_1 - \sigma \sqrt{T}
+\end{align*}
+
+and $N(\cdot)$ is the cumulative standard normal distribution.
+
+\paragraph{Put-Call Parity}
+
+The no-arbitrage relationship between European calls and puts:
+\[
+C - P = S e^{-qT} - K e^{-rT}
+\]
+
+This ensures consistent pricing across the option chain and enables arbitrage detection.
+
+\paragraph{Greeks}
+
+\textbf{Delta} ($\Delta$): Sensitivity to underlying price
+\begin{align*}
+\Delta_{\text{call}} &= e^{-qT} N(d_1) \\
+\Delta_{\text{put}} &= e^{-qT} (N(d_1) - 1)
+\end{align*}
+
+\textbf{Gamma} ($\Gamma$): Convexity (rate of change of delta)
+\[
+\Gamma = \frac{e^{-qT} n(d_1)}{S \sigma \sqrt{T}}
+\]
+
+where $n(x) = \frac{1}{\sqrt{2\pi}} e^{-x^2/2}$ is the standard normal PDF.
+
+\textbf{Vega} ($\mathcal{V}$): Sensitivity to volatility (per 1\% change)
+\[
+\mathcal{V} = S e^{-qT} n(d_1) \sqrt{T}
+\]
+
+\textbf{Theta} ($\Theta$): Time decay (per day)
+\begin{align*}
+\Theta_{\text{call}} &= -\frac{S n(d_1) \sigma e^{-qT}}{2\sqrt{T}} - rK e^{-rT} N(d_2) + qS e^{-qT} N(d_1) \\
+\Theta_{\text{put}} &= -\frac{S n(d_1) \sigma e^{-qT}}{2\sqrt{T}} + rK e^{-rT} N(-d_2) - qS e^{-qT} N(-d_1)
+\end{align*}
+
+\textbf{Rho} ($\rho$): Sensitivity to interest rate (per 1\% change)
+\begin{align*}
+\rho_{\text{call}} &= KT e^{-rT} N(d_2) \\
+\rho_{\text{put}} &= -KT e^{-rT} N(-d_2)
+\end{align*}
+
+\subsubsection{SVI Volatility Surface}
+
+The Stochastic Volatility Inspired (SVI) model parametrizes total implied variance as a function of log-moneyness.
+
+\paragraph{Total Variance Formula}
+
+\[
+w(k; \theta) = a + b \left\{ \rho(k - m) + \sqrt{(k - m)^2 + \sigma^2} \right\}
+\]
+
+where:
+\begin{itemize}
+  \item $k = \ln(K/F)$ is log-moneyness ($F$ is the forward price)
+  \item $\theta = (a, b, \rho, m, \sigma)$ are SVI parameters
+  \item $a \geq 0$: vertical translation
+  \item $b \geq 0$: slope of the wings
+  \item $\rho \in [-1, 1]$: rotation (skew direction)
+  \item $m$: horizontal translation (ATM shift)
+  \item $\sigma > 0$: curvature at the ATM
+\end{itemize}
+
+\paragraph{Implied Volatility}
+
+\[
+\text{IV}(k, T) = \sqrt{\frac{w(k; \theta)}{T}}
+\]
+
+\paragraph{No-Arbitrage Conditions}
+
+To prevent arbitrage opportunities:
+
+\textbf{Butterfly arbitrage:}
+\[
+\frac{\partial^2 C}{\partial K^2} \geq 0 \quad \Rightarrow \quad \frac{b}{\sigma} \geq |\rho|
+\]
+
+\textbf{Calendar arbitrage:}
+\[
+\frac{\partial w}{\partial T} \geq 0 \quad \Rightarrow \quad a \geq 0
+\]
+
+\paragraph{Calibration}
+
+Minimize sum of squared errors between model and market total variance:
+\[
+\min_{\theta} \sum_{i=1}^{N} \left[ w(k_i; \theta) - w_{\text{market}}(k_i) \right]^2
+\]
+
+subject to the no-arbitrage constraints. Solved via differential evolution (global optimizer) with fallback to L-BFGS-B.
+
+\subsubsection{SABR Volatility Model}
+
+The SABR (Stochastic Alpha Beta Rho) model captures the dynamics of forward prices with stochastic volatility. Unlike SVI, which is a static parametrization, SABR describes a stochastic process.
+
+\paragraph{Dynamics}
+
+Under the risk-neutral measure:
+\begin{align*}
+dF_t &= \sigma_t F_t^\beta \, dW_t^1 \\
+d\sigma_t &= \nu \sigma_t \, dW_t^2 \\
+dW_t^1 \cdot dW_t^2 &= \rho \, dt
+\end{align*}
+
+where:
+\begin{itemize}
+  \item $F_t$ is the forward price
+  \item $\sigma_t$ is the stochastic volatility with initial value $\alpha = \sigma_0$
+  \item $\beta \in [0, 1]$: CEV exponent (0 = normal, 0.5 = typical equity, 1 = lognormal)
+  \item $\nu > 0$: volatility of volatility
+  \item $\rho \in (-1, 1)$: correlation between price and vol processes
+\end{itemize}
+
+\paragraph{Hagan Approximation}
+
+Hagan et al.~(2002) derive a closed-form approximation for implied volatility. For the general case ($F \neq K$):
+
+\[
+\sigma_{\text{impl}}(K, T) = \frac{\alpha}{(FK)^{(1-\beta)/2}} \cdot \frac{z}{\chi(z)} \cdot \frac{1}{1 + \frac{(1-\beta)^2}{24} \ln^2\!\frac{F}{K} + \frac{(1-\beta)^4}{1920} \ln^4\!\frac{F}{K}} \cdot \left(1 + \epsilon T\right)
+\]
+
+where:
+\begin{align*}
+z &= \frac{\nu}{\alpha} (FK)^{(1-\beta)/2} \ln\frac{F}{K} \\
+\chi(z) &= \ln\!\left(\frac{\sqrt{1 - 2\rho z + z^2} + z - \rho}{1 - \rho}\right) \\
+\epsilon &= \frac{(1-\beta)^2 \alpha^2}{24 \bar{F}^{2(1-\beta)}} + \frac{\rho \beta \nu \alpha}{4 \bar{F}^{1-\beta}} + \frac{(2 - 3\rho^2)\nu^2}{24}
+\end{align*}
+
+with $\bar{F} = (F + K) / 2$.
+
+\paragraph{ATM Case}
+
+When $F = K$:
+\[
+\sigma_{\text{ATM}} = \frac{\alpha}{F^{1-\beta}} \cdot \left(1 + \epsilon T\right)
+\]
+
+\paragraph{Calibration}
+
+For each expiry, calibrate $(\alpha, \beta, \rho, \nu)$ by minimizing:
+\[
+\min_{\alpha, \rho, \nu} \sum_{i=1}^{N} \left[ \sigma_{\text{impl}}(K_i) - \sigma_{\text{market}}(K_i) \right]^2
+\]
+
+with $\beta$ typically fixed (e.g., $\beta = 0.5$). Solved via differential evolution.
+
+\paragraph{SVI vs SABR}
+
+SVI is the default model for this framework:
+\begin{itemize}
+  \item SVI: 5 free parameters per expiry, more flexible static fit, built-in no-arbitrage checks
+  \item SABR: 3 free parameters (with $\beta$ fixed), Hagan approximation can become unstable for deep OTM or very short-dated options
+\end{itemize}
+
+SABR is available as an alternative when the user requires a stochastic volatility model or needs to capture vol-of-vol dynamics.
+
+\subsubsection{Longstaff-Schwartz for American Options}
+
+American options allow early exercise, requiring Monte Carlo simulation with backward induction.
+
+\paragraph{Algorithm}
+
+\textbf{Step 1:} Simulate $M$ price paths forward to expiry using geometric Brownian motion:
+\[
+S_{i,t+1} = S_{i,t} \exp\left[ \left(r - q - \frac{\sigma^2}{2}\right) \Delta t + \sigma \sqrt{\Delta t} \, Z_{i,t} \right]
+\]
+
+where $Z_{i,t} \sim \mathcal{N}(0, 1)$.
+
+\textbf{Step 2:} At expiry $T$, compute intrinsic value:
+\[
+V_{i,T} = \max(0, h(S_{i,T}))
+\]
+
+where $h(S) = K - S$ for puts, $h(S) = S - K$ for calls.
+
+\textbf{Step 3:} Backward induction for $t = T-1, T-2, \ldots, 1$:
+\begin{enumerate}
+  \item Filter in-the-money paths: $\mathcal{I}_t = \{ i : h(S_{i,t}) > 0 \}$
+  \item Regress continuation value on basis functions:
+  \[
+  C(S_{i,t}) \approx \sum_{j=0}^{J} \beta_j L_j(S_{i,t})
+  \]
+  where $L_j$ are Laguerre polynomials and the target is $e^{-r\Delta t} V_{i,t+1}$
+  \item Exercise decision:
+  \[
+  V_{i,t} = \begin{cases}
+  h(S_{i,t}) & \text{if } h(S_{i,t}) > C(S_{i,t}) \quad \text{(exercise)} \\
+  e^{-r\Delta t} V_{i,t+1} & \text{otherwise} \quad \text{(continue)}
+  \end{cases}
+  \]
+\end{enumerate}
+
+\textbf{Step 4:} Average discounted payoffs:
+\[
+\text{Option Price} = \frac{1}{M} \sum_{i=1}^{M} e^{-r \tau_i} V_{i,\tau_i}
+\]
+
+where $\tau_i$ is the optimal exercise time for path $i$.
+
+\subsubsection{Hedge Strategy Payoffs}
+
+\paragraph{Protective Put}
+
+Portfolio value at expiry:
+\[
+V_T = n \cdot \max(S_T, K_{\text{put}})
+\]
+
+where $n$ is the number of shares hedged.
+
+\textbf{Cost:} Put premium $P(S, K_{\text{put}}, T, r, q, \sigma)$
+
+\textbf{Protection:} Downside floored at $K_{\text{put}}$. No upside cap.
+
+\paragraph{Collar}
+
+Portfolio value at expiry:
+\[
+V_T = n \cdot \min\left(\max(S_T, K_{\text{put}}), K_{\text{call}}\right)
+\]
+
+where $K_{\text{put}} < K_{\text{call}}$.
+
+\textbf{Cost:} $P(K_{\text{put}}) - C(K_{\text{call}})$ (can be $\leq 0$ for zero-cost collar)
+
+\textbf{Protection:} Bounded between $K_{\text{put}}$ and $K_{\text{call}}$.
+
+\paragraph{Vertical Put Spread}
+
+Buy put at $K_{\text{long}}$, sell put at $K_{\text{short}}$ where $K_{\text{long}} > K_{\text{short}}$:
+\[
+V_T = n \cdot S_T + n \cdot \left[ \max(0, K_{\text{long}} - S_T) - \max(0, K_{\text{short}} - S_T) \right]
+\]
+
+\textbf{Cost:} $P(K_{\text{long}}) - P(K_{\text{short}})$
+
+\textbf{Protection:} Limited to $K_{\text{long}} - K_{\text{short}}$.
+
+\paragraph{Covered Call}
+
+Sell call at strike $K_{\text{call}}$ against long stock:
+\[
+V_T = n \cdot \min(S_T, K_{\text{call}})
+\]
+
+\textbf{Cost:} Negative (receive premium $C(K_{\text{call}})$)
+
+\textbf{Protection:} None. Upside capped at $K_{\text{call}}$.
+
+\subsubsection{Pareto Frontier Optimization}
+
+\paragraph{Multi-Objective Formulation}
+
+For each strategy $s$, compute:
+\begin{itemize}
+  \item \textbf{Cost}: $\text{Cost}(s) = $ total option premium paid
+  \item \textbf{Protection}: $\text{Prot}(s) = $ expected downside protection at 5\% quantile
+\end{itemize}
+
+A strategy $s^*$ is \textbf{Pareto efficient} if there exists no strategy $s$ such that:
+\[
+\text{Cost}(s) \leq \text{Cost}(s^*) \quad \text{and} \quad \text{Prot}(s) \geq \text{Prot}(s^*)
+\]
+
+with at least one strict inequality.
+
+\paragraph{Pareto Dominance}
+
+Strategy A dominates strategy B if:
+\[
+\text{Cost}(A) \leq \text{Cost}(B) \quad \text{and} \quad \text{Prot}(A) \geq \text{Prot}(B)
+\]
+
+with at least one strict inequality. Dominated strategies are never optimal.
+
+\paragraph{Frontier Construction}
+
+\begin{enumerate}
+  \item Generate candidate strategies by varying strikes across a grid
+  \item For each strategy, compute (cost, protection)
+  \item Remove dominated strategies
+  \item Plot efficient frontier: protection (x-axis) vs cost (y-axis)
+\end{enumerate}
+
+The investor selects a point on the frontier based on their risk-return preferences and budget constraints.
+
+\subsubsection{Interpretation}
+
+The options hedging framework provides:
+
+\begin{enumerate}
+  \item \textbf{Explicit cost-benefit trade-off}: The Pareto frontier quantifies the price of protection, enabling rational hedging decisions rather than ad-hoc choices.
+
+  \item \textbf{Volatility surface integration}: SVI calibration ensures consistent pricing across all strikes, preventing arbitrage and enabling accurate hedge valuation.
+
+  \item \textbf{American option pricing}: Longstaff-Schwartz handles early exercise optimally, critical for accurately pricing equity options (which are typically American).
+
+  \item \textbf{Strategy diversity}: From maximum protection (protective put) to income generation (covered call), the framework spans defensive to opportunistic hedging.
+
+  \item \textbf{Portfolio Greeks}: Full Greeks calculation enables dynamic risk management, position sizing, and delta-neutral adjustments.
+\end{enumerate}
+
+The framework recognizes that there is no universally optimal hedge - the best strategy depends on the investor's downside tolerance, willingness to pay for protection, and market outlook. The Pareto frontier makes this trade-off explicit and quantifiable.
+
+\subsection{Gamma Scalping}
+
+\subsubsection{Mathematical Framework}
+
+Gamma scalping exploits the convexity of option payoffs by dynamically delta-hedging a long options position. The strategy profits when realized volatility exceeds the implied volatility paid for the option, capturing P\&L from frequent rehedging along the option's gamma profile.
+
+\paragraph{Black-Scholes Model}
+
+Let $S_t$ denote the underlying asset price at time $t$, with dynamics under the risk-neutral measure $\mathbb{Q}$:
+\[
+dS_t = rS_t dt + \sigma S_t dW_t
+\]
+
+where $r$ is the risk-free rate, $\sigma$ is the volatility, and $W_t$ is a standard Brownian motion.
+
+The Black-Scholes price for a European call option at time $t$ with strike $K$ and expiry $T$ is:
+\[
+C(S_t, t) = S_t N(d_1) - K e^{-r(T-t)} N(d_2)
+\]
+
+where:
+\begin{align*}
+d_1 &= \frac{\ln(S_t / K) + (r + \sigma^2/2)(T - t)}{\sigma \sqrt{T - t}} \\
+d_2 &= d_1 - \sigma \sqrt{T - t}
+\end{align*}
+
+and $N(\cdot)$ is the cumulative standard normal distribution.
+
+The European put price via put-call parity is:
+\[
+P(S_t, t) = C(S_t, t) - S_t + K e^{-r(T-t)}
+\]
+
+\paragraph{Greeks}
+
+The option's Greeks quantify sensitivities to market parameters:
+
+\textbf{Delta} ($\Delta$): sensitivity to underlying price
+\begin{align*}
+\Delta_{\text{call}} &= N(d_1) \\
+\Delta_{\text{put}} &= N(d_1) - 1
+\end{align*}
+
+\textbf{Gamma} ($\Gamma$): rate of change of delta (convexity)
+\[
+\Gamma = \frac{n(d_1)}{S_t \sigma \sqrt{T - t}}
+\]
+
+where $n(\cdot) = N'(\cdot) = \frac{1}{\sqrt{2\pi}} e^{-x^2/2}$ is the standard normal PDF.
+
+\textbf{Theta} ($\Theta$): time decay (per year)
+\begin{align*}
+\Theta_{\text{call}} &= -\frac{S_t n(d_1) \sigma}{2\sqrt{T-t}} - rK e^{-r(T-t)} N(d_2) \\
+\Theta_{\text{put}} &= -\frac{S_t n(d_1) \sigma}{2\sqrt{T-t}} + rK e^{-r(T-t)} N(-d_2)
+\end{align*}
+
+\textbf{Vega} ($\mathcal{V}$): sensitivity to volatility (per 1\% vol change)
+\[
+\mathcal{V} = \frac{S_t n(d_1) \sqrt{T-t}}{100}
+\]
+
+\textbf{Rho} ($\rho$): sensitivity to interest rate (per 1\% rate change)
+\begin{align*}
+\rho_{\text{call}} &= \frac{K(T-t) e^{-r(T-t)} N(d_2)}{100} \\
+\rho_{\text{put}} &= -\frac{K(T-t) e^{-r(T-t)} N(-d_2)}{100}
+\end{align*}
+
+\subsubsection{Delta-Hedging Mechanism}
+
+\paragraph{Portfolio Construction}
+
+Consider a portfolio consisting of:
+\begin{itemize}
+  \item Long $n_{\text{opt}}$ option contracts (calls or puts)
+  \item Short $\Delta_t$ shares of the underlying (delta hedge)
+  \item Cash position earning/paying the risk-free rate
+\end{itemize}
+
+The portfolio value at time $t$ is:
+\[
+V_t = n_{\text{opt}} \cdot V_{\text{opt}}(S_t, t) - \Delta_t \cdot S_t + C_t
+\]
+
+where $V_{\text{opt}}(S_t, t)$ is the option value and $C_t$ is the cash balance.
+
+\paragraph{Delta-Neutral Hedging}
+
+To maintain delta neutrality, the hedge position is:
+\[
+\Delta_t = n_{\text{opt}} \cdot \delta_{\text{opt}}(S_t, t)
+\]
+
+where $\delta_{\text{opt}}$ is the option delta. This ensures:
+\[
+\frac{\partial V_t}{\partial S_t} = 0
+\]
+
+to first order, insulating the portfolio from small price movements.
+
+\paragraph{Rehedging Strategies}
+
+Four rehedging strategies are implemented:
+
+\textbf{(1) Threshold Rehedging}
+
+Rehedge when the absolute delta drift exceeds a threshold $\epsilon_\delta$:
+\[
+|\Delta_{\text{current}} - \Delta_{\text{target}}| > \epsilon_\delta
+\]
+
+Typical threshold: $\epsilon_\delta \in [0.05, 0.15]$.
+
+\textbf{(2) Time-Based Rehedging}
+
+Rehedge at fixed time intervals $\tau$ (e.g., daily, every 6 hours):
+\[
+t - t_{\text{last rehedge}} \geq \tau
+\]
+
+\textbf{(3) Hybrid Rehedging}
+
+Combines threshold and time-based rules:
+\[
+\left( |\Delta_{\text{current}} - \Delta_{\text{target}}| > \epsilon_\delta \right) \; \text{OR} \; \left( t - t_{\text{last rehedge}} \geq \tau \right)
+\]
+
+\textbf{(4) Volatility-Adaptive Rehedging}
+
+Adjusts threshold based on realized volatility:
+\[
+\epsilon_\delta(t) = \epsilon_{\text{base}} \cdot \left( 1 + \alpha \cdot \frac{\sigma_{\text{realized}}(t) - \sigma_{\text{IV}}}{\sigma_{\text{IV}}} \right)
+\]
+
+where $\alpha \in [0.5, 1.5]$ controls sensitivity. This widens the threshold when realized vol exceeds implied (reducing hedging frequency during profitable volatility conditions) and tightens it when realized vol is low.
+
+\subsubsection{P\&L Attribution}
+
+The instantaneous P\&L of a delta-hedged option portfolio can be decomposed via Itô's lemma.
+
+\paragraph{Hedged Portfolio Dynamics}
+
+For a delta-neutral portfolio $\Pi_t = V_{\text{opt}}(S_t, t) - \delta_{\text{opt}} S_t$, the instantaneous change is:
+\[
+d\Pi_t = \frac{\partial V_{\text{opt}}}{\partial t} dt + \frac{1}{2} \frac{\partial^2 V_{\text{opt}}}{\partial S_t^2} (dS_t)^2 + \text{h.o.t.}
+\]
+
+Using $dS_t = \mu S_t dt + \sigma S_t dW_t$ and $(dS_t)^2 = \sigma^2 S_t^2 dt$:
+\[
+d\Pi_t = \Theta dt + \frac{1}{2} \Gamma \sigma^2 S_t^2 dt
+\]
+
+\paragraph{Gamma P\&L}
+
+The gamma P\&L accrues from the portfolio's convexity:
+\[
+\text{Gamma P\&L} = \frac{1}{2} \Gamma \cdot (S_{t+1} - S_t)^2
+\]
+
+This is always non-negative for a long option position ($\Gamma > 0$), capturing profit from large price moves in either direction.
+
+\paragraph{Theta Decay}
+
+Time decay erodes the option premium:
+\[
+\text{Theta P\&L} = \Theta \cdot \Delta t
+\]
+
+For long options, $\Theta < 0$, representing the daily cost of holding the position.
+
+\paragraph{Vega P\&L}
+
+Changes in implied volatility affect option value:
+\[
+\text{Vega P\&L} = \mathcal{V} \cdot (\sigma_{\text{IV},t+1} - \sigma_{\text{IV},t}) \cdot 100
+\]
+
+For long positions, increases in implied volatility generate positive vega P\&L.
+
+\paragraph{Total Attributed P\&L}
+
+\[
+\text{Total P\&L} \approx \text{Gamma P\&L} + \text{Theta P\&L} + \text{Vega P\&L} + \text{Transaction Costs}
+\]
+
+The residual unexplained P\&L arises from higher-order Greeks (vanna, volga) and discrete rehedging errors.
+
+\subsubsection{Transaction Costs}
+
+Each delta rebalance incurs proportional transaction costs:
+\[
+\text{Cost}_t = c \cdot |\Delta S_t|
+\]
+
+where $c$ is the cost in basis points (typically 5--10 bps for liquid equities) and $\Delta S_t$ is the notional value traded.
+
+Cumulative costs over the hedging period $[0, T]$:
+\[
+\text{Total Costs} = \sum_{i=1}^{N_{\text{rehedges}}} c \cdot |\Delta_{i} - \Delta_{i-1}| \cdot S_{t_i}
+\]
+
+Higher rehedging frequency increases transaction costs, creating a trade-off between delta accuracy and cost efficiency.
+
+\subsubsection{Profitability Condition}
+
+\paragraph{Realized vs Implied Volatility}
+
+The strategy is profitable when:
+\[
+\sigma_{\text{realized}} > \sigma_{\text{implied}}
+\]
+
+\textbf{Intuition:} The gamma P\&L accumulates based on realized price movements ($\sigma_{\text{realized}}$), while theta decay reflects the cost of the option premium paid ($\sigma_{\text{implied}}$).
+
+Over the life of the option, the expected P\&L (ignoring transaction costs) is approximately:
+\[
+\mathbb{E}[\text{P\&L}] \propto \frac{1}{2} \Gamma S^2 (\sigma_{\text{realized}}^2 - \sigma_{\text{implied}}^2) T
+\]
+
+When $\sigma_{\text{realized}} > \sigma_{\text{implied}}$, gamma profits exceed theta decay.
+
+\paragraph{Breakeven Realized Volatility}
+
+Incorporating transaction costs $c$ and rehedging frequency $f$, the breakeven condition becomes:
+\[
+\sigma_{\text{realized}}^{\text{BE}} = \sqrt{\sigma_{\text{implied}}^2 + \frac{2cf}{\Gamma S^2 T}}
+\]
+
+The strategy requires realized volatility to exceed this breakeven threshold.
+
+\subsubsection{Implementation}
+
+\paragraph{Position Initialization}
+
+At $t = 0$:
+\begin{itemize}
+  \item Purchase $n_{\text{opt}}$ straddles (long call + long put at strike $K$)
+  \item Initial delta: $\Delta_0 = n_{\text{opt}} \cdot (\delta_{\text{call}} + \delta_{\text{put}})$
+  \item Hedge by selling $\Delta_0$ shares
+\end{itemize}
+
+For at-the-money (ATM) straddles where $S_0 \approx K$:
+\[
+\Delta_{\text{straddle}} = N(d_1) + (N(d_1) - 1) = 2N(d_1) - 1 \approx 0
+\]
+
+so the initial hedge is near zero.
+
+\paragraph{Simulation Loop}
+
+For each time step $t$:
+\begin{enumerate}
+  \item Observe new underlying price $S_t$
+  \item Compute current option values and Greeks
+  \item Determine if rehedging is triggered (based on strategy)
+  \item If triggered:
+  \begin{itemize}
+    \item Compute new target delta $\Delta_{\text{target}} = n_{\text{opt}} \cdot \delta_{\text{opt}}(S_t, t)$
+    \item Trade $\Delta_{\text{target}} - \Delta_{\text{current}}$ shares
+    \item Incur transaction costs
+    \item Update cash balance
+  \end{itemize}
+  \item Attribute P\&L to gamma, theta, vega
+  \item Update portfolio value
+\end{enumerate}
+
+\paragraph{Expiry Handling}
+
+At expiry $T$:
+\begin{itemize}
+  \item Option payoff: $\max(0, S_T - K)$ for calls, $\max(0, K - S_T)$ for puts
+  \item Close hedge position (sell/buy back shares)
+  \item Realize final P\&L
+\end{itemize}
+
+\subsubsection{Performance Metrics}
+
+\paragraph{Total P\&L}
+
+Net profit after all costs:
+\[
+\text{Net P\&L} = \text{Option Payoff} + \text{Hedging Gains} - \text{Option Premium Paid} - \text{Transaction Costs}
+\]
+
+\paragraph{Return on Capital}
+
+\[
+\text{ROC} = \frac{\text{Net P\&L}}{\text{Initial Capital}}
+\]
+
+where initial capital is the option premium plus margin for short stock position.
+
+\paragraph{Sharpe Ratio}
+
+\[
+\text{Sharpe} = \frac{\mathbb{E}[\text{Daily P\&L}]}{\text{Std}[\text{Daily P\&L}]}
+\]
+
+\paragraph{Hedge Effectiveness}
+
+\[
+\text{Effectiveness} = 1 - \frac{\text{Var}(\Delta V_{\text{hedged}})}{\text{Var}(\Delta V_{\text{unhedged}})}
+\]
+
+Measures the reduction in portfolio variance from delta-hedging.
+
+\paragraph{Realized Volatility}
+
+\[
+\sigma_{\text{realized}} = \sqrt{252} \cdot \sqrt{\frac{1}{N} \sum_{i=1}^{N} r_i^2}
+\]
+
+where $r_i = \log(S_i / S_{i-1})$ are log-returns.
+
+\subsubsection{Interpretation}
+
+Gamma scalping is a market-neutral strategy that:
+
+\begin{enumerate}
+  \item \textbf{Profits from volatility mispricing}: The strategy is inherently long realized volatility and short implied volatility. It succeeds when markets move more than option prices anticipated.
+
+  \item \textbf{Benefits from large moves}: Gamma P\&L is quadratic in price changes, generating outsized profits during volatile periods regardless of direction.
+
+  \item \textbf{Incurs theta decay}: The cost of maintaining long gamma is the daily time decay, which must be offset by sufficient price movement.
+
+  \item \textbf{Requires active management}: Frequent rehedging is needed to maintain delta neutrality, introducing path-dependency and transaction costs.
+
+  \item \textbf{Faces execution risk}: Slippage and transaction costs erode gamma profits, particularly for high-frequency rehedging strategies.
+\end{enumerate}
+
+The strategy is best suited for traders who:
+\begin{itemize}
+  \item Expect realized volatility to exceed implied volatility
+  \item Have low transaction costs (market makers, proprietary desks)
+  \item Can monitor and rehedge positions dynamically
+  \item Prefer market-neutral exposure with positive convexity
+\end{itemize}
+
+\subsection{Volatility Arbitrage}
+
+\subsubsection{Motivation}
+
+Volatility arbitrage exploits mispricings between implied volatility (IV) embedded in option prices and forecasts of realized volatility (RV). When IV systematically deviates from expected RV, delta-neutral strategies can profit from vol convergence while minimizing directional risk.
+
+This framework addresses:
+\begin{itemize}
+  \item Forecasting realized volatility using GARCH, EWMA, and HAR models
+  \item Detecting IV--RV mispricings and arbitrage opportunities
+  \item Identifying no-arbitrage violations (butterfly, calendar, put-call parity)
+  \item Constructing delta-neutral positions to isolate vol exposure
+  \item Managing vega, gamma, and theta risks in volatility trading
+\end{itemize}
+
+\subsubsection{Realized Volatility Forecasting}
+
+\paragraph{GARCH(1,1) Model}
+
+The Generalized Autoregressive Conditional Heteroskedasticity model captures volatility clustering:
+\[
+\sigma_t^2 = \omega + \alpha \epsilon_{t-1}^2 + \beta \sigma_{t-1}^2
+\]
+where $\epsilon_t = r_t - \mu$ are return innovations. Stationarity requires $\alpha + \beta < 1$. The long-run variance is:
+\[
+\bar{\sigma}^2 = \frac{\omega}{1 - \alpha - \beta}
+\]
+
+\paragraph{Exponentially Weighted Moving Average (EWMA)}
+
+RiskMetrics-style volatility forecast:
+\[
+\sigma_t^2 = \lambda \sigma_{t-1}^2 + (1 - \lambda) r_{t-1}^2
+\]
+with decay factor $\lambda \in [0.94, 0.97]$ for daily data. Recent shocks receive exponentially declining weights.
+
+\paragraph{Heterogeneous Autoregressive (HAR) Model}
+
+Multi-horizon realized volatility regression:
+\[
+\text{RV}_{t \to t+h} = \beta_0 + \beta_d \text{RV}_{t-1} + \beta_w \text{RV}_{t-5:t-1} + \beta_m \text{RV}_{t-22:t-1} + \epsilon_t
+\]
+where $\text{RV}_{t-5:t-1}$ is weekly realized vol and $\text{RV}_{t-22:t-1}$ is monthly. This captures heterogeneous market participants with different rebalancing horizons.
+
+\subsubsection{IV--RV Mispricing Detection}
+
+\paragraph{Arbitrage Signal}
+
+At time $t$, for an option with maturity $T$:
+\[
+\text{Signal}_t = \text{IV}_t - \mathbb{E}_t[\text{RV}_{t \to T}]
+\]
+where $\mathbb{E}_t[\text{RV}_{t \to T}]$ is the forecast from GARCH, EWMA, or HAR. Positive signal suggests selling volatility (options overpriced); negative signal suggests buying volatility.
+
+\paragraph{Threshold Strategy}
+
+Enter trade when $|\text{Signal}_t| > \tau \cdot \sigma_{\text{signal}}$, where $\tau \in [1.5, 2.5]$ and $\sigma_{\text{signal}}$ is the historical standard deviation of forecast errors. This filters noise and targets statistically significant mispricings.
+
+\subsubsection{No-Arbitrage Constraint Violations}
+
+\paragraph{Butterfly Arbitrage}
+
+For strikes $K_1 < K_2 < K_3$ with equal spacing $K_2 - K_1 = K_3 - K_2 = \Delta K$:
+\[
+\text{Butterfly}(K_2) = C(K_1) - 2 C(K_2) + C(K_3) \geq 0
+\]
+Violation implies negative Arrow-Debreu state price. Arbitrage: buy butterfly spread.
+
+\paragraph{Calendar Arbitrage}
+
+For maturities $T_1 < T_2$ at fixed strike $K$:
+\[
+C(K, T_2) \geq C(K, T_1)
+\]
+Violation: buy long-dated call, sell short-dated call. As $T_1 \to 0$, the short call expires worthless while the long call retains value.
+
+\paragraph{Put-Call Parity Violation}
+
+For European options:
+\[
+C - P = S e^{-qT} - K e^{-rT}
+\]
+If $C - P > S e^{-qT} - K e^{-rT}$: sell call, buy put, buy stock, borrow $K e^{-rT}$.
+If $C - P < S e^{-qT} - K e^{-rT}$: buy call, sell put, short stock, lend $K e^{-rT}$.
+
+\subsubsection{Delta-Neutral Volatility Trading}
+
+\paragraph{Straddle with Delta Hedging}
+
+At-the-money straddle: $V = C_{\text{ATM}} + P_{\text{ATM}}$. Initial delta:
+\[
+\Delta_V = \Delta_C + \Delta_P \approx e^{-qT} N(d_1) + e^{-qT} (N(d_1) - 1) \approx 0
+\]
+Hedge with $n_S = -\Delta_V / \Delta_S$ shares. Rehedge when $\Delta$ drifts beyond threshold $\delta \in [0.05, 0.15]$.
+
+\paragraph{P\&L Attribution}
+
+Daily P\&L from delta-hedged straddle:
+\[
+\text{P\&L}_t = \underbrace{\frac{1}{2} \Gamma \cdot (\Delta S)^2}_{\text{Gamma P\&L}} - \underbrace{\Theta \cdot \Delta t}_{\text{Theta decay}} + \underbrace{\mathcal{V} \cdot \Delta \sigma}_{\text{Vega P\&L}}
+\]
+Profitable if realized gamma profits exceed theta decay and vega losses.
+
+\subsubsection{Risk Management}
+
+\paragraph{Greeks Exposure}
+
+Monitor portfolio-level Greeks:
+\begin{itemize}
+  \item \textbf{Delta}: Keep $|\Delta_{\text{port}}| < 0.05 \times S$ to maintain neutrality
+  \item \textbf{Gamma}: Positive for long vol, negative for short vol
+  \item \textbf{Vega}: Sensitivity to IV changes; long vol has positive vega
+  \item \textbf{Theta}: Time decay; short vol earns theta, long vol pays theta
+\end{itemize}
+
+\paragraph{VaR and Stress Testing}
+
+Historical simulation VaR for vol portfolio:
+\[
+\text{VaR}_{95\%} = -\inf \{ x : P(\text{P\&L} \leq x) \leq 0.05 \}
+\]
+Stress test scenarios: IV spike (+10 vol points), RV spike (2$\times$ historical), correlation breakdown.
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Forecast-dependent}: Returns hinge on RV forecasting accuracy. Misspecified models produce false signals.
+
+  \item \textbf{Transaction costs erode profits}: Frequent delta rehedging incurs slippage and commissions, particularly for illiquid underlyings.
+
+  \item \textbf{Model risk}: GARCH parameters estimated on historical data may not persist; regime changes invalidate forecasts.
+
+  \item \textbf{Path-dependent}: Even if IV converges to RV eventually, interim P\&L depends on realized gamma vs theta decay dynamics.
+\end{enumerate}
+
+The strategy is best suited for:
+\begin{itemize}
+  \item Traders with robust RV forecasting models and low transaction costs
+  \item Market-neutral desks seeking to harvest vol risk premium
+  \item Options market makers identifying arbitrage violations
+  \item Investors willing to monitor and rehedge delta dynamically
+\end{itemize}
+
+\subsection{Variance Swaps}
+
+\subsubsection{Motivation}
+
+Variance swaps provide pure volatility exposure without delta or gamma hedging complexity. The payoff depends solely on realized variance over the contract period, making them ideal instruments for volatility trading and harvesting the variance risk premium (VRP).
+
+This framework addresses:
+\begin{itemize}
+  \item Pricing variance swaps via Carr-Madan replication with vanilla options
+  \item Static replication using optimized log-spaced strike grids
+  \item Measuring realized variance with multiple high-efficiency estimators
+  \item Forecasting realized variance via EWMA and GARCH models
+  \item Computing VRP and generating threshold-based trading signals
+\end{itemize}
+
+\subsubsection{Variance Swap Payoff}
+
+At maturity $T$, the variance swap pays:
+\[
+\text{Payoff} = N_{\text{var}} \times (\text{RV}^2 - K_{\text{var}})
+\]
+where $N_{\text{var}}$ is the variance notional, $\text{RV}^2$ is the realized variance over $[0, T]$, and $K_{\text{var}}$ is the strike variance (fair value at inception). The \emph{vega notional} converts between variance and volatility space:
+\[
+N_{\text{vega}} = \frac{N_{\text{var}}}{2 \sqrt{K_{\text{var}}}}
+\]
+
+\subsubsection{Realized Variance Estimators}
+
+The close-to-close estimator computes realized variance from log returns:
+\[
+\hat\sigma^2_{\text{CC}} = \frac{252}{N} \sum_{i=1}^{N} r_i^2, \quad r_i = \ln \left( \frac{S_i}{S_{i-1}} \right)
+\]
+where 252 annualizes daily variance. Higher-efficiency estimators use intraday range information to reduce sampling noise:
+
+\paragraph{Parkinson (5$\times$ efficiency)}
+Uses the high-low range, exploiting the fact that extremes contain more information than closing prices alone:
+\[
+\hat\sigma^2_{\text{P}} = \frac{252}{N} \sum_{i=1}^{N} \frac{\bigl(\ln H_i / L_i\bigr)^2}{4 \ln 2}
+\]
+
+\paragraph{Garman-Klass (8$\times$ efficiency)}
+Combines open-high-low-close data for further efficiency gains:
+\[
+\hat\sigma^2_{\text{GK}} = \frac{252}{N} \sum_{i=1}^{N} \left[ \frac{1}{2} \bigl(\ln H_i / L_i\bigr)^2 - (2 \ln 2 - 1) \bigl(\ln C_i / O_i\bigr)^2 \right]
+\]
+
+\paragraph{Rogers-Satchell (drift-independent)}
+Consistent even when the underlying has non-zero drift:
+\[
+\hat\sigma^2_{\text{RS}} = \frac{252}{N} \sum_{i=1}^{N} \left[ \ln \frac{H_i}{C_i} \cdot \ln \frac{H_i}{O_i} + \ln \frac{L_i}{C_i} \cdot \ln \frac{L_i}{O_i} \right]
+\]
+
+\paragraph{Yang-Zhang (14$\times$ efficiency)}
+The most efficient estimator, combining overnight and intraday components:
+\[
+\hat\sigma^2_{\text{YZ}} = \hat\sigma^2_{\text{overnight}} + k \, \hat\sigma^2_{\text{OC}} + (1 - k) \, \hat\sigma^2_{\text{RS}}, \quad k = \frac{0.34}{1.34 + \frac{n+1}{n-1}}
+\]
+
+\subsubsection{Variance Forecasting}
+
+Realized variance estimators measure the past; trading signals require a forecast. Two models are implemented:
+
+\paragraph{EWMA}
+Exponentially weighted moving average with decay factor $\lambda \in [0.90, 0.97]$:
+\[
+\hat\sigma^2_t = \lambda \, \hat\sigma^2_{t-1} + (1 - \lambda) \, r_t^2
+\]
+
+\paragraph{GARCH(1,1)}
+Conditional variance with mean-reverting dynamics:
+\[
+\hat\sigma^2_t = \omega + \alpha \, r_{t-1}^2 + \beta \, \hat\sigma^2_{t-1}
+\]
+where $\alpha + \beta < 1$ ensures stationarity and $\omega / (1 - \alpha - \beta)$ is the long-run variance.
+
+\subsubsection{Carr-Madan Replication}
+
+\paragraph{Model-Free Fair Variance}
+
+Under the risk-neutral measure, the fair variance strike is obtained from a portfolio of out-of-the-money options spanning all strikes. In practice, the integral is discretized over a finite strike grid:
+\[
+K_{\text{var}} \approx \frac{2 e^{rT}}{T} \sum_{i} \frac{\Delta K_i}{K_i^2} \cdot V(K_i)
+\]
+where $V(K_i) = P(K_i)$ for $K_i < F$ and $V(K_i) = C(K_i)$ for $K_i \geq F$, with $F = S_0 \, e^{(r - q)T}$ the forward price. The cutoff at the forward (rather than spot) avoids double-counting near-the-money options and is consistent with the Carr-Madan (1998) derivation.
+
+\paragraph{Static Replication}
+
+Each option in the replication portfolio is weighted by:
+\[
+w_i = \frac{2 e^{rT}}{T} \cdot \frac{\Delta K_i}{K_i^2} \cdot N_{\text{var}}
+\]
+where $\Delta K_i$ uses the midpoint rule: $\Delta K_i = (K_{i+1} - K_{i-1}) / 2$ for interior strikes. The implementation uses log-spaced strikes across $[0.70\,S_0, \; 1.30\,S_0]$ to concentrate resolution near ATM while covering the wings. Option prices at each strike are computed from an SVI volatility surface parameterized as:
+\[
+w(k) = a + b \bigl(\rho (k - m) + \sqrt{(k - m)^2 + \sigma^2}\bigr)
+\]
+where $k = \ln(K/S)$ is log-moneyness and $(a, b, \rho, m, \sigma)$ are calibrated per expiry from the options chain.
+
+\paragraph{Portfolio Greeks}
+
+The replication portfolio's aggregate Greeks (delta, gamma, vega, theta, rho) are computed by summing weighted Black-Scholes Greeks across all legs. A well-constructed replication should be approximately delta-neutral; the implementation checks $|\Delta_{\text{total}}| < \epsilon$ with configurable tolerance.
+
+\subsubsection{Variance Risk Premium (VRP)}
+
+\paragraph{Definition}
+
+The variance risk premium is the difference between implied and expected realized variance:
+\[
+\text{VRP}_t = \text{IV}_t^2 - \mathbb{E}_t [ \text{RV}_{t \to T}^2 ]
+\]
+Empirically, $\text{VRP} > 0$ on average: investors overpay for volatility protection, creating a persistent premium that can be harvested by selling variance. The percentage VRP normalizes by the implied level:
+\[
+\text{VRP}\% = \frac{\text{VRP}}{\text{IV}^2} \times 100
+\]
+
+\paragraph{Signal Generation}
+
+Trading signals are generated from VRP thresholds with confidence scoring:
+\begin{itemize}
+  \item \textbf{Short variance}: $\text{VRP}\% \geq +2\%$. Implied volatility is rich relative to forecast; sell variance to harvest the premium. Confidence: $\min(1, \, |\text{VRP}\%| / 10)$.
+  \item \textbf{Long variance}: $\text{VRP}\% \leq -1\%$. Implied volatility is cheap; buy variance for mean reversion. Confidence: $\min(1, \, |\text{VRP}\%| / 5)$.
+  \item \textbf{Neutral}: VRP between thresholds; no position warranted.
+\end{itemize}
+Position size is scaled by confidence times the target vega notional. Kelly criterion provides an upper bound: $f^* = \mu / \sigma^2$, capped at half-Kelly for conservatism.
+
+\paragraph{VRP Significance Testing}
+
+The module tests whether the mean VRP is statistically different from zero via a $t$-test. A rolling $z$-score detector flags regime changes when the VRP deviates from its recent mean by more than two standard deviations, signaling shifts in the volatility environment.
+
+\paragraph{Backtesting}
+
+The rolling strategy sells 1-month variance swaps monthly and tracks cumulative P\&L:
+\[
+\text{P\&L}_t = -N_{\text{var}} \times (\text{RV}_t^2 - K_{\text{var},t})
+\]
+with a 20-period rolling Sharpe ratio to monitor strategy health. Historical backtests on equity indices (SPY) typically show Sharpe ratios of 1.0--2.0 during calm regimes.
+
+\subsubsection{Jump Risk and Tail Events}
+
+Large jumps contribute disproportionately to $\text{RV}^2$. A single $-10\%$ move adds $0.01$ to annual variance. Short variance positions are exposed to convex losses during crashes---March 2020 saw variance swaps lose $10$--$20\times$ in days. Risk management considerations include position sizing to cap maximum loss, tail hedges via OTM puts, stop-loss triggers on MTM drawdowns, and diversification across maturities.
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Pure vol exposure}: No delta or gamma hedging required; P\&L depends solely on realized vs implied variance.
+
+  \item \textbf{VRP harvesting}: Systematically profitable if implied variance exceeds realized variance on average. The signal framework provides disciplined entry and sizing.
+
+  \item \textbf{Estimator choice matters}: Yang-Zhang is $14\times$ more efficient than close-to-close, enabling tighter confidence intervals on RV forecasts and earlier signal detection.
+
+  \item \textbf{Jump risk}: Highly vulnerable to tail events. The VRP percentage and regime detection help identify when implied vol is insufficient compensation for crash risk.
+\end{enumerate}
+
+The strategy is best suited for:
+\begin{itemize}
+  \item Institutional volatility traders with risk appetite for tail events
+  \item Market makers providing variance swap liquidity
+  \item Hedge funds seeking uncorrelated returns from vol risk premium
+  \item Investors willing to size positions conservatively and monitor VRP regime shifts
+\end{itemize}
+
+\subsection{Skew Trading}
+
+\subsubsection{Motivation}
+
+Volatility skew reflects the market's preference for downside protection, manifesting as higher implied volatility for out-of-the-money puts relative to calls. Skew trading exploits mean reversion in skew metrics, profiting when skew deviates from historical norms and reverts.
+
+This framework addresses:
+\begin{itemize}
+  \item Quantifying skew via risk reversal (RR25) and butterfly (BF25) metrics
+  \item Detecting skew extremes and mean reversion signals
+  \item Constructing risk reversal and butterfly spread trades
+  \item Managing vega, delta, and gamma exposures in skew positions
+  \item Hedging against directional moves and volatility regime shifts
+\end{itemize}
+
+\subsubsection{Skew Metrics}
+
+\paragraph{Risk Reversal (RR25)}
+
+Risk reversal measures the difference in implied volatility between 25-delta call and 25-delta put:
+\[
+\text{RR25} = \text{IV}(25\Delta_{\text{call}}) - \text{IV}(25\Delta_{\text{put}})
+\]
+Negative RR25 indicates downside skew (put IV $>$ call IV), typical in equity markets. Positive RR25 indicates upside skew, seen in commodities during supply shocks.
+
+\paragraph{Butterfly (BF25)}
+
+Butterfly measures the convexity of the volatility smile:
+\[
+\text{BF25} = \frac{\text{IV}(25\Delta_{\text{call}}) + \text{IV}(25\Delta_{\text{put}})}{2} - \text{IV}_{\text{ATM}}
+\]
+High BF25 means wings (OTM options) are expensive relative to ATM, indicating fat tails or demand for tail hedges.
+
+\paragraph{Historical Context}
+
+Compare current skew to rolling percentiles:
+\[
+\text{Skew Score} = \frac{\text{RR25}_t - \mu_{\text{RR25}}}{\sigma_{\text{RR25}}}
+\]
+where $\mu$ and $\sigma$ are 252-day rolling mean and standard deviation. Extreme scores ($|z| > 2$) signal potential mean reversion.
+
+\subsubsection{Risk Reversal Trade}
+
+\paragraph{Structure}
+
+If RR25 is excessively negative (puts too expensive):
+\[
+\text{Position} = \text{Buy 25}\Delta \text{ Call} + \text{Sell 25}\Delta \text{ Put}
+\]
+This is a long risk reversal, profiting if skew flattens (put IV decreases or call IV increases).
+
+Conversely, if RR25 is too positive:
+\[
+\text{Position} = \text{Sell 25}\Delta \text{ Call} + \text{Buy 25}\Delta \text{ Put}
+\]
+
+\paragraph{Greeks}
+
+For long risk reversal:
+\begin{itemize}
+  \item \textbf{Delta}: $\Delta_{\text{call}} - |\Delta_{\text{put}}| \approx 0.25 - 0.25 = 0$ (approximately delta-neutral)
+  \item \textbf{Vega}: $\mathcal{V}_{\text{call}} - \mathcal{V}_{\text{put}}$ (differential vega exposure)
+  \item \textbf{Gamma}: Slightly positive from long call, negative from short put
+\end{itemize}
+
+\paragraph{P\&L Drivers}
+
+\[
+\text{P\&L} = \underbrace{\mathcal{V}_{\text{call}} \cdot \Delta \text{IV}_{\text{call}}}_{\text{Call vega}} - \underbrace{\mathcal{V}_{\text{put}} \cdot \Delta \text{IV}_{\text{put}}}_{\text{Put vega}} - \underbrace{\Theta \cdot \Delta t}_{\text{Theta decay}}
+\]
+Profitable if RR25 reverts toward mean, narrowing the IV differential.
+
+\subsubsection{Butterfly Spread Trade}
+
+\paragraph{Structure}
+
+If BF25 is excessively high (wings overpriced):
+\[
+\text{Position} = \text{Sell 25}\Delta \text{ Call} + \text{Sell 25}\Delta \text{ Put} + \text{Buy 2} \times \text{ATM Straddle}
+\]
+This is short butterfly, profiting if BF25 compresses.
+
+If BF25 is too low (wings underpriced):
+\[
+\text{Position} = \text{Buy 25}\Delta \text{ Call} + \text{Buy 25}\Delta \text{ Put} + \text{Sell 2} \times \text{ATM Straddle}
+\]
+
+\paragraph{Greeks}
+
+For short butterfly:
+\begin{itemize}
+  \item \textbf{Delta}: Approximately zero (ATM straddle delta offsets wing deltas)
+  \item \textbf{Vega}: Negative wing vega, positive ATM vega; net vega exposure to BF25
+  \item \textbf{Gamma}: Positive ATM gamma, negative wing gamma
+\end{itemize}
+
+\paragraph{P\&L Attribution}
+
+\[
+\text{P\&L} = \underbrace{(\mathcal{V}_{\text{ATM}} - \mathcal{V}_{\text{wings}}) \cdot \Delta \text{BF25}}_{\text{Skew compression}} + \underbrace{\Gamma_{\text{net}} \cdot (\Delta S)^2 / 2}_{\text{Gamma P\&L}} - \Theta \cdot \Delta t
+\]
+Profitable if BF25 mean-reverts and realized volatility aligns with expectations.
+
+\subsubsection{Mean Reversion Signal Construction}
+
+\paragraph{Z-Score Trigger}
+
+Enter trade when skew metric exceeds historical threshold:
+\[
+|\text{Skew Score}_t| > \tau, \quad \tau \in [1.5, 2.5]
+\]
+Higher $\tau$ reduces trade frequency but increases signal reliability.
+
+\paragraph{Bollinger Band Strategy}
+
+Alternative: enter when RR25 or BF25 breaches $\pm 2 \sigma$ Bollinger bands:
+\[
+\text{Upper Band} = \mu_{20} + 2 \sigma_{20}, \quad \text{Lower Band} = \mu_{20} - 2 \sigma_{20}
+\]
+where $\mu_{20}$ and $\sigma_{20}$ are 20-day moving statistics.
+
+\paragraph{Exit Rules}
+
+Close position when:
+\begin{enumerate}
+  \item Skew metric reverts to within $\pm 0.5 \sigma$ of mean (take profit)
+  \item Time to expiration $< 7$ days (avoid gamma risk and pin risk)
+  \item Mark-to-market loss exceeds -2\% of position value (stop-loss)
+\end{enumerate}
+
+\subsubsection{Risk Management}
+
+\paragraph{Delta Hedging}
+
+Even nominally delta-neutral positions drift as spot moves. Rehedge when:
+\[
+|\Delta_{\text{port}}| > \delta \cdot S, \quad \delta \in [0.05, 0.10]
+\]
+Use futures or stock to adjust delta without disturbing skew exposure.
+
+\paragraph{Scenario Analysis}
+
+Stress test positions under:
+\begin{itemize}
+  \item \textbf{Spot crash (-10\%)}: Short puts in risk reversal lose; BF25 widens
+  \item \textbf{Vol spike (+10 vol points)}: All positions gain vega; assess net exposure
+  \item \textbf{Skew widening}: RR25 becomes more negative; butterfly wings expensive
+\end{itemize}
+Ensure maximum loss under worst-case scenario $<$ 5\% of capital.
+
+\paragraph{Correlation Risk}
+
+Skew and spot returns are correlated: market drops $\Rightarrow$ skew steepens. Hedging spot exposure may inadvertently reduce skew trade profitability. Separate directional from skew exposure using futures overlays.
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Mean reversion assumption}: Strategy relies on skew returning to historical norms; structural regime shifts invalidate signals.
+
+  \item \textbf{Transaction costs}: Frequent rehedging and bid-ask spreads erode profits, particularly in illiquid options markets.
+
+  \item \textbf{Theta decay}: Long options positions pay theta; must be compensated by skew reversion or realized volatility.
+
+  \item \textbf{Event risk}: Earnings, geopolitical shocks can cause skew to diverge further before reverting.
+\end{enumerate}
+
+The strategy is best suited for:
+\begin{itemize}
+  \item Options traders with access to tight bid-ask spreads
+  \item Volatility arbitrageurs seeking to monetize skew mispricings
+  \item Institutional desks with delta hedging infrastructure
+  \item Investors with patience for mean reversion over weeks to months
+\end{itemize}
+
+\subsection{FX Hedging \& Futures Options}
+
+\subsubsection{Motivation}
+
+Portfolios with international exposure face currency risk: fluctuations in exchange rates can dominate returns, particularly when the domestic currency (e.g., USD) depreciates. Traditional spot FX hedging requires 100\% capital commitment. Futures and futures options provide capital-efficient alternatives, requiring only 3--5\% margin while delivering 20--40$\times$ leverage.
+
+This framework addresses:
+\begin{itemize}
+  \item Hedging multi-currency portfolios against FX moves
+  \item Capital-efficient implementation via CME currency futures
+  \item Pricing and Greeks for futures options (Black-76 model)
+  \item Dynamic hedge ratio optimization
+  \item Margin management and roll strategies
+\end{itemize}
+
+\subsubsection{Forward and Futures Pricing}
+
+\paragraph{Covered Interest Rate Parity}
+
+Let $S$ denote the spot exchange rate (units of domestic currency per unit of foreign currency), $r_d$ the domestic interest rate, $r_f$ the foreign interest rate, and $T$ the time to maturity.
+
+The no-arbitrage forward rate is:
+\[
+F = S \cdot e^{(r_d - r_f) T}
+\]
+
+\textbf{Interpretation:} If domestic rates exceed foreign rates ($r_d > r_f$), the forward trades at a premium to spot (contango). Conversely, if $r_d < r_f$, the forward is at a discount (backwardation).
+
+\paragraph{Forward Points}
+
+The difference between forward and spot:
+\[
+\text{Forward Points} = F - S = S \cdot \left( e^{(r_d - r_f) T} - 1 \right)
+\]
+
+For small rate differentials and short maturities, the approximation holds:
+\[
+F - S \approx S \cdot (r_d - r_f) T
+\]
+
+\paragraph{Futures Price}
+
+Under the assumption of deterministic interest rates, futures and forwards have identical prices:
+\[
+\text{Futures Price} = F = S \cdot e^{(r_d - r_f) T}
+\]
+
+In practice, marking-to-market and margin flows introduce small deviations, but these are typically negligible for liquid FX futures.
+
+\paragraph{Basis}
+
+The basis is the spread between futures and spot:
+\[
+\text{Basis} = \text{Futures Price} - S
+\]
+
+\textbf{Contango} ($\text{Basis} > 0$): Futures trade above spot.
+\textbf{Backwardation} ($\text{Basis} < 0$): Futures trade below spot.
+
+\subsubsection{Black-76 Model for Futures Options}
+
+\paragraph{Model Setup}
+
+The Black-76 model prices European options on futures. Unlike Black-Scholes (which models spot price dynamics), Black-76 assumes the futures price $F_t$ follows:
+\[
+dF_t = \sigma F_t dW_t
+\]
+
+under the risk-neutral measure, with no drift term (since futures are martingales).
+
+\paragraph{Option Pricing Formulas}
+
+\textbf{Call Option:}
+\[
+C = e^{-rT} \left[ F \cdot N(d_1) - K \cdot N(d_2) \right]
+\]
+
+\textbf{Put Option:}
+\[
+P = e^{-rT} \left[ K \cdot N(-d_2) - F \cdot N(-d_1) \right]
+\]
+
+where:
+\begin{align*}
+d_1 &= \frac{\ln(F/K) + (\sigma^2/2)T}{\sigma \sqrt{T}} \\
+d_2 &= d_1 - \sigma \sqrt{T}
+\end{align*}
+
+and $r$ is the risk-free discount rate.
+
+\paragraph{Key Differences from Black-Scholes}
+
+\begin{itemize}
+  \item Uses futures price $F$ instead of spot $S$
+  \item No dividend yield term (futures already incorporate the cost of carry)
+  \item Simpler structure: only two inputs ($F$ and $\sigma$) beyond standard parameters
+\end{itemize}
+
+\paragraph{Greeks for Futures Options}
+
+\textbf{Delta:}
+\begin{align*}
+\Delta_{\text{call}} &= e^{-rT} N(d_1) \\
+\Delta_{\text{put}} &= -e^{-rT} N(-d_1)
+\end{align*}
+
+\textbf{Gamma:}
+\[
+\Gamma = e^{-rT} \frac{n(d_1)}{F \sigma \sqrt{T}}
+\]
+
+\textbf{Theta (per day):}
+\begin{align*}
+\Theta_{\text{call}} &= -\frac{e^{-rT} F n(d_1) \sigma}{2\sqrt{T} \cdot 365} + \frac{rC}{365} \\
+\Theta_{\text{put}} &= -\frac{e^{-rT} F n(d_1) \sigma}{2\sqrt{T} \cdot 365} + \frac{rP}{365}
+\end{align*}
+
+\textbf{Vega (per 1\% vol):}
+\[
+\mathcal{V} = \frac{e^{-rT} F n(d_1) \sqrt{T}}{100}
+\]
+
+\textbf{Rho (per 1\% rate):}
+\begin{align*}
+\rho_{\text{call}} &= -\frac{T \cdot C}{100} \\
+\rho_{\text{put}} &= -\frac{T \cdot P}{100}
+\end{align*}
+
+Note: Rho for futures options reflects the discounting effect, not the carry cost (which is embedded in $F$).
+
+\subsubsection{Margin and Capital Efficiency}
+
+\paragraph{Initial Margin}
+
+CME futures require initial margin (typically 3--5\% of contract notional) to open a position. For the EUR/USD futures (6E):
+\begin{itemize}
+  \item Contract size: EUR 125,000
+  \item Notional (at $F = 1.10$): \$137,500
+  \item Typical initial margin: \$2,500
+  \item Leverage: $137{,}500 / 2{,}500 = 55\times$
+\end{itemize}
+
+\paragraph{Maintenance Margin}
+
+The maintenance margin (typically 80\% of initial margin) is the minimum account balance to avoid a margin call:
+\[
+\text{Maintenance Margin} \approx 0.8 \times \text{Initial Margin}
+\]
+
+If the margin account falls below this level due to adverse price moves, additional funds must be deposited.
+
+\paragraph{Variation Margin}
+
+Futures are marked-to-market daily. The daily P\&L is settled in cash:
+\[
+\text{Variation Margin}_t = (F_t - F_{t-1}) \times \text{Contract Size} \times \text{Position}
+\]
+
+This settlement is credited or debited from the margin account.
+
+\paragraph{SPAN Methodology}
+
+CME uses Standard Portfolio Analysis of Risk (SPAN) to compute risk-based margin requirements. SPAN evaluates portfolio risk across 16 scenarios (price moves of $\pm1\sigma$, $\pm2\sigma$, $\pm3\sigma$ and volatility changes of $\pm10\%$, $\pm20\%$, $\pm30\%$), taking the worst-case loss as the margin requirement.
+
+A simplified SPAN estimate is:
+\[
+\text{SPAN Margin} \approx 0.04 \times \text{Contract Value}
+\]
+
+for a $\pm10\%$ price move scenario.
+
+\subsubsection{Hedge Ratio Optimization}
+
+\paragraph{Exposure Calculation}
+
+For a portfolio with $n$ positions in different currencies, the net FX exposure in USD for currency $i$ is:
+\[
+E_i = \sum_{j \in \text{positions}} \text{Quantity}_j \times \text{Price}_j \times \text{FX Rate}_j \times \mathbb{I}[\text{Currency}_j = i]
+\]
+
+\paragraph{Futures Contracts Needed}
+
+Given an exposure $E$ in currency units and a hedge ratio $h \in [-1, 1]$:
+\[
+N_{\text{contracts}} = \left\lfloor \frac{h \cdot E \cdot S}{\text{Contract Size}} \right\rfloor
+\]
+
+where $S$ is the current spot rate and Contract Size is the notional per futures contract.
+
+For a full hedge ($h = -1$), this formula gives the number of short futures contracts needed to offset long currency exposure.
+
+\paragraph{Minimum Variance Hedge Ratio}
+
+The optimal hedge ratio minimizing portfolio variance is:
+\[
+h^* = \frac{\text{Cov}(\Delta S, \Delta F)}{\text{Var}(\Delta F)} = \rho_{S,F} \cdot \frac{\sigma_S}{\sigma_F}
+\]
+
+where:
+\begin{itemize}
+  \item $\rho_{S,F}$ is the correlation between spot and futures returns
+  \item $\sigma_S$ is the volatility of spot returns
+  \item $\sigma_F$ is the volatility of futures returns
+\end{itemize}
+
+In practice, for highly liquid FX futures, $\rho_{S,F} \approx 1$ and $\sigma_S \approx \sigma_F$, so $h^* \approx -1$ (full hedge).
+
+\paragraph{Hedge Effectiveness}
+
+The effectiveness of the hedge is measured by variance reduction:
+\[
+\text{Effectiveness} = 1 - \frac{\text{Var}(\text{Hedged P\&L})}{\text{Var}(\text{Unhedged P\&L})}
+\]
+
+Values above 80\% indicate a highly effective hedge. Lower effectiveness suggests basis risk or imperfect correlation.
+
+\subsubsection{Roll Management}
+
+Futures contracts have finite expiry. To maintain a hedge beyond the contract's maturity, positions must be rolled to the next contract month.
+
+\paragraph{Roll Decision}
+
+Typically, rolls occur 5--10 days before expiry to avoid illiquidity and delivery risk:
+\[
+\text{Days to Expiry} \leq \text{Roll Threshold} \quad \Rightarrow \quad \text{Execute Roll}
+\]
+
+\paragraph{Roll P\&L}
+
+The P\&L from rolling depends on the basis:
+\[
+\text{Roll P\&L} = (F_{\text{new}} - F_{\text{old}}) \times \text{Contract Size} \times \text{Position}
+\]
+
+\textbf{Positive roll yield:} If $F_{\text{new}} < F_{\text{old}}$ for a short hedge, the roll generates profit.
+\textbf{Negative roll yield:} If $F_{\text{new}} > F_{\text{old}}$, the roll incurs a cost.
+
+Over time, cumulative roll costs can be significant for persistent contango or backwardation.
+
+\subsubsection{Hedge Strategies}
+
+\paragraph{Static Hedge}
+
+A fixed hedge ratio $h$ maintained throughout the backtest:
+\[
+N_{\text{contracts}} = \text{constant}
+\]
+
+\textbf{Advantages:} Low transaction costs, simple to implement.
+\textbf{Disadvantages:} Does not adapt to changing correlations or exposures.
+
+\paragraph{Dynamic Hedge (Time-Based)}
+
+Rebalance periodically (e.g., weekly, monthly):
+\[
+t - t_{\text{last rebalance}} \geq \tau \quad \Rightarrow \quad \text{Rehedge}
+\]
+
+\textbf{Advantages:} Adapts to price changes and exposure drift.
+\textbf{Disadvantages:} Higher transaction costs.
+
+\paragraph{Minimum Variance Hedge}
+
+Optimize the hedge ratio based on rolling-window correlation and volatility estimates:
+\[
+h^*(t) = \rho_{S,F}(t) \cdot \frac{\sigma_S(t)}{\sigma_F(t)}
+\]
+
+Lookback window typically 60--90 days.
+
+\textbf{Advantages:} Maximizes hedge effectiveness.
+\textbf{Disadvantages:} Sensitive to estimation error in correlation.
+
+\paragraph{Optimal Cost Hedge}
+
+Rebalance only when delta drift exceeds a threshold:
+\[
+|\Delta_{\text{current}} - \Delta_{\text{target}}| > \epsilon \quad \Rightarrow \quad \text{Rehedge}
+\]
+
+\textbf{Advantages:} Balances effectiveness and transaction costs.
+\textbf{Disadvantages:} May allow temporary exposure drift.
+
+\subsubsection{Performance Metrics}
+
+\paragraph{Unhedged P\&L}
+
+Cumulative exposure P\&L without hedging:
+\[
+\text{Unhedged P\&L}_T = E \cdot (S_T - S_0)
+\]
+
+\paragraph{Hedged P\&L}
+
+Combined exposure and futures hedge P\&L:
+\[
+\text{Hedged P\&L}_T = E \cdot (S_T - S_0) + N \cdot (F_T - F_0) \cdot \text{Contract Size} - \text{Costs}
+\]
+
+\paragraph{Sharpe Ratio}
+
+\[
+\text{Sharpe}_{\text{hedged}} = \frac{\mathbb{E}[\text{Daily Hedged P\&L}]}{\text{Std}[\text{Daily Hedged P\&L}]}
+\]
+
+Compare to the unhedged Sharpe ratio to assess risk-adjusted improvement.
+
+\paragraph{Maximum Drawdown}
+
+\[
+\text{MDD} = \max_{t \in [0, T]} \left( \max_{s \in [0, t]} \text{P\&L}_s - \text{P\&L}_t \right)
+\]
+
+Hedging should reduce maximum drawdown significantly relative to the unhedged position.
+
+\subsubsection{Interpretation}
+
+The FX hedging framework enables:
+
+\begin{enumerate}
+  \item \textbf{Capital efficiency}: Futures require 3--5\% margin vs 100\% for spot FX, freeing capital for other investments.
+
+  \item \textbf{Leverage}: 20--40$\times$ leverage allows hedging large exposures with minimal upfront cost, critical for portfolios with substantial international holdings.
+
+  \item \textbf{Flexibility}: Multiple hedge strategies (static, dynamic, minimum variance) adapt to different market conditions and cost constraints.
+
+  \item \textbf{Tail risk management}: Futures options provide convexity, allowing non-linear hedges that protect against extreme moves while preserving upside.
+
+  \item \textbf{Transparency}: Futures are exchange-traded with standardized specifications, daily settlement, and centralized clearing, reducing counterparty risk.
+\end{enumerate}
+
+The Black-76 framework for futures options extends the toolkit beyond linear hedging:
+\begin{itemize}
+  \item \textbf{Collars}: Buy put, sell call to limit downside and cap upside
+  \item \textbf{Ratio spreads}: Sell multiple out-of-the-money options to finance at-the-money protection
+  \item \textbf{Volatility hedges}: Use vega exposure to hedge against implied volatility spikes
+\end{itemize}
+
+Optimal hedge design depends on:
+\begin{itemize}
+  \item Risk tolerance and downside limits
+  \item Transaction cost environment
+  \item Correlation stability between spot and futures
+  \item Expected holding period and roll frequency
+  \item Capital constraints and margin availability
+\end{itemize}
+
+The framework rejects naive full hedging in favor of risk-return optimization, recognizing that currency exposure may offer diversification benefits or expected returns that justify partial hedging or selective hedging by currency.
+
+\subsection{Dispersion Trading}
+
+\subsubsection{Motivation}
+
+Dispersion trading exploits the difference between index implied volatility and the weighted average implied volatility of its constituents. When index options are expensive relative to single-name options (or vice versa), the implied correlation embedded in index volatility deviates from realized correlation, creating arbitrage opportunities.
+
+This framework addresses:
+\begin{itemize}
+  \item Extracting implied correlation from volatility surfaces
+  \item Detecting dispersion mispricings via z-score analysis
+  \item Constructing delta-neutral dispersion trades
+  \item Managing portfolio Greeks across index and constituent legs
+  \item Attributing P\&L to correlation convergence
+\end{itemize}
+
+\subsubsection{Implied Correlation from Volatility}
+
+\paragraph{Volatility Decomposition}
+
+For an index composed of $n$ constituents with weights $w_i$ and implied volatilities $\sigma_i$, the index variance under perfect correlation would be:
+\[
+\sigma_{\text{index}}^2 = \left( \sum_{i=1}^n w_i \sigma_i \right)^2
+\]
+
+Under imperfect correlation, the actual index variance is:
+\[
+\sigma_{\text{index}}^2 = \sum_{i=1}^n w_i^2 \sigma_i^2 + 2 \sum_{i=1}^n \sum_{j>i}^n w_i w_j \sigma_i \sigma_j \rho_{ij}
+\]
+
+where $\rho_{ij}$ is the pairwise correlation between constituents $i$ and $j$.
+
+\paragraph{Implied Correlation}
+
+Assuming a single average correlation $\bar{\rho}$ across all pairs, we can solve for the implied correlation:
+\[
+\bar{\rho}_{\text{impl}} = \frac{\sigma_{\text{index}}^2 - \sum_{i=1}^n w_i^2 \sigma_i^2}{2 \sum_{i=1}^n \sum_{j>i}^n w_i w_j \sigma_i \sigma_j}
+\]
+
+This implied correlation reflects the market's expectation of how correlated constituent returns will be over the option's life.
+
+\subsubsection{Dispersion Metrics}
+
+\paragraph{Dispersion Level}
+
+The dispersion level measures the spread between weighted average constituent IV and index IV:
+\[
+D = \sum_{i=1}^n w_i \sigma_i - \sigma_{\text{index}}
+\]
+
+Positive dispersion ($D > 0$) indicates single-name options are expensive relative to the index; negative dispersion indicates the reverse.
+
+\paragraph{Dispersion Z-Score}
+
+To normalize dispersion across time and market regimes:
+\[
+Z_{\text{disp}} = \frac{D - \mu_D}{\sigma_D}
+\]
+
+where $\mu_D$ and $\sigma_D$ are the rolling mean and standard deviation of historical dispersion levels (typically 60--252 day lookback).
+
+Extreme z-scores ($|Z| > 2$) signal potential mean reversion opportunities.
+
+\subsubsection{Trade Construction}
+
+\paragraph{Long Dispersion}
+
+When implied correlation is high relative to expected realized correlation ($Z_{\text{disp}} < -2$):
+\[
+\text{Position} = \text{Long Single-Name Straddles} + \text{Short Index Straddle}
+\]
+
+This profits if realized correlation is lower than implied, causing constituent volatilities to outperform index volatility.
+
+\paragraph{Short Dispersion}
+
+When implied correlation is low ($Z_{\text{disp}} > 2$):
+\[
+\text{Position} = \text{Short Single-Name Straddles} + \text{Long Index Straddle}
+\]
+
+This profits if realized correlation exceeds implied correlation.
+
+\paragraph{Delta Neutrality}
+
+Aggregate portfolio delta is maintained near zero:
+\[
+\Delta_{\text{port}} = \sum_{i=1}^n w_i \Delta_i - \Delta_{\text{index}} \approx 0
+\]
+
+Rehedge when $|\Delta_{\text{port}}| > 0.05 \times S_{\text{index}}$.
+
+\subsubsection{P\&L Attribution}
+
+The dispersion trade P\&L decomposes into:
+\[
+\text{P\&L} = \underbrace{\sum_{i=1}^n w_i \text{P\&L}_i}_{\text{Single Names}} - \underbrace{\text{P\&L}_{\text{index}}}_{\text{Index}}
+\]
+
+Further attribution:
+\begin{itemize}
+  \item \textbf{Gamma P\&L}: From realized volatility vs implied
+  \item \textbf{Vega P\&L}: From IV changes (correlation convergence)
+  \item \textbf{Theta decay}: Time value erosion
+  \item \textbf{Correlation P\&L}: Residual from correlation mean reversion
+\end{itemize}
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Correlation risk premium}: Index options embed a correlation risk premium; short dispersion harvests this premium but faces tail risk during market stress when correlations spike.
+
+  \item \textbf{Regime sensitivity}: During crises, correlations approach 1.0, causing dispersion trades to suffer. Long dispersion provides convexity during stress.
+
+  \item \textbf{Transaction costs}: Managing multiple single-name positions incurs higher costs than index-only strategies.
+
+  \item \textbf{Liquidity constraints}: Single-name option liquidity varies; illiquid names widen bid-ask spreads and execution risk.
+\end{enumerate}
+
+The strategy is best suited for:
+\begin{itemize}
+  \item Volatility arbitrageurs with access to tight spreads across index and single-name options
+  \item Institutional desks capable of managing multi-leg positions
+  \item Investors seeking correlation exposure independent of market direction
+\end{itemize}
+
+\subsection{Earnings Volatility Scanner}
+
+\subsubsection{Motivation}
+
+Earnings announcements create predictable volatility events. Implied volatility rises into earnings as uncertainty increases, then collapses post-announcement (``IV crush''). This framework identifies opportunities where the IV term structure signals profitable calendar spreads or straddles around earnings.
+
+This framework addresses:
+\begin{itemize}
+  \item Analyzing IV term structure slope and curvature
+  \item Comparing implied volatility to realized volatility
+  \item Sizing positions using Kelly criterion from historical backtest statistics
+  \item Filtering opportunities by liquidity, IV/RV ratio, and term structure slope
+\end{itemize}
+
+\subsubsection{Term Structure Analysis}
+
+\paragraph{Term Structure Slope}
+
+The IV term structure slope measures the rate of IV change across expirations:
+\[
+\text{Slope} = \frac{\sigma_{\text{back}} - \sigma_{\text{front}}}{\text{DTE}_{\text{back}} - \text{DTE}_{\text{front}}}
+\]
+
+where $\sigma_{\text{front}}$ and $\sigma_{\text{back}}$ are the front-month and back-month ATM implied volatilities, and DTE is days to expiration.
+
+Negative slope (backwardation) indicates front-month IV exceeds back-month, typical before earnings.
+
+\paragraph{Term Structure Ratio}
+
+The ratio provides a scale-invariant measure:
+\[
+\text{Ratio} = \frac{\sigma_{\text{back}}}{\sigma_{\text{front}}}
+\]
+
+Ratios below 1.0 indicate backwardation; ratios significantly below 0.9 suggest extreme front-month IV elevation.
+
+\paragraph{IV/RV Comparison}
+
+The implied-to-realized volatility ratio:
+\[
+\text{IV/RV} = \frac{\sigma_{\text{implied,30d}}}{\sigma_{\text{realized,30d}}}
+\]
+
+Ratios above 1.1 suggest options are expensive relative to recent realized volatility, favoring short volatility strategies.
+
+\subsubsection{Expected Move Calculation}
+
+The annualized ATM implied volatility converts to an expected stock move:
+\[
+E[\text{Move}] = \sigma_{\text{ATM}} \sqrt{\frac{\text{DTE}}{365}}
+\]
+
+This represents the one-standard-deviation expected price change by expiration, used to assess whether straddle pricing is fair relative to historical earnings moves.
+
+\subsubsection{Kelly Criterion Sizing}
+
+\paragraph{Kelly Fraction}
+
+From backtest statistics (win rate $p$, average win $W$, average loss $L$):
+\[
+f^* = \frac{p \cdot W - (1-p) \cdot L}{W \cdot L} = \frac{\text{Edge}}{\text{Avg Win}}
+\]
+
+Simplified for equal win/loss magnitudes:
+\[
+f^* = \frac{\mu}{\sigma^2}
+\]
+
+where $\mu$ is mean return and $\sigma$ is standard deviation.
+
+\paragraph{Fractional Kelly}
+
+Full Kelly is aggressive; conservative sizing uses fractions:
+\begin{itemize}
+  \item Half Kelly: $f = 0.5 \times f^*$
+  \item Quarter Kelly: $f = 0.25 \times f^*$
+\end{itemize}
+
+Half Kelly is typically recommended, balancing growth rate against drawdown risk.
+
+\subsubsection{Trade Structures}
+
+\paragraph{Calendar Spread}
+
+Sell front-month straddle (captures IV crush), buy back-month straddle (hedge):
+\[
+\text{P\&L} = (\text{Front Premium Decay}) - (\text{Back Premium Change})
+\]
+
+Profits if IV crush in front month exceeds back month decay and stock stays near strike.
+
+\paragraph{Short Straddle}
+
+Sell ATM call and put:
+\[
+\text{Max Profit} = \text{Call Premium} + \text{Put Premium}
+\]
+\[
+\text{Breakeven} = K \pm \text{Total Premium}
+\]
+
+Profits if realized move is less than implied move.
+
+\subsubsection{Filter Criteria}
+
+Opportunities are filtered by:
+\begin{itemize}
+  \item Term structure slope $\leq -5\%$ (significant backwardation)
+  \item Average volume $\geq 1$M shares (liquidity)
+  \item IV/RV ratio $\geq 1.1$ (options expensive)
+  \item Days to earnings $\leq 14$ (imminent catalyst)
+\end{itemize}
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{IV crush monetization}: The strategy profits from the predictable collapse of implied volatility post-earnings.
+
+  \item \textbf{Gap risk}: Large earnings surprises can cause moves exceeding the expected range, resulting in significant losses for short straddles.
+
+  \item \textbf{Term structure persistence}: Backwardation typically persists until earnings; early entry captures more theta decay.
+
+  \item \textbf{Sector effects}: Tech and growth stocks exhibit larger earnings moves; adjust expected move assumptions by sector.
+\end{enumerate}
+
+The strategy is best suited for:
+\begin{itemize}
+  \item Options traders comfortable with event-driven volatility
+  \item Investors with systematic earnings calendars and backtested statistics
+  \item Traders willing to size positions conservatively via Kelly fractions
+\end{itemize}
+
+\subsection{Forward Factor Scanner}
+
+\subsubsection{Motivation}
+
+The forward factor measures backwardation in the volatility term structure by comparing near-term implied volatility to forward-starting volatility. Extreme forward factors signal calendar spread opportunities where front-month options are overpriced relative to deferred expirations.
+
+This framework addresses:
+\begin{itemize}
+  \item Computing forward volatility from the variance term structure
+  \item Calculating the forward factor as a normalized backwardation signal
+  \item Constructing ATM and double calendar spreads
+  \item Sizing positions based on forward factor magnitude
+\end{itemize}
+
+\subsubsection{Forward Volatility Calculation}
+
+\paragraph{Variance Decomposition}
+
+Total variance to time $T$ is additive:
+\[
+\sigma_T^2 \cdot T = \sigma_1^2 \cdot T_1 + V_{\text{fwd}} \cdot (T - T_1)
+\]
+
+where $V_{\text{fwd}}$ is the forward variance from $T_1$ to $T$.
+
+\paragraph{Forward Variance}
+
+Solving for forward variance:
+\[
+V_{\text{fwd}} = \frac{\sigma_2^2 \cdot T_2 - \sigma_1^2 \cdot T_1}{T_2 - T_1}
+\]
+
+where $\sigma_1$ and $\sigma_2$ are the implied volatilities at expirations $T_1$ and $T_2$.
+
+\paragraph{Forward Volatility}
+
+The annualized forward volatility:
+\[
+\sigma_{\text{fwd}} = \sqrt{V_{\text{fwd}}}
+\]
+
+This represents the market's implied volatility for the period between $T_1$ and $T_2$.
+
+\subsubsection{Forward Factor}
+
+\paragraph{Definition}
+
+The forward factor measures backwardation strength:
+\[
+\text{FF} = \frac{\sigma_1 - \sigma_{\text{fwd}}}{\sigma_{\text{fwd}}} = \frac{\sigma_1}{\sigma_{\text{fwd}}} - 1
+\]
+
+\paragraph{Interpretation}
+
+\begin{itemize}
+  \item $\text{FF} > 0$: Backwardation (front IV $>$ forward IV); calendar spreads are attractive
+  \item $\text{FF} = 0$: Flat term structure
+  \item $\text{FF} < 0$: Contango (front IV $<$ forward IV); avoid calendar spreads
+\end{itemize}
+
+Threshold: $\text{FF} \geq 0.20$ (20\% backwardation) signals actionable opportunity.
+
+\subsubsection{Calendar Spread Structures}
+
+\paragraph{ATM Calendar}
+
+Sell front-month ATM call, buy back-month ATM call at same strike:
+\[
+\text{Debit} = C_{\text{back}}(K) - C_{\text{front}}(K)
+\]
+\[
+\text{Max Profit} \approx 0.75 \times \text{Debit} \quad \text{(conservative estimate)}
+\]
+
+Profits if stock stays near strike and front-month IV decays faster than back-month.
+
+\paragraph{Double Calendar}
+
+Sell front-month 35$\Delta$ call and put, buy back-month at same strikes:
+\[
+\text{Debit} = [C_{\text{back}}(K_C) - C_{\text{front}}(K_C)] + [P_{\text{back}}(K_P) - P_{\text{front}}(K_P)]
+\]
+\[
+\text{Max Profit} \approx 1.0 \times \text{Debit}
+\]
+
+Wider profit zone than ATM calendar; benefits from both call and put IV convergence.
+
+\subsubsection{Position Sizing}
+
+\paragraph{Kelly Fraction by Forward Factor}
+
+Expected return scales with forward factor magnitude:
+\begin{itemize}
+  \item $\text{FF} \geq 1.0$: Expected return $\approx 80\%$, Kelly $\approx 8\%$
+  \item $\text{FF} \geq 0.5$: Expected return $\approx 50\%$, Kelly $\approx 5\%$
+  \item $\text{FF} \geq 0.2$: Expected return $\approx 30\%$, Kelly $\approx 3\%$
+\end{itemize}
+
+From backtest: win rate $p \approx 0.66$, win/loss ratio $b \approx 1.5$.
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Term structure mean reversion}: Extreme backwardation tends to normalize as front-month IV decays faster than back-month.
+
+  \item \textbf{Event sensitivity}: Earnings or other catalysts in the front month cause backwardation; post-event, term structure flattens.
+
+  \item \textbf{Gamma risk}: Large moves can cause losses even if IV converges; double calendars provide wider breakevens.
+
+  \item \textbf{Theta dynamics}: Front-month theta exceeds back-month; time decay favors the position.
+\end{enumerate}
+
+The strategy is best suited for:
+\begin{itemize}
+  \item Volatility traders seeking term structure arbitrage
+  \item Systematic scanners monitoring multiple tickers and DTE combinations
+  \item Investors comfortable with defined-risk spreads
+\end{itemize}
+
+\subsection{Pairs Trading}
+
+\subsubsection{Motivation}
+
+Pairs trading exploits mean reversion in the price spread between two cointegrated assets. When two stocks share a common stochastic trend, their spread is stationary and reverts to a long-run equilibrium, enabling market-neutral profits.
+
+This framework addresses:
+\begin{itemize}
+  \item Testing for cointegration using Engle-Granger and Johansen methods
+  \item Estimating hedge ratios via OLS and Total Least Squares (TLS) regression
+  \item Computing spread z-scores for entry/exit signals
+  \item Calculating mean reversion half-life for holding period estimation
+  \item Monitoring half-life stability to detect weakening mean reversion
+\end{itemize}
+
+\subsubsection{Cointegration Testing}
+
+\paragraph{Engle-Granger Two-Step Method}
+
+\textbf{Step 1:} Regress one price series on the other:
+\[
+Y_t = \alpha + \beta X_t + \epsilon_t
+\]
+
+where $\beta$ is the hedge ratio and $\epsilon_t$ are the residuals.
+
+\textbf{Step 2:} Test residuals for stationarity using the Augmented Dickey-Fuller (ADF) test.
+
+\paragraph{Augmented Dickey-Fuller Test}
+
+The ADF regression with $p$ lags:
+\[
+\Delta \epsilon_t = \alpha + \rho \epsilon_{t-1} + \sum_{i=1}^{p} \gamma_i \Delta \epsilon_{t-i} + u_t
+\]
+
+Hypothesis test:
+\begin{itemize}
+  \item $H_0$: $\rho = 0$ (unit root, non-stationary)
+  \item $H_1$: $\rho < 0$ (stationary)
+\end{itemize}
+
+Test statistic:
+\[
+t = \frac{\hat{\rho}}{\text{SE}(\hat{\rho})}
+\]
+
+Reject $H_0$ if $t < \text{critical value}$ (e.g., $-2.86$ at 5\% for $n = 100$).
+
+\paragraph{Lag Selection}
+
+Optimal lag $p$ minimizes the Bayesian Information Criterion (BIC):
+\[
+\text{BIC}(p) = n \ln(\text{RSS}/n) + p \ln(n)
+\]
+
+Maximum lag from Schwert's rule:
+\[
+p_{\max} = \left\lfloor 12 \cdot \left(\frac{n}{100}\right)^{0.25} \right\rfloor
+\]
+
+\paragraph{Johansen Cointegration Test}
+
+The Johansen test is inherently symmetric and does not require choosing a dependent variable. For two price series $Z_t = [X_t, Y_t]'$, the Vector Error Correction Model (VECM) with one lag is:
+\[
+\Delta Z_t = \Pi Z_{t-1} + \mu + \varepsilon_t
+\]
+
+where $\Pi = \alpha \beta'$ is the error correction matrix with $\beta$ the cointegrating vector and $\alpha$ the adjustment speeds.
+
+The procedure computes residuals $R_0$ and $R_1$ from regressing $\Delta Z_t$ and $Z_{t-1}$ on a constant, then forms the moment matrices:
+\[
+S_{ij} = \frac{1}{T} R_i' R_j, \quad i,j \in \{0, 1\}
+\]
+
+The eigenvalues $\hat{\lambda}_1 \geq \hat{\lambda}_2$ of the matrix $S_{11}^{-1} S_{10} S_{00}^{-1} S_{01}$ yield the trace statistic for testing rank $r = 0$ (no cointegration):
+\[
+\text{Trace}(r=0) = -T \sum_{i=1}^{2} \ln(1 - \hat{\lambda}_i)
+\]
+
+For two variables at 5\% significance: reject $H_0$ (no cointegration) if $\text{Trace} > 15.41$.
+
+The cointegrating vector is extracted from the eigenvector of $\hat{\lambda}_1$, normalized as $[1, -\beta]$, giving the Johansen hedge ratio directly. For the $2 \times 2$ case, all matrix operations (inversion, eigenvalue decomposition) have closed-form analytical solutions.
+
+\subsubsection{Spread Construction}
+
+\paragraph{OLS Hedge Ratio}
+
+The OLS hedge ratio $\beta$ determines the relative position sizes:
+\[
+\text{Spread}_t = Y_t - \beta X_t - \alpha
+\]
+
+For each \$1 long in $Y$, short $\beta$ dollars in $X$.
+
+\paragraph{Total Least Squares Regression}
+
+OLS is asymmetric: regressing $Y$ on $X$ gives a different hedge ratio than $X$ on $Y$. Total Least Squares (TLS) resolves this by minimizing the perpendicular distance to the regression line rather than the vertical distance.
+
+For centered data $(\tilde{x}, \tilde{y})$, form the $2 \times 2$ scatter matrix:
+\[
+S = \begin{bmatrix} \sum \tilde{x}_i^2 & \sum \tilde{x}_i \tilde{y}_i \\ \sum \tilde{x}_i \tilde{y}_i & \sum \tilde{y}_i^2 \end{bmatrix}
+\]
+
+The eigenvalues are:
+\[
+\lambda = \frac{\text{tr}(S) \pm \sqrt{\text{tr}(S)^2 - 4 \det(S)}}{2}
+\]
+
+The TLS slope comes from the eigenvector $[a, b]$ corresponding to the smallest eigenvalue:
+\[
+\beta_{\text{TLS}} = -\frac{a}{b} = \frac{S_{xy}}{S_{xx} - \lambda_{\min}}
+\]
+
+The key property is symmetry: if $\beta_{\text{TLS}}(X \to Y) = \hat{\beta}$, then $\beta_{\text{TLS}}(Y \to X) \approx 1/\hat{\beta}$, making the cointegration test invariant to the choice of dependent variable.
+
+\paragraph{Spread Z-Score}
+
+Normalize the spread for signal generation:
+\[
+Z_t = \frac{\text{Spread}_t - \mu_{\text{spread}}}{\sigma_{\text{spread}}}
+\]
+
+where $\mu$ and $\sigma$ are rolling statistics (typically 20--60 day lookback).
+
+\subsubsection{Mean Reversion Half-Life}
+
+\paragraph{AR(1) Model}
+
+Fit an autoregressive model to the spread:
+\[
+\Delta S_t = \alpha + \phi S_{t-1} + \epsilon_t
+\]
+
+where $\phi = \rho - 1$ and $\rho$ is the AR(1) coefficient.
+
+\paragraph{Half-Life Calculation}
+
+The half-life is the expected time for the spread to revert halfway to equilibrium:
+\[
+t_{1/2} = -\frac{\ln 2}{\ln \rho} = -\frac{\ln 2}{\ln(1 + \phi)}
+\]
+
+Typical tradeable pairs have half-lives of 5--20 days.
+
+\paragraph{Dynamic Half-Life Monitoring}
+
+The half-life is not constant --- it drifts as the cointegration relationship strengthens or weakens. A rolling window estimate tracks this:
+\[
+t_{1/2}^{(\text{rolling})} = -\frac{\ln 2}{\ln(1 + \hat{\phi}_w)}
+\]
+
+where $\hat{\phi}_w$ is the AR(1) coefficient estimated from the most recent $w$ observations (typically $w = 60$).
+
+Comparing the rolling half-life to the full-sample baseline:
+\[
+r = \frac{t_{1/2}^{(\text{rolling})}}{t_{1/2}^{(\text{baseline})}}
+\]
+
+\begin{itemize}
+  \item $r < 2.0$: Mean reversion stable, position is safe to hold
+  \item $r \geq 2.0$: Mean reversion weakening, consider reducing exposure or exiting
+\end{itemize}
+
+This provides an early warning signal that the cointegration relationship may be breaking down, complementing the stop-loss rules based on z-score expansion.
+
+\subsubsection{Trading Signals}
+
+\paragraph{Entry Rules}
+
+\begin{itemize}
+  \item \textbf{Long spread} (buy $Y$, sell $X$): $Z_t < -2.0$
+  \item \textbf{Short spread} (sell $Y$, buy $X$): $Z_t > 2.0$
+\end{itemize}
+
+\paragraph{Exit Rules}
+
+\begin{itemize}
+  \item \textbf{Take profit}: $|Z_t| < 0.5$ (spread reverted)
+  \item \textbf{Stop loss}: $|Z_t| > 4.0$ (divergence, possible regime change)
+  \item \textbf{Time stop}: Position held $> 2 \times t_{1/2}$ (mean reversion failed)
+\end{itemize}
+
+\subsubsection{Position Sizing}
+
+\paragraph{Dollar Neutrality}
+
+For notional $N$:
+\begin{itemize}
+  \item Long $Y$: $N / (1 + \beta)$ dollars
+  \item Short $X$: $N \cdot \beta / (1 + \beta)$ dollars
+\end{itemize}
+
+This ensures the portfolio is approximately dollar-neutral.
+
+\paragraph{Beta Neutrality}
+
+Adjust for market beta:
+\[
+\text{Shares}_X = \text{Shares}_Y \times \frac{\beta_Y}{\beta_X} \times \beta_{\text{hedge}}
+\]
+
+\subsubsection{Performance Metrics}
+
+\begin{itemize}
+  \item \textbf{Win rate}: Fraction of trades closed at profit
+  \item \textbf{Profit factor}: Gross profits / Gross losses
+  \item \textbf{Sharpe ratio}: $\mu_{\text{return}} / \sigma_{\text{return}}$
+  \item \textbf{Maximum drawdown}: Largest peak-to-trough decline
+  \item \textbf{Average holding period}: Mean trade duration
+\end{itemize}
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Cointegration vs. correlation}: High correlation does not imply cointegration; pairs must share a common stochastic trend.
+
+  \item \textbf{Regime changes}: Cointegration relationships can break down due to fundamental changes (M\&A, sector rotation).
+
+  \item \textbf{Execution costs}: Frequent rebalancing and short borrowing costs erode profits; target pairs with low transaction costs.
+
+  \item \textbf{Capacity constraints}: Pairs trading alpha decays with AUM; strategies are capacity-limited.
+\end{enumerate}
+
+The strategy is best suited for:
+\begin{itemize}
+  \item Quantitative traders with robust cointegration testing infrastructure
+  \item Market-neutral funds seeking low-beta returns
+  \item Systematic investors with access to short selling and low borrowing costs
+\end{itemize}
+
+\subsection{Pre-Earnings Straddle Scanner}
+
+\subsubsection{Motivation}
+
+Pre-earnings straddles profit from stock moves exceeding the implied move priced into options. A machine learning model predicts expected returns based on IV term structure signals, enabling systematic selection of high-probability earnings trades.
+
+This framework addresses:
+\begin{itemize}
+  \item Extracting predictive signals from IV and realized volatility relationships
+  \item Applying a linear regression model to forecast straddle returns
+  \item Sizing positions using Kelly criterion from historical trade statistics
+  \item Ranking opportunities for portfolio construction
+\end{itemize}
+
+\subsubsection{Signal Construction}
+
+\paragraph{Four Predictive Signals}
+
+The model uses four signals derived from implied and realized volatility:
+
+\textbf{Signal 1:} Current implied vs. last implied ratio
+\[
+S_1 = \frac{\sigma_{\text{curr}}}{\sigma_{\text{last}}}
+\]
+
+\textbf{Signal 2:} Current implied minus last realized gap
+\[
+S_2 = \sigma_{\text{curr}} - \text{RV}_{\text{last}}
+\]
+
+\textbf{Signal 3:} Current implied vs. average implied ratio
+\[
+S_3 = \frac{\sigma_{\text{curr}}}{\bar{\sigma}}
+\]
+
+\textbf{Signal 4:} Current implied minus average realized gap
+\[
+S_4 = \sigma_{\text{curr}} - \overline{\text{RV}}
+\]
+
+where ``last'' refers to the previous earnings cycle and ``average'' refers to the trailing 4--8 earnings cycles.
+
+\subsubsection{Linear Regression Model}
+
+\paragraph{Prediction Equation}
+
+Expected straddle return:
+\[
+\hat{r} = \beta_0 + \beta_1 S_1 + \beta_2 S_2 + \beta_3 S_3 + \beta_4 S_4
+\]
+
+Coefficients are estimated via OLS on historical earnings trades.
+
+\paragraph{Typical Coefficients}
+
+From backtest calibration:
+\begin{itemize}
+  \item $\beta_0 \approx 0.033$ (intercept)
+  \item $\beta_1 \approx -0.050$ (negative: high relative IV is bearish)
+  \item $\beta_2 \approx -0.040$ (negative: large IV-RV gap is bearish)
+  \item $\beta_3 \approx -0.060$ (negative: elevated vs. history is bearish)
+  \item $\beta_4 \approx -0.050$ (negative: IV above avg RV is bearish)
+\end{itemize}
+
+\subsubsection{Implied Move Calculation}
+
+The ATM straddle prices an expected move:
+\[
+E[\text{Move}] = \sigma_{\text{ATM}} \sqrt{\frac{\text{DTE}}{365}}
+\]
+
+The straddle is profitable if the realized move exceeds this implied move.
+
+\subsubsection{Kelly Sizing}
+
+\paragraph{Historical Statistics}
+
+From backtest (typical values):
+\begin{itemize}
+  \item Win rate: $p \approx 0.42$
+  \item Average win: $W \approx 15\%$
+  \item Average loss: $L \approx 50\%$
+\end{itemize}
+
+\paragraph{Kelly Fraction}
+
+\[
+f^* = \frac{p \cdot W - (1-p) \cdot L}{W} = \frac{0.42 \times 0.15 - 0.58 \times 0.50}{0.15} \approx -1.5
+\]
+
+Negative Kelly indicates the strategy is unprofitable on average; only trade when predicted return $\hat{r}$ exceeds a threshold.
+
+\paragraph{Conditional Sizing}
+
+When $\hat{r} > 0$:
+\[
+f = \min\left(\frac{\hat{r}}{\sigma_{\hat{r}}^2}, 0.10\right)
+\]
+
+Cap at 10\% of account to limit single-event risk.
+
+\subsubsection{Recommendation Thresholds}
+
+\begin{itemize}
+  \item \textbf{Strong Buy}: $\hat{r} \geq 5\%$
+  \item \textbf{Buy}: $\hat{r} \geq 2\%$
+  \item \textbf{Pass}: $\hat{r} < 2\%$
+\end{itemize}
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Signal interpretation}: Negative coefficients indicate that high implied volatility (relative to history or realized) predicts lower straddle returns---options are overpriced.
+
+  \item \textbf{Model limitations}: Linear regression assumes stable relationships; coefficient drift requires periodic recalibration.
+
+  \item \textbf{Event clustering}: Multiple earnings in the same week can concentrate risk; diversify across dates.
+
+  \item \textbf{Tail risk}: Earnings surprises can cause moves far exceeding expectations; position sizing limits catastrophic losses.
+\end{enumerate}
+
+The strategy is best suited for:
+\begin{itemize}
+  \item Systematic earnings traders with historical databases
+  \item Quantitative investors comfortable with machine learning signals
+  \item Traders willing to accept low win rates with positive expected value
+\end{itemize}
+
+\subsection{Skew Verticals Scanner}
+
+\subsubsection{Motivation}
+
+Volatility skew---the tendency for OTM put IV to exceed ATM IV---reflects demand for downside protection. When skew is extreme relative to history, vertical spreads can profit from skew normalization while providing defined risk.
+
+This framework addresses:
+\begin{itemize}
+  \item Quantifying call and put skew relative to ATM volatility
+  \item Computing skew z-scores for mean reversion signals
+  \item Constructing bull call and bear put vertical spreads
+  \item Scoring opportunities via multi-factor edge analysis
+  \item Estimating probability of profit and expected value
+\end{itemize}
+
+\subsubsection{Skew Metrics}
+
+\paragraph{Normalized Skew}
+
+Call skew (typically negative in equity markets):
+\[
+\text{Skew}_{\text{call}} = \frac{\sigma_{\text{ATM}} - \sigma_{25\Delta\text{ call}}}{\sigma_{\text{ATM}}}
+\]
+
+Put skew (typically positive):
+\[
+\text{Skew}_{\text{put}} = \frac{\sigma_{25\Delta\text{ put}} - \sigma_{\text{ATM}}}{\sigma_{\text{ATM}}}
+\]
+
+\paragraph{Skew Z-Score}
+
+Normalize skew against historical distribution:
+\[
+Z_{\text{skew}} = \frac{\text{Skew}_{\text{curr}} - \mu_{\text{skew}}}{\sigma_{\text{skew}}}
+\]
+
+Extreme z-scores ($|Z| > 2$) signal mean reversion opportunities.
+
+\paragraph{Variance Risk Premium}
+
+The VRP measures richness of options:
+\[
+\text{VRP} = \sigma_{\text{ATM}} - \text{RV}_{30d}
+\]
+
+Positive VRP indicates options are expensive relative to realized volatility.
+
+\subsubsection{Vertical Spread Construction}
+
+\paragraph{Bull Call Spread}
+
+Buy lower-strike call, sell higher-strike call:
+\[
+\text{Debit} = C(K_{\text{long}}) - C(K_{\text{short}})
+\]
+\[
+\text{Max Profit} = (K_{\text{short}} - K_{\text{long}}) - \text{Debit}
+\]
+\[
+\text{Max Loss} = \text{Debit}
+\]
+\[
+\text{Breakeven} = K_{\text{long}} + \text{Debit}
+\]
+
+\paragraph{Bear Put Spread}
+
+Buy higher-strike put, sell lower-strike put:
+\[
+\text{Debit} = P(K_{\text{long}}) - P(K_{\text{short}})
+\]
+\[
+\text{Max Profit} = (K_{\text{long}} - K_{\text{short}}) - \text{Debit}
+\]
+\[
+\text{Max Loss} = \text{Debit}
+\]
+\[
+\text{Breakeven} = K_{\text{long}} - \text{Debit}
+\]
+
+\paragraph{Strike Selection}
+
+Valid strikes must satisfy sanity filters:
+\begin{itemize}
+  \item ATM candidates: Strike within 5\% of spot, $\text{IV} < 200\%$, mid price $\geq \$0.10$
+  \item Short leg candidates: Strike 5--15\% from long strike, $\text{IV} < 200\%$, $\text{IV} < 2.5 \times \sigma_{\text{ATM}}$
+  \item Minimum reward/risk: $\geq 1.5:1$ for debit spreads, $\geq 0.1:1$ for credit spreads
+\end{itemize}
+
+The relaxed IV ceiling of 200\% (vs.\ 100\%) accommodates high-volatility names where OTM options routinely exceed 100\% IV.
+
+\subsubsection{Probability of Profit}
+
+\paragraph{Lognormal Approximation}
+
+Assuming lognormal price distribution:
+\[
+\text{POP} = N\left(\frac{\ln(\text{Breakeven}/S)}{\sigma\sqrt{T}}\right)
+\]
+
+where $N(\cdot)$ is the standard normal CDF.
+
+For bull call spreads, POP increases as the breakeven approaches the current price.
+
+\paragraph{Expected Value}
+
+\[
+E[V] = \text{POP} \times \text{Max Profit} - (1 - \text{POP}) \times \text{Max Loss}
+\]
+
+\[
+\text{Expected Return} = \frac{E[V]}{\text{Debit}} \times 100\%
+\]
+
+\subsubsection{Multi-Factor Edge Score}
+
+A composite score (0--100) combines multiple factors:
+
+\begin{itemize}
+  \item \textbf{Skew component} (40 points): $\min(|Z_{\text{skew}}| \times 10, 40)$
+  \item \textbf{Momentum component} (20 points): Directional alignment with price trend
+  \item \textbf{Reward/risk component} (30 points): Tiered by ratio
+    \begin{itemize}
+      \item $\geq 10:1 \to 30$ points
+      \item $\geq 7:1 \to 25$ points
+      \item $\geq 5:1 \to 20$ points
+      \item $\geq 3:1 \to 10$ points
+    \end{itemize}
+  \item \textbf{Expected value component} (10 points): Tiered by return
+    \begin{itemize}
+      \item $\geq 50\% \to 10$ points
+      \item $\geq 20\% \to 7$ points
+      \item $\geq 0\% \to 0$ points
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Filter Criteria}
+
+Opportunities must pass:
+\begin{itemize}
+  \item Skew filter: $Z_{\text{skew}} < -2.0$ (extreme skew)
+  \item IV/RV filter: $\text{VRP} > 0$ (positive variance risk premium) and $\text{OTM IV} > \text{RV}$
+  \item Momentum filter: Score $> 0.3$ for bull calls, score $< -0.3$ for bear puts
+\end{itemize}
+
+The IV/RV filter ensures options are overpriced relative to realized volatility. Positive VRP indicates the market systematically pays more for volatility protection than historical moves justify, creating edge for premium sellers.
+
+\subsubsection{Recommendation Thresholds}
+
+\begin{itemize}
+  \item \textbf{Strong Buy}: Edge score $\geq 60$ and all filters pass
+  \item \textbf{Buy}: Edge score $\geq 40$
+  \item \textbf{Pass}: Edge score $< 40$ or filter failure
+\end{itemize}
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Skew mean reversion}: Extreme skew tends to normalize; selling expensive OTM options via spreads captures this convergence.
+
+  \item \textbf{Defined risk}: Vertical spreads cap maximum loss at the debit paid, unlike naked option sales.
+
+  \item \textbf{Momentum alignment}: Trading with the trend increases probability of profit; counter-trend trades require stronger skew signals.
+
+  \item \textbf{Liquidity considerations}: Wide bid-ask spreads on OTM options reduce edge; prefer liquid underlyings.
+\end{enumerate}
+
+The strategy is best suited for:
+\begin{itemize}
+  \item Options traders seeking defined-risk directional exposure
+  \item Systematic scanners monitoring skew across multiple underlyings
+  \item Investors comfortable with multi-factor signal combination
+\end{itemize}
+
+\subsection{Perpetual Futures Pricing}
+
+Perpetual futures are derivatives contracts without expiration dates, dominant in cryptocurrency markets. The anchoring of futures price to spot is achieved via periodic funding payments. This section implements the no-arbitrage pricing framework.
+
+\subsubsection{Contract Types}
+
+\paragraph{Linear Perpetual Futures}
+
+A linear perpetual provides exposure to one unit of base currency $b$ from the perspective of an investor in quote currency $a$. The futures price $f_t$ is quoted in units of $a$ and margining is in currency $a$.
+
+\paragraph{Inverse Perpetual Futures}
+
+An inverse perpetual uses the base currency $b$ for margining and settlement. The contract size is expressed in units of quote currency $a$. This allows speculation on the exchange rate without holding fiat currency.
+
+\paragraph{Quanto Perpetual Futures}
+
+A quanto perpetual uses a third currency $c$ (different from $a$ and $b$) for margining and settlement. The payoff requires a convexity adjustment for the correlation between the two exchange rates.
+
+\subsubsection{Funding Mechanism}
+
+The funding payment from long to short consists of two components:
+\begin{enumerate}
+  \item \textbf{Premium term}: $\kappa_t(f_t - x_t)$ where $\kappa_t > 0$ controls anchoring intensity
+  \item \textbf{Interest term}: $\iota_t x_t$ reflecting interest rate differential
+\end{enumerate}
+
+The cash flow at time $t+1$ from a long position is:
+\[
+(f_{t+1} - f_t) - \kappa_t(f_t - x_t) - \iota_t x_t
+\]
+
+\subsubsection{No-Arbitrage Pricing}
+
+\paragraph{Linear Perpetual Futures Price}
+
+Under constant interest rates $r_a$, $r_b$ and funding parameters $\kappa$, $\iota$:
+
+\textbf{Discrete-time} (Proposition 1):
+\[
+f_t = \frac{(\kappa - \iota)(1 + r_b)}{r_b - r_a + \kappa(1 + r_b)} \cdot x_t
+\]
+
+\textbf{Continuous-time} (Proposition 3):
+\[
+f_t = \frac{\kappa - \iota}{\kappa + r_b - r_a} \cdot x_t
+\]
+
+subject to the condition $\kappa + r_b - r_a > 0$.
+
+\paragraph{Inverse Perpetual Futures Price}
+
+Let $x_t^* = 1/x_t$ denote the $a/b$ exchange rate.
+
+\textbf{Continuous-time} (Proposition 4):
+\[
+f_{I,t} = \frac{\kappa_I + r_a - r_b}{\kappa_I - \iota_I} \cdot x_t
+\]
+
+\paragraph{Quanto Perpetual Futures Price}
+
+For a contract on the $c/a$ exchange rate $z_t$, margined in currency $b$:
+\[
+f_{q,t} = \frac{\kappa - \iota}{r_c - \sigma_x^* \sigma_z - r_a + \kappa} \cdot z_t
+\]
+
+where $\sigma_x^* \sigma_z$ is the covariance between the two exchange rates (convexity adjustment).
+
+\subsubsection{Perfect Anchoring}
+
+The interest factor that guarantees $f_t = x_t$ at all times:
+
+\textbf{Linear} (Corollary 1):
+\[
+\iota_t = \frac{r_{a,t} - r_{b,t}}{1 + r_{b,t}} < \kappa_t \quad \text{(discrete)}
+\]
+\[
+\iota_t = r_{a,t} - r_{b,t} < \kappa_t \quad \text{(continuous)}
+\]
+
+\textbf{Inverse} (Corollary 2):
+\[
+\iota_{I,t} = \frac{r_{b,t} - r_{a,t}}{1 + r_{a,t}} < \kappa_{I,t} \quad \text{(discrete)}
+\]
+
+\subsubsection{Random Maturity Representation}
+
+A key result is that the perpetual futures price equals the risk-neutral expectation of the spot at a random time:
+\[
+f_t = E^{Q_a}_t[x_{\theta_t}]
+\]
+
+where $\theta_t$ is distributed according to:
+\begin{itemize}
+  \item \textbf{Discrete}: $\theta \sim \text{Geometric}(\kappa)$ with mean $1/\kappa$
+  \item \textbf{Continuous}: $\theta \sim \text{Exponential}(\kappa)$ with mean $1/\kappa$
+\end{itemize}
+
+\subsubsection{Basis Analysis}
+
+The basis (futures minus spot) under constant parameters:
+\[
+\text{Basis} = f_t - x_t = \left(\frac{\kappa - \iota}{\kappa + r_b - r_a} - 1\right) x_t
+\]
+
+\begin{itemize}
+  \item \textbf{Contango} ($f_t > x_t$): When $r_a > r_b$ (quote currency has higher interest)
+  \item \textbf{Backwardation} ($f_t < x_t$): When $r_b > r_a$ (base currency has higher interest)
+\end{itemize}
+
+The magnitude of basis is:
+\begin{enumerate}
+  \item Increasing in $|r_a - r_b|$ (interest rate spread)
+  \item Decreasing in $\kappa$ (anchoring intensity)
+  \item Zero when $\iota = r_a - r_b$ (perfect anchoring)
+\end{enumerate}
+
+\subsubsection{Everlasting Options}
+
+Everlasting options track a function $\varphi(x_t)$ of the spot price instead of the spot itself. The price is:
+\[
+f_{o,t} = E^{Q_a}_t\left[\varphi(x_{\theta_{o,t}})\right]
+\]
+
+where $\theta_{o,t} \sim \text{Exponential}(\kappa_o)$.
+
+\paragraph{Black-Scholes Everlasting Options}
+
+Assume the exchange rate follows geometric Brownian motion:
+\[
+dx_t/x_t = (r_a - r_b)dt + \sigma_x^* dZ_t^a
+\]
+
+\textbf{Everlasting Call} (Proposition 6):
+\[
+c(x) = \begin{cases}
+x^\Theta K^{1-\Theta} \cdot \frac{\Pi(r_a-r_b)-\kappa}{(\Pi-\Theta)(\kappa-r_a+r_b)} & x \leq K \\[8pt]
+x^\Pi K^{1-\Pi} \cdot \frac{\Theta(r_a-r_b)-\kappa}{(\Pi-\Theta)(\kappa-r_a+r_b)} + f(x) - K & x > K
+\end{cases}
+\]
+
+where $\Pi < 0$ and $\Theta > 1$ are roots of:
+\[
+(r_a - r_b)\xi + \frac{1}{2}\xi(\xi-1)\|\sigma_x\|^2 - \kappa = 0
+\]
+
+and $f(x) = \kappa x / (\kappa - r_a + r_b)$ is the perpetual futures price with $\iota = 0$.
+
+\textbf{Put-Call Parity}:
+\[
+c_t - p_t = f(x_t) - K
+\]
+
+\paragraph{Greeks}
+
+\textbf{Call Delta}:
+\[
+\Delta_c(x) = \begin{cases}
+\Theta \cdot x^{\Theta-1} K^{1-\Theta} \cdot \text{coef}_1 & x \leq K \\
+\Pi \cdot x^{\Pi-1} K^{1-\Pi} \cdot \text{coef}_2 + f'(x) & x > K
+\end{cases}
+\]
+
+where $f'(x) = \kappa/(\kappa - r_a + r_b)$.
+
+\subsubsection{Implementation}
+
+The module provides:
+
+\begin{enumerate}
+  \item \textbf{Perpetual futures pricing}: Linear, inverse, and quanto contracts
+  \item \textbf{Funding analysis}: Perfect anchoring interest factors
+  \item \textbf{Basis computation}: Theoretical vs market basis
+  \item \textbf{Everlasting options}: Black-Scholes pricing with Greeks
+  \item \textbf{Market data}: Real-time funding rates from exchanges
+\end{enumerate}
+
+\subsubsection{Practical Considerations}
+
+\paragraph{Funding Rate Annualization}
+
+Most exchanges use 8-hour funding periods (3 per day):
+\[
+\kappa_{\text{annual}} = \kappa_{8h} \times 3 \times 365 = 1095 \times \kappa_{8h}
+\]
+
+\paragraph{Interest Rate Proxy}
+
+For cryptocurrency perpetuals:
+\begin{itemize}
+  \item $r_a$ (USD): Use Fed Funds rate or SOFR ($\approx 4$--$5\%$ as of 2025)
+  \item $r_b$ (BTC/ETH): Typically assumed $\approx 0$ or use staking yield
+\end{itemize}
+
+\paragraph{Arbitrage Opportunities}
+
+When market futures price deviates from theoretical price:
+\begin{itemize}
+  \item \textbf{Market $>$ Theoretical}: Short futures, long spot (cash-and-carry)
+  \item \textbf{Market $<$ Theoretical}: Long futures, short spot (reverse cash-and-carry)
+\end{itemize}
+
+\newpage\subsection{Liquidity Analysis}
+
+Liquidity analysis evaluates a security's tradability via price impact, volume characteristics, and spread metrics. Two complementary frameworks are implemented: a structural liquidity scoring system and a predictive volume signal engine.
+
+\subsubsection{Structural Liquidity Metrics}
+
+\paragraph{Amihud Illiquidity Ratio}
+
+The Amihud (2002) illiquidity ratio measures price impact per unit of trading volume:
+\[
+\text{ILLIQ} = \frac{1}{D} \sum_{d=1}^{D} \frac{|R_d|}{V_d^{\$}} \times 10^6
+\]
+
+\begin{itemize}
+  \item[] $R_d$: daily return on day $d$
+  \item[] $V_d^{\$} = P_d \times \text{Volume}_d$: dollar volume
+  \item[] $D$: lookback window (default 20 days)
+\end{itemize}
+
+Lower values indicate higher liquidity; ILLIQ $< 0.01$ signals highly liquid large-caps, while ILLIQ $> 10$ suggests severe illiquidity.
+
+\paragraph{Turnover Ratio}
+
+Turnover measures the fraction of shares outstanding traded per day:
+\[
+\text{Turnover} = \frac{\bar{V}_D}{\text{Shares Outstanding}}
+\]
+
+where $\bar{V}_D$ is the average daily volume over the lookback window. Turnover $> 5\%$ indicates active trading interest; turnover $< 0.1\%$ suggests a thinly traded name.
+
+\paragraph{Spread Proxy}
+
+In the absence of tick-level bid-ask data, the high-low range serves as a spread proxy:
+\[
+\text{Spread Proxy}(\%) = \frac{1}{D} \sum_{d=1}^{D} \frac{H_d - L_d}{C_d} \times 100
+\]
+
+where $H_d$, $L_d$, $C_d$ are the daily high, low, and close. Spread $< 0.5\%$ is tight; spread $> 3\%$ indicates significant friction.
+
+\paragraph{Volume Volatility}
+
+The coefficient of variation of volume measures trading consistency:
+\[
+\text{VV} = \frac{\sigma(\text{Volume})}{\mu(\text{Volume})}
+\]
+
+Low volume volatility (VV $< 0.3$) indicates stable, predictable liquidity; high values (VV $> 1.0$) signal erratic trading patterns.
+
+\paragraph{Relative Volume}
+
+Relative volume compares the latest session's volume to its recent average:
+\[
+\text{RVOL} = \frac{V_{\text{today}}}{\bar{V}_{D}}
+\]
+
+RVOL $\geq 2.0\times$ constitutes a volume surge; RVOL $\ll 1.0$ indicates unusual quietness.
+
+\subsubsection{Composite Liquidity Score}
+
+The composite score aggregates structural metrics on a 0--100 scale, starting from a base of 50 and adjusting by tier:
+
+\begin{center}
+\begin{tabular}{lcc}
+\textbf{Metric} & \textbf{Condition} & \textbf{Adjustment} \\
+\hline
+Amihud & $< 0.01$ & $+15$ \\
+Amihud & $> 10$ & $-15$ \\
+Turnover & $> 5\%$ & $+15$ \\
+Turnover & $< 0.1\%$ & $-10$ \\
+Vol Volatility & $< 0.3$ & $+10$ \\
+Vol Volatility & $> 1.0$ & $-10$ \\
+Spread Proxy & $< 0.5\%$ & $+10$ \\
+Spread Proxy & $> 3.0\%$ & $-10$ \\
+\end{tabular}
+\end{center}
+
+\[
+\text{Liquidity Score} = \text{clamp}\left( 50 + \sum \text{adjustments}, \; 0, \; 100 \right)
+\]
+
+Tiers: Excellent ($\geq 80$), Good ($\geq 65$), Fair ($\geq 50$), Poor ($\geq 35$), Very Poor ($< 35$).
+
+\subsubsection{Volume-Based Predictive Signals}
+
+\paragraph{On-Balance Volume (OBV)}
+
+OBV is a cumulative indicator that links volume to price direction:
+\[
+\text{OBV}_t = \text{OBV}_{t-1} + \text{sign}(R_t) \cdot V_t
+\]
+
+where $\text{sign}(R_t) = +1$ if $C_t > C_{t-1}$, $-1$ if $C_t < C_{t-1}$, and $0$ otherwise.
+
+\textbf{Divergence detection}: Compare the linear regression slopes of price and OBV over a window $w$. Bullish divergence occurs when price slopes down but OBV slopes up; bearish divergence is the reverse.
+
+\[
+\text{OBV Strength} = \min\left(100, \; \frac{|\text{slope}(\text{OBV})|} {\bar{V}_w} \times 100\right)
+\]
+
+Divergence signals are scaled by a factor of 0.7 relative to confirmation signals.
+
+\paragraph{Volume Surge Detection}
+
+A surge is flagged when the current volume exceeds the prior-window average by a threshold multiple:
+\[
+\text{Surge} = \mathbb{I}\!\left[ \frac{V_{\text{today}}}{\bar{V}_w} \geq \tau \right], \quad \tau = 2.0
+\]
+
+Surges often precede breakouts or breakdowns and warrant attention regardless of direction.
+
+\paragraph{Smart Money Flow}
+
+Volume-weighted return estimates net institutional participation:
+\[
+\text{SMF} = \frac{\sum_{d=1}^{w} R_d \cdot V_d}{\sum_{d=1}^{w} V_d} \times 100
+\]
+
+SMF $> 1.0$ suggests accumulation (net buying on volume); SMF $< -1.0$ suggests distribution.
+
+\subsubsection{Composite Signal Score}
+
+The predictive signal score combines five indicators via weighted sum:
+
+\[
+S = 0.30 \cdot \text{OBV}_{\text{str}} + 0.20 \cdot (\text{RVOL} - 1) \cdot 20 + 0.20 \cdot \text{Vol Slope} + 0.15 \cdot \rho_{|R|,V} \cdot 30 + 0.15 \cdot \text{SMF} \cdot 5
+\]
+
+\begin{itemize}
+  \item[] $\text{OBV}_{\text{str}}$: OBV strength (directional)
+  \item[] $\text{Vol Slope}$: volume trend slope (\%/day)
+  \item[] $\rho_{|R|,V}$: correlation between absolute returns and volume changes
+  \item[] $\text{SMF}$: smart money flow
+\end{itemize}
+
+Classification: Strong Bullish ($S > 30$), Bullish ($S > 10$), Neutral, Bearish ($S < -10$), Strong Bearish ($S < -30$).
+
+\subsubsection{Interpretation}
+
+\begin{enumerate}
+  \item \textbf{Structural vs predictive}: The liquidity score measures current tradability; the signal score forecasts directional pressure from volume patterns.
+
+  \item \textbf{Volume precedes price}: OBV divergences and smart money flow often lead price by several sessions, providing early warning of trend changes.
+
+  \item \textbf{Liquidity and volatility}: Illiquid names exhibit higher volatility and wider spreads during stress; the Amihud ratio captures this nonlinearly.
+
+  \item \textbf{Position sizing}: Low liquidity scores should translate to smaller position sizes to avoid excessive market impact.
+\end{enumerate}

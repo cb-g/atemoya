@@ -1,0 +1,5 @@
+(executable
+ (name main)
+ (public_name dcf_reit)
+ (libraries dcf_reit yojson)
+ (preprocess (pps ppx_deriving.show)))

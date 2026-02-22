@@ -1,0 +1,40 @@
+{
+  "market": {
+    "ticker": "STWD",
+    "price": 18.06,
+    "shares_outstanding": 370331329,
+    "market_cap": 6861559808,
+    "dividend_yield": 0.1063,
+    "dividend_per_share": 1.92,
+    "currency": "USD",
+    "sector": "mortgage",
+    "reit_type": "mortgage"
+  },
+  "financial": {
+    "revenue": 961901000.0,
+    "net_income": 359933000.0,
+    "depreciation": 43943200.0,
+    "amortization": 2312800.0,
+    "gains_on_sales": 0,
+    "impairments": 0,
+    "straight_line_rent_adj": 0,
+    "stock_compensation": 41786000.0,
+    "maintenance_capex": 0,
+    "development_capex": 0,
+    "total_debt": 9006280000.0,
+    "cash": 377831000.0,
+    "total_assets": 62556497000.0,
+    "total_equity": 6437107000.0,
+    "book_value_per_share": 18.54,
+    "noi": 0.0,
+    "occupancy_rate": 0.0,
+    "same_store_noi_growth": 0.0,
+    "weighted_avg_lease_term": 0.0,
+    "lease_expiration_1yr": 0.0,
+    "interest_income": 1764872000.0,
+    "interest_expense": 1348693000.0,
+    "net_interest_income": 416179000.0,
+    "earning_assets": 62178666000.0,
+    "distributable_earnings": 406189000.0
+  }
+}

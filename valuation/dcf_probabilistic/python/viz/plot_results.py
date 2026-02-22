@@ -7,15 +7,13 @@ import argparse
 import sys
 from pathlib import Path
 
-try:
-    import pandas as pd
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from scipy.stats import gaussian_kde
-except ImportError:
-    print("Error: Required packages not installed.", file=sys.stderr)
-    print("Run: pip install pandas numpy matplotlib scipy", file=sys.stderr)
-    sys.exit(1)
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from lib.python.theme import save_figure
 
 
 # Kanagawa Dragon color palette (dark mode)
@@ -125,10 +123,8 @@ def plot_kde_distribution(ticker, simulations, price, output_file, method="FCFE"
     ax.grid(True, alpha=0.3, linewidth=0.6)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"KDE plot saved: {output_file}")
 
 
 def plot_value_surplus_distribution(ticker, simulations, price, output_file, method="FCFE", dark_mode=False):
@@ -180,10 +176,8 @@ def plot_value_surplus_distribution(ticker, simulations, price, output_file, met
     ax.grid(True, alpha=0.3, linewidth=0.6)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Surplus distribution plot saved: {output_file}")
 
 
 def plot_combined_kde_distribution(ticker, fcfe_sims, fcff_sims, price, output_file):
@@ -244,10 +238,8 @@ def plot_combined_kde_distribution(ticker, fcfe_sims, fcff_sims, price, output_f
     ax2.grid(True, alpha=0.3, linewidth=0.6)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
-
-    print(f"Combined KDE plot saved: {output_file}")
 
 
 def plot_combined_surplus_distribution(ticker, fcfe_sims, fcff_sims, price, output_file):
@@ -310,34 +302,115 @@ def plot_combined_surplus_distribution(ticker, fcfe_sims, fcff_sims, price, outp
     ax2.grid(True, alpha=0.3, linewidth=0.6)
 
     plt.tight_layout()
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    save_figure(fig, output_file, dpi=300)
     plt.close()
 
-    print(f"Combined surplus plot saved: {output_file}")
+
+def detect_specialized_model(ticker, summary_df):
+    """Detect if a ticker uses a specialized model from the summary CSV.
+    Returns model_type string: 'standard', 'bank', 'insurance', 'oil_gas'."""
+    if summary_df is not None and 'model_type' in summary_df.columns:
+        row = summary_df[summary_df['ticker'] == ticker]
+        if not row.empty:
+            return row['model_type'].values[0]
+    return 'standard'
+
+
+def get_specialized_label(model_type):
+    """Get display labels for specialized models."""
+    labels = {
+        'bank': ('Excess Return Model', 'Fair Value'),
+        'insurance': ('Float-Based Model', 'Fair Value'),
+        'oil_gas': ('NAV Model', 'Fair Value'),
+    }
+    return labels.get(model_type, ('FCFE/FCFF', None))
+
+
+def plot_single_kde_distribution(ticker, simulations, price, output_file, model_label, value_label):
+    """Plot single KDE distribution for specialized models."""
+    dist_color = KANAGAWA_DRAGON['cyan']
+    price_color = KANAGAWA_DRAGON['red']
+    mean_color = KANAGAWA_DRAGON['yellow']
+    upside_color = KANAGAWA_DRAGON['green']
+    downside_color = KANAGAWA_DRAGON['red']
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    kde = gaussian_kde(simulations)
+    x_range = np.linspace(simulations.min() * 0.8, simulations.max() * 1.2, 1000)
+    density = kde(x_range)
+
+    ax.plot(x_range, density, color=dist_color, linewidth=2, label=f'{value_label} Distribution')
+    ax.fill_between(x_range, density, alpha=0.3, color=dist_color)
+
+    ax.fill_between(x_range[x_range > price], density[x_range > price], alpha=0.2, color=upside_color, label='Upside Potential')
+    ax.fill_between(x_range[x_range < price], density[x_range < price], alpha=0.2, color=downside_color, label='Downside Risk')
+
+    ax.axvline(price, color=price_color, linestyle='--', linewidth=2, label=f'Market Price: ${price:.2f}')
+    mean_val = simulations.mean()
+    ax.axvline(mean_val, color=mean_color, linestyle='--', linewidth=2, label=f'Mean: ${mean_val:.2f}')
+
+    prob_under = (simulations > price).mean()
+    ax.set_xlabel('Intrinsic Value per Share ($)', fontsize=12)
+    ax.set_ylabel('Probability Density', fontsize=12)
+    ax.set_title(f'{ticker} - {model_label} Distribution\nP(Undervalued) = {prob_under:.1%}', fontsize=14)
+    ax.legend(fontsize=10)
+    ax.grid(True, alpha=0.3, linewidth=0.6)
+
+    plt.tight_layout()
+    save_figure(fig, output_file, dpi=300)
+    plt.close()
+
+
+def plot_single_surplus_distribution(ticker, simulations, price, output_file, model_label, value_label):
+    """Plot single surplus distribution for specialized models."""
+    dist_color = KANAGAWA_DRAGON['cyan']
+    price_color = KANAGAWA_DRAGON['red']
+    mean_color = KANAGAWA_DRAGON['yellow']
+    upside_color = KANAGAWA_DRAGON['green']
+    downside_color = KANAGAWA_DRAGON['red']
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    surplus_pct = (simulations - price) / price * 100
+    kde = gaussian_kde(surplus_pct)
+    x_range = np.linspace(surplus_pct.min() * 1.2, surplus_pct.max() * 1.2, 1000)
+    density = kde(x_range)
+
+    ax.plot(x_range, density, color=dist_color, linewidth=2, label=f'{value_label} Surplus')
+    ax.fill_between(x_range, density, alpha=0.3, color=dist_color)
+
+    ax.fill_between(x_range[x_range > 0], density[x_range > 0], alpha=0.2, color=upside_color, label='Upside Potential')
+    ax.fill_between(x_range[x_range < 0], density[x_range < 0], alpha=0.2, color=downside_color, label='Downside Risk')
+
+    ax.axvline(0, color=price_color, linestyle='--', linewidth=2, label='Market Price (0%)')
+    mean_surplus = surplus_pct.mean()
+    ax.axvline(mean_surplus, color=mean_color, linestyle='--', linewidth=2, label=f'Mean Surplus: {mean_surplus:.1f}%')
+
+    ax.set_xlabel('Value Surplus (%)', fontsize=12)
+    ax.set_ylabel('Probability Density', fontsize=12)
+    ax.set_title(f'{ticker} - {model_label} Value Surplus Distribution', fontsize=14)
+    ax.legend(fontsize=10)
+    ax.grid(True, alpha=0.3, linewidth=0.6)
+
+    plt.tight_layout()
+    save_figure(fig, output_file, dpi=300)
+    plt.close()
 
 
 def main():
     parser = argparse.ArgumentParser(description="Visualize probabilistic DCF results")
-    parser.add_argument("--output-dir", default="../output", help="Output directory with CSV files")
-    parser.add_argument("--viz-dir", default="../output", help="Directory to save visualizations")
+    parser.add_argument("--output-dir", default="valuation/dcf_probabilistic/output", help="Base output directory")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
 
-    # Create organized directory structure
+    # Create organized directory structure under base output dir
     data_dir = output_dir / "data"
     single_asset_dir = output_dir / "single_asset"
 
     data_dir.mkdir(parents=True, exist_ok=True)
     single_asset_dir.mkdir(parents=True, exist_ok=True)
-
-    # For backward compatibility, also accept old viz_dir argument
-    if args.viz_dir != "../output":
-        output_dir = Path(args.viz_dir)
-        data_dir = output_dir / "data"
-        single_asset_dir = output_dir / "single_asset"
-        data_dir.mkdir(parents=True, exist_ok=True)
-        single_asset_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         # Load data from data directory (try new structure first, fall back to old)
@@ -361,6 +434,12 @@ def main():
         fcff_sims = pd.read_csv(fcff_matrix_file)
         prices = pd.read_csv(prices_file)
 
+        # Load summary for model_type detection
+        summary_file = data_dir / "probabilistic_summary.csv"
+        summary_df = None
+        if summary_file.exists():
+            summary_df = pd.read_csv(summary_file)
+
         # Set up dark mode (Kanagawa Dragon)
         setup_dark_mode()
 
@@ -375,16 +454,36 @@ def main():
             fcfe_vals = fcfe_sims[ticker].dropna().values
             fcff_vals = fcff_sims[ticker].dropna().values
 
-            # Generate combined plots
-            if len(fcfe_vals) > 10 and len(fcff_vals) > 10:
-                plot_combined_kde_distribution(
-                    ticker, fcfe_vals, fcff_vals, price,
-                    single_asset_dir / f"{ticker}_kde_combined.png"
+            if len(fcfe_vals) <= 10:
+                continue
+
+            # Detect model type
+            model_type = detect_specialized_model(ticker, summary_df)
+
+            if model_type in ('bank', 'insurance', 'oil_gas'):
+                # Specialized model: single distribution
+                model_label, value_label = get_specialized_label(model_type)
+                plot_single_kde_distribution(
+                    ticker, fcfe_vals, price,
+                    single_asset_dir / f"{ticker}_kde_combined.png",
+                    model_label, value_label
                 )
-                plot_combined_surplus_distribution(
-                    ticker, fcfe_vals, fcff_vals, price,
-                    single_asset_dir / f"{ticker}_surplus_combined.png"
+                plot_single_surplus_distribution(
+                    ticker, fcfe_vals, price,
+                    single_asset_dir / f"{ticker}_surplus_combined.png",
+                    model_label, value_label
                 )
+            else:
+                # Standard model: dual FCFE/FCFF distributions
+                if len(fcff_vals) > 10:
+                    plot_combined_kde_distribution(
+                        ticker, fcfe_vals, fcff_vals, price,
+                        single_asset_dir / f"{ticker}_kde_combined.png"
+                    )
+                    plot_combined_surplus_distribution(
+                        ticker, fcfe_vals, fcff_vals, price,
+                        single_asset_dir / f"{ticker}_surplus_combined.png"
+                    )
 
         print(f"\nAll visualizations saved to: {single_asset_dir}")
 

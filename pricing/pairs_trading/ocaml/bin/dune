@@ -1,0 +1,4 @@
+(executable
+ (name main)
+ (public_name pairs_trading)
+ (libraries pairs_trading_lib))
