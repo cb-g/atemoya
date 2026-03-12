@@ -60,6 +60,92 @@ print_info() {
     echo -e "${BLUE}ℹ $1${NC}"
 }
 
+# Prompt for ticker source: manual entry, all_liquid, or a price-segment file.
+# Sets the variable $ticker_arg to pass to --tickers.
+# Usage: pick_ticker_source "default_ticker"
+pick_ticker_source() {
+    local default_ticker="${1:-TSLA}"
+    local segment_dir="pricing/liquidity/data"
+
+    echo -e "\n${YELLOW}Ticker source:${NC}"
+    echo -e "  ${GREEN}1)${NC} Enter ticker(s) manually (default: $default_ticker)"
+    echo -e "  ${GREEN}2)${NC} All liquid optionables (liquid_options.txt)"
+
+    # List available segment files (prefer liquid_options segments, fall back to liquid_tickers)
+    local segments=()
+    if compgen -G "$segment_dir/liquid_options_*_USD.txt" > /dev/null 2>&1; then
+        while IFS= read -r f; do
+            segments+=("$f")
+        done < <(ls "$segment_dir"/liquid_options_*_USD.txt 2>/dev/null | sort -V)
+    elif compgen -G "$segment_dir/liquid_tickers_*_USD.txt" > /dev/null 2>&1; then
+        while IFS= read -r f; do
+            segments+=("$f")
+        done < <(ls "$segment_dir"/liquid_tickers_*_USD.txt 2>/dev/null | sort -V)
+    fi
+
+    if [[ ${#segments[@]} -gt 0 ]]; then
+        echo -e "  ${GREEN}3)${NC} Price segment (pick from available segments)"
+    fi
+
+    echo ""
+    echo -e "${YELLOW}Enter choice (default: 1):${NC} "
+    read -r source_choice
+
+    case ${source_choice:-1} in
+        1)
+            echo -e "${YELLOW}Enter ticker(s), comma-separated (default: $default_ticker):${NC} "
+            read -r ticker_arg
+            ticker_arg=${ticker_arg:-$default_ticker}
+            ;;
+        2)
+            ticker_arg="all_liquid"
+            local count=0
+            if [[ -f "$segment_dir/liquid_options.txt" ]]; then
+                count=$(wc -l < "$segment_dir/liquid_options.txt" | tr -d ' ')
+            fi
+            print_info "Using all $count liquid optionables"
+            ;;
+        3)
+            if [[ ${#segments[@]} -eq 0 ]]; then
+                print_error "No segment files found. Run 'Subset Liquid Tickers by Price' first."
+                ticker_arg=""
+                return 1
+            fi
+            echo ""
+            for i in "${!segments[@]}"; do
+                local fname
+                fname=$(basename "${segments[$i]}" .txt)
+                local count
+                count=$(wc -l < "${segments[$i]}" | tr -d ' ')
+                # Pretty-print: liquid_tickers_1_to_10_USD -> $1-$10
+                local label
+                label=$(echo "$fname" | sed 's/liquid_options_//;s/liquid_tickers_//;s/_USD//;s/\([0-9]*\)_to_\([0-9]*\)/$\1-$\2/;s/^above_/above $/')
+                echo -e "  ${GREEN}$((i+1)))${NC} $label ($count tickers)"
+            done
+            echo ""
+            echo -e "${YELLOW}Pick a segment:${NC} "
+            read -r seg_choice
+            seg_choice=${seg_choice:-1}
+            local idx=$((seg_choice - 1))
+            if [[ $idx -ge 0 && $idx -lt ${#segments[@]} ]]; then
+                ticker_arg="${segments[$idx]}"
+                local count
+                count=$(wc -l < "$ticker_arg" | tr -d ' ')
+                print_info "Using segment: $(basename "$ticker_arg") ($count tickers)"
+            else
+                print_error "Invalid choice"
+                ticker_arg=""
+                return 1
+            fi
+            ;;
+        *)
+            print_error "Invalid choice"
+            ticker_arg=""
+            return 1
+            ;;
+    esac
+}
+
 # Check if we're in the project root
 check_project_root() {
     if [[ ! -f "dune-project" ]] || [[ ! -f "pyproject.toml" ]]; then
@@ -2481,11 +2567,20 @@ show_liquidity_menu() {
     while true; do
         echo ""
         echo -e "${BLUE}═══ Liquidity Analysis ═══${NC}\n"
+        echo -e "${DIM}Feeds into: Skew Trading, Variance Swaps, Pre-Earnings Straddle collectors${NC}"
+        echo -e "${DIM}Gate 1 (stock liquidity) → Gate 2 (option chain coverage) → price segments${NC}"
+        echo ""
         echo -e "${GREEN}1)${NC} Fetch Market Data"
         echo -e "${GREEN}2)${NC} Run Liquidity Analysis"
         echo -e "${GREEN}3)${NC} Generate Dashboard"
         echo -e "${GREEN}4)${NC} Generate Single Ticker Detail"
         echo -e "${GREEN}5)${NC} Run Full Workflow"
+        echo ""
+        echo -e "${CYAN}--- Optionable Screening ---${NC}"
+        echo -e "${GREEN}6)${NC} Fetch Optionable Tickers (CBOE)"
+        echo -e "${GREEN}7)${NC} Screen Optionables for Liquidity"
+        echo -e "${GREEN}8)${NC} Screen Options Chain Depth"
+        echo -e "${GREEN}9)${NC} Subset Liquid Tickers by Price"
         echo ""
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
@@ -2498,6 +2593,10 @@ show_liquidity_menu() {
             3) plot_liquidity_dashboard ;;
             4) plot_liquidity_single ;;
             5|"") run_liquidity_full_workflow ;;
+            6) fetch_optionable_tickers ;;
+            7) screen_optionables_for_liquidity ;;
+            8) screen_options_chain_depth ;;
+            9) subset_liquid_by_price ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -2621,6 +2720,132 @@ run_liquidity_full_workflow() {
     fi
 
     print_success "Full workflow complete!"
+}
+
+fetch_optionable_tickers() {
+    print_header "Fetch Optionable Tickers from CBOE"
+
+    uv run pricing/liquidity/python/fetch/fetch_optionable_tickers.py
+
+    if [[ -f "pricing/liquidity/data/optionable_tickers.csv" ]]; then
+        local count
+        count=$(tail -n +2 pricing/liquidity/data/optionable_tickers.csv | wc -l)
+        print_success "Saved $count optionable tickers to pricing/liquidity/data/optionable_tickers.csv"
+    else
+        print_error "Failed to fetch optionable tickers"
+    fi
+}
+
+screen_optionables_for_liquidity() {
+    print_header "Screen Optionables for Liquidity"
+
+    if [[ ! -f "pricing/liquidity/data/optionable_tickers.csv" ]]; then
+        print_error "No optionable tickers found. Run 'Fetch Optionable Tickers' first."
+        return 1
+    fi
+
+    local count
+    count=$(tail -n +2 pricing/liquidity/data/optionable_tickers.csv | wc -l)
+    print_info "Screening $count optionable tickers (score >= 75)"
+    print_info "This is a long-running process (~17h for full run). Resumable if interrupted."
+
+    echo -e "${YELLOW}Batch size (Enter=100):${NC}"
+    read -r batch_size
+    batch_size=${batch_size:-20}
+
+    echo -e "${YELLOW}Delay between tickers in seconds (Enter=10):${NC}"
+    read -r delay
+    delay=${delay:-10}
+
+    echo -e "${YELLOW}Start fresh? Ignore previous progress? (y/N):${NC}"
+    read -r fresh
+    local resume_flag=""
+    if [[ "$fresh" == "y" || "$fresh" == "Y" ]]; then
+        resume_flag="--no-resume"
+    fi
+
+    uv run pricing/liquidity/python/fetch/filter_liquid_tickers.py \
+        --batch-size "$batch_size" \
+        --delay "$delay" \
+        $resume_flag
+
+    if [[ -f "pricing/liquidity/data/liquid_tickers.txt" ]]; then
+        local liquid_count
+        liquid_count=$(wc -l < pricing/liquidity/data/liquid_tickers.txt)
+        print_success "$liquid_count liquid tickers written to pricing/liquidity/data/liquid_tickers.txt"
+    fi
+}
+
+screen_options_chain_depth() {
+    print_header "Screen Options Chain Depth (Gate 2)"
+
+    if [[ ! -f "pricing/liquidity/data/liquid_tickers.txt" ]]; then
+        print_error "No liquid tickers found. Run 'Screen Optionables for Liquidity' first."
+        return 1
+    fi
+
+    local ticker_count
+    ticker_count=$(wc -l < pricing/liquidity/data/liquid_tickers.txt | tr -d ' ')
+    print_info "Input: $ticker_count liquid tickers from gate 1"
+    print_info "Checks each ticker for >= 3 valid expiries and >= 5 OTM strikes (SVI requirements)"
+
+    echo -e "${YELLOW}Batch size (default: 20):${NC} "
+    read -r batch_size
+    batch_size=${batch_size:-20}
+
+    echo -e "${YELLOW}Delay between tickers in seconds (default: 2):${NC} "
+    read -r delay
+    delay=${delay:-2}
+
+    uv run pricing/liquidity/python/fetch/filter_liquid_options.py \
+        --batch-size "$batch_size" \
+        --delay "$delay"
+
+    if [ $? -eq 0 ]; then
+        if [[ -f "pricing/liquidity/data/liquid_options.txt" ]]; then
+            local pass_count
+            pass_count=$(wc -l < pricing/liquidity/data/liquid_options.txt | tr -d ' ')
+            print_success "Gate 2 complete: $pass_count tickers with deep options chains"
+            print_info "Output: pricing/liquidity/data/liquid_options.txt"
+        fi
+    else
+        print_error "Options chain screening failed"
+    fi
+
+    echo ""
+    echo -e "${YELLOW}Jump to:${NC}  ${GREEN}s)${NC} Skew Trading  ${GREEN}v)${NC} Variance Swaps  ${GREEN}e)${NC} Pre-Earnings  ${GREEN}p)${NC} Subset by Price  ${GREEN}Enter)${NC} Stay"
+    read -r jump
+    case $jump in
+        s) show_skew_trading_menu ;;
+        v) show_variance_swaps_menu ;;
+        e) show_pre_earnings_straddle_menu ;;
+        p) subset_liquid_by_price ;;
+    esac
+}
+
+subset_liquid_by_price() {
+    print_header "Subset Liquid Tickers by Price"
+
+    if [[ ! -f "pricing/liquidity/data/liquid_tickers.txt" ]]; then
+        print_error "No liquid tickers found. Run 'Screen Optionables for Liquidity' first."
+        return 1
+    fi
+
+    echo -e "${YELLOW}Enter max price in USD, or 'segments' for all \$10 segments up to \$200 (e.g., 50):${NC}"
+    read -r choice
+
+    if [[ -z "$choice" ]]; then
+        print_error "Input required"
+        return 1
+    fi
+
+    if [[ "$choice" == "segments" ]]; then
+        print_info "Generating all price segments..."
+        uv run pricing/liquidity/python/fetch/subset_by_price.py --segments
+    else
+        print_info "Fetching prices and filtering below \$$choice..."
+        uv run pricing/liquidity/python/fetch/subset_by_price.py --max-price "$choice"
+    fi
 }
 
 # Regime-aware downside optimization operations
@@ -3423,6 +3648,8 @@ show_variance_swaps_menu() {
     while true; do
         clear
         echo -e "${BLUE}═══ Variance Swaps & VRP Trading ═══${NC}\n"
+        echo -e "${DIM}Daily snapshots accept liquid tickers from Liquidity module (option 8)${NC}"
+        echo ""
         if echo "$providers" | grep -q "ibkr"; then
             echo -e "  ${GREEN}Data: IBKR${NC} (yfinance fallback for options chain)"
         else
@@ -3436,6 +3663,7 @@ show_variance_swaps_menu() {
         echo -e "${GREEN}5)${NC} Build Replication Portfolio"
         echo -e "${GREEN}6)${NC} Visualize Results"
         echo -e "${GREEN}7)${NC} Run Full Workflow"
+        echo -e "${GREEN}8)${NC} Collect Daily IV Snapshot"
         echo ""
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
@@ -3450,6 +3678,7 @@ show_variance_swaps_menu() {
             5) build_variance_replication ; echo ""; read -rp "Press Enter to continue..." ;;
             6) visualize_vrp_results ; echo ""; read -rp "Press Enter to continue..." ;;
             7|"") run_variance_swaps_full_workflow ; echo ""; read -rp "Press Enter to continue..." ;;
+            8) collect_variance_snapshot ; echo ""; read -rp "Press Enter to continue..." ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -3730,6 +3959,36 @@ run_variance_swaps_full_workflow() {
 
     print_success "Full workflow complete for $ticker"
     print_info "Results in: pricing/variance_swaps/output/"
+}
+
+collect_variance_snapshot() {
+    print_header "Collect Daily IV Snapshot"
+
+    pick_ticker_source "SPY" || return
+
+    print_info "Collecting IV snapshot..."
+
+    uv run pricing/variance_swaps/python/collect_snapshot.py \
+        --tickers "$ticker_arg" \
+        --data-dir pricing/variance_swaps/data
+
+    if [ $? -eq 0 ]; then
+        print_success "Snapshot collected"
+        print_info "Data: pricing/variance_swaps/data/"
+    else
+        print_error "Snapshot collection failed"
+    fi
+
+    if [[ "$ticker_arg" == "all_liquid" || "$ticker_arg" == *.txt ]]; then
+        echo ""
+        echo -e "${YELLOW}Jump to:${NC}  ${GREEN}s)${NC} Skew Trading  ${GREEN}e)${NC} Pre-Earnings  ${GREEN}l)${NC} Liquidity  ${GREEN}Enter)${NC} Stay"
+        read -r jump
+        case $jump in
+            s) show_skew_trading_menu ;;
+            e) show_pre_earnings_straddle_menu ;;
+            l) show_liquidity_menu ;;
+        esac
+    fi
 }
 
 # Fetch underlying data for options
@@ -6769,6 +7028,8 @@ show_skew_trading_menu() {
     while true; do
         clear
         echo -e "${BLUE}═══ Skew Trading ═══${NC}\n"
+        echo -e "${DIM}Daily snapshots accept liquid tickers from Liquidity module (option 8)${NC}"
+        echo ""
         echo -e "${GREEN}1)${NC} Fetch Market Data"
         echo -e "${GREEN}2)${NC} Measure Skew (RR25, BF25)"
         echo -e "${GREEN}3)${NC} Generate Trading Signal"
@@ -6991,25 +7252,31 @@ visualize_skew_results() {
 collect_skew_snapshot() {
     print_header "Collect Daily Vol Surface Snapshot"
 
-    read_ticker "Enter ticker(s), comma-separated (default: TSLA):" "TSLA"
+    pick_ticker_source "TSLA" || return
 
-    print_info "Collecting vol surface snapshot for $ticker..."
+    print_info "Collecting vol surface snapshot..."
     print_info "This fetches the current option chain, calibrates SVI, and archives the raw market surface."
 
     uv run pricing/skew_trading/python/fetch/collect_snapshot.py \
-        --tickers "$ticker" \
+        --tickers "$ticker_arg" \
         --data-dir pricing/skew_trading/data
 
     if [ $? -eq 0 ]; then
         print_success "Snapshot collected"
         print_info "Snapshots: pricing/skew_trading/data/snapshots/"
-        print_info "History:   pricing/skew_trading/data/${ticker}_skew_history.csv"
-        echo ""
-        print_info "To automate daily collection, install a cron job:"
-        echo -e "  ${DIM}echo \"15 21 * * 1-5 cd /app && ./pricing/skew_trading/cron_collect.sh $ticker --quiet\" >> /app/crontab${NC}"
-        echo -e "  ${DIM}crontab /app/crontab${NC}"
     else
         print_error "Snapshot collection failed"
+    fi
+
+    if [[ "$ticker_arg" == "all_liquid" || "$ticker_arg" == *.txt ]]; then
+        echo ""
+        echo -e "${YELLOW}Jump to:${NC}  ${GREEN}v)${NC} Variance Swaps  ${GREEN}e)${NC} Pre-Earnings  ${GREEN}l)${NC} Liquidity  ${GREEN}Enter)${NC} Stay"
+        read -r jump
+        case $jump in
+            v) show_variance_swaps_menu ;;
+            e) show_pre_earnings_straddle_menu ;;
+            l) show_liquidity_menu ;;
+        esac
     fi
 }
 
@@ -8410,11 +8677,13 @@ show_pre_earnings_straddle_menu() {
         clear
         echo -e "${BLUE}═══ Pre-Earnings Straddle (ML-Based) ═══${NC}\n"
         echo "Predict earnings moves using machine learning"
+        echo -e "${DIM}Daily snapshots accept liquid tickers from Liquidity module (option 5)${NC}"
         echo ""
         echo -e "${GREEN}1)${NC} Fetch Straddle Data (Current Opportunity)"
         echo -e "${GREEN}2)${NC} Train ML Model (Historical Earnings)"
         echo -e "${GREEN}3)${NC} Run Scanner (Predict & Recommend)"
         echo -e "${GREEN}4)${NC} Run Full Workflow"
+        echo -e "${GREEN}5)${NC} Collect Daily Earnings IV Snapshot"
         echo ""
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
@@ -8426,6 +8695,7 @@ show_pre_earnings_straddle_menu() {
             2) train_earnings_model ;;
             3) run_pre_earnings_scanner ;;
             4|"") run_pre_earnings_workflow ;;
+            5) collect_earnings_iv_snapshot ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -8509,6 +8779,36 @@ run_pre_earnings_workflow() {
     fi
 
     print_success "Full pre-earnings workflow complete!"
+}
+
+collect_earnings_iv_snapshot() {
+    print_header "Collect Daily Earnings IV Snapshot"
+
+    pick_ticker_source "NVDA" || return
+
+    print_info "Collecting earnings IV snapshot..."
+
+    uv run pricing/pre_earnings_straddle/python/fetch/collect_earnings_iv.py \
+        --tickers "$ticker_arg" \
+        --data-dir pricing/pre_earnings_straddle/data
+
+    if [ $? -eq 0 ]; then
+        print_success "Snapshot collected"
+        print_info "Data: pricing/pre_earnings_straddle/data/"
+    else
+        print_error "Snapshot collection failed"
+    fi
+
+    if [[ "$ticker_arg" == "all_liquid" || "$ticker_arg" == *.txt ]]; then
+        echo ""
+        echo -e "${YELLOW}Jump to:${NC}  ${GREEN}s)${NC} Skew Trading  ${GREEN}v)${NC} Variance Swaps  ${GREEN}l)${NC} Liquidity  ${GREEN}Enter)${NC} Stay"
+        read -r jump
+        case $jump in
+            s) show_skew_trading_menu ;;
+            v) show_variance_swaps_menu ;;
+            l) show_liquidity_menu ;;
+        esac
+    fi
 }
 
 # Forward Factor (Term Structure Arbitrage) operations

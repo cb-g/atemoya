@@ -76,7 +76,13 @@ let () =
       (* Generate trading signal *)
       Io.write_log log_file "Generating skew trading signal";
 
-      let skew_obs_file = Printf.sprintf "pricing/skew_trading/data/%s_skew_timeseries.csv" !ticker in
+      let skew_obs_file =
+        let timeseries = Printf.sprintf "pricing/skew_trading/data/%s_skew_timeseries.csv" !ticker in
+        let history = Printf.sprintf "pricing/skew_trading/data/%s_skew_history.csv" !ticker in
+        if Sys.file_exists timeseries then timeseries
+        else if Sys.file_exists history then history
+        else timeseries (* will fail with clear error *)
+      in
       let historical_obs = Io.read_skew_observations skew_obs_file in
 
       if Array.length historical_obs < config.lookback_days then begin
@@ -159,7 +165,13 @@ let () =
       (* Backtest mean reversion strategy *)
       Io.write_log log_file "Backtesting skew mean reversion strategy";
 
-      let skew_obs_file = Printf.sprintf "pricing/skew_trading/data/%s_skew_timeseries.csv" !ticker in
+      let skew_obs_file =
+        let timeseries = Printf.sprintf "pricing/skew_trading/data/%s_skew_timeseries.csv" !ticker in
+        let history = Printf.sprintf "pricing/skew_trading/data/%s_skew_history.csv" !ticker in
+        if Sys.file_exists timeseries then timeseries
+        else if Sys.file_exists history then history
+        else timeseries
+      in
 
       let skew_observations = Io.read_skew_observations skew_obs_file in
 

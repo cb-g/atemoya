@@ -271,7 +271,7 @@ def main() -> int:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--ticker", type=str, help="Single ticker symbol")
     group.add_argument("--tickers", type=str,
-                       help="Comma-separated ticker list (e.g., AAPL,NVDA,TSLA)")
+                       help="Comma-separated tickers, 'all_liquid', or path to .txt file")
     parser.add_argument("--data-dir", type=str,
                         default="pricing/pre_earnings_straddle/data",
                         help="Data directory (default: pricing/pre_earnings_straddle/data)")
@@ -286,10 +286,22 @@ def main() -> int:
     # Parse ticker list
     if args.ticker:
         tickers = [args.ticker.upper()]
+    elif args.tickers == "all_liquid":
+        liquid_file = Path(__file__).resolve().parents[4] / "pricing" / "liquidity" / "data" / "liquid_options.txt"
+        if not liquid_file.exists():
+            print(f"Error: {liquid_file} not found. Run filter_liquid_options.py first.", file=sys.stderr)
+            return 1
+        tickers = [t.strip() for t in liquid_file.read_text().splitlines() if t.strip()]
+    elif args.tickers.endswith(".txt"):
+        ticker_file = Path(args.tickers)
+        if not ticker_file.exists():
+            print(f"Error: {ticker_file} not found", file=sys.stderr)
+            return 1
+        tickers = [t.strip() for t in ticker_file.read_text().splitlines() if t.strip()]
     else:
         tickers = [t.strip().upper() for t in args.tickers.split(",")]
 
-    print(f"Earnings IV Collection: {', '.join(tickers)}")
+    print(f"Earnings IV Collection: {len(tickers)} tickers")
     print(f"Data dir: {data_dir}")
     print(f"Entry window: {args.entry_window} days")
 

@@ -47,7 +47,7 @@ def load_progress() -> dict:
     if PROGRESS_FILE.exists():
         with open(PROGRESS_FILE) as f:
             return json.load(f)
-    return {"completed": [], "failed": [], "passing": [], "timestamp": None}
+    return {"completed": [], "failed": [], "passing": [], "scores": {}, "timestamp": None}
 
 
 def save_progress(progress: dict):
@@ -56,6 +56,25 @@ def save_progress(progress: dict):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with open(PROGRESS_FILE, "w") as f:
         json.dump(progress, f, indent=2)
+
+
+def write_liquid_tickers(progress: dict, min_score: float, output_path: Path):
+    """Write liquid_tickers.txt from progress data."""
+    scores = progress.get("scores", {})
+    if scores:
+        passing = sorted(t for t, s in scores.items() if s >= min_score)
+    else:
+        passing = sorted(set(progress["passing"]))
+    with open(output_path, "w") as f:
+        for ticker in passing:
+            f.write(ticker + "\n")
+
+
+def read_liquid_tickers(output_path: Path) -> list[str]:
+    """Read liquid_tickers.txt."""
+    if output_path.exists():
+        return [t.strip() for t in output_path.read_text().splitlines() if t.strip()]
+    return []
 
 
 def fetch_batch(tickers: list[str], delay: float) -> list[dict]:
@@ -120,11 +139,11 @@ def main():
     )
     parser.add_argument(
         "--output",
-        default=str(PROJECT_ROOT / "liquid_tickers.txt"),
+        default=str(DATA_DIR / "liquid_tickers.txt"),
         help="Output file for liquid tickers",
     )
-    parser.add_argument("--batch-size", type=int, default=100, help="Tickers per batch")
-    parser.add_argument("--min-score", type=float, default=65, help="Minimum liquidity score")
+    parser.add_argument("--batch-size", type=int, default=20, help="Tickers per batch")
+    parser.add_argument("--min-score", type=float, default=75, help="Minimum liquidity score")
     parser.add_argument("--delay", type=float, default=10, help="Seconds between tickers")
     parser.add_argument("--no-resume", action="store_true", help="Ignore progress, start fresh")
 
@@ -139,7 +158,7 @@ def main():
 
     # Load or reset progress
     if args.no_resume:
-        progress = {"completed": [], "failed": [], "passing": [], "timestamp": None}
+        progress = {"completed": [], "failed": [], "passing": [], "scores": {}, "timestamp": None}
     else:
         progress = load_progress()
         if progress["completed"]:
@@ -184,10 +203,13 @@ def main():
             write_batch_data(ticker_data)
             results = run_ocaml_analysis()
 
-            # Collect passing tickers
+            # Collect scores and passing tickers
+            if "scores" not in progress:
+                progress["scores"] = {}
             for r in results:
                 ticker = r["ticker"]
                 score = r.get("liquidity_score", 0)
+                progress["scores"][ticker] = score
                 if score >= args.min_score:
                     progress["passing"].append(ticker)
                     print(f"  PASS: {ticker} (score={score:.1f})")
@@ -199,16 +221,10 @@ def main():
                 progress["completed"].append(t)
 
             save_progress(progress)
+            write_liquid_tickers(progress, args.min_score, Path(args.output))
             print(f"  Progress saved: {len(progress['completed'])} completed, {len(progress['passing'])} passing")
 
-    # Write final output
-    passing = sorted(set(progress["passing"]))
-    output_path = Path(args.output)
-    with open(output_path, "w") as f:
-        for ticker in passing:
-            f.write(ticker + "\n")
-
-    print(f"\nDone: {len(passing)} liquid tickers (score >= {args.min_score}) written to {output_path}")
+    print(f"\nDone: {len(read_liquid_tickers(Path(args.output)))} liquid tickers (score >= {args.min_score}) in {args.output}")
     print(f"Total processed: {len(progress['completed'])} completed, {len(progress['failed'])} failed")
 
 

@@ -9,6 +9,27 @@ Computes liquidity metrics (Amihud illiquidity ratio, turnover, spread proxy, vo
 - Composite liquidity score (0--100) with tier classification (Excellent/Good/Fair/Poor/Very Poor)
 - Composite signal score combining OBV, surge magnitude, volume trend, volume-price correlation, and smart money flow
 
+## Optionable Screening Pipeline
+
+Discovers and filters the full CBOE optionable universe down to tickers suitable for daily options chain collection by Skew Trading, Variance Swaps, and Pre-Earnings Straddle modules.
+
+```
+CBOE optionable list (5297 tickers)
+  │
+  ▼  Gate 1: filter_liquid_tickers.py (stock liquidity score >= 75)
+liquid_tickers.txt (~612 tickers)
+  │
+  ▼  Gate 2: filter_liquid_options.py (>= 3 expiries, >= 5 OTM strikes)
+liquid_options.txt (subset with SVI-calibratable chains)
+  │
+  ▼  subset_by_price.py --segments
+liquid_options_1_to_10_USD.txt, ..., liquid_options_above_200_USD.txt
+```
+
+Both gates are resumable (kill and rerun to continue) and save progress after each batch. Gate 2 thresholds match the SVI calibrator requirements in the skew trading module.
+
+Downstream collectors accept tickers via `--tickers all_liquid` (reads `liquid_options.txt`) or `--tickers path/to/segment.txt`.
+
 ## Architecture
 
 ```
@@ -25,10 +46,14 @@ liquidity/
 │       └── test_liquidity.ml    # Unit tests (Alcotest)
 ├── python/
 │   ├── fetch/
-│   │   └── fetch_liquidity_data.py  # Fetch OHLCV + shares outstanding via yfinance
+│   │   ├── fetch_liquidity_data.py     # Fetch OHLCV + shares outstanding via yfinance
+│   │   ├── fetch_optionable_tickers.py # Fetch CBOE optionable list
+│   │   ├── filter_liquid_tickers.py    # Gate 1: stock liquidity filter
+│   │   ├── filter_liquid_options.py    # Gate 2: option chain coverage filter
+│   │   └── subset_by_price.py          # Segment tickers by underlying price
 │   └── viz/
-│       └── plot_liquidity.py        # Dashboard and single-ticker detail plots
-├── data/                        # Input market data JSON
+│       └── plot_liquidity.py           # Dashboard and single-ticker detail plots
+├── data/                        # Input market data, ticker lists, segments
 └── output/                      # Results JSON and plots
 ```
 

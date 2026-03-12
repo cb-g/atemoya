@@ -57,7 +57,9 @@ pricing/skew_verticals/data/
 pricing/options_hedging/data/
 pricing/fx_hedging/data/*
 !pricing/fx_hedging/data/portfolio.csv
-pricing/liquidity/data/
+pricing/liquidity/data/*
+!pricing/liquidity/data/liquid_tickers*.txt
+!pricing/liquidity/data/liquid_options*.txt
 pricing/tail_risk_forecast/data/
 pricing/perpetual_futures/data/
 alternative/macro_dashboard/data/*

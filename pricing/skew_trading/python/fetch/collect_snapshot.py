@@ -26,6 +26,8 @@ import pandas as pd
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parents[4]))
 
+from lib.python.retry import retry_with_backoff
+
 # Reuse functions from fetch_options.py (no duplication)
 from pricing.skew_trading.python.fetch.fetch_options import (
     calibrate_svi_surface,
@@ -244,7 +246,7 @@ def collect_one_ticker(ticker: str, data_dir: Path, expiry_days: int,
 
     # Fetch option chain (reuse from fetch_options.py)
     try:
-        chain_df, spot = fetch_option_chain(ticker)
+        chain_df, spot = retry_with_backoff(lambda: fetch_option_chain(ticker))
     except Exception as e:
         print(f"  ERROR fetching options for {ticker}: {e}")
         return False
@@ -311,7 +313,7 @@ def main() -> int:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--ticker", type=str, help="Single ticker symbol")
     group.add_argument("--tickers", type=str,
-                       help="Comma-separated ticker list (e.g., SPY,AAPL,TSLA)")
+                       help="Comma-separated tickers, 'all_liquid', or path to .txt file")
     parser.add_argument("--data-dir", type=str,
                         default="pricing/skew_trading/data",
                         help="Data directory (default: pricing/skew_trading/data)")
@@ -330,10 +332,22 @@ def main() -> int:
     # Parse ticker list
     if args.ticker:
         tickers = [args.ticker.upper()]
+    elif args.tickers == "all_liquid":
+        liquid_file = Path(__file__).resolve().parents[4] / "pricing" / "liquidity" / "data" / "liquid_options.txt"
+        if not liquid_file.exists():
+            print(f"Error: {liquid_file} not found. Run filter_liquid_options.py first.", file=sys.stderr)
+            return 1
+        tickers = [t.strip() for t in liquid_file.read_text().splitlines() if t.strip()]
+    elif args.tickers.endswith(".txt"):
+        ticker_file = Path(args.tickers)
+        if not ticker_file.exists():
+            print(f"Error: {ticker_file} not found", file=sys.stderr)
+            return 1
+        tickers = [t.strip() for t in ticker_file.read_text().splitlines() if t.strip()]
     else:
         tickers = [t.strip().upper() for t in args.tickers.split(",")]
 
-    print(f"Daily Skew Collection: {', '.join(tickers)}")
+    print(f"Daily Skew Collection: {len(tickers)} tickers")
     print(f"Data dir: {data_dir}")
     print(f"Target expiry: {args.expiry_days} days")
     print(f"Risk-free rate: {rate*100:.1f}%")

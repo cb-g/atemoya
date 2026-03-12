@@ -29,6 +29,8 @@ import argparse
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parents[3]))
 
+from lib.python.retry import retry_with_backoff
+
 from pricing.variance_swaps.python.fetch_data import (
     fetch_options_chain,
     fetch_underlying_data,
@@ -136,7 +138,7 @@ def collect_one_ticker(ticker: str, data_dir: Path) -> bool:
 
     # Fetch underlying data (spot, dividend yield)
     try:
-        underlying = fetch_underlying_data(ticker)
+        underlying = retry_with_backoff(lambda: fetch_underlying_data(ticker))
         spot = underlying["spot_price"]
     except Exception as e:
         print(f"  ERROR fetching underlying for {ticker}: {e}")
@@ -144,7 +146,7 @@ def collect_one_ticker(ticker: str, data_dir: Path) -> bool:
 
     # Fetch option chain and calibrate SVI
     try:
-        options_df = fetch_options_chain(ticker)
+        options_df = retry_with_backoff(lambda: fetch_options_chain(ticker))
         svi_surface = calibrate_svi_surface(options_df, spot)
     except Exception as e:
         print(f"  ERROR calibrating vol surface for {ticker}: {e}")
@@ -191,7 +193,7 @@ def main() -> int:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--ticker", type=str, help="Single ticker symbol")
     group.add_argument("--tickers", type=str,
-                       help="Comma-separated ticker list (e.g., SPY,QQQ,IWM)")
+                       help="Comma-separated tickers, 'all_liquid', or path to .txt file")
     parser.add_argument("--data-dir", type=str,
                         default="pricing/variance_swaps/data",
                         help="Data directory (default: pricing/variance_swaps/data)")
@@ -204,10 +206,22 @@ def main() -> int:
     # Parse ticker list
     if args.ticker:
         tickers = [args.ticker.upper()]
+    elif args.tickers == "all_liquid":
+        liquid_file = Path(__file__).resolve().parents[3] / "pricing" / "liquidity" / "data" / "liquid_options.txt"
+        if not liquid_file.exists():
+            print(f"Error: {liquid_file} not found. Run filter_liquid_options.py first.", file=sys.stderr)
+            return 1
+        tickers = [t.strip() for t in liquid_file.read_text().splitlines() if t.strip()]
+    elif args.tickers.endswith(".txt"):
+        ticker_file = Path(args.tickers)
+        if not ticker_file.exists():
+            print(f"Error: {ticker_file} not found", file=sys.stderr)
+            return 1
+        tickers = [t.strip() for t in ticker_file.read_text().splitlines() if t.strip()]
     else:
         tickers = [t.strip().upper() for t in args.tickers.split(",")]
 
-    print(f"Daily IV Collection: {', '.join(tickers)}")
+    print(f"Daily IV Collection: {len(tickers)} tickers")
     print(f"Data dir: {data_dir}")
 
     successes = 0
