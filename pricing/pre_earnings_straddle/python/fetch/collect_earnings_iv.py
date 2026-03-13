@@ -71,12 +71,17 @@ def archive_snapshot(snapshot_data: dict, ticker: str, data_dir: Path) -> Path:
 
 
 def append_to_history(row: dict, ticker: str, data_dir: Path) -> None:
-    """Append one row to {TICKER}_iv_snapshots.csv."""
+    """Append one row to {TICKER}_iv_snapshots.csv, skipping if date already exists."""
     history_file = data_dir / f"{ticker}_iv_snapshots.csv"
 
     df = pd.DataFrame([row], columns=HISTORY_COLUMNS)
+    today = row["date"]
 
     if history_file.exists():
+        existing = pd.read_csv(history_file, usecols=["date"], dtype=str)
+        if today in existing["date"].values:
+            print(f"  Skipped {ticker}: {today} already in history")
+            return
         df.to_csv(history_file, mode="a", header=False, index=False)
     else:
         df.to_csv(history_file, index=False)

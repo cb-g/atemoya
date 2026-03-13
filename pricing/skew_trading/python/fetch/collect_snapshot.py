@@ -215,12 +215,17 @@ def archive_chain(chain_df: pd.DataFrame, ticker: str, data_dir: Path) -> None:
 
 
 def append_to_history(row: dict, ticker: str, data_dir: Path) -> None:
-    """Append one row to {TICKER}_skew_history.csv."""
+    """Append one row to {TICKER}_skew_history.csv, skipping if date already exists."""
     history_file = data_dir / f"{ticker}_skew_history.csv"
 
     df = pd.DataFrame([row], columns=HISTORY_COLUMNS)
+    today = row["date"]
 
     if history_file.exists():
+        existing = pd.read_csv(history_file, usecols=["date"], dtype=str)
+        if today in existing["date"].values:
+            print(f"  Skipped {ticker}: {today} already in history")
+            return
         df.to_csv(history_file, mode="a", header=False, index=False)
     else:
         df.to_csv(history_file, index=False)

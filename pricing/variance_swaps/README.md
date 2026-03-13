@@ -417,29 +417,32 @@ Each run:
 
 ### Automated Cron Setup
 
-**Docker (recommended):**
+The daily pipeline has three stages: **collect** (after market close) → **scan** (after collection) → **notify** (before market open). All times below are UTC. Collectors run on Tue-Sat (for Mon-Fri market data).
 
+**Native (uv installed on host):**
 ```bash
-# Add to container crontab (runs 5:15pm ET weekdays, after market close)
-echo "15 21 * * 1-5 cd /app && uv run pricing/variance_swaps/python/collect_snapshot.py --tickers SPY,QQQ,IWM --data-dir pricing/variance_swaps/data" >> /app/crontab
-crontab /app/crontab
+# 1. Collect IV snapshots for all liquid tickers
+15 1 * * 2-6 cd /path/to/atemoya && uv run pricing/variance_swaps/python/collect_snapshot.py --tickers all_liquid >> /tmp/variance_collect.log 2>&1
+
+# 2. Run signal scanner after collection completes
+30 2 * * 2-6 cd /path/to/atemoya && uv run pricing/variance_swaps/python/scan_signals.py --segments --quiet --output pricing/variance_swaps/output/signal_scan.csv >> /tmp/variance_scan.log 2>&1
+
+# 3. Send morning trade notifications (before market open)
+5 9 * * 1-5 cd /path/to/atemoya && uv run pricing/variance_swaps/python/notify_signals.py >> /tmp/variance_notify.log 2>&1
 ```
 
-**Host system (via Docker):**
-
+**Docker (from host crontab):**
 ```bash
-(crontab -l 2>/dev/null; echo "15 17 * * 1-5 cd $(pwd) && docker compose exec -w /app atemoya /bin/bash -c 'uv run pricing/variance_swaps/python/collect_snapshot.py --tickers SPY,QQQ,IWM'") | crontab -
+15 1 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/variance_swaps/python/collect_snapshot.py --tickers all_liquid" >> /tmp/variance_collect.log 2>&1
+30 2 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/variance_swaps/python/scan_signals.py --segments --quiet --output pricing/variance_swaps/output/signal_scan.csv" >> /tmp/variance_scan.log 2>&1
+5 9 * * 1-5 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/variance_swaps/python/notify_signals.py" >> /tmp/variance_notify.log 2>&1
 ```
 
-**Host system (native):**
-
-```bash
-(crontab -l 2>/dev/null; echo "15 17 * * 1-5 cd $(pwd) && uv run pricing/variance_swaps/python/collect_snapshot.py --tickers SPY,QQQ,IWM") | crontab -
-```
+Notifications require `NTFY_TOPIC` set in `.env` at the project root.
 
 ### Adding Tickers
 
-Add new tickers to the `--tickers` list at any time. Each ticker gets its own independent history file. New tickers start collecting from day 1; existing tickers are idempotently skipped. After enough days accumulate (60+), the backtest can use real time-varying IV instead of the constant 20% assumption.
+Use `--tickers all_liquid` to automatically collect all tickers from the liquidity module. Alternatively, pass specific tickers: `--tickers SPY,QQQ,IWM`. Each ticker gets its own independent history file. New tickers start collecting from day 1; existing tickers are idempotently skipped. After enough days accumulate (60+), the backtest can use real time-varying IV instead of the constant 20% assumption.
 
 ## Future Enhancements
 

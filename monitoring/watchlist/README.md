@@ -139,7 +139,7 @@ uv run monitoring/watchlist/python/viz/plot_watchlist.py --input monitoring/watc
 
 ### Full Pipeline (with notifications)
 
-The shell script runs the complete workflow: fetch prices, run OCaml analysis, diff against previous state, and optionally send push notifications.
+The shell script runs the complete workflow: fetch prices, run analysis (OCaml if available, pure Python fallback otherwise), diff against previous state, and optionally send push notifications.
 
 ```bash
 # Analysis only
@@ -152,7 +152,24 @@ The shell script runs the complete workflow: fetch prices, run OCaml analysis, d
 ./monitoring/watchlist/run_watchlist.sh --notify --quiet
 ```
 
-Requires `NTFY_TOPIC` environment variable for notifications. Set in `.env` or export directly.
+The script auto-detects the execution environment:
+- **Docker**: inside the atemoya container (runs directly)
+- **Native**: `uv` available on host, OCaml optional (e.g. synology)
+- **Host**: runs commands via `docker compose exec`
+
+If no `portfolio.json` exists, it is automatically copied from `portfolio.example.json` on first run.
+
+Requires `NTFY_TOPIC` set in `.env` at the project root for notifications.
+
+### Automated Cron Setup
+
+```bash
+# Run twice during market hours (Mon-Fri)
+45 15 * * 1-5 cd /path/to/atemoya && ./monitoring/watchlist/run_watchlist.sh --notify --quiet >> /tmp/watchlist.log 2>&1
+10 18 * * 1-5 cd /path/to/atemoya && ./monitoring/watchlist/run_watchlist.sh --notify --quiet >> /tmp/watchlist.log 2>&1
+```
+
+Notifications are only sent when new alerts are detected (state diff). Alerts are aggregated into a single notification per run.
 
 ## Output
 

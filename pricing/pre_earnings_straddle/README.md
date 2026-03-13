@@ -167,27 +167,32 @@ Each run:
 
 ### Automated Cron Setup
 
-**Docker (recommended):**
+The daily pipeline has three stages: **collect** (after market close) → **scan** (after collection) → **notify** (before market open). All times below are UTC. Collectors run on Tue-Sat (for Mon-Fri market data).
+
+**Native (uv installed on host):**
 ```bash
-echo "15 21 * * 1-5 cd /app && uv run pricing/pre_earnings_straddle/python/fetch/collect_earnings_iv.py --tickers AAPL,NVDA,TSLA,AMZN,GOOGL,META,MSFT" >> /app/crontab
-crontab /app/crontab
+# 1. Collect IV snapshots for all liquid tickers
+15 4 * * 2-6 cd /path/to/atemoya && uv run pricing/pre_earnings_straddle/python/fetch/collect_earnings_iv.py --tickers all_liquid >> /tmp/earnings_collect.log 2>&1
+
+# 2. Run signal scanner after collection completes
+30 5 * * 2-6 cd /path/to/atemoya && uv run pricing/pre_earnings_straddle/python/scan_signals.py --segments --quiet --output pricing/pre_earnings_straddle/output/signal_scan.csv >> /tmp/earnings_scan.log 2>&1
+
+# 3. Send morning trade notifications (before market open)
+10 9 * * 1-5 cd /path/to/atemoya && uv run pricing/pre_earnings_straddle/python/notify_signals.py >> /tmp/earnings_notify.log 2>&1
 ```
 
-**Host system (via Docker):**
+**Docker (from host crontab):**
 ```bash
-(crontab -l 2>/dev/null; echo "15 17 * * 1-5 cd $(pwd) && docker compose exec -w /app atemoya /bin/bash -c 'uv run pricing/pre_earnings_straddle/python/fetch/collect_earnings_iv.py --tickers AAPL,NVDA,TSLA,AMZN,GOOGL,META,MSFT'") | crontab -
+15 4 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/pre_earnings_straddle/python/fetch/collect_earnings_iv.py --tickers all_liquid" >> /tmp/earnings_collect.log 2>&1
+30 5 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/pre_earnings_straddle/python/scan_signals.py --segments --quiet --output pricing/pre_earnings_straddle/output/signal_scan.csv" >> /tmp/earnings_scan.log 2>&1
+10 9 * * 1-5 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/pre_earnings_straddle/python/notify_signals.py" >> /tmp/earnings_notify.log 2>&1
 ```
 
-**Host system (native):**
-```bash
-(crontab -l 2>/dev/null; echo "15 17 * * 1-5 cd $(pwd) && uv run pricing/pre_earnings_straddle/python/fetch/collect_earnings_iv.py --tickers AAPL,NVDA,TSLA,AMZN,GOOGL,META,MSFT") | crontab -
-```
+Notifications require `NTFY_TOPIC` set in `.env` at the project root.
 
 ### Adding Tickers
 
-Add new tickers to `--tickers` at any time. Each ticker gets independent history.
-After 2+ quarters of collection, `fetch_earnings_data.py` automatically uses
-real snapshot IV instead of the RV\*1.2 estimate.
+Use `--tickers all_liquid` to automatically collect all tickers from the liquidity module. Alternatively, pass specific tickers: `--tickers AAPL,NVDA,TSLA`. Each ticker gets independent history. After 2+ quarters of collection, `fetch_earnings_data.py` automatically uses real snapshot IV instead of the RV\*1.2 estimate.
 
 ## Why This Works
 

@@ -7038,6 +7038,7 @@ show_skew_trading_menu() {
         echo -e "${GREEN}6)${NC} Visualize Results"
         echo -e "${GREEN}7)${NC} Run Full Workflow"
         echo -e "${GREEN}8)${NC} Collect Daily Snapshot"
+        echo -e "${GREEN}9)${NC} Scan Signals (z-score watchlist)"
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
         echo -e "${DIM}Tip: Install a daily cron job to collect vol surface snapshots automatically.${NC}"
@@ -7055,6 +7056,7 @@ show_skew_trading_menu() {
             6) visualize_skew_results ;;
             7|"") run_skew_full_workflow ;;
             8) collect_skew_snapshot ;;
+            9) scan_skew_signals ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -7277,6 +7279,63 @@ collect_skew_snapshot() {
             e) show_pre_earnings_straddle_menu ;;
             l) show_liquidity_menu ;;
         esac
+    fi
+}
+
+scan_skew_signals() {
+    print_header "Scan Skew Signals (z-score watchlist)"
+
+    echo -e "${GREEN}1)${NC} Overall ranking (all tickers)"
+    echo -e "${GREEN}2)${NC} By price segment"
+    echo ""
+    echo -e "${YELLOW}Enter your choice (Enter=By segment):${NC} "
+    read -r scan_choice
+
+    local scan_args="--quiet"
+    case $scan_choice in
+        1) ;;
+        2|"") scan_args="$scan_args --segments" ;;
+        *) scan_args="$scan_args --segments" ;;
+    esac
+
+    read -p "Min days of history (default: 5): " min_days
+    min_days=${min_days:-5}
+
+    print_info "Scanning skew histories..."
+
+    uv run pricing/skew_trading/python/scan_signals.py \
+        $scan_args \
+        --min-days "$min_days" \
+        --output pricing/skew_trading/output/signal_scan.csv
+
+    if [ $? -eq 0 ]; then
+        print_success "Scan complete"
+        print_info "Results: pricing/skew_trading/output/signal_scan.csv"
+
+        echo ""
+        echo -e "${YELLOW}Build position for a ticker? Enter ticker or press Enter to skip:${NC} "
+        read -r pos_ticker
+        if [[ -n "$pos_ticker" ]]; then
+            # Determine direction and strategy from scan results
+            local signal
+            signal=$(grep "^${pos_ticker}," pricing/skew_trading/output/signal_scan.csv 2>/dev/null | cut -d',' -f3)
+            local direction="long"
+            local strat="rr"
+            if [[ "$signal" == *"SHORT"* ]]; then
+                direction="short"
+            fi
+            if [[ "$signal" == *"WINGS"* ]]; then
+                strat="butterfly"
+            fi
+            print_info "Building $direction $strat for $pos_ticker (signal: $signal)..."
+            opam exec -- dune exec skew_trading -- \
+                -ticker "$pos_ticker" \
+                -op position \
+                -direction "$direction" \
+                -strategy "$strat"
+        fi
+    else
+        print_error "Scan failed"
     fi
 }
 

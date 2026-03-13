@@ -23,29 +23,49 @@
 
 set -e
 
-# Detect if we're inside Docker or on the host
-if [ -f /.dockerenv ] || [ -f /app/pyproject.toml ]; then
-    IN_DOCKER=true
+# Detect execution environment:
+#   docker  — inside the atemoya Docker container (/app/pyproject.toml exists)
+#   native  — local tools available (uv required; opam optional)
+#   host    — run commands via docker compose exec
+if [ -f /.dockerenv ] && [ -f /app/pyproject.toml ]; then
+    RUN_MODE="docker"
+elif command -v uv >/dev/null 2>&1; then
+    RUN_MODE="native"
 else
-    IN_DOCKER=false
+    RUN_MODE="host"
+fi
+
+# Check if OCaml is available (for analysis step)
+HAS_OCAML=false
+if command -v dune >/dev/null 2>&1 && eval $(opam env 2>/dev/null) && command -v dune >/dev/null 2>&1; then
+    HAS_OCAML=true
 fi
 
 # Find project root
-if [ "$IN_DOCKER" = true ]; then
+if [ "$RUN_MODE" = "docker" ]; then
     PROJECT_ROOT="/app"
 else
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 fi
 
-# Run a command — directly if in Docker, via docker compose exec if on host
+cd "$PROJECT_ROOT"
+
+# Load .env if present (native/host modes)
+if [ "$RUN_MODE" != "docker" ] && [ -f "$PROJECT_ROOT/.env" ]; then
+    set -a
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
+# Run a command — directly if in docker/native, via docker compose if on host
 run_cmd() {
-    if [ "$IN_DOCKER" = true ]; then
-        eval "$@"
-    else
+    if [ "$RUN_MODE" = "host" ]; then
         docker compose -f "$PROJECT_ROOT/docker-compose.yml" \
             exec -w /app -T atemoya \
             /bin/bash -c "eval \$(opam env) && $*"
+    else
+        eval "$@"
     fi
 }
 
@@ -98,16 +118,21 @@ log() {
 }
 
 # Check prerequisites
-if [ "$IN_DOCKER" = true ]; then
-    if [[ ! -f "$PROJECT_ROOT/$PORTFOLIO_FILE" ]]; then
-        echo "Error: Portfolio file not found: $PORTFOLIO_FILE" >&2
-        exit 1
-    fi
-else
-    # On host, check Docker is running
+if [ "$RUN_MODE" = "host" ]; then
     if ! docker compose -f "$PROJECT_ROOT/docker-compose.yml" ps --format '{{.State}}' 2>/dev/null | grep -q running; then
         echo "Error: Docker container not running. Run: docker compose up -d" >&2
         exit 1
+    fi
+else
+    if [[ ! -f "$PROJECT_ROOT/$PORTFOLIO_FILE" ]]; then
+        EXAMPLE_FILE="$WATCHLIST_DIR/data/portfolio.example.json"
+        if [[ -f "$PROJECT_ROOT/$EXAMPLE_FILE" ]]; then
+            log "No portfolio.json found, copying from portfolio.example.json"
+            cp "$PROJECT_ROOT/$EXAMPLE_FILE" "$PROJECT_ROOT/$PORTFOLIO_FILE"
+        else
+            echo "Error: Portfolio file not found: $PORTFOLIO_FILE" >&2
+            exit 1
+        fi
     fi
 fi
 
@@ -122,13 +147,17 @@ else
     run_cmd "uv run python $WATCHLIST_DIR/python/fetch/fetch_prices.py --portfolio $PORTFOLIO_FILE --output $PRICES_FILE"
 fi
 
-# Step 2: Run analysis
+# Step 2: Run analysis (OCaml if available, Python fallback otherwise)
 log "Running portfolio analysis..."
 QUIET_FLAG=""
 if [[ "$QUIET" == "true" ]]; then
     QUIET_FLAG="--quiet"
 fi
-run_cmd "eval \$(opam env) && dune exec watchlist -- --portfolio $PORTFOLIO_FILE --prices $PRICES_FILE --output $ANALYSIS_FILE $QUIET_FLAG"
+if [ "$HAS_OCAML" = true ] || [ "$RUN_MODE" = "host" ]; then
+    run_cmd "eval \$(opam env) && dune exec watchlist -- --portfolio $PORTFOLIO_FILE --prices $PRICES_FILE --output $ANALYSIS_FILE $QUIET_FLAG"
+else
+    uv run python -m monitoring.watchlist.python.analysis.cli --portfolio "$PORTFOLIO_FILE" --prices "$PRICES_FILE" --output "$ANALYSIS_FILE" $QUIET_FLAG
+fi
 
 # Step 3: Detect changes
 log "Detecting changes..."
@@ -140,11 +169,6 @@ fi
 
 # Step 4: Send notifications if requested
 if [[ "$NOTIFY" == "true" ]]; then
-    # Check for NTFY_TOPIC — in Docker it's from env_file, on host from .env
-    if [ "$IN_DOCKER" != true ] && [ -z "$NTFY_TOPIC" ] && [ -f "$PROJECT_ROOT/.env" ]; then
-        NTFY_TOPIC=$(grep -E '^NTFY_TOPIC=' "$PROJECT_ROOT/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
-    fi
-
     if [[ -z "$NTFY_TOPIC" ]]; then
         echo "Error: NTFY_TOPIC environment variable required for --notify" >&2
         echo "  Set in .env or export NTFY_TOPIC=your-topic" >&2

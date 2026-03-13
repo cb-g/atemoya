@@ -234,38 +234,34 @@ uv run pricing/skew_trading/python/fetch/collect_snapshot.py --tickers TSLA,AAPL
 
 #### Automated Cron Setup
 
-**Docker (recommended):** The cron daemon runs inside the container. The `crontab` file lives in the project root (mounted at `/app/crontab`) and is auto-loaded on every container start.
+The daily pipeline has three stages: **collect** (after market close) → **scan** (after collection) → **notify** (before market open). All times below are UTC.
 
+**Native (uv installed on host):**
 ```bash
-# Inside the container, add a daily collection job:
-echo "15 21 * * 1-5 cd /app && ./pricing/skew_trading/cron_collect.sh TSLA,AAPL --quiet" >> /app/crontab
-crontab /app/crontab
+# 1. Collect option chain snapshots for all liquid tickers (weekday evenings)
+15 22 * * 1-5 cd /path/to/atemoya && uv run pricing/skew_trading/python/fetch/collect_snapshot.py --tickers all_liquid >> /tmp/skew_collect.log 2>&1
+
+# 2. Run signal scanner after collection completes
+30 23 * * 1-5 cd /path/to/atemoya && uv run pricing/skew_trading/python/scan_signals.py --segments --quiet --output pricing/skew_trading/output/signal_scan.csv >> /tmp/skew_scan.log 2>&1
+
+# 3. Send morning trade notifications (before market open)
+0 9 * * 1-5 cd /path/to/atemoya && uv run pricing/skew_trading/python/notify_signals.py >> /tmp/skew_notify.log 2>&1
 ```
 
-Since the crontab file is stored in the project directory, it persists across container restarts.
-
-**Host (without Docker):** The same script works directly on the host if `uv` and `opam` are installed.
-
+**Docker (from host crontab):**
 ```bash
-# From the project root:
-(crontab -l 2>/dev/null; echo "15 21 * * 1-5 cd $(pwd) && ./pricing/skew_trading/cron_collect.sh TSLA,AAPL --quiet") | crontab -
+15 22 * * 1-5 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/skew_trading/python/fetch/collect_snapshot.py --tickers all_liquid" >> /tmp/skew_collect.log 2>&1
+30 23 * * 1-5 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/skew_trading/python/scan_signals.py --segments --quiet --output pricing/skew_trading/output/signal_scan.csv" >> /tmp/skew_scan.log 2>&1
+0 9 * * 1-5 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/skew_trading/python/notify_signals.py" >> /tmp/skew_notify.log 2>&1
 ```
 
-The `15 21 * * 1-5` schedule runs at 21:15 UTC (5:15pm ET) on weekdays, 15 minutes after market close. Adjust the hour for your timezone.
-
-The cron script:
-1. Fetches option chains and calibrates SVI surfaces
-2. Archives full snapshots to `data/snapshots/`
-3. Appends real skew metrics to `{TICKER}_skew_history.csv`
-4. Regenerates `{TICKER}_skew_timeseries.csv` for OCaml consumption
+Notifications require `NTFY_TOPIC` set in `.env` at the project root.
 
 Collection is idempotent -- running multiple times on the same day for the same ticker skips duplicate collection.
 
 #### Switching from Synthetic to Real Data
 
 Once `{TICKER}_skew_history.csv` accumulates >= 60 rows, `compute_skew_timeseries.py` automatically uses real data. The backtest and signal generation then operate on actual market observations with no OCaml code changes needed.
-
-Logs: `log/cron_collect.log`
 
 ## Configuration
 

@@ -131,6 +131,38 @@ def format_alert_message(alert: dict) -> tuple[str, str, int, list[str]]:
     return message, title, priority, tags
 
 
+def format_digest(alerts: list[dict]) -> tuple[str, str, int]:
+    """
+    Format all alerts into a single digest notification.
+
+    Returns (message, title, max_priority).
+    """
+    # Sort by priority (URGENT first)
+    priority_order = {"URGENT": 0, "HIGH": 1, "NORMAL": 2, "INFO": 3}
+    sorted_alerts = sorted(alerts, key=lambda a: priority_order.get(a.get("priority", "INFO"), 9))
+
+    PRIORITY_ICONS = {
+        "URGENT": "\U0001f534",  # red circle
+        "HIGH": "\U0001f7e0",    # orange circle
+        "NORMAL": "\U0001f7e1",  # yellow circle
+        "INFO": "\U0001f7e2",    # green circle
+    }
+
+    lines = []
+    max_priority = 2  # default low
+    for alert in sorted_alerts:
+        ticker = alert.get("ticker", "???")
+        priority_str = alert.get("priority", "NORMAL")
+        message = alert.get("message", "Alert triggered")
+        priority = PRIORITY_MAP.get(priority_str, 3)
+        max_priority = max(max_priority, priority)
+        icon = PRIORITY_ICONS.get(priority_str, "\u25CF")
+        lines.append(f"{icon} {ticker}: {message}")
+
+    title = f"Watchlist: {len(alerts)} alerts"
+    return "\n".join(lines), title, max_priority
+
+
 def main():
     parser = argparse.ArgumentParser(description="Send watchlist alerts via ntfy.sh")
     parser.add_argument("--alerts", required=True, help="Analysis JSON file with alerts")
@@ -161,34 +193,27 @@ def main():
         print("No alerts to send")
         return
 
-    print(f"Sending {len(alerts)} alert(s) to {args.server}/{args.topic}")
+    message, title, priority = format_digest(alerts)
 
-    sent = 0
-    failed = 0
-    for alert in alerts:
-        message, title, priority, tags = format_alert_message(alert)
+    if args.dry_run:
+        print(f"Title: {title}")
+        print("---")
+        print(message)
+        return
 
-        if args.dry_run:
-            tag_str = f" [{','.join(tags)}]" if tags else ""
-            print(f"  [DRY RUN] (p={priority}) {title}: {message}{tag_str}")
-        else:
-            success = send_notification(
-                topic=args.topic,
-                message=message,
-                title=title,
-                priority=priority,
-                tags=tags,
-                server=args.server,
-            )
-            if success:
-                sent += 1
-                print(f"  [sent] {title}: {message}")
-            else:
-                failed += 1
-                print(f"  [FAILED] {title}: {message}")
-
-    if not args.dry_run:
-        print(f"\n{sent} sent, {failed} failed")
+    print(f"Sending {len(alerts)} alert(s) as single notification...")
+    success = send_notification(
+        topic=args.topic,
+        message=message,
+        title=title,
+        priority=priority,
+        server=args.server,
+    )
+    if success:
+        print("Notification sent.")
+    else:
+        print("Notification failed.", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

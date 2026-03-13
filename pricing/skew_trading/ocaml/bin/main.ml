@@ -7,13 +7,19 @@ let () =
   let operation = ref "measure" in
   let expiry_days = ref 30 in
   let notional = ref 10000.0 in
+  let direction_str = ref "long" in
+  let contracts = ref 1 in
+  let strategy = ref "rr" in
 
   let usage_msg = "Skew Trading Model - Trade volatility skew using risk reversals, butterflies, and spreads" in
   let speclist = [
     ("-ticker", Arg.Set_string ticker, "Ticker symbol (default: TSLA)");
     ("-op", Arg.Set_string operation, "Operation: measure|signal|backtest|position (default: measure)");
     ("-expiry", Arg.Set_int expiry_days, "Days to expiry (default: 30)");
-    ("-notional", Arg.Set_float notional, "Vega notional (default: 10000)");
+    ("-notional", Arg.Set_float notional, "Dollar notional for sizing (default: 10000)");
+    ("-direction", Arg.Set_string direction_str, "Position direction: long|short (default: long)");
+    ("-contracts", Arg.Set_int contracts, "Number of contracts per leg (default: 1)");
+    ("-strategy", Arg.Set_string strategy, "Strategy: rr|butterfly (default: rr)");
   ] in
 
   Arg.parse speclist (fun _ -> ()) usage_msg;
@@ -127,26 +133,70 @@ let () =
       Printf.printf "  Position Size: $%.2f\n" signal.position_size
 
   | "position" ->
-      (* Build skew position *)
-      Io.write_log log_file "Building risk reversal position";
-
       let expiry = float_of_int !expiry_days /. 365.0 in
       let rate = 0.05 in
+      let spot = underlying_data.spot_price in
+      let dividend = underlying_data.dividend_yield in
 
-      let position = Skew_strategies.build_risk_reversal
-        vol_surface
-        underlying_data
-        ~rate
-        ~expiry
-        ~delta_target:0.25
-        ~direction:`Long
-        ~notional:!notional
+      let direction = match String.lowercase_ascii !direction_str with
+        | "short" -> `Short
+        | _ -> `Long
+      in
+
+      let raw_position = match String.lowercase_ascii !strategy with
+        | "butterfly" | "bf" ->
+            Io.write_log log_file "Building butterfly position";
+            (* Use 25Δ put, ATM, 25Δ call as strikes *)
+            let call_strike = match Skew_measurement.find_delta_strike Call ~target_delta:0.25 ~spot ~expiry ~rate ~dividend vol_surface with
+              | Some k -> k | None -> spot *. 1.05 in
+            let put_strike = match Skew_measurement.find_delta_strike Put ~target_delta:(-0.25) ~spot ~expiry ~rate ~dividend vol_surface with
+              | Some k -> k | None -> spot *. 0.95 in
+            let atm_strike = spot in
+            Skew_strategies.build_butterfly
+              vol_surface underlying_data ~rate ~expiry
+              ~strikes:(put_strike, atm_strike, call_strike)
+              ~notional:!notional
+        | _ ->
+            Io.write_log log_file "Building risk reversal position";
+            Skew_strategies.build_risk_reversal
+              vol_surface underlying_data ~rate ~expiry
+              ~delta_target:0.25 ~direction ~notional:!notional
+      in
+
+      (* Rescale to exact contract count *)
+      let position =
+        if !contracts > 0 then
+          let target_qty = float_of_int !contracts in
+          let current_qty = abs_float raw_position.Types.legs.(0).Types.quantity in
+          let scale = if current_qty > 0.0 then target_qty /. current_qty else 1.0 in
+          let rescale_leg leg = { leg with Types.quantity = leg.Types.quantity *. scale } in
+          (* For SHORT WINGS (sell butterfly), flip all signs *)
+          let dir_flip = match String.lowercase_ascii !strategy, direction with
+            | ("butterfly" | "bf"), `Short -> -1.0
+            | _ -> 1.0
+          in
+          let final_scale = scale *. dir_flip in
+          let rescale_leg_dir leg = { (rescale_leg leg) with Types.quantity = leg.Types.quantity *. final_scale } in
+          { raw_position with
+            Types.legs = Array.map rescale_leg_dir raw_position.Types.legs;
+            total_cost = raw_position.Types.total_cost *. final_scale;
+            total_delta = raw_position.Types.total_delta *. final_scale;
+            total_vega = raw_position.Types.total_vega *. final_scale;
+            total_gamma = raw_position.Types.total_gamma *. final_scale;
+          }
+        else raw_position
       in
 
       let output_file = Printf.sprintf "pricing/skew_trading/output/%s_position.csv" !ticker in
       Io.write_positions_csv output_file [| position |];
 
-      Io.write_log log_file (Printf.sprintf "Position: Risk Reversal (25Δ)");
+      let strategy_label = match String.lowercase_ascii !strategy with
+        | "butterfly" | "bf" -> "butterfly"
+        | _ -> "risk reversal"
+      in
+      let dir_label = match direction with `Long -> "LONG" | `Short -> "SHORT" in
+
+      Io.write_log log_file (Printf.sprintf "Strategy: %s %s" dir_label strategy_label);
       Io.write_log log_file (Printf.sprintf "Number of Legs: %d" (Array.length position.legs));
       Io.write_log log_file (Printf.sprintf "Total Cost: $%.2f" position.total_cost);
       Io.write_log log_file (Printf.sprintf "Total Delta: %.4f" position.total_delta);
@@ -154,8 +204,15 @@ let () =
       Io.write_log log_file (Printf.sprintf "Total Gamma: %.4f" position.total_gamma);
       Io.write_log log_file (Printf.sprintf "Output: %s" output_file);
 
-      Printf.printf "✓ Risk reversal position built\n";
+      Printf.printf "✓ %s %s position built\n" dir_label strategy_label;
       Printf.printf "  Legs: %d\n" (Array.length position.legs);
+      Array.iteri (fun i leg ->
+        let opt_str = match leg.Types.option_type with Types.Call -> "CALL" | Types.Put -> "PUT" in
+        let dir = if leg.Types.quantity > 0.0 then "BUY" else "SELL" in
+        Printf.printf "  Leg %d: %s %.0f %s strike=$%.2f expiry=%.0fd price=$%.2f\n"
+          (i + 1) dir (abs_float leg.Types.quantity) opt_str
+          leg.Types.strike (leg.Types.expiry *. 365.0) leg.Types.entry_price
+      ) position.legs;
       Printf.printf "  Cost: $%.2f\n" position.total_cost;
       Printf.printf "  Delta: %.4f\n" position.total_delta;
       Printf.printf "  Vega: %.2f\n" position.total_vega;

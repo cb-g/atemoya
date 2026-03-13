@@ -67,7 +67,7 @@ alternative/macro_dashboard/data/*
 alternative/macro_dashboard/output/*
 !alternative/macro_dashboard/output/.gitkeep
 monitoring/watchlist/data/*
-!monitoring/watchlist/data/portfolio.json
+!monitoring/watchlist/data/portfolio.example.json
 pricing/systematic_risk_signals/data/
 alternative/insider_trading/data/*
 !alternative/insider_trading/data/.gitkeep
