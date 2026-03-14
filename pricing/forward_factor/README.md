@@ -73,7 +73,60 @@ FF = (σ1 - σ_fwd) / σ_fwd
 2. Profit target: 50-75% of max profit
 3. Stop loss: 100% of debit (let expire)
 
-## Quick Start
+## Daily Signal Pipeline
+
+Three-stage automated pipeline: **collect** (after market close) → **scan** (after collection) → **notify** (before market open).
+
+Runs on all 523 liquid tickers daily (not earnings-gated). The more history accumulated, the better the z-scores.
+
+**What gets stored:**
+- `data/snapshots/{TICKER}/{YYYY-MM-DD}.json` - Full snapshot archive per day
+- `data/{TICKER}_ff_history.csv` - Append-only history (one row per DTE pair per day)
+
+#### Automated Cron Setup
+
+All times below are UTC. Runs Tue-Sat to capture Mon-Fri market data.
+
+**Native (uv installed on host):**
+```bash
+# 1. Collect forward factor snapshots for all liquid tickers
+45 7 * * 2-6 cd /path/to/atemoya && uv run pricing/forward_factor/python/fetch/collect_snapshot.py --tickers all_liquid >> /tmp/ff_collect.log 2>&1
+
+# 2. Run signal scanner after collection completes
+0 9 * * 2-6 cd /path/to/atemoya && uv run pricing/forward_factor/python/scan_signals.py --segments --quiet --output pricing/forward_factor/output/signal_scan.csv >> /tmp/ff_scan.log 2>&1
+
+# 3. Send morning trade notifications (before market open)
+20 9 * * 1-5 cd /path/to/atemoya && uv run pricing/forward_factor/python/notify_signals.py >> /tmp/ff_notify.log 2>&1
+```
+
+**Docker (from host crontab):**
+```bash
+45 7 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/forward_factor/python/fetch/collect_snapshot.py --tickers all_liquid" >> /tmp/ff_collect.log 2>&1
+0 9 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/forward_factor/python/scan_signals.py --segments --quiet --output pricing/forward_factor/output/signal_scan.csv" >> /tmp/ff_scan.log 2>&1
+20 9 * * 1-5 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/forward_factor/python/notify_signals.py" >> /tmp/ff_notify.log 2>&1
+```
+
+Notifications require `NTFY_TOPIC` set in `.env` at the project root.
+
+#### Manual / Ad-hoc Usage
+
+```bash
+# Collect a single ticker
+uv run pricing/forward_factor/python/fetch/collect_snapshot.py --ticker AAPL
+
+# Run scanner filtered to 60-90 DTE pair (best performing in backtest)
+uv run pricing/forward_factor/python/scan_signals.py --segments --dte-pair 60-90
+
+# Run scanner with z-score lookback window
+uv run pricing/forward_factor/python/scan_signals.py --window 60
+
+# Dry-run notification
+uv run pricing/forward_factor/python/notify_signals.py --dry-run
+```
+
+## Quick Start (OCaml Scanner)
+
+For the original single-run OCaml scanner with Kelly sizing:
 
 ### 1. Fetch Options Data
 
@@ -130,13 +183,19 @@ pricing/forward_factor/
 │   │   └── scanner.ml       # Opportunity scanner
 │   └── bin/
 │       └── main.ml          # Main executable
-├── python/                  # Data fetching (Python)
-│   ├── fetch_chains.py      # Fetch options chains
-│   └── pyproject.toml       # Python dependencies
-├── data/                    # Options chain data
-│   └── options_chains.json
-└── output/                  # Scanner results
-    └── recommendations.json
+├── python/                   # Data & signals (Python)
+│   ├── fetch/
+│   │   └── collect_snapshot.py  # Daily cron collector
+│   ├── fetch_chains.py       # One-shot chain fetcher (for OCaml)
+│   ├── scan_signals.py       # Z-score signal scanner
+│   ├── notify_signals.py     # ntfy.sh notification sender
+│   └── pyproject.toml        # Python dependencies
+├── data/                     # Time series data
+│   ├── {TICKER}_ff_history.csv
+│   ├── snapshots/{TICKER}/{YYYY-MM-DD}.json
+│   └── options_chains.json   # One-shot chain data (for OCaml)
+└── output/                   # Scanner results
+    └── signal_scan.csv
 ```
 
 ## Strategy Details

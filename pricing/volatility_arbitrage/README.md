@@ -48,7 +48,55 @@ eval $(opam env) && dune build pricing/volatility_arbitrage
 # Python dependencies already installed via uv sync
 ```
 
-### Basic Workflow
+## Daily Signal Pipeline
+
+Three-stage automated pipeline: **collect** (after market close) → **scan** (after collection) → **notify** (before market open).
+
+Runs on all 523 liquid tickers daily. Computes Yang-Zhang realized vol and EWMA forecast, compares against ATM IV. Z-scores measure how extreme today's IV-RV spread is vs history.
+
+**What gets stored:**
+- `data/snapshots/{TICKER}/{YYYY-MM-DD}.json` - Full snapshot archive per day
+- `data/{TICKER}_volarb_history.csv` - Append-only history of daily IV/RV metrics
+
+#### Automated Cron Setup
+
+All times below are UTC. Runs Tue-Sat to capture Mon-Fri market data.
+
+**Native (uv installed on host):**
+```bash
+# 1. Collect vol arb snapshots for all liquid tickers
+30 4 * * 2-6 cd /path/to/atemoya && uv run pricing/volatility_arbitrage/python/fetch/collect_snapshot.py --tickers all_liquid >> /tmp/volarb_collect.log 2>&1
+
+# 2. Run signal scanner after collection completes
+45 5 * * 2-6 cd /path/to/atemoya && uv run pricing/volatility_arbitrage/python/scan_signals.py --segments --quiet --output pricing/volatility_arbitrage/output/signal_scan.csv >> /tmp/volarb_scan.log 2>&1
+
+# 3. Send morning trade notifications (before market open)
+20 9 * * 1-5 cd /path/to/atemoya && uv run pricing/volatility_arbitrage/python/notify_signals.py >> /tmp/volarb_notify.log 2>&1
+```
+
+**Docker (from host crontab):**
+```bash
+30 4 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/volatility_arbitrage/python/fetch/collect_snapshot.py --tickers all_liquid" >> /tmp/volarb_collect.log 2>&1
+45 5 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/volatility_arbitrage/python/scan_signals.py --segments --quiet --output pricing/volatility_arbitrage/output/signal_scan.csv" >> /tmp/volarb_scan.log 2>&1
+20 9 * * 1-5 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/volatility_arbitrage/python/notify_signals.py" >> /tmp/volarb_notify.log 2>&1
+```
+
+Notifications require `NTFY_TOPIC` set in `.env` at the project root.
+
+#### Manual / Ad-hoc Usage
+
+```bash
+# Collect a single ticker
+uv run pricing/volatility_arbitrage/python/fetch/collect_snapshot.py --ticker AAPL
+
+# Run scanner with z-score lookback window
+uv run pricing/volatility_arbitrage/python/scan_signals.py --segments --window 60
+
+# Dry-run notification
+uv run pricing/volatility_arbitrage/python/notify_signals.py --dry-run
+```
+
+### Basic Workflow (OCaml)
 
 **Step 1: Fetch Historical Data**
 

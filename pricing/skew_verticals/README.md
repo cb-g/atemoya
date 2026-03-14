@@ -65,7 +65,57 @@ pricing/skew_verticals/
     └── trade_history.csv     # Forward-testing database
 ```
 
-## Usage
+## Daily Signal Pipeline
+
+Three-stage automated pipeline: **collect** (after market close) → **scan** (after collection) → **notify** (before market open).
+
+Runs on all 523 liquid tickers daily. Skew z-scores need history to detect extremes — signals improve after 3+ days of collection.
+
+**What gets stored:**
+- `data/snapshots/{TICKER}/{YYYY-MM-DD}.json` - Full snapshot archive per day
+- `data/{TICKER}_skewvert_history.csv` - Append-only history of daily skew/VRP/momentum metrics
+
+#### Automated Cron Setup
+
+All times below are UTC. Runs Tue-Sat to capture Mon-Fri market data.
+
+**Native (uv installed on host):**
+```bash
+# 1. Collect skew verticals snapshots for all liquid tickers
+0 3 * * 2-6 cd /path/to/atemoya && uv run pricing/skew_verticals/python/fetch/collect_snapshot.py --tickers all_liquid >> /tmp/skewvert_collect.log 2>&1
+
+# 2. Run signal scanner after collection completes
+15 4 * * 2-6 cd /path/to/atemoya && uv run pricing/skew_verticals/python/scan_signals.py --segments --quiet --output pricing/skew_verticals/output/signal_scan.csv >> /tmp/skewvert_scan.log 2>&1
+
+# 3. Send morning trade notifications (before market open)
+15 9 * * 1-5 cd /path/to/atemoya && uv run pricing/skew_verticals/python/notify_signals.py >> /tmp/skewvert_notify.log 2>&1
+```
+
+**Docker (from host crontab):**
+```bash
+0 3 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/skew_verticals/python/fetch/collect_snapshot.py --tickers all_liquid" >> /tmp/skewvert_collect.log 2>&1
+15 4 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/skew_verticals/python/scan_signals.py --segments --quiet --output pricing/skew_verticals/output/signal_scan.csv" >> /tmp/skewvert_scan.log 2>&1
+15 9 * * 1-5 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/skew_verticals/python/notify_signals.py" >> /tmp/skewvert_notify.log 2>&1
+```
+
+Notifications require `NTFY_TOPIC` set in `.env` at the project root.
+
+#### Manual / Ad-hoc Usage
+
+```bash
+# Collect a single ticker
+uv run pricing/skew_verticals/python/fetch/collect_snapshot.py --ticker AAPL
+
+# Run scanner with z-score lookback window
+uv run pricing/skew_verticals/python/scan_signals.py --segments --window 60
+
+# Dry-run notification
+uv run pricing/skew_verticals/python/notify_signals.py --dry-run
+```
+
+## Usage (OCaml Scanner)
+
+For the original single-ticker OCaml scanner with spread optimization:
 
 ### 1. Fetch Data
 

@@ -97,7 +97,58 @@ Example with $10,000 account:
 - Calendar @ 10% Kelly = $600 max debit
 - Trade 1-2 contracts
 
-## Live Scanner Workflow
+## Daily Signal Pipeline
+
+Three-stage automated pipeline: **collect** (after market close) → **scan** (after collection) → **notify** (before market open).
+
+**What gets stored:**
+- `data/snapshots/{TICKER}/{YYYY-MM-DD}.json` - Full snapshot archive per day
+- `data/{TICKER}_earnings_vol.csv` - Append-only history of daily term structure metrics
+
+#### Automated Cron Setup
+
+All times below are UTC. Runs Tue-Sat to capture Mon-Fri market data.
+
+**Native (uv installed on host):**
+```bash
+# 1. Collect earnings vol snapshots for all liquid tickers
+15 6 * * 2-6 cd /path/to/atemoya && uv run pricing/earnings_vol/python/fetch/collect_snapshot.py --tickers all_liquid >> /tmp/earnings_vol_collect.log 2>&1
+
+# 2. Run signal scanner after collection completes
+30 7 * * 2-6 cd /path/to/atemoya && uv run pricing/earnings_vol/python/scan_signals.py --segments --quiet --output pricing/earnings_vol/output/signal_scan.csv >> /tmp/earnings_vol_scan.log 2>&1
+
+# 3. Send morning trade notifications (before market open)
+15 9 * * 1-5 cd /path/to/atemoya && uv run pricing/earnings_vol/python/notify_signals.py >> /tmp/earnings_vol_notify.log 2>&1
+```
+
+**Docker (from host crontab):**
+```bash
+15 6 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/earnings_vol/python/fetch/collect_snapshot.py --tickers all_liquid" >> /tmp/earnings_vol_collect.log 2>&1
+30 7 * * 2-6 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/earnings_vol/python/scan_signals.py --segments --quiet --output pricing/earnings_vol/output/signal_scan.csv" >> /tmp/earnings_vol_scan.log 2>&1
+15 9 * * 1-5 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run pricing/earnings_vol/python/notify_signals.py" >> /tmp/earnings_vol_notify.log 2>&1
+```
+
+Notifications require `NTFY_TOPIC` set in `.env` at the project root.
+
+#### Manual / Ad-hoc Usage
+
+```bash
+# Collect a single ticker
+uv run pricing/earnings_vol/python/fetch/collect_snapshot.py --ticker AAPL
+
+# Collect with wider entry window (default 18 days)
+uv run pricing/earnings_vol/python/fetch/collect_snapshot.py --tickers all_liquid --entry-window 30
+
+# Run scanner with z-score window (last ~4 earnings cycles)
+uv run pricing/earnings_vol/python/scan_signals.py --segments --window 72
+
+# Dry-run notification
+uv run pricing/earnings_vol/python/notify_signals.py --dry-run
+```
+
+## Live Scanner Workflow (OCaml)
+
+For the original single-ticker OCaml scanner:
 
 **Docker:**
 ```bash
@@ -175,9 +226,14 @@ Instead of trying to backtest historical data (yfinance has bugs), we're **build
 ## Files
 
 - `ocaml/` - Filter engine, term structure analyzer, Kelly sizer
-- `python/fetch/` - Earnings calendar and IV term structure fetchers
+- `python/fetch/collect_snapshot.py` - Daily cron collector (term structure + volume + RV)
+- `python/fetch/fetch_earnings.py` - Single-ticker earnings calendar fetcher
+- `python/fetch/fetch_iv_term.py` - Single-ticker IV term structure fetcher
+- `python/scan_signals.py` - 3-gate signal scanner with z-score history
+- `python/notify_signals.py` - ntfy.sh notification sender
 - `python/tracking/` - Forward-testing database and updaters
-- `data/trade_history.csv` - Accumulated scan/trade history
+- `data/{TICKER}_earnings_vol.csv` - Append-only daily snapshot history
+- `data/snapshots/{TICKER}/{YYYY-MM-DD}.json` - Full daily snapshot archive
 - `FORWARD_TESTING.md` - Complete documentation for data collection
 
 ## Classic Example
