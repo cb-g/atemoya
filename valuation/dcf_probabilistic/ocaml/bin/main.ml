@@ -9,6 +9,7 @@ let () =
   let log_dir = ref "valuation/dcf_probabilistic/log" in
   let output_dir = ref "valuation/dcf_probabilistic/output" in
   let python_script = ref "valuation/dcf_probabilistic/python/fetch/fetch_financials_ts.py" in
+  let json_output = ref "" in
 
   let speclist = [
     ("-ticker", Arg.Set_string ticker, "Ticker symbol to value");
@@ -16,6 +17,7 @@ let () =
     ("-log-dir", Arg.Set_string log_dir, "Log directory path");
     ("-output-dir", Arg.Set_string output_dir, "Output directory path");
     ("-python", Arg.Set_string python_script, "Python fetcher script path");
+    ("-json-output", Arg.Set_string json_output, "Write JSON summary to file (for panel integration)");
   ] in
 
   let usage_msg = "DCF Probabilistic Valuation Tool\nUsage: dcf_probabilistic -ticker TICKER [options]" in
@@ -288,6 +290,31 @@ let () =
     Io.write_market_prices ~filename:prices_file ~results:[result];
 
     Printf.printf "CSV outputs written to: %s\n" data_dir;
+
+    (* Write JSON summary if requested *)
+    if !json_output <> "" then begin
+      let open Yojson.Basic in
+      let json = `Assoc [
+        ("ticker", `String result.ticker);
+        ("price", `Float result.price);
+        ("fcfe_mean", `Float result.fcfe_stats.mean);
+        ("fcfe_median", `Float result.fcfe_stats.percentile_50);
+        ("fcfe_p5", `Float result.fcfe_stats.percentile_5);
+        ("fcfe_p95", `Float result.fcfe_stats.percentile_95);
+        ("fcff_mean", `Float result.fcff_stats.mean);
+        ("fcff_median", `Float result.fcff_stats.percentile_50);
+        ("fcff_p5", `Float result.fcff_stats.percentile_5);
+        ("fcff_p95", `Float result.fcff_stats.percentile_95);
+        ("p_undervalued_fcfe", `Float result.fcfe_metrics.prob_undervalued);
+        ("p_undervalued_fcff", `Float result.fcff_metrics.prob_undervalued);
+        ("signal", `String (Statistics.signal_to_string result.signal));
+        ("num_simulations", `Int result.num_simulations);
+      ] in
+      let oc = open_out !json_output in
+      output_string oc (pretty_to_string json);
+      output_char oc '\n';
+      close_out oc
+    end;
 
   with
   | Sys_error msg ->

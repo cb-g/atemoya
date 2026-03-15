@@ -110,6 +110,9 @@ valuation/dcf_deterministic/output/sensitivity/plots/*
 !valuation/dcf_deterministic/output/sensitivity/plots/dcf_sensitivity_CVX.svg
 valuation/dcf_deterministic/output/sensitivity/data/
 
+# Panel: all output is generated
+valuation/panel/output/
+
 # DCF Probabilistic: ignore everything, whitelist showcase SVGs
 valuation/dcf_probabilistic/output/data/
 valuation/dcf_probabilistic/output/single_asset/*
@@ -178,7 +181,9 @@ valuation/dividend_income/data/**
 !valuation/dividend_income/output/plots/JNJ_dividend_analysis.svg
 !valuation/dividend_income/output/plots/VZ_dividend_analysis.svg
 
-# Growth Analysis: ignore everything, whitelist showcase SVGs
+# Growth Analysis: ignore root-level stray plots and output dir, whitelist showcase SVGs
+valuation/growth_analysis/output.png
+valuation/growth_analysis/output.svg
 valuation/growth_analysis/output/*
 !valuation/growth_analysis/output/plots/
 valuation/growth_analysis/output/plots/*

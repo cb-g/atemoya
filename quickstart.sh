@@ -3031,6 +3031,10 @@ show_valuation_menu() {
         echo -e "${DIM}    Scan analyst price targets to find biggest upside opportunities."
         echo -e "    Ranks by upside %, filters by analyst coverage, maps conviction vs dispersion.${NC}"
         echo ""
+        echo -e "${GREEN}12)${NC} ${BOLD}Panel (Multi-Model View)${NC}"
+        echo -e "${DIM}    Run multiple valuation models per ticker. Each model's verdict presented"
+        echo -e "    as-is — a panel of experts, each speaking for itself.${NC}"
+        echo ""
         echo -e "${GREEN}0)${NC} Back to Run Menu"
         echo ""
         echo -e "${YELLOW}Enter your choice:${NC} "
@@ -3048,6 +3052,7 @@ show_valuation_menu() {
             9) show_relative_valuation_menu ;;
             10) show_normalized_multiples_menu ;;
             11) show_analyst_upside_menu ;;
+            12) show_panel_menu ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -3422,6 +3427,10 @@ show_volatility_arbitrage_menu() {
         echo -e "${GREEN}5)${NC} Generate Visualizations"
         echo -e "${GREEN}6)${NC} Do Everything (Full Workflow)"
         echo ""
+        echo "DAILY PIPELINE:"
+        echo -e "${GREEN}7)${NC} Collect Daily Snapshot"
+        echo -e "${GREEN}8)${NC} Scan Signals (z-score watchlist)"
+        echo ""
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
         echo -e "${YELLOW}Enter your choice (Enter=Full Workflow):${NC} "
@@ -3434,6 +3443,8 @@ show_volatility_arbitrage_menu() {
             4) detect_volatility_arbitrage ;;
             5) generate_vol_arb_visualizations ;;
             6|"") run_vol_arb_full_workflow ;;
+            7) collect_vol_arb_snapshot ;;
+            8) scan_vol_arb_signals ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -3591,6 +3602,55 @@ run_vol_arb_full_workflow() {
 
     print_success "Full workflow complete for $ticker"
     print_info "Results in: pricing/volatility_arbitrage/output/"
+}
+
+collect_vol_arb_snapshot() {
+    print_header "Collect Daily Vol Arb Snapshot"
+
+    pick_ticker_source "TSLA" || return
+
+    print_info "Collecting volatility arbitrage snapshot..."
+
+    uv run pricing/volatility_arbitrage/python/fetch/collect_snapshot.py \
+        --tickers "$ticker_arg" \
+        --data-dir pricing/volatility_arbitrage/data
+
+    if [ $? -eq 0 ]; then
+        print_success "Snapshot collected"
+        print_info "Data: pricing/volatility_arbitrage/data/"
+    else
+        print_error "Snapshot collection failed"
+    fi
+}
+
+scan_vol_arb_signals() {
+    print_header "Scan Vol Arb Signals"
+
+    echo -e "${GREEN}1)${NC} Overall ranking (all tickers)"
+    echo -e "${GREEN}2)${NC} By price segment"
+    echo ""
+    echo -e "${YELLOW}Enter your choice (Enter=By segment):${NC} "
+    read -r scan_choice
+
+    local scan_args="--quiet"
+    case $scan_choice in
+        1) ;;
+        2|"") scan_args="$scan_args --segments" ;;
+        *) scan_args="$scan_args --segments" ;;
+    esac
+
+    print_info "Scanning vol arb histories..."
+
+    uv run pricing/volatility_arbitrage/python/scan_signals.py \
+        $scan_args \
+        --output pricing/volatility_arbitrage/output/signal_scan.csv
+
+    if [ $? -eq 0 ]; then
+        print_success "Scan complete"
+        print_info "Results: pricing/volatility_arbitrage/output/signal_scan.csv"
+    else
+        print_error "Scan failed"
+    fi
 }
 
 # Variance Swaps - prompt for estimator and forecast method
@@ -8048,6 +8108,11 @@ show_dispersion_trading_menu() {
         echo -e "${GREEN}2)${NC} Run Analysis"
         echo -e "${GREEN}3)${NC} Visualize Dispersion"
         echo -e "${GREEN}4)${NC} Run Full Workflow"
+        echo ""
+        echo "DAILY PIPELINE:"
+        echo -e "${GREEN}5)${NC} Collect Daily Snapshot"
+        echo -e "${GREEN}6)${NC} Scan Signals"
+        echo ""
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
         echo -e "${YELLOW}Enter your choice (Enter=Full Workflow):${NC} "
@@ -8058,6 +8123,8 @@ show_dispersion_trading_menu() {
             2) run_dispersion_analysis ;;
             3) visualize_dispersion ;;
             4|"") run_dispersion_workflow ;;
+            5) collect_dispersion_snapshot ;;
+            6) scan_dispersion_signals ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -8167,6 +8234,46 @@ run_dispersion_workflow() {
     read -p "Press Enter to continue..."
 }
 
+collect_dispersion_snapshot() {
+    print_header "Collect Daily Dispersion Snapshot"
+
+    read -p "Enter index ticker (default: SPY): " index
+    index=${index:-SPY}
+
+    read -p "Enter constituent tickers (default: top 10 SPY holdings): " constituents
+    constituents=${constituents:-AAPL,MSFT,NVDA,AMZN,GOOGL,META,TSLA,JPM,V,UNH}
+
+    print_info "Collecting dispersion snapshot for $index..."
+
+    uv run pricing/dispersion_trading/python/fetch/collect_snapshot.py \
+        --index "$index" \
+        --constituents "$constituents" \
+        --data-dir pricing/dispersion_trading/data
+
+    if [ $? -eq 0 ]; then
+        print_success "Snapshot collected"
+        print_info "Data: pricing/dispersion_trading/data/"
+    else
+        print_error "Snapshot collection failed"
+    fi
+}
+
+scan_dispersion_signals() {
+    print_header "Scan Dispersion Signals"
+
+    print_info "Scanning dispersion histories..."
+
+    uv run pricing/dispersion_trading/python/scan_signals.py \
+        --quiet \
+        --output pricing/dispersion_trading/output/signal_scan.csv
+
+    if [ $? -eq 0 ]; then
+        print_success "Scan complete"
+        print_info "Results: pricing/dispersion_trading/output/signal_scan.csv"
+    else
+        print_error "Scan failed"
+    fi
+}
 
 # Pairs Trading operations
 show_pairs_trading_menu() {
@@ -8294,11 +8401,15 @@ show_earnings_vol_menu() {
         echo -e "${GREEN}3)${NC} Run Scanner (Filter + Kelly Sizing)"
         echo -e "${GREEN}4)${NC} Run Full Workflow"
         echo ""
+        echo "DAILY PIPELINE:"
+        echo -e "${GREEN}5)${NC} Collect Daily Snapshot"
+        echo -e "${GREEN}6)${NC} Scan Signals (z-score watchlist)"
+        echo ""
         echo "HISTORICAL BACKTEST (Phase 2):"
-        echo -e "${GREEN}5)${NC} Fetch Historical Earnings (2022-2025)"
-        echo -e "${GREEN}6)${NC} Run Historical Backtest"
-        echo -e "${GREEN}7)${NC} Visualize Backtest Results"
-        echo -e "${GREEN}8)${NC} Run Full Backtest Workflow"
+        echo -e "${GREEN}7)${NC} Fetch Historical Earnings (2022-2025)"
+        echo -e "${GREEN}8)${NC} Run Historical Backtest"
+        echo -e "${GREEN}9)${NC} Visualize Backtest Results"
+        echo -e "${GREEN}10)${NC} Run Full Backtest Workflow"
         echo ""
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
@@ -8310,10 +8421,12 @@ show_earnings_vol_menu() {
             2) fetch_iv_term_structure ;;
             3) run_earnings_scanner ;;
             4|"") run_earnings_workflow ;;
-            5) fetch_historical_earnings ;;
-            6) run_historical_backtest ;;
-            7) visualize_backtest ;;
-            8) run_full_backtest_workflow ;;
+            5) collect_earnings_vol_snapshot ;;
+            6) scan_earnings_vol_signals ;;
+            7) fetch_historical_earnings ;;
+            8) run_historical_backtest ;;
+            9) visualize_backtest ;;
+            10) run_full_backtest_workflow ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -8533,6 +8646,55 @@ run_full_backtest_workflow() {
     print_info "Data: pricing/earnings_vol/data/backtest/"
 }
 
+collect_earnings_vol_snapshot() {
+    print_header "Collect Daily Earnings Vol Snapshot"
+
+    pick_ticker_source "NVDA" || return
+
+    print_info "Collecting earnings vol snapshot..."
+
+    uv run pricing/earnings_vol/python/fetch/collect_snapshot.py \
+        --tickers "$ticker_arg" \
+        --data-dir pricing/earnings_vol/data
+
+    if [ $? -eq 0 ]; then
+        print_success "Snapshot collected"
+        print_info "Data: pricing/earnings_vol/data/"
+    else
+        print_error "Snapshot collection failed"
+    fi
+}
+
+scan_earnings_vol_signals() {
+    print_header "Scan Earnings Vol Signals"
+
+    echo -e "${GREEN}1)${NC} Overall ranking (all tickers)"
+    echo -e "${GREEN}2)${NC} By price segment"
+    echo ""
+    echo -e "${YELLOW}Enter your choice (Enter=By segment):${NC} "
+    read -r scan_choice
+
+    local scan_args="--quiet"
+    case $scan_choice in
+        1) ;;
+        2|"") scan_args="$scan_args --segments" ;;
+        *) scan_args="$scan_args --segments" ;;
+    esac
+
+    print_info "Scanning earnings vol histories..."
+
+    uv run pricing/earnings_vol/python/scan_signals.py \
+        $scan_args \
+        --output pricing/earnings_vol/output/signal_scan.csv
+
+    if [ $? -eq 0 ]; then
+        print_success "Scan complete"
+        print_info "Results: pricing/earnings_vol/output/signal_scan.csv"
+    else
+        print_error "Scan failed"
+    fi
+}
+
 # Skew Verticals (Directional Spreads) operations
 show_skew_verticals_menu() {
     while true; do
@@ -8545,6 +8707,10 @@ show_skew_verticals_menu() {
         echo -e "${GREEN}3)${NC} Run Scanner (Momentum + Skew Analysis)"
         echo -e "${GREEN}4)${NC} Run Full Workflow (Batch: Multiple Tickers)"
         echo ""
+        echo "DAILY PIPELINE:"
+        echo -e "${GREEN}5)${NC} Collect Daily Snapshot"
+        echo -e "${GREEN}6)${NC} Scan Signals (z-score watchlist)"
+        echo ""
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
         echo -e "${YELLOW}Enter your choice (Enter=Full Workflow):${NC} "
@@ -8555,6 +8721,8 @@ show_skew_verticals_menu() {
             2) fetch_skew_verticals_prices ;;
             3) run_skew_verticals_scanner ;;
             4|"") run_skew_verticals_workflow ;;
+            5) collect_skew_verticals_snapshot ;;
+            6) scan_skew_verticals_signals ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -8730,6 +8898,55 @@ run_skew_verticals_workflow() {
     read -p "Press Enter to continue..."
 }
 
+collect_skew_verticals_snapshot() {
+    print_header "Collect Daily Skew Verticals Snapshot"
+
+    pick_ticker_source "TSLA" || return
+
+    print_info "Collecting skew verticals snapshot..."
+
+    uv run pricing/skew_verticals/python/fetch/collect_snapshot.py \
+        --tickers "$ticker_arg" \
+        --data-dir pricing/skew_verticals/data
+
+    if [ $? -eq 0 ]; then
+        print_success "Snapshot collected"
+        print_info "Data: pricing/skew_verticals/data/"
+    else
+        print_error "Snapshot collection failed"
+    fi
+}
+
+scan_skew_verticals_signals() {
+    print_header "Scan Skew Verticals Signals"
+
+    echo -e "${GREEN}1)${NC} Overall ranking (all tickers)"
+    echo -e "${GREEN}2)${NC} By price segment"
+    echo ""
+    echo -e "${YELLOW}Enter your choice (Enter=By segment):${NC} "
+    read -r scan_choice
+
+    local scan_args="--quiet"
+    case $scan_choice in
+        1) ;;
+        2|"") scan_args="$scan_args --segments" ;;
+        *) scan_args="$scan_args --segments" ;;
+    esac
+
+    print_info "Scanning skew verticals histories..."
+
+    uv run pricing/skew_verticals/python/scan_signals.py \
+        $scan_args \
+        --output pricing/skew_verticals/output/signal_scan.csv
+
+    if [ $? -eq 0 ]; then
+        print_success "Scan complete"
+        print_info "Results: pricing/skew_verticals/output/signal_scan.csv"
+    else
+        print_error "Scan failed"
+    fi
+}
+
 # Pre-Earnings Straddle (ML-Based) operations
 show_pre_earnings_straddle_menu() {
     while true; do
@@ -8881,6 +9098,10 @@ show_forward_factor_menu() {
         echo -e "${GREEN}2)${NC} Run Scanner (Detect Backwardation/Contango)"
         echo -e "${GREEN}3)${NC} Run Full Workflow"
         echo ""
+        echo "DAILY PIPELINE:"
+        echo -e "${GREEN}4)${NC} Collect Daily Snapshot"
+        echo -e "${GREEN}5)${NC} Scan Signals (z-score watchlist)"
+        echo ""
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
         echo -e "${YELLOW}Enter your choice (Enter=Full Workflow):${NC} "
@@ -8890,6 +9111,8 @@ show_forward_factor_menu() {
             1) fetch_forward_factor_chain ;;
             2) run_forward_factor_scanner ;;
             3|"") run_forward_factor_workflow ;;
+            4) collect_forward_factor_snapshot ;;
+            5) scan_forward_factor_signals ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -8944,5 +9167,129 @@ run_forward_factor_workflow() {
 
     print_success "Full forward factor workflow complete!"
 }
+
+collect_forward_factor_snapshot() {
+    print_header "Collect Daily Forward Factor Snapshot"
+
+    pick_ticker_source "AAPL" || return
+
+    print_info "Collecting forward factor snapshot..."
+
+    uv run pricing/forward_factor/python/fetch/collect_snapshot.py \
+        --tickers "$ticker_arg" \
+        --data-dir pricing/forward_factor/data
+
+    if [ $? -eq 0 ]; then
+        print_success "Snapshot collected"
+        print_info "Data: pricing/forward_factor/data/"
+    else
+        print_error "Snapshot collection failed"
+    fi
+}
+
+scan_forward_factor_signals() {
+    print_header "Scan Forward Factor Signals"
+
+    echo -e "${GREEN}1)${NC} Overall ranking (all tickers)"
+    echo -e "${GREEN}2)${NC} By price segment"
+    echo ""
+    echo -e "${YELLOW}Enter your choice (Enter=By segment):${NC} "
+    read -r scan_choice
+
+    local scan_args="--quiet"
+    case $scan_choice in
+        1) ;;
+        2|"") scan_args="$scan_args --segments" ;;
+        *) scan_args="$scan_args --segments" ;;
+    esac
+
+    print_info "Scanning forward factor histories..."
+
+    uv run pricing/forward_factor/python/scan_signals.py \
+        $scan_args \
+        --output pricing/forward_factor/output/signal_scan.csv
+
+    if [ $? -eq 0 ]; then
+        print_success "Scan complete"
+        print_info "Results: pricing/forward_factor/output/signal_scan.csv"
+    else
+        print_error "Scan failed"
+    fi
+}
+
+# Valuation Panel
+show_panel_menu() {
+    while true; do
+        clear
+        echo -e "${BLUE}═══ Valuation Panel (Multi-Model View) ═══${NC}\n"
+        echo "Run multiple valuation models per ticker. Each model speaks for itself."
+        echo ""
+        echo -e "${GREEN}1)${NC} Custom Tickers"
+        echo -e "${GREEN}2)${NC} Portfolio Holdings"
+        echo -e "${GREEN}3)${NC} Full Watchlist (portfolio + watching)"
+        echo -e "${GREEN}4)${NC} S&P 500 Top 50"
+        echo -e "${GREEN}5)${NC} NASDAQ Top 30"
+        echo ""
+        echo -e "${GREEN}0)${NC} Back to Valuation Menu"
+        echo ""
+        echo -e "${YELLOW}Enter your choice:${NC} "
+        read -r choice
+
+        case $choice in
+            1) run_panel_custom ;;
+            2) run_panel "portfolio" ;;
+            3) run_panel "all_portfolio" ;;
+            4) run_panel "sp50" ;;
+            5) run_panel "nasdaq30" ;;
+            0) clear; return ;;
+            *) print_error "Invalid choice." ;;
+        esac
+    done
+}
+
+run_panel_custom() {
+    print_header "Panel: Custom Tickers"
+
+    echo -e "${YELLOW}Enter tickers (comma-separated):${NC} "
+    read -r tickers
+    if [[ -z "$tickers" ]]; then
+        print_error "No tickers provided."
+        read -rp "Press Enter to continue..."
+        return
+    fi
+
+    run_panel "$tickers"
+}
+
+run_panel() {
+    local input="$1"
+    local args=""
+
+    # Determine if this is a universe or ticker list
+    case "$input" in
+        portfolio|watchlist|all_portfolio|sp50|nasdaq30|dow30|tech|healthcare|financials|energy|ai|liquid)
+            args="--universe $input"
+            ;;
+        *)
+            args="--tickers $input"
+            ;;
+    esac
+
+    echo ""
+    echo -e "${YELLOW}Include DCF Probabilistic (slower, Monte Carlo)? [y/N]:${NC} "
+    read -r include_prob
+    if [[ "$include_prob" =~ ^[Yy] ]]; then
+        args="$args --include-probabilistic"
+    fi
+
+    print_info "Running valuation panel..."
+    echo ""
+
+    uv run valuation/panel/python/run.py $args
+
+    echo ""
+    read -rp "Press Enter to continue..."
+}
+
 # Run main
 main

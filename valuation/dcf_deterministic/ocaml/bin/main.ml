@@ -21,6 +21,9 @@ let () =
   let erp_mode_override = ref None in  (* "static" or "dynamic" *)
   let vix_override = ref None in       (* Manual VIX override *)
 
+  (* JSON output *)
+  let json_output = ref "" in
+
   (* O&G options *)
   let fetch_sec_reserves = ref false in
 
@@ -39,6 +42,7 @@ let () =
     ("-erp-dynamic", Arg.Unit (fun () -> erp_mode_override := Some "dynamic"), "Use dynamic VIX-adjusted ERP");
     ("-vix", Arg.Float (fun x -> vix_override := Some x), "Manual VIX override (for dynamic ERP mode)");
     ("-fetch-sec-reserves", Arg.Set fetch_sec_reserves, "Fetch O&G reserves from SEC 10-K (requires edgartools)");
+    ("-json-output", Arg.Set_string json_output, "Write JSON summary to file (for panel integration)");
   ] in
 
   let usage_msg = "DCF Deterministic Valuation Tool\nUsage: dcf_deterministic -ticker TICKER [options]\n\nERP Modes:\n  -erp-static   Use Damodaran country ERPs (default, updated annually)\n  -erp-dynamic  Adjust base ERP using current VIX (real-time risk adjustment)" in
@@ -49,6 +53,33 @@ let () =
     Arg.usage speclist usage_msg;
     exit 1
   end;
+
+  (* Helper: write JSON summary for panel integration *)
+  let write_json_output (result : Types.valuation_result) =
+    if !json_output <> "" then begin
+      let open Yojson.Basic in
+      let opt_float = function Some v -> `Float v | None -> `Null in
+      let json = `Assoc [
+        ("ticker", `String result.ticker);
+        ("price", `Float result.price);
+        ("ivps_fcfe", `Float result.ivps_fcfe);
+        ("ivps_fcff", `Float result.ivps_fcff);
+        ("margin_of_safety_fcfe", `Float result.margin_of_safety_fcfe);
+        ("margin_of_safety_fcff", `Float result.margin_of_safety_fcff);
+        ("implied_growth_fcfe", opt_float result.implied_growth_fcfe);
+        ("implied_growth_fcff", opt_float result.implied_growth_fcff);
+        ("signal", `String (Signal.signal_to_string result.signal));
+        ("cost_of_equity", `Float result.cost_of_capital.ce);
+        ("wacc", `Float result.cost_of_capital.wacc);
+        ("growth_rate_equity", `Float result.projection.growth_rate_fcfe);
+        ("growth_rate_firm", `Float result.projection.growth_rate_fcff);
+      ] in
+      let oc = open_out !json_output in
+      output_string oc (pretty_to_string json);
+      output_char oc '\n';
+      close_out oc
+    end
+  in
 
   try
     (* Step 1: Fetch financial data using Python script *)
@@ -218,6 +249,7 @@ let () =
       (* Write to log file *)
       let log_filename = Io.create_log_filename ~base_dir:!log_dir ~ticker:!ticker in
       Io.write_log ~filename:log_filename ~result;
+      write_json_output result;
       Printf.printf "Results written to: %s\n" log_filename
     end
     else if financial_data.is_insurance then begin
@@ -308,6 +340,7 @@ let () =
       (* Write to log file *)
       let log_filename = Io.create_log_filename ~base_dir:!log_dir ~ticker:!ticker in
       Io.write_log ~filename:log_filename ~result;
+      write_json_output result;
       Printf.printf "Results written to: %s\n" log_filename
     end
     else if financial_data.is_oil_gas then begin
@@ -411,6 +444,7 @@ let () =
       (* Write to log file *)
       let log_filename = Io.create_log_filename ~base_dir:!log_dir ~ticker:!ticker in
       Io.write_log ~filename:log_filename ~result;
+      write_json_output result;
       Printf.printf "Results written to: %s\n" log_filename
     end
     else begin
@@ -600,6 +634,7 @@ let () =
         (* Step 9: Write to log file *)
         let log_filename = Io.create_log_filename ~base_dir:!log_dir ~ticker:!ticker in
         Io.write_log ~filename:log_filename ~result;
+        write_json_output result;
         Printf.printf "Results written to: %s\n" log_filename
     end  (* end of non-bank else branch *)
 

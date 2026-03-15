@@ -39,6 +39,7 @@ A collection of quantitative finance models for investment analysis.[*](#disclai
   - [Normalized Multiples](#normalized-multiples)
   - [Analyst Upside](#analyst-upside)
   - [ETF Analysis](#etf-analysis)
+  - [Panel (Multi-Model View)](#panel-multi-model-view)
 - **Monitoring**
   - [Watchlist & Alerts](#watchlist--alerts)
   - [Earnings Calendar](#earnings-calendar)
@@ -199,6 +200,7 @@ Atemoya contains 33+ quantitative models organized into four categories:
 | [Crypto Treasury](#crypto-treasury) | Is the BTC premium justified? | mNAV + implied BTC price |
 | [ETF Analysis](#etf-analysis) | Is the ETF well-structured? | Expense + tracking + type analysis |
 | [Analyst Upside](#analyst-upside) | Where do analysts see upside? | Upside ranking + conviction map |
+| [Panel](#panel-multi-model-view) | What do all models say together? | Per-ticker multi-model dashboard |
 
 ### Monitoring
 
@@ -260,7 +262,8 @@ What are you trying to do?
 │   ├─ Income / dividends ..................... Dividend Income
 │   ├─ REIT ................................... DCF REIT
 │   ├─ BTC treasury company ................... Crypto Treasury
-│   └─ ETF .................................... ETF Analysis
+│   ├─ ETF .................................... ETF Analysis
+│   └─ All applicable models at once .......... Panel
 │
 ├─ Monitor ───────────────────────────────── What signal?
 │   ├─ Price / technical alerts ............... Watchlist & Alerts
@@ -1325,6 +1328,32 @@ Comprehensive ETF analysis covering premium/discount, tracking quality, costs, l
 *Standard Index ETF — SPY (75/B+):*
 
 <img src="valuation/etf_analysis/output/plots/SPY_etf_analysis.svg" width="800">
+
+[↑ Back to top](#table-of-contents)
+
+### Panel (Multi-Model View)
+
+**Run all applicable valuation models per ticker, side by side.**
+
+Triages each ticker (equity, ETF, REIT, crypto treasury), routes it to the right subset of models, runs them in parallel, and presents each model's verdict as-is. No composite score — a growth stock and a dividend aristocrat are judged by different lenses.
+
+**Routing logic:**
+- **ETFs** → ETF Analysis only
+- **REITs** → DCF REIT only
+- **Crypto treasury** (MSTR, MARA, etc.) → Crypto Treasury + general models
+- **General stocks** → up to 7 models: Analyst Upside, DCF Deterministic, Normalized Multiples, GARP/PEG, Growth Analysis, Dividend Income, DCF Probabilistic (opt-in)
+
+**Features:**
+- Same-day data caching (skip re-fetch on reruns, `--fresh` to override)
+- Pre-built OCaml binaries for parallel execution (no dune lock contention)
+- Output: terminal dashboard, JSON, CSV, ntfy notification
+- Supports universes: portfolio, watchlist, sp50, nasdaq30, sector baskets, liquid tickers
+
+```bash
+uv run valuation/panel/python/run.py --tickers AAPL,NVDA,JPM,O,SPY
+uv run valuation/panel/python/run.py --universe portfolio
+uv run valuation/panel/python/run.py --universe sp50 --format csv --output results.csv
+```
 
 [↑ Back to top](#table-of-contents)
 
