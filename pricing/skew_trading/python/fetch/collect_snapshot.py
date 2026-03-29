@@ -219,11 +219,11 @@ def append_to_history(row: dict, ticker: str, data_dir: Path) -> None:
     history_file = data_dir / f"{ticker}_skew_history.csv"
 
     df = pd.DataFrame([row], columns=HISTORY_COLUMNS)
-    today = row["date"]
+    today = row["timestamp"]
 
     if history_file.exists():
-        existing = pd.read_csv(history_file, usecols=["date"], dtype=str)
-        if today in existing["date"].values:
+        existing = pd.read_csv(history_file, usecols=["timestamp"], dtype=str)
+        if today in existing["timestamp"].values:
             print(f"  Skipped {ticker}: {today} already in history")
             return
         df.to_csv(history_file, mode="a", header=False, index=False)
