@@ -80,6 +80,12 @@ Runs on all 523 liquid tickers daily. Skew z-scores need history to detect extre
 All times below are UTC. Runs Tue-Sat to capture Mon-Fri market data.
 
 **Native (uv installed on host):**
+
+Cron runs with minimal PATH — add this line to the top of your crontab so `uv` is found:
+```
+PATH=/home/devusr/.local/bin:/usr/local/bin:/usr/bin:/bin
+```
+
 ```bash
 # 1. Collect skew verticals snapshots for all liquid tickers
 0 3 * * 2-6 cd /path/to/atemoya && uv run pricing/skew_verticals/python/fetch/collect_snapshot.py --tickers all_liquid >> /tmp/skewvert_collect.log 2>&1

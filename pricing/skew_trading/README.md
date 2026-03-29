@@ -237,6 +237,12 @@ uv run pricing/skew_trading/python/fetch/collect_snapshot.py --tickers TSLA,AAPL
 The daily pipeline has three stages: **collect** (after market close) → **scan** (after collection) → **notify** (before market open). All times below are UTC.
 
 **Native (uv installed on host):**
+
+Cron runs with minimal PATH — add this line to the top of your crontab so `uv` is found:
+```
+PATH=/home/devusr/.local/bin:/usr/local/bin:/usr/bin:/bin
+```
+
 ```bash
 # 1. Collect option chain snapshots for all liquid tickers (weekday evenings)
 15 22 * * 1-5 cd /path/to/atemoya && uv run pricing/skew_trading/python/fetch/collect_snapshot.py --tickers all_liquid >> /tmp/skew_collect.log 2>&1

@@ -195,6 +195,7 @@ def main():
             print("Warning: No EPS data available - PEG calculation may be invalid", file=sys.stderr)
 
         # Write JSON file
+        output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / f"garp_data_{ticker_symbol}.json"
 
         with open(output_file, "w") as f:

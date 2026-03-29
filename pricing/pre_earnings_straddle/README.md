@@ -170,6 +170,12 @@ Each run:
 The daily pipeline has three stages: **collect** (after market close) → **scan** (after collection) → **notify** (before market open). All times below are UTC. Collectors run on Tue-Sat (for Mon-Fri market data).
 
 **Native (uv installed on host):**
+
+Cron runs with minimal PATH — add this line to the top of your crontab so `uv` is found:
+```
+PATH=/home/devusr/.local/bin:/usr/local/bin:/usr/bin:/bin
+```
+
 ```bash
 # 1. Collect IV snapshots for all liquid tickers
 15 4 * * 2-6 cd /path/to/atemoya && uv run pricing/pre_earnings_straddle/python/fetch/collect_earnings_iv.py --tickers all_liquid >> /tmp/earnings_collect.log 2>&1

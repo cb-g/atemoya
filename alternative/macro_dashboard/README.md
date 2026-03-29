@@ -87,6 +87,27 @@ docker compose exec -w /app atemoya /bin/bash -c "uv run alternative/macro_dashb
 uv run alternative/macro_dashboard/python/viz/plot_dashboard.py
 ```
 
+### Automated Cron Setup
+
+Most FRED indicators update monthly, so a weekly run keeps `environment.json` fresh. The pricing signal scanners read this file automatically — if it exists and is less than 30 days old, every scan output gets `macro_regime` and `risk_sentiment` columns.
+
+**Native (uv installed on host):**
+
+Cron runs with minimal PATH — add this line to the top of your crontab so `uv` is found:
+```
+PATH=/home/devusr/.local/bin:/usr/local/bin:/usr/bin:/bin
+```
+
+```bash
+# Weekly macro regime update (Sunday 20:00 UTC — before pricing pipelines)
+0 20 * * 0 cd /path/to/atemoya && uv run alternative/macro_dashboard/python/fetch/fetch_macro.py --quiet >> /tmp/macro_fetch.log 2>&1 && eval $(opam env) && dune exec macro_dashboard -- alternative/macro_dashboard/data/macro_data.json --output alternative/macro_dashboard/output/environment.json >> /tmp/macro_classify.log 2>&1
+```
+
+**Docker (from host crontab):**
+```bash
+0 20 * * 0 cd /path/to/atemoya && docker compose exec -w /app -T atemoya /bin/bash -c "uv run alternative/macro_dashboard/python/fetch/fetch_macro.py --quiet && eval \$(opam env) && dune exec macro_dashboard -- alternative/macro_dashboard/data/macro_data.json --output alternative/macro_dashboard/output/environment.json" >> /tmp/macro_dashboard.log 2>&1
+```
+
 ## Output
 
 - `output/environment.json` -- classified regime, rates, inflation, employment, market metrics, and investment implications

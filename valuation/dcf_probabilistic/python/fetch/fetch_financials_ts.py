@@ -382,6 +382,7 @@ def main():
         }
 
         # Write JSON files
+        output_dir.mkdir(parents=True, exist_ok=True)
         market_data_file = output_dir / f"dcf_prob_market_data_{ticker_symbol}.json"
         time_series_file = output_dir / f"dcf_prob_time_series_{ticker_symbol}.json"
 

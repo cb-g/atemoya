@@ -635,7 +635,13 @@ let format_valuation_result result =
 
   Buffer.contents buffer
 
+let ensure_dir_exists dir =
+  if not (Sys.file_exists dir) then
+    let _ = Sys.command (Printf.sprintf "mkdir -p %s" (Filename.quote dir)) in
+    ()
+
 let write_log ~filename ~result =
+  ensure_dir_exists (Filename.dirname filename);
   let oc = open_out filename in
   output_string oc (format_valuation_result result);
   close_out oc

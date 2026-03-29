@@ -63,6 +63,12 @@ Runs on all 523 liquid tickers daily. Computes Yang-Zhang realized vol and EWMA 
 All times below are UTC. Runs Tue-Sat to capture Mon-Fri market data.
 
 **Native (uv installed on host):**
+
+Cron runs with minimal PATH — add this line to the top of your crontab so `uv` is found:
+```
+PATH=/home/devusr/.local/bin:/usr/local/bin:/usr/bin:/bin
+```
+
 ```bash
 # 1. Collect vol arb snapshots for all liquid tickers
 30 4 * * 2-6 cd /path/to/atemoya && uv run pricing/volatility_arbitrage/python/fetch/collect_snapshot.py --tickers all_liquid >> /tmp/volarb_collect.log 2>&1

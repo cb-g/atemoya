@@ -88,6 +88,12 @@ Runs on all 523 liquid tickers daily (not earnings-gated). The more history accu
 All times below are UTC. Runs Tue-Sat to capture Mon-Fri market data.
 
 **Native (uv installed on host):**
+
+Cron runs with minimal PATH — add this line to the top of your crontab so `uv` is found:
+```
+PATH=/home/devusr/.local/bin:/usr/local/bin:/usr/bin:/bin
+```
+
 ```bash
 # 1. Collect forward factor snapshots for all liquid tickers
 45 7 * * 2-6 cd /path/to/atemoya && uv run pricing/forward_factor/python/fetch/collect_snapshot.py --tickers all_liquid >> /tmp/ff_collect.log 2>&1
