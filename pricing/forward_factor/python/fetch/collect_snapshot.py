@@ -9,7 +9,7 @@ Each run:
 - Fetches option chains, finds ATM IV for 3 target DTEs
 - Computes forward vol and forward factor for each DTE pair
 - Archives full snapshot to data/snapshots/{TICKER}/{YYYY-MM-DD}.json
-- Appends rows to data/{TICKER}_ff_history.csv (one row per DTE pair)
+- Appends rows to data/{TICKER}_ff_history_yfinance.csv (one row per DTE pair)
 
 Idempotent: skips tickers already collected today.
 
@@ -155,8 +155,8 @@ def archive_snapshot(snapshot_data: dict, ticker: str, data_dir: Path) -> Path:
 
 
 def append_to_history(rows: list[dict], ticker: str, data_dir: Path) -> None:
-    """Append rows to {TICKER}_ff_history.csv, skipping if date+dte_pair already exists."""
-    history_file = data_dir / f"{ticker}_ff_history.csv"
+    """Append rows to {TICKER}_ff_history_yfinance.csv, skipping if date+dte_pair already exists."""
+    history_file = data_dir / f"{ticker}_ff_history_yfinance.csv"
     today = rows[0]["date"] if rows else ""
 
     new_df = pd.DataFrame(rows, columns=HISTORY_COLUMNS)

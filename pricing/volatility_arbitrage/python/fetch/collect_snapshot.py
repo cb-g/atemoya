@@ -11,7 +11,7 @@ Each run:
 - Fetches 3 months of OHLC for Yang-Zhang RV computation
 - Computes EWMA vol forecast (lambda=0.94)
 - Archives full snapshot to data/snapshots/{TICKER}/{YYYY-MM-DD}.json
-- Appends one row to data/{TICKER}_volarb_history.csv
+- Appends one row to data/{TICKER}_volarb_history_yfinance.csv
 
 Idempotent: skips tickers already collected today.
 
@@ -189,8 +189,8 @@ def archive_snapshot(snapshot_data: dict, ticker: str, data_dir: Path) -> Path:
 
 
 def append_to_history(row: dict, ticker: str, data_dir: Path) -> None:
-    """Append one row to {TICKER}_volarb_history.csv, skipping if date already exists."""
-    history_file = data_dir / f"{ticker}_volarb_history.csv"
+    """Append one row to {TICKER}_volarb_history_yfinance.csv, skipping if date already exists."""
+    history_file = data_dir / f"{ticker}_volarb_history_yfinance.csv"
 
     df = pd.DataFrame([row], columns=HISTORY_COLUMNS)
     today = row["date"]

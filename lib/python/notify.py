@@ -77,6 +77,23 @@ def send_notification(
     if server is None:
         server = get_server()
 
+    # ntfy.sh message body limit is 4096 bytes. Truncate if needed.
+    MAX_BYTES = 4096
+    encoded = message.encode("utf-8")
+    if len(encoded) > MAX_BYTES:
+        lines = message.split("\n")
+        truncated = []
+        size = 0
+        for line in lines:
+            line_size = len(line.encode("utf-8")) + 1  # +1 for newline
+            if size + line_size > MAX_BYTES - 40:  # reserve space for footer
+                break
+            truncated.append(line)
+            size += line_size
+        remaining = len(lines) - len(truncated)
+        truncated.append(f"... and {remaining} more signals")
+        message = "\n".join(truncated)
+
     url = f"{server.rstrip('/')}/{topic}"
     data = message.encode("utf-8")
 

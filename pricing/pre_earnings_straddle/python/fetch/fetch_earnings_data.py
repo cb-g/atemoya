@@ -55,7 +55,7 @@ def calculate_implied_move_from_straddle(atm_call_iv, atm_put_iv, days_to_expiry
 
 def load_snapshot_history(ticker: str, data_dir: Path) -> pd.DataFrame | None:
     """Load IV snapshot history for a ticker, if available."""
-    snapshots_file = data_dir / f"{ticker}_iv_snapshots.csv"
+    snapshots_file = data_dir / f"{ticker}_iv_snapshots_yfinance.csv"
     if not snapshots_file.exists():
         return None
 

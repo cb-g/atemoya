@@ -16,7 +16,7 @@ Each run:
 - Fetches 3 months of price history + SPY for beta
 - Computes skew metrics, momentum, VRP
 - Archives full snapshot to data/snapshots/{TICKER}/{YYYY-MM-DD}.json
-- Appends one row to data/{TICKER}_skewvert_history.csv
+- Appends one row to data/{TICKER}_skewvert_history_yfinance.csv
 
 Idempotent: skips tickers already collected today.
 """
@@ -226,8 +226,8 @@ def archive_snapshot(snapshot_data: dict, ticker: str, data_dir: Path) -> Path:
 
 
 def append_to_history(row: dict, ticker: str, data_dir: Path) -> None:
-    """Append one row to {TICKER}_skewvert_history.csv, skipping if date already exists."""
-    history_file = data_dir / f"{ticker}_skewvert_history.csv"
+    """Append one row to {TICKER}_skewvert_history_yfinance.csv, skipping if date already exists."""
+    history_file = data_dir / f"{ticker}_skewvert_history_yfinance.csv"
 
     df = pd.DataFrame([row], columns=HISTORY_COLUMNS)
     today = row["date"]
@@ -345,7 +345,7 @@ def collect_one_ticker(ticker: str, data_dir: Path,
     momentum = compute_momentum(prices, spy_prices)
 
     # Compute skew z-scores (need history for proper z-scores, use skew magnitude as proxy on day 1)
-    history_file = data_dir / f"{ticker}_skewvert_history.csv"
+    history_file = data_dir / f"{ticker}_skewvert_history_yfinance.csv"
     call_skew_z = 0.0
     put_skew_z = 0.0
     if history_file.exists():

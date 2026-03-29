@@ -71,16 +71,26 @@ def load_segment_map(segment_dir: Path) -> dict[str, str]:
 
 
 def load_histories(data_dir: Path) -> dict[str, pd.DataFrame]:
-    """Load all earnings vol history CSVs."""
+    """Load earnings vol history CSVs from both yfinance and thetadata sources."""
     histories = {}
-    for f in sorted(data_dir.glob("*_earnings_vol.csv")):
-        ticker = f.stem.replace("_earnings_vol", "")
-        try:
-            df = pd.read_csv(f)
-            if len(df) >= 1:
-                histories[ticker] = df
-        except Exception:
-            continue
+    ticker_dfs: dict[str, list[pd.DataFrame]] = {}
+    for pattern in ("*_earnings_vol_yfinance.csv", "*_earnings_vol_thetadata.csv"):
+        for f in sorted(data_dir.glob(pattern)):
+            ticker = f.stem.replace("_earnings_vol_yfinance", "").replace("_earnings_vol_thetadata", "")
+            try:
+                df = pd.read_csv(f)
+                if not df.empty:
+                    ticker_dfs.setdefault(ticker, []).append(df)
+            except Exception:
+                continue
+
+    for ticker, dfs in ticker_dfs.items():
+        merged = pd.concat(dfs, ignore_index=True)
+        merged = merged.drop_duplicates(subset=["date"], keep="first")
+        merged = merged.sort_values("date").reset_index(drop=True)
+        if len(merged) >= 1:
+            histories[ticker] = merged
+
     return histories
 
 

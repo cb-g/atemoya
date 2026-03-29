@@ -3725,6 +3725,8 @@ show_variance_swaps_menu() {
         echo -e "${GREEN}6)${NC} Visualize Results"
         echo -e "${GREEN}7)${NC} Run Full Workflow"
         echo -e "${GREEN}8)${NC} Collect Daily IV Snapshot"
+        echo -e "${GREEN}9)${NC} Scan Signals (z-score watchlist)"
+        echo -e "${DIM}     Tip: Run Macro Dashboard first for regime-tagged signals${NC}"
         echo ""
         echo -e "${GREEN}0)${NC} Back to Pricing Menu"
         echo ""
@@ -3740,6 +3742,7 @@ show_variance_swaps_menu() {
             6) visualize_vrp_results ; echo ""; read -rp "Press Enter to continue..." ;;
             7|"") run_variance_swaps_full_workflow ; echo ""; read -rp "Press Enter to continue..." ;;
             8) collect_variance_snapshot ; echo ""; read -rp "Press Enter to continue..." ;;
+            9) scan_variance_signals ; echo ""; read -rp "Press Enter to continue..." ;;
             0) clear; return ;;
             *) print_error "Invalid choice." ;;
         esac
@@ -4049,6 +4052,36 @@ collect_variance_snapshot() {
             e) show_pre_earnings_straddle_menu ;;
             l) show_liquidity_menu ;;
         esac
+    fi
+}
+
+scan_variance_signals() {
+    print_header "Scan Variance Swap Signals"
+
+    echo -e "${GREEN}1)${NC} Overall ranking (all tickers)"
+    echo -e "${GREEN}2)${NC} By price segment"
+    echo ""
+    echo -e "${YELLOW}Enter your choice (Enter=By segment):${NC} "
+    read -r scan_choice
+
+    local scan_args="--quiet"
+    case $scan_choice in
+        1) ;;
+        2|"") scan_args="$scan_args --segments" ;;
+        *) scan_args="$scan_args --segments" ;;
+    esac
+
+    print_info "Scanning variance swap histories..."
+
+    uv run pricing/variance_swaps/python/scan_signals.py \
+        $scan_args \
+        --output pricing/variance_swaps/output/signal_scan.csv
+
+    if [ $? -eq 0 ]; then
+        print_success "Scan complete"
+        print_info "Results: pricing/variance_swaps/output/signal_scan.csv"
+    else
+        print_error "Scan failed"
     fi
 }
 
