@@ -30,6 +30,7 @@ from scipy.optimize import minimize
 from scipy.stats import norm
 
 from lib.python.retry import retry_with_backoff
+from lib.python.iv import implied_vol_newton_raphson
 
 # Load configuration
 CONFIG_PATH = Path(__file__).parent.parent.parent / "config.json"
@@ -95,73 +96,8 @@ def black_scholes_vega(S, K, T, r, sigma):
     return S * np.sqrt(T) * norm.pdf(d1)
 
 
-def implied_vol_newton_raphson_vectorized(
-    prices: np.ndarray,
-    spots: np.ndarray,
-    strikes: np.ndarray,
-    expiries: np.ndarray,
-    rates: np.ndarray,
-    option_types: np.ndarray,
-    tol: float = 1e-5,
-    max_iter: int = 50
-) -> np.ndarray:
-    """
-    Vectorized implied volatility using Newton-Raphson.
-
-    Much faster than iterating with bisection for large option chains.
-
-    Args:
-        prices: Array of option prices
-        spots: Array of spot prices
-        strikes: Array of strikes
-        expiries: Array of times to expiry
-        rates: Array of risk-free rates
-        option_types: Array of 'call' or 'put' strings
-        tol: Convergence tolerance
-        max_iter: Maximum iterations
-
-    Returns:
-        Array of implied volatilities (NaN where failed)
-    """
-    n = len(prices)
-    sigma = np.full(n, 0.3)  # Initial guess
-    is_call = option_types == 'call'
-
-    # Mask for valid options (positive time to expiry)
-    valid = expiries > 0
-
-    for _ in range(max_iter):
-        # Compute BS prices and vegas for valid options
-        d1 = np.where(valid,
-            (np.log(spots / strikes) + (rates + 0.5 * sigma**2) * expiries) / (sigma * np.sqrt(expiries)),
-            0)
-        d2 = d1 - sigma * np.sqrt(expiries)
-
-        # Call and put prices
-        call_price = spots * norm.cdf(d1) - strikes * np.exp(-rates * expiries) * norm.cdf(d2)
-        put_price = strikes * np.exp(-rates * expiries) * norm.cdf(-d2) - spots * norm.cdf(-d1)
-
-        bs_price = np.where(is_call, call_price, put_price)
-        vega = spots * np.sqrt(expiries) * norm.pdf(d1)
-
-        # Newton-Raphson update
-        price_diff = bs_price - prices
-        converged = np.abs(price_diff) < tol
-
-        # Update sigma where not converged and vega is positive
-        update_mask = valid & ~converged & (vega > 1e-10)
-        sigma = np.where(update_mask, sigma - price_diff / vega, sigma)
-
-        # Clamp sigma to reasonable bounds
-        sigma = np.clip(sigma, 0.01, 5.0)
-
-        if np.all(converged | ~valid):
-            break
-
-    # Mark failed computations as NaN
-    sigma = np.where(valid & (sigma > 0.01) & (sigma < 5.0), sigma, np.nan)
-
-    return sigma
+# Re-export for backwards compatibility — implementation now in lib/python/iv.py
+implied_vol_newton_raphson_vectorized = implied_vol_newton_raphson
 
 
 def fetch_option_chain(

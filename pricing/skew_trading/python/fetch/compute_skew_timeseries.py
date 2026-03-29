@@ -6,7 +6,7 @@ Uses real historical data from daily collection (collect_snapshot.py) when
 available. Falls back to synthetic generation when insufficient history exists.
 
 Real data: Accumulated via daily cron job running collect_snapshot.py,
-stored in {TICKER}_skew_history.csv.
+stored in {TICKER}_skew_history_yfinance.csv.
 
 Synthetic data: Creates approximate skew observations from a single SVI
 surface snapshot + random noise. Used for demo/backtest bootstrapping.
@@ -168,7 +168,7 @@ def use_real_history_if_available(
     """
     Check if real historical skew data is available.
 
-    Looks for {TICKER}_skew_history.csv produced by collect_snapshot.py.
+    Looks for {TICKER}_skew_history_yfinance.csv produced by collect_snapshot.py.
 
     Args:
         ticker: Stock ticker
@@ -178,7 +178,7 @@ def use_real_history_if_available(
     Returns:
         DataFrame if real history is sufficient, else None
     """
-    history_file = data_dir / f"{ticker}_skew_history.csv"
+    history_file = data_dir / f"{ticker}_skew_history_yfinance.csv"
 
     if not history_file.exists():
         return None

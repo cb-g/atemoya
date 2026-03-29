@@ -9,15 +9,29 @@
       "Bash(pdflatex:*)",
       "Bash(opam list:*)",
       "Bash(grep:*)",
-      "Bash(docker compose exec:*)"
+      "Bash(docker compose exec:*)",
+      "WebFetch(domain:http-docs.thetadata.us)",
+      "WebFetch(domain:docs.thetadata.us)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.thetadata.net)"
     ],
     "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(/app/.env)",
-      "Read(/app/.env.*)",
       "Read(**/.env)",
-      "Read(**/.env.*)"
+      "Edit(**/.env)",
+      "Glob(**/.env)",
+      "Grep(**/.env)",
+      "Bash(cat **/.env)",
+      "Bash(head **/.env)",
+      "Bash(tail **/.env)",
+      "Bash(grep **/.env)",
+      "Read(**/creds.txt)",
+      "Edit(**/creds.txt)",
+      "Glob(**/creds.txt)",
+      "Grep(**/creds.txt)",
+      "Bash(cat **/creds.txt)",
+      "Bash(head **/creds.txt)",
+      "Bash(tail **/creds.txt)"
     ]
   }
 }

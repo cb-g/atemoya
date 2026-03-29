@@ -84,9 +84,11 @@ let () =
 
       let skew_obs_file =
         let timeseries = Printf.sprintf "pricing/skew_trading/data/%s_skew_timeseries.csv" !ticker in
-        let history = Printf.sprintf "pricing/skew_trading/data/%s_skew_history.csv" !ticker in
+        let history_yf = Printf.sprintf "pricing/skew_trading/data/%s_skew_history_yfinance.csv" !ticker in
+        let history_td = Printf.sprintf "pricing/skew_trading/data/%s_skew_history_thetadata.csv" !ticker in
         if Sys.file_exists timeseries then timeseries
-        else if Sys.file_exists history then history
+        else if Sys.file_exists history_yf then history_yf
+        else if Sys.file_exists history_td then history_td
         else timeseries (* will fail with clear error *)
       in
       let historical_obs = Io.read_skew_observations skew_obs_file in
@@ -224,9 +226,11 @@ let () =
 
       let skew_obs_file =
         let timeseries = Printf.sprintf "pricing/skew_trading/data/%s_skew_timeseries.csv" !ticker in
-        let history = Printf.sprintf "pricing/skew_trading/data/%s_skew_history.csv" !ticker in
+        let history_yf = Printf.sprintf "pricing/skew_trading/data/%s_skew_history_yfinance.csv" !ticker in
+        let history_td = Printf.sprintf "pricing/skew_trading/data/%s_skew_history_thetadata.csv" !ticker in
         if Sys.file_exists timeseries then timeseries
-        else if Sys.file_exists history then history
+        else if Sys.file_exists history_yf then history_yf
+        else if Sys.file_exists history_td then history_td
         else timeseries
       in
 

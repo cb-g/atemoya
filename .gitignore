@@ -2,6 +2,10 @@
 TODO.md
 orientation.md
 .last_tickers
+creds.txt
+*.jar
+lib/thetadata/config.toml
+pricing/thetadata/data/
 papers/
 check_menu.sh
 test_functions.sh

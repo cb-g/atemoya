@@ -46,6 +46,7 @@ from .base import (
 )
 from .yfinance_provider import YFinanceProvider
 from .ibkr_provider import IBKRProvider
+from .thetadata_provider import ThetaDataProvider
 
 __all__ = [
     "DataProvider",
@@ -72,6 +73,7 @@ __all__ = [
 _PROVIDERS = {
     "yfinance": YFinanceProvider,
     "ibkr": IBKRProvider,
+    "thetadata": ThetaDataProvider,
 }
 
 # Cached provider instances

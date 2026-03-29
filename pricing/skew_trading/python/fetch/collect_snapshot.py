@@ -8,7 +8,7 @@ market close.
 
 Each run:
 - Archives full SVI snapshot to data/snapshots/{TICKER}/{YYYY-MM-DD}.json
-- Appends one row to data/{TICKER}_skew_history.csv
+- Appends one row to data/{TICKER}_skew_history_yfinance.csv
 
 Idempotent: skips tickers already collected today.
 """
@@ -215,8 +215,8 @@ def archive_chain(chain_df: pd.DataFrame, ticker: str, data_dir: Path) -> None:
 
 
 def append_to_history(row: dict, ticker: str, data_dir: Path) -> None:
-    """Append one row to {TICKER}_skew_history.csv, skipping if date already exists."""
-    history_file = data_dir / f"{ticker}_skew_history.csv"
+    """Append one row to {TICKER}_skew_history_yfinance.csv, skipping if date already exists."""
+    history_file = data_dir / f"{ticker}_skew_history_yfinance.csv"
 
     df = pd.DataFrame([row], columns=HISTORY_COLUMNS)
     today = row["timestamp"]
