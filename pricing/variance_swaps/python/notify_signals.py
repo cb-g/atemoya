@@ -42,7 +42,12 @@ def format_message(df: pd.DataFrame) -> str:
             f"{icon} {row['ticker']}: {direction} var (z={row['max_abs_z']:.1f}{strength}) IV={row['atm_iv_latest']*100:.0f}%{seg}"
         )
 
-    return header + "\n" + "\n".join(lines)
+    regime_line = ""
+    if "macro_regime" in actionable.columns and actionable.iloc[0].get("macro_regime"):
+        r = actionable.iloc[0]
+        regime_line = f"\U0001f4ca Regime: {r['macro_regime']} | {r['risk_sentiment']}\n"
+
+    return regime_line + header + "\n" + "\n".join(lines)
 
 
 def main():

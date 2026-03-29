@@ -1333,27 +1333,22 @@ Comprehensive ETF analysis covering premium/discount, tracking quality, costs, l
 
 ### Panel (Multi-Model View)
 
-**Run all applicable valuation models per ticker, side by side.**
+**Multi-Model Valuation Dashboard | Per-Ticker Routing**
 
-Triages each ticker (equity, ETF, REIT, crypto treasury), routes it to the right subset of models, runs them in parallel, and presents each model's verdict as-is. No composite score — a growth stock and a dividend aristocrat are judged by different lenses.
+Run all applicable valuation models per ticker, side by side. Triages each ticker by security type (equity, ETF, REIT, crypto treasury), routes to the right subset of models, and presents each model's verdict as-is. No composite score — a growth stock and a dividend aristocrat are judged by different lenses.
 
-**Routing logic:**
+**Routing:**
 - **ETFs** → ETF Analysis only
 - **REITs** → DCF REIT only
 - **Crypto treasury** (MSTR, MARA, etc.) → Crypto Treasury + general models
-- **General stocks** → up to 7 models: Analyst Upside, DCF Deterministic, Normalized Multiples, GARP/PEG, Growth Analysis, Dividend Income, DCF Probabilistic (opt-in)
+- **General stocks** → up to 7 models depending on ticker characteristics (earnings, dividends, growth estimates, analyst coverage)
+- **Specialized detection** — banks (Excess Return), insurance (Float-Based), O&G (NAV) automatically switch DCF model
 
-**Features:**
-- Same-day data caching (skip re-fetch on reruns, `--fresh` to override)
-- Pre-built OCaml binaries for parallel execution (no dune lock contention)
-- Output: terminal dashboard, JSON, CSV, ntfy notification
-- Supports universes: portfolio, watchlist, sp50, nasdaq30, sector baskets, liquid tickers
-
-```bash
-uv run valuation/panel/python/run.py --tickers AAPL,NVDA,JPM,O,SPY
-uv run valuation/panel/python/run.py --universe portfolio
-uv run valuation/panel/python/run.py --universe sp50 --format csv --output results.csv
-```
+**Key Features:**
+- **Parallel execution** — pre-built OCaml binaries, no dune lock contention
+- **Same-day caching** — skip re-fetch on reruns
+- **Universe support** — portfolio, watchlist, S&P 50, NASDAQ 30, sector baskets, liquid tickers
+- **Output formats** — terminal dashboard, JSON, CSV, ntfy notification
 
 [↑ Back to top](#table-of-contents)
 

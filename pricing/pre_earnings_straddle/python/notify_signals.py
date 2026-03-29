@@ -41,7 +41,12 @@ def format_message(df: pd.DataFrame) -> str:
             f"straddle={row['straddle_pct']:.1f}%){seg}"
         )
 
-    return header + "\n" + "\n".join(lines)
+    regime_line = ""
+    if "macro_regime" in actionable.columns and actionable.iloc[0].get("macro_regime"):
+        r = actionable.iloc[0]
+        regime_line = f"\U0001f4ca Regime: {r['macro_regime']} | {r['risk_sentiment']}\n"
+
+    return regime_line + header + "\n" + "\n".join(lines)
 
 
 def main():

@@ -23,6 +23,17 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 SEGMENT_DIR = Path(__file__).resolve().parents[2] / "liquidity" / "data"
 
+# Optional macro regime context (enriches output when available)
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+try:
+    from lib.python.context import load_macro_regime
+except ImportError:
+    load_macro_regime = lambda: None
+try:
+    from lib.python.context import load_ticker_sentiment
+except ImportError:
+    load_ticker_sentiment = lambda t: None
+
 import re
 
 
@@ -104,6 +115,7 @@ def scan(data_dir: Path, segment_map: dict[str, str] | None = None) -> pd.DataFr
         return pd.DataFrame()
 
     rows = []
+    regime = load_macro_regime()
     for ticker, df in histories.items():
         latest = df.iloc[-1]
 
@@ -136,6 +148,13 @@ def scan(data_dir: Path, segment_map: dict[str, str] | None = None) -> pd.DataFr
             if seg is None:
                 seg = price_to_segment(latest["spot"])
             row["segment"] = seg
+        if regime:
+            row["macro_regime"] = regime["cycle_phase"]
+            row["risk_sentiment"] = regime["risk_sentiment"]
+        sentiment = load_ticker_sentiment(ticker)
+        if sentiment:
+            row["sentiment_score"] = sentiment["sentiment_score"]
+            row["sentiment_bias"] = sentiment["sentiment_signal"]
         rows.append(row)
 
     result = pd.DataFrame(rows)

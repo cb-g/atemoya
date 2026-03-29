@@ -24,6 +24,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# Optional macro regime context (enriches output when available)
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+try:
+    from lib.python.context import load_macro_regime
+except ImportError:
+    load_macro_regime = lambda: None
+
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 SEGMENT_DIR = Path(__file__).resolve().parents[2] / "liquidity" / "data"
@@ -140,6 +147,7 @@ def scan(data_dir: Path, min_days: int, threshold: float,
         return pd.DataFrame()
 
     rows = []
+    regime = load_macro_regime()
     for ticker, df in histories.items():
         # For each ticker, pick the best DTE pair (highest FF) or preferred pair
         if preferred_pair:
@@ -181,6 +189,9 @@ def scan(data_dir: Path, min_days: int, threshold: float,
         if segment_map is not None:
             seg = segment_map.get(ticker, "unknown")
             row["segment"] = seg
+        if regime:
+            row["macro_regime"] = regime["cycle_phase"]
+            row["risk_sentiment"] = regime["risk_sentiment"]
         rows.append(row)
 
     result = pd.DataFrame(rows)

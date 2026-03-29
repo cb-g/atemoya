@@ -23,6 +23,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# Optional macro regime context (enriches output when available)
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+try:
+    from lib.python.context import load_macro_regime
+except ImportError:
+    load_macro_regime = lambda: None
+
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 SEGMENT_DIR = Path(__file__).resolve().parents[2] / "liquidity" / "data"
@@ -155,6 +162,7 @@ def scan(data_dir: Path, segment_map: dict[str, str] | None = None,
         return pd.DataFrame()
 
     rows = []
+    regime = load_macro_regime()
     for ticker, df in histories.items():
         latest = df.iloc[-1]
 
@@ -186,6 +194,9 @@ def scan(data_dir: Path, segment_map: dict[str, str] | None = None,
             if seg is None:
                 seg = price_to_segment(latest["spot"])
             row["segment"] = seg
+        if regime:
+            row["macro_regime"] = regime["cycle_phase"]
+            row["risk_sentiment"] = regime["risk_sentiment"]
         rows.append(row)
 
     result = pd.DataFrame(rows)

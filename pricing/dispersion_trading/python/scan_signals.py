@@ -19,6 +19,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# Optional macro regime context (enriches output when available)
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+try:
+    from lib.python.context import load_macro_regime
+except ImportError:
+    load_macro_regime = lambda: None
+
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 
@@ -112,6 +119,7 @@ def scan(data_dir: Path, min_days: int, window: int = 0) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame()
 
+    regime = load_macro_regime()
     latest = df.iloc[-1]
     scores = compute_z_scores(df, window=window)
 
@@ -137,6 +145,9 @@ def scan(data_dir: Path, min_days: int, window: int = 0) -> pd.DataFrame:
         "weighted_avg_iv": latest["weighted_avg_iv"],
         "days": len(df),
     }
+    if regime:
+        row["macro_regime"] = regime["cycle_phase"]
+        row["risk_sentiment"] = regime["risk_sentiment"]
 
     return pd.DataFrame([row])
 

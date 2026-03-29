@@ -46,7 +46,11 @@ def format_message(df: pd.DataFrame) -> str:
         f"Real={row['realized_correlation']:.2f}"
     )
 
-    return header + "\n" + line
+    regime_line = ""
+    if "macro_regime" in row and row.get("macro_regime"):
+        regime_line = f"\U0001f4ca Regime: {row['macro_regime']} | {row['risk_sentiment']}\n"
+
+    return regime_line + header + "\n" + line
 
 
 def main():
