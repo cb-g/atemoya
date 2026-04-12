@@ -75,7 +75,7 @@ def load_histories(data_dir: Path, min_days: int) -> dict[str, pd.DataFrame]:
     """Load forward factor history CSVs from both yfinance and thetadata sources."""
     histories = {}
     ticker_dfs: dict[str, list[pd.DataFrame]] = {}
-    for pattern in ("*_ff_history_yfinance.csv", "*_ff_history_thetadata.csv"):
+    for pattern in ("*_ff_history_thetadata.csv", "*_ff_history_yfinance.csv"):
         for f in sorted(data_dir.glob(pattern)):
             ticker = f.stem.replace("_ff_history_yfinance", "").replace("_ff_history_thetadata", "")
             try:

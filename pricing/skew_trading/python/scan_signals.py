@@ -73,12 +73,13 @@ def load_segment_map(segment_dir: Path) -> dict[str, str]:
 def load_histories(data_dir: Path, min_days: int) -> dict[str, pd.DataFrame]:
     """Load skew history CSVs from both yfinance and thetadata sources.
 
-    Merges both sources per ticker, deduplicates by timestamp (yfinance
-    preferred for overlapping dates), requires at least min_days observations.
+    Merges both sources per ticker, deduplicates by timestamp (thetadata
+    preferred for overlapping dates — deeper chain, internally consistent
+    EOD dates), requires at least min_days observations.
     """
     histories = {}
     ticker_dfs: dict[str, list[pd.DataFrame]] = {}
-    for pattern in ("*_skew_history_yfinance.csv", "*_skew_history_thetadata.csv"):
+    for pattern in ("*_skew_history_thetadata.csv", "*_skew_history_yfinance.csv"):
         for f in sorted(data_dir.glob(pattern)):
             ticker = f.stem.replace("_skew_history_yfinance", "").replace("_skew_history_thetadata", "")
             try:

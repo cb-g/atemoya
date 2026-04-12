@@ -73,7 +73,7 @@ def load_histories(data_dir: Path, min_days: int) -> dict[str, pd.DataFrame]:
     """Load skew verticals history CSVs from both yfinance and thetadata sources."""
     histories = {}
     ticker_dfs: dict[str, list[pd.DataFrame]] = {}
-    for pattern in ("*_skewvert_history_yfinance.csv", "*_skewvert_history_thetadata.csv"):
+    for pattern in ("*_skewvert_history_thetadata.csv", "*_skewvert_history_yfinance.csv"):
         for f in sorted(data_dir.glob(pattern)):
             ticker = f.stem.replace("_skewvert_history_yfinance", "").replace("_skewvert_history_thetadata", "")
             try:

@@ -171,11 +171,6 @@ def replay_ticker(ticker: str, thetadata_dir: Path, module_data_dir: Path, quiet
             continue
 
         atm_iv, num_expiries, near_expiry = svi_atm_iv(svi_params)
-
-        # Zero fake data policy: skip if calibration fell back to default
-        if atm_iv == 0.20 and num_expiries <= 3:
-            continue
-
         implied_var = atm_iv ** 2
 
         row = {

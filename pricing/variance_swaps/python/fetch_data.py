@@ -121,15 +121,18 @@ def fetch_options_chain(ticker: str) -> pd.DataFrame:
 
     all_options = []
 
-    for expiry_str in expirations[:5]:  # First 5 expiries
+    # Filter to valid DTE range first, then take first 5 — otherwise daily-expiry
+    # tickers (SPY/QQQ/IWM) have their first 5 expiries all under 7 DTE and nothing passes.
+    now_naive = datetime.now().replace(tzinfo=None)
+    eligible = []
+    for expiry_str in expirations:
         expiry_dt = datetime.strptime(expiry_str, '%Y-%m-%d')
-        # Use naive datetime for comparison
-        now_naive = datetime.now().replace(tzinfo=None)
         days_to_expiry = (expiry_dt - now_naive).days
+        if 7 <= days_to_expiry <= 365:
+            eligible.append((expiry_str, days_to_expiry))
+    eligible = eligible[:5]
 
-        if days_to_expiry < 7 or days_to_expiry > 365:
-            continue
-
+    for expiry_str, days_to_expiry in eligible:
         try:
             chain = retry_with_backoff(lambda exp=expiry_str: stock.option_chain(exp))
 
@@ -171,30 +174,9 @@ def calibrate_svi_surface(options_df: pd.DataFrame, spot_price: float) -> dict:
     print("Calibrating SVI volatility surface...")
 
     if options_df.empty:
-        # Create default flat surface (~20% vol)
-        # SVI: w(k) = a + b*(rho*(k-m) + sqrt((k-m)^2 + sigma^2))
-        # At ATM (k=0, m=0, rho=0): w = a + b*sigma
-        # Want IV = 0.20, so w = IV^2 * T, hence a = IV^2*T - b*sigma
-        print("  ⚠ Using default flat surface (20% vol)")
-        atm_iv = 0.20
-        b_val = 0.01
-        sigma_val = 0.1
-        expiries = [0.0822, 0.25, 0.5]  # 30d, 90d, 180d
-        params = []
-        for t in expiries:
-            a_val = atm_iv**2 * t - b_val * sigma_val
-            params.append({
-                'expiry': t,
-                'a': round(a_val, 6),
-                'b': b_val,
-                'rho': -0.1,  # mild negative skew (typical equity)
-                'm': 0.0,
-                'sigma': sigma_val,
-            })
-        return {
-            'model': 'SVI',
-            'params': params
-        }
+        # Zero fake data policy: no options quotes → empty params, caller must skip
+        print("  ⚠ No options data — SVI calibration skipped")
+        return {'model': 'SVI', 'params': []}
 
     # Group by expiry
     expiries = sorted(options_df['expiry'].unique())
@@ -228,19 +210,8 @@ def calibrate_svi_surface(options_df: pd.DataFrame, spot_price: float) -> dict:
         params_list.append(params)
 
     if not params_list:
-        # Fallback: flat 20% vol
-        atm_iv = 0.20
-        b_val = 0.01
-        sigma_val = 0.1
-        for t in [0.0822, 0.25, 0.5]:
-            params_list.append({
-                'expiry': t,
-                'a': round(atm_iv**2 * t - b_val * sigma_val, 6),
-                'b': b_val,
-                'rho': -0.1,
-                'm': 0.0,
-                'sigma': sigma_val,
-            })
+        # Zero fake data policy: no ATM strikes in any expiry → empty params, caller must skip
+        print("  ⚠ No ATM strikes in 0.95–1.05 band — SVI calibration skipped")
 
     print(f"  ✓ Calibrated SVI surface with {len(params_list)} expiries")
 

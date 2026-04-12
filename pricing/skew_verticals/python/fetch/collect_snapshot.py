@@ -93,22 +93,31 @@ def compute_skew_metrics(calls_iv: dict[float, float], puts_iv: dict[float, floa
     if atm_iv <= 0:
         return {}
 
-    # Approximate 25-delta strikes:
-    # 25-delta call ≈ spot * (1 + 0.05 to 0.15), pick closest
-    # 25-delta put ≈ spot * (1 - 0.05 to 0.15), pick closest
+    # Approximate 25-delta strikes — require truly OTM strikes, otherwise skip the row.
+    # Previously fell back to atm_strike, producing call_25d_iv == put_25d_iv == atm_iv
+    # and skew=0 — a silent fake for thin chains (zero fake data policy).
     call_25d_target = spot * 1.06
     put_25d_target = spot * 0.94
 
-    call_25d_strike = min(all_strikes, key=lambda k: abs(k - call_25d_target))
+    otm_call_strikes = [k for k in all_strikes if k > atm_strike]
     put_strikes = sorted(puts_iv.keys())
-    put_25d_strike = min(put_strikes, key=lambda k: abs(k - put_25d_target)) if put_strikes else atm_strike
+    otm_put_strikes = [k for k in put_strikes if k < atm_strike]
+
+    if not otm_call_strikes or not otm_put_strikes:
+        return {}
+
+    call_25d_strike = min(otm_call_strikes, key=lambda k: abs(k - call_25d_target))
+    put_25d_strike = min(otm_put_strikes, key=lambda k: abs(k - put_25d_target))
 
     call_25d_iv = calls_iv.get(call_25d_strike, 0)
     put_25d_iv = puts_iv.get(put_25d_strike, 0)
 
+    if call_25d_iv <= 0 or put_25d_iv <= 0:
+        return {}
+
     # Skew: negative means OTM is expensive relative to ATM
-    call_skew = (atm_iv - call_25d_iv) / atm_iv if call_25d_iv > 0 else 0
-    put_skew = (atm_iv - put_25d_iv) / atm_iv if put_25d_iv > 0 else 0
+    call_skew = (atm_iv - call_25d_iv) / atm_iv
+    put_skew = (atm_iv - put_25d_iv) / atm_iv
 
     return {
         "atm_iv": atm_iv,

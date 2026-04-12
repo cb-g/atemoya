@@ -52,7 +52,7 @@ def svi_atm_iv(svi_params: list[dict]) -> tuple[float, int, float]:
     Returns (atm_iv, num_expiries, near_expiry_years).
     """
     if not svi_params:
-        return 0.20, 0, 0.0
+        raise ValueError("empty svi_params — calibration failed upstream")
 
     # Pick nearest expiry (most liquid, most relevant for 30-day horizon)
     nearest = min(svi_params, key=lambda p: p["expiry"])
