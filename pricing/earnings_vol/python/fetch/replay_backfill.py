@@ -15,7 +15,7 @@ Usage:
 
 import argparse
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -156,12 +156,35 @@ def replay_ticker(ticker: str, thetadata_dir: Path, module_data_dir: Path, quiet
             print(f"  {ticker}: all dates already in history")
         return 0
 
-    from lib.python.data_fetcher.thetadata_provider import ThetaDataProvider
+    from lib.python.data_fetcher.thetadata_provider import ThetaDataProvider, theta_stock_symbol
     provider = ThetaDataProvider()
+
+    # Pre-fetch EOD closes for the full date window in up to 365-day chunks and
+    # build an in-memory lookup. Per-date spot calls would otherwise serialise
+    # at 20 req/min, adding ~11 minutes of pure wait per ticker.
+    spot_by_date: dict[str, float] = {}
+    sd = datetime.strptime(new_dates[0], "%Y-%m-%d")
+    ed = datetime.strptime(new_dates[-1], "%Y-%m-%d")
+    cursor = sd
+    while cursor <= ed:
+        chunk_end = min(cursor + timedelta(days=364), ed)
+        rows = provider._request_csv("/v3/stock/history/eod", {
+            "symbol": theta_stock_symbol(ticker),
+            "start_date": cursor.strftime("%Y%m%d"),
+            "end_date": chunk_end.strftime("%Y%m%d"),
+        })
+        for row in rows:
+            created = row.get("created", "") or row.get("date", "")
+            d = created.split("T")[0] if "T" in created else created
+            try:
+                spot_by_date[d] = float(row.get("close") or row.get("Close") or 0)
+            except (TypeError, ValueError):
+                pass
+        cursor = chunk_end + timedelta(days=1)
 
     added = 0
     for date_str in new_dates:
-        spot = provider._fetch_underlying_price(ticker, date_str.replace("-", ""))
+        spot = spot_by_date.get(date_str, 0.0)
         if spot == 0.0:
             continue
 

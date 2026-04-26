@@ -114,19 +114,31 @@ def build_iv_maps(chain_df: pd.DataFrame, spot: float) -> tuple[dict, dict]:
 
 
 def fetch_ohlcv_history(ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
-    """Fetch OHLCV from ThetaData."""
-    from lib.python.data_fetcher.thetadata_provider import ThetaDataProvider
+    """Fetch OHLCV from ThetaData. Chunks automatically if range >365 days
+    (the free tier cap on /v3/stock/history/eod)."""
+    from lib.python.data_fetcher.thetadata_provider import ThetaDataProvider, theta_stock_symbol
     provider = ThetaDataProvider()
     if not provider.is_available():
         return pd.DataFrame()
-    rows = provider._request_csv("/v3/stock/history/eod", {
-        "symbol": ticker,
-        "start_date": start_date,
-        "end_date": end_date,
-    })
-    if not rows:
+
+    sd = datetime.strptime(start_date, "%Y%m%d")
+    ed = datetime.strptime(end_date, "%Y%m%d")
+    chunks = []
+    cursor = sd
+    while cursor <= ed:
+        chunk_end = min(cursor + timedelta(days=364), ed)
+        rows = provider._request_csv("/v3/stock/history/eod", {
+            "symbol": theta_stock_symbol(ticker),
+            "start_date": cursor.strftime("%Y%m%d"),
+            "end_date": chunk_end.strftime("%Y%m%d"),
+        })
+        if rows:
+            chunks.extend(rows)
+        cursor = chunk_end + timedelta(days=1)
+
+    if not chunks:
         return pd.DataFrame()
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(chunks)
     for col in ["open", "high", "low", "close", "volume"]:
         if col in df.columns:
             df[col] = df[col].astype(float)
@@ -176,9 +188,20 @@ def replay_ticker(ticker: str, thetadata_dir: Path, module_data_dir: Path, quiet
     # SPY OHLCV for momentum alpha computation
     spy_ohlcv = fetch_ohlcv_history("SPY", earliest.strftime("%Y%m%d"), latest)
 
+    # Build an in-memory date→Close lookup from the bulk OHLCV we already fetched,
+    # instead of hitting /v3/stock/history/eod once per date (which the rate limiter
+    # then throttles to 20/min → ~11 minutes of pure wait per ticker).
+    spot_by_date: dict[str, float] = {}
+    if not ohlcv.empty and "date" in ohlcv.columns and "Close" in ohlcv.columns:
+        for d, c in zip(ohlcv["date"].values, ohlcv["Close"].values):
+            try:
+                spot_by_date[str(d)] = float(c)
+            except (ValueError, TypeError):
+                pass
+
     added = 0
     for date_str in new_dates:
-        spot = provider._fetch_underlying_price(ticker, date_str.replace("-", ""))
+        spot = spot_by_date.get(date_str, 0.0)
         if spot == 0.0:
             continue
 

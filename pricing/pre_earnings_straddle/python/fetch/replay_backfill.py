@@ -16,7 +16,7 @@ Usage:
 import argparse
 import math
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -120,6 +120,39 @@ def compute_straddle_metrics(raw_df: pd.DataFrame, date_str: str, spot: float) -
     }
 
 
+def fetch_ohlcv_history(ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """Fetch OHLCV from ThetaData, chunked by 364 days (free tier cap)."""
+    from lib.python.data_fetcher.thetadata_provider import ThetaDataProvider, theta_stock_symbol
+    provider = ThetaDataProvider()
+    if not provider.is_available():
+        return pd.DataFrame()
+
+    sd = datetime.strptime(start_date, "%Y%m%d")
+    ed = datetime.strptime(end_date, "%Y%m%d")
+    chunks = []
+    cursor = sd
+    while cursor <= ed:
+        chunk_end = min(cursor + timedelta(days=364), ed)
+        rows = provider._request_csv("/v3/stock/history/eod", {
+            "symbol": theta_stock_symbol(ticker),
+            "start_date": cursor.strftime("%Y%m%d"),
+            "end_date": chunk_end.strftime("%Y%m%d"),
+        })
+        if rows:
+            chunks.extend(rows)
+        cursor = chunk_end + timedelta(days=1)
+
+    if not chunks:
+        return pd.DataFrame()
+    df = pd.DataFrame(chunks)
+    if "close" in df.columns:
+        df["close"] = df["close"].astype(float)
+    df = df.rename(columns={"close": "Close"})
+    if "created" in df.columns:
+        df["date"] = df["created"].str.split("T").str[0]
+    return df
+
+
 def replay_ticker(ticker: str, thetadata_dir: Path, module_data_dir: Path, quiet: bool = False) -> int:
     raw_file = thetadata_dir / f"{ticker}.csv"
     if not raw_file.exists():
@@ -149,12 +182,23 @@ def replay_ticker(ticker: str, thetadata_dir: Path, module_data_dir: Path, quiet
             print(f"  {ticker}: all dates already in history")
         return 0
 
-    from lib.python.data_fetcher.thetadata_provider import ThetaDataProvider
-    provider = ThetaDataProvider()
+    # Bulk-fetch OHLCV once per ticker instead of per-date — each per-date call
+    # hit /v3/stock/history/eod and the 20 req/min rate limiter serialized
+    # them into ~12 min per ticker.
+    earliest = new_dates[0].replace("-", "")
+    latest = new_dates[-1].replace("-", "")
+    ohlcv = fetch_ohlcv_history(ticker, earliest, latest)
+    spot_by_date: dict[str, float] = {}
+    if not ohlcv.empty and "date" in ohlcv.columns and "Close" in ohlcv.columns:
+        for d, c in zip(ohlcv["date"].values, ohlcv["Close"].values):
+            try:
+                spot_by_date[str(d)] = float(c)
+            except (ValueError, TypeError):
+                pass
 
     added = 0
     for date_str in new_dates:
-        spot = provider._fetch_underlying_price(ticker, date_str.replace("-", ""))
+        spot = spot_by_date.get(date_str, 0.0)
         if spot == 0.0:
             continue
 

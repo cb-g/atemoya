@@ -35,6 +35,7 @@ from lib.python.data_fetcher.thetadata_provider import (
     BASE_URL,
     RATE_LIMIT,
     REQUEST_TIMEOUT,
+    theta_symbol,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -60,7 +61,7 @@ def _fetch_month(ticker: str, start: str, end: str, request_times: list) -> tupl
     """Fetch one month of EOD chain data. Returns (csv_text_without_header, status)."""
     _rate_limit(request_times)
     params = {
-        "symbol": ticker,
+        "symbol": theta_symbol(ticker),
         "expiration": "*",
         "strike": "*",
         "right": "both",
@@ -74,6 +75,13 @@ def _fetch_month(ticker: str, start: str, end: str, request_times: list) -> tupl
             params=params,
             timeout=REQUEST_TIMEOUT,
         )
+        # ThetaData returns HTTP 472 "No data found" for date ranges that exist
+        # outside a ticker's listed window (e.g. before IPO, after renaming).
+        # Treat that as an empty chunk and continue, not a hard failure — otherwise
+        # newer tickers abort on their first (oldest) chunk and never fetch the
+        # months they do have data for.
+        if resp.status_code == 472:
+            return "", 0
         if resp.status_code != 200:
             return "", -1
         text = resp.text.strip()
@@ -164,6 +172,8 @@ def backfill_ticker(
     # Determine write mode
     file_exists = output_file.exists() and output_file.stat().st_size > 0
     total_rows = 0
+    # `created` column is index 4 in HEADER
+    created_idx = HEADER.split(",").index("created")
 
     with open(output_file, "a" if file_exists else "w") as f:
         if not file_exists:
@@ -175,8 +185,20 @@ def backfill_ticker(
                 return -1
             if not text:
                 continue
-            f.write(text + "\n")
-            total_rows += text.count("\n") + 1
+            # Filter out rows whose date is already on disk. Needed because a
+            # partial current month triggers a re-fetch of the whole chunk
+            # (has_gap detects the missing tail days) and would otherwise
+            # duplicate every earlier day in that month.
+            kept_lines = [
+                line for line in text.split("\n")
+                if line
+                and len(line.split(",")) > created_idx
+                and line.split(",")[created_idx].split("T")[0].replace("-", "") not in existing_dates
+            ]
+            if not kept_lines:
+                continue
+            f.write("\n".join(kept_lines) + "\n")
+            total_rows += len(kept_lines)
 
     return total_rows
 

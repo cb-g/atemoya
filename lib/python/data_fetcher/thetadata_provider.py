@@ -32,6 +32,29 @@ RATE_LIMIT = 20  # requests per minute (free tier)
 REQUEST_TIMEOUT = 120  # seconds — full chains can be large
 
 
+def theta_option_symbol(ticker: str) -> str:
+    """Translate yfinance-style symbol for ThetaData's /option/* endpoints.
+
+    Options use the class-share concatenated: BRK-B (yfinance) → BRKB.
+    """
+    return ticker.replace("-", "").replace(".", "")
+
+
+def theta_stock_symbol(ticker: str) -> str:
+    """Translate yfinance-style symbol for ThetaData's /stock/* endpoints.
+
+    Stock endpoints use the SEC/CBOE dot convention: BRK-B (yfinance) → BRK.B.
+    (Yes, Theta is internally inconsistent — options strip the separator, stock
+    keeps it as a dot.)
+    """
+    return ticker.replace("-", ".")
+
+
+# Backward-compatible alias: existing callers that used `theta_symbol` were all
+# on option endpoints, so keep it pointing at the option translation.
+theta_symbol = theta_option_symbol
+
+
 class ThetaDataProvider(DataProvider):
 
     def __init__(self):
@@ -128,7 +151,7 @@ class ThetaDataProvider(DataProvider):
     def _fetch_underlying_price(self, ticker: str, date: str) -> float:
         """Get underlying closing price for a date. date format: YYYYMMDD."""
         rows = self._request_csv("/v3/stock/history/eod", {
-            "symbol": ticker,
+            "symbol": theta_stock_symbol(ticker),
             "start_date": date,
             "end_date": date,
         })
@@ -158,7 +181,7 @@ class ThetaDataProvider(DataProvider):
             expiry: Specific expiry as YYYYMMDD, or None for all
         """
         params = {
-            "symbol": ticker,
+            "symbol": theta_symbol(ticker),
             "expiration": expiry or "*",
             "strike": "*",
             "right": "both",
@@ -186,7 +209,7 @@ class ThetaDataProvider(DataProvider):
         start = end - timedelta(days=days)
 
         rows = self._request_csv("/v3/stock/history/eod", {
-            "symbol": ticker,
+            "symbol": theta_stock_symbol(ticker),
             "start_date": start.strftime("%Y%m%d"),
             "end_date": end.strftime("%Y%m%d"),
         })

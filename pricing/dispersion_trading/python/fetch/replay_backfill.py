@@ -151,10 +151,14 @@ def main():
         print("All dates already in history")
         return
 
-    # Fetch OHLCV for realized correlation
+    # Fetch OHLCV for realized correlation — also reused as per-date spot lookup
+    # below (previously fell back to per-date _fetch_underlying_price which hit
+    # /v3/stock/history/eod 11× per date and the 20 req/min rate limiter dragged
+    # the whole run to ~3 rows/min).
     earliest = datetime.strptime(new_dates[0], "%Y-%m-%d") - timedelta(days=30)
     latest = new_dates[-1].replace("-", "")
     ohlcv_data = {}
+    spot_by_ticker_date: dict[str, dict[str, float]] = {}
     for ticker in all_tickers:
         rows = provider._request_csv("/v3/stock/history/eod", {
             "symbol": ticker,
@@ -169,6 +173,7 @@ def main():
             else:
                 df["date_str"] = df["date"]
             ohlcv_data[ticker] = df
+            spot_by_ticker_date[ticker] = dict(zip(df["date_str"].values, df["close"].values))
 
     # Equal weights for constituents
     available_constituents = [c for c in DEFAULT_CONSTITUENTS if c in raw_data]
@@ -181,7 +186,7 @@ def main():
     added = 0
     for date_str in new_dates:
         # Index IV
-        index_spot = provider._fetch_underlying_price(DEFAULT_INDEX, date_str.replace("-", ""))
+        index_spot = spot_by_ticker_date.get(DEFAULT_INDEX, {}).get(date_str, 0.0)
         if index_spot == 0.0:
             continue
         index_iv = compute_atm_iv_from_raw(raw_data[DEFAULT_INDEX], date_str, index_spot)
@@ -194,7 +199,7 @@ def main():
             if ticker not in raw_data:
                 constituent_ivs.append(0.0)
                 continue
-            spot = provider._fetch_underlying_price(ticker, date_str.replace("-", ""))
+            spot = spot_by_ticker_date.get(ticker, {}).get(date_str, 0.0)
             if spot == 0.0:
                 constituent_ivs.append(0.0)
                 continue
