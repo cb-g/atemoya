@@ -95,8 +95,12 @@ def calculate_forward_factor(front_iv: float, back_iv: float,
     """
     Compute forward vol and forward factor.
 
-    Returns (forward_vol, forward_factor).
-    Matches OCaml forward_vol.ml logic exactly.
+    Returns (forward_vol, forward_factor). Returns (0, 0) for degenerate
+    inputs: the ff = (front_iv - fwd_vol) / fwd_vol ratio becomes numerically
+    unstable when fwd_vol is near zero relative to front_iv (steep
+    backwardation, v2*t2 ≈ v1*t1), producing huge spurious ff values. Reject
+    those so downstream (scanner, replay, collect) skips them uniformly —
+    matches the zero-fake-data policy used across other pricing modules.
     """
     t1 = front_dte / 365.0
     t2 = back_dte / 365.0
@@ -111,10 +115,15 @@ def calculate_forward_factor(front_iv: float, back_iv: float,
     forward_variance = max(0.0, forward_variance)
     forward_volatility = math.sqrt(forward_variance)
 
-    if forward_volatility > 0:
-        ff = (front_iv - forward_volatility) / forward_volatility
-    else:
-        ff = 0.0
+    # Numerical stability gates: fwd_vol must be above a physical floor
+    # (5% annualized), and ff must stay in a plausible range. Either failing
+    # means the formula blew up in the backwardation edge case.
+    if forward_volatility < 0.05:
+        return 0.0, 0.0
+
+    ff = (front_iv - forward_volatility) / forward_volatility
+    if abs(ff) > 2.0:
+        return 0.0, 0.0
 
     return forward_volatility, ff
 
@@ -258,6 +267,9 @@ def collect_one_ticker(ticker: str, data_dir: Path) -> bool:
         )
 
         dte_pair = f"{front_target}-{back_target}"
+        if fwd_vol <= 0:
+            print(f"  {dte_pair}: degenerate (fwd_vol≤0 or |ff|>2), skipping")
+            continue
         print(f"  {dte_pair}: FF={ff:+.4f} (fwd_vol={fwd_vol*100:.1f}%)")
 
         pair_results.append({

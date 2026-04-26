@@ -72,7 +72,12 @@ def load_segment_map(segment_dir: Path) -> dict[str, str]:
 
 
 def load_histories(data_dir: Path, min_days: int) -> dict[str, pd.DataFrame]:
-    """Load forward factor history CSVs from both yfinance and thetadata sources."""
+    """Load forward factor history CSVs from both yfinance and thetadata sources.
+
+    Drops rows where the forward factor computation blew up numerically
+    (|ff|>2 or fwd_vol<0.05) — defense in depth against legacy rows written
+    before calculate_forward_factor got its stability gates.
+    """
     histories = {}
     ticker_dfs: dict[str, list[pd.DataFrame]] = {}
     for pattern in ("*_ff_history_thetadata.csv", "*_ff_history_yfinance.csv"):
@@ -80,6 +85,9 @@ def load_histories(data_dir: Path, min_days: int) -> dict[str, pd.DataFrame]:
             ticker = f.stem.replace("_ff_history_yfinance", "").replace("_ff_history_thetadata", "")
             try:
                 df = pd.read_csv(f)
+                if df.empty:
+                    continue
+                df = df[(df["forward_factor"].abs() <= 2.0) & (df["forward_vol"] >= 0.05)]
                 if not df.empty:
                     ticker_dfs.setdefault(ticker, []).append(df)
             except Exception:
@@ -95,6 +103,9 @@ def load_histories(data_dir: Path, min_days: int) -> dict[str, pd.DataFrame]:
     return histories
 
 
+MIN_Z_SAMPLES = 20
+
+
 def compute_z_scores(series: pd.Series, window: int = 0) -> tuple[float, float, float]:
     """Compute z-score for latest value against history.
 
@@ -103,7 +114,10 @@ def compute_z_scores(series: pd.Series, window: int = 0) -> tuple[float, float, 
         window: Lookback window (0 = all history).
 
     Returns:
-        (z_score, latest, mean) — z_score is NaN if insufficient data.
+        (z_score, latest, mean) — z_score is NaN if fewer than MIN_Z_SAMPLES
+        prior observations. Previously the guard was len>=3, which let thin
+        pairs produce blown-up z-scores (tiny std, one outlier → z in the
+        thousands). 20 is conservative but keeps z-scores in a sane range.
     """
     series = series.dropna()
     if len(series) < 1:
@@ -111,7 +125,7 @@ def compute_z_scores(series: pd.Series, window: int = 0) -> tuple[float, float, 
 
     latest = series.iloc[-1]
 
-    if len(series) < 3:
+    if len(series) < MIN_Z_SAMPLES + 1:
         return np.nan, latest, np.nan
 
     if window > 0 and len(series) > window:
@@ -168,9 +182,18 @@ def scan(data_dir: Path, min_days: int, threshold: float,
         if pair_df.empty:
             continue
 
-        # Get the latest observation per DTE pair, pick highest FF
+        # Pick the DTE pair with the highest latest FF *among pairs that have
+        # enough history to z-score*. A rich-history pair with a modest signal
+        # beats a thin pair at the ff cap — otherwise idxmax latches onto
+        # whichever pair happened to be sampled most recently regardless of
+        # whether we can contextualize its reading.
+        pair_counts = pair_df.groupby("dte_pair").size()
+        eligible_pairs = pair_counts[pair_counts >= MIN_Z_SAMPLES + 1].index
         latest_per_pair = pair_df.groupby("dte_pair").last()
-        best_pair = latest_per_pair["forward_factor"].idxmax()
+        if len(eligible_pairs) > 0:
+            best_pair = latest_per_pair.loc[eligible_pairs, "forward_factor"].idxmax()
+        else:
+            best_pair = latest_per_pair["forward_factor"].idxmax()
         latest = latest_per_pair.loc[best_pair]
 
         ff = latest["forward_factor"]
@@ -181,7 +204,12 @@ def scan(data_dir: Path, min_days: int, threshold: float,
 
         signal, description = classify_signal(ff, ff_z)
 
-        max_z = abs(ff_z) if not np.isnan(ff_z) else abs(ff / 0.1) if ff != 0 else 0
+        # Rank only by z-score. Previous fallback (abs(ff/0.1) when z NaN)
+        # let thin-history tickers with 1-2 observations at the ff floor/cap
+        # outrank z-qualified signals. With the MIN_Z_SAMPLES gate enforced
+        # in compute_z_scores, NaN z means "not enough history to compare" —
+        # rank at 0 so they fall to the bottom of the tradeable list.
+        max_z = abs(ff_z) if not np.isnan(ff_z) else 0.0
 
         row = {
             "ticker": ticker,
