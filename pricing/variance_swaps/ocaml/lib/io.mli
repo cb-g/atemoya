@@ -12,6 +12,13 @@ val read_price_data : string -> (float * float) array
 *)
 val read_ohlc_data : string -> (float * float * float * float * float) array
 
+(** Read ATM IV history from ThetaData backfill CSV.
+    Returns a date-string -> ATM IV map (empty on missing/unreadable file). *)
+val read_iv_history : string -> (string, float) Hashtbl.t
+
+(** Convert a UTC Unix timestamp to "YYYY-MM-DD". *)
+val timestamp_to_date_str : float -> string
+
 (** Read volatility surface parameters from JSON *)
 val read_vol_surface : string -> vol_surface
 

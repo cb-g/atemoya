@@ -226,6 +226,8 @@ def main():
     parser.add_argument('--ticker', type=str, required=True, help='Ticker symbol')
     parser.add_argument('--lookback', type=int, default=365, help='Days of price history')
     parser.add_argument('--output', type=str, default='pricing/variance_swaps/data', help='Output directory')
+    parser.add_argument('--prices-only', action='store_true',
+                        help='Fetch only price OHLC; skip underlying + vol surface (fast path for backtests)')
 
     args = parser.parse_args()
 
@@ -238,6 +240,10 @@ def main():
         prices_file = output_dir / f"{args.ticker}_prices.csv"
         prices_df.to_csv(prices_file, index=False)
         print(f"✓ Saved price data to {prices_file}")
+
+        if args.prices_only:
+            print(f"\n✅ Prices-only fetch complete for {args.ticker}")
+            return 0
 
         # Fetch underlying data
         underlying_data = fetch_underlying_data(args.ticker)

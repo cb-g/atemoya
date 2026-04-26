@@ -37,6 +37,40 @@ let read_price_data filename =
     Array.of_list parsed
   with Sys_error _ -> [||]
 
+(* Read IV history from ThetaData backfill CSV.
+   Expected columns: date, ticker, spot_price, atm_iv, implied_var, num_expiries, near_expiry_days
+   Returns a Hashtbl keyed by "YYYY-MM-DD" date string -> ATM IV (decimal, e.g. 0.21). *)
+let read_iv_history filename =
+  let table = Hashtbl.create 256 in
+  (try
+    let ic = open_in filename in
+    (try
+      let _ = input_line ic in
+      while true do
+        let line = input_line ic in
+        let parts = String.split_on_char ',' line in
+        match parts with
+        | date_str :: _ticker :: _spot :: atm_iv_str :: _ ->
+            (try
+              let atm_iv = float_of_string atm_iv_str in
+              if atm_iv > 0.0 then Hashtbl.replace table date_str atm_iv
+            with Failure _ -> ())
+        | _ -> ()
+      done
+     with End_of_file -> close_in ic)
+   with Sys_error _ -> ());
+  table
+
+(* Convert a Unix timestamp (UTC) to "YYYY-MM-DD" date string.
+   Price CSVs store dates as UTC-midnight Unix timestamps; IV history CSVs
+   use ISO date strings, so we go through this to align them. *)
+let timestamp_to_date_str ts =
+  let tm = Unix.gmtime ts in
+  Printf.sprintf "%04d-%02d-%02d"
+    (tm.Unix.tm_year + 1900)
+    (tm.Unix.tm_mon + 1)
+    tm.Unix.tm_mday
+
 let read_ohlc_data filename =
   try
     let ic = open_in filename in

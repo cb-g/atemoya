@@ -108,9 +108,13 @@ let compute_vrp_time_series ~ticker ~vol_surface_data ~price_data ~horizon_days 
     Array.init n (fun i ->
       let (date, _strikes, ivs) = vol_surface_data.(i) in
 
-      (* Implied variance: ATM IV squared *)
+      (* Implied variance: ATM IV squared.
+         T2 blocker: variance_swaps SVI snapshots in data/snapshots/{TICKER}/
+         are seed defaults (rho=-0.1, m=0, sigma=0.1, b=0.01), not calibrated
+         fits — using them as-is would not improve over σ²_ATM. T3 raw-chain
+         replay from pricing/thetadata/data/{TICKER}.csv is the realistic path. *)
       let atm_iv = if Array.length ivs > 0 then
-        ivs.(Array.length ivs / 2)  (* Middle strike as proxy for ATM *)
+        ivs.(Array.length ivs / 2)
       else 0.20 in
       let implied_var = atm_iv *. atm_iv in
 
@@ -237,9 +241,15 @@ let vrp_statistics vrp_observations =
     ) 0.0 vrp_observations in
     let std_vrp = sqrt (sum_sq_dev /. float_of_int (n - 1)) in
 
-    (* Sharpe ratio (assuming VRP is the return) *)
+    (* Sharpe ratio (assuming VRP is the return).
+       Annualization uses trades-per-year (252 / horizon_days) rather than 252,
+       since each VRP observation looks h trading days forward and consecutive
+       daily samples overlap. Treating them as 252 i.i.d. samples overstates
+       Sharpe by ≈ √h. *)
+    let h = float_of_int vrp_observations.(0).horizon_days in
+    let trades_per_year = if h > 0.0 then 252.0 /. h else 252.0 in
     let sharpe_ratio = if std_vrp > 0.0 then
-      (mean_vrp *. sqrt 252.0) /. std_vrp  (* Annualized *)
+      (mean_vrp *. sqrt trades_per_year) /. std_vrp
     else 0.0 in
 
     (mean_vrp, std_vrp, sharpe_ratio)
