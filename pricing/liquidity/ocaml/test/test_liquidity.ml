@@ -71,24 +71,38 @@ let test_spread_proxy () =
   Alcotest.(check (float_eq ~eps:0.01)) "1% spread" 1.0 sp
 
 let test_liquidity_score_excellent () =
-  (* All metrics at best levels *)
+  (* All metrics at best levels — turnover alone earns +15 *)
   let score = Scoring.liquidity_score
-    ~amihud:0.005 ~turnover:0.06 ~vol_vol:0.2 ~spread:0.3 in
+    ~amihud:0.005 ~turnover:0.06 ~dollar_volume:0.0 ~vol_vol:0.2 ~spread:0.3 in
   (* 50 + 15 + 15 + 10 + 10 = 100 *)
   Alcotest.(check (float_eq ~eps:0.01)) "excellent" 100.0 score
+
+let test_liquidity_score_mega_cap () =
+  (* Mega-cap: low turnover but massive dollar volume — dollar-volume band rescues *)
+  let score = Scoring.liquidity_score
+    ~amihud:0.005 ~turnover:0.008 ~dollar_volume:5e9 ~vol_vol:0.2 ~spread:0.3 in
+  (* 50 + 15 (amihud) + 15 (dollar_vol via max) + 10 (vol_vol) + 10 (spread) = 100 *)
+  Alcotest.(check (float_eq ~eps:0.01)) "mega cap rescued" 100.0 score
+
+let test_liquidity_score_depth_max () =
+  (* Both depth signals weak: max picks the less-bad penalty (both -10) *)
+  let score = Scoring.liquidity_score
+    ~amihud:0.5 ~turnover:0.0005 ~dollar_volume:1e6 ~vol_vol:0.4 ~spread:0.8 in
+  (* 50 + 5 (amihud<1) + (-10) (both bands -10, max is -10) + 5 + 5 = 55 *)
+  Alcotest.(check (float_eq ~eps:0.01)) "both weak" 55.0 score
 
 let test_liquidity_score_poor () =
   (* All metrics at worst levels *)
   let score = Scoring.liquidity_score
-    ~amihud:15.0 ~turnover:0.0005 ~vol_vol:1.5 ~spread:4.0 in
+    ~amihud:15.0 ~turnover:0.0005 ~dollar_volume:1e6 ~vol_vol:1.5 ~spread:4.0 in
   (* 50 - 15 - 10 - 10 - 10 = 5 *)
   Alcotest.(check (float_eq ~eps:0.01)) "poor" 5.0 score
 
 let test_liquidity_score_clamped () =
   Alcotest.(check bool) "min 0" true
-    (Scoring.liquidity_score ~amihud:100.0 ~turnover:0.0001 ~vol_vol:5.0 ~spread:10.0 >= 0.0);
+    (Scoring.liquidity_score ~amihud:100.0 ~turnover:0.0001 ~dollar_volume:0.0 ~vol_vol:5.0 ~spread:10.0 >= 0.0);
   Alcotest.(check bool) "max 100" true
-    (Scoring.liquidity_score ~amihud:0.001 ~turnover:0.10 ~vol_vol:0.1 ~spread:0.1 <= 100.0)
+    (Scoring.liquidity_score ~amihud:0.001 ~turnover:0.10 ~dollar_volume:1e10 ~vol_vol:0.1 ~spread:0.1 <= 100.0)
 
 let test_liquidity_tier () =
   Alcotest.(check string) "excellent" "Excellent" (Scoring.liquidity_tier 90.0);
@@ -227,6 +241,8 @@ let () =
       Alcotest.test_case "Volume volatility high" `Quick test_volume_volatility_high;
       Alcotest.test_case "Spread proxy" `Quick test_spread_proxy;
       Alcotest.test_case "Score excellent" `Quick test_liquidity_score_excellent;
+      Alcotest.test_case "Score mega cap" `Quick test_liquidity_score_mega_cap;
+      Alcotest.test_case "Score depth max" `Quick test_liquidity_score_depth_max;
       Alcotest.test_case "Score poor" `Quick test_liquidity_score_poor;
       Alcotest.test_case "Score clamped" `Quick test_liquidity_score_clamped;
       Alcotest.test_case "Tier strings" `Quick test_liquidity_tier;

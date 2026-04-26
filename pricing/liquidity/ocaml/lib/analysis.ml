@@ -20,9 +20,7 @@ let analyze_ticker (data : ticker_data) ~window : analysis_result option =
   else begin
     let price = ohlcv.close.(n - 1) in
     let avg_vol = array_mean (array_tail ohlcv.volume window) in
-    let avg_dollar_vol = array_mean (Array.init window (fun i ->
-      let idx = n - window + i in
-      ohlcv.close.(idx) *. ohlcv.volume.(idx))) in
+    let avg_dollar_vol = Scoring.avg_dollar_volume ohlcv.close ohlcv.volume ~window in
 
     let liquidity = Scoring.compute_metrics data ~window in
     let signals = Signals.compute_signals data ~window in

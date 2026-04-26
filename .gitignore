@@ -888,3 +888,6 @@ Thumbs.db
 # Claude Code
 CLAUDE.md
 # .claude/
+
+.claude/discord/
+.claude/settings.local.json

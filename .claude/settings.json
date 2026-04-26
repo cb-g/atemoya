@@ -1,0 +1,51 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(dune build:*)",
+      "Bash(dune clean:*)",
+      "Bash(ls:*)",
+      "Bash(pdflatex:*)",
+      "Bash(opam list:*)",
+      "Bash(grep:*)",
+      "Bash(docker compose exec:*)",
+      "WebFetch(domain:http-docs.thetadata.us)",
+      "WebFetch(domain:docs.thetadata.us)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.thetadata.net)",
+      "Read(**/.env.example)",
+      "Edit(**/.env.example)",
+      "Glob(**/.env.example)",
+      "Grep(**/.env.example)",
+      "Bash(cat **/.env.example)",
+      "Bash(head **/.env.example)",
+      "Bash(tail **/.env.example)",
+      "Bash(grep **/.env.example)"
+    ],
+    "deny": [
+      "Read(**/.env*)",
+      "Edit(**/.env*)",
+      "Glob(**/.env*)",
+      "Grep(**/.env*)",
+      "Bash(cat **/.env*)",
+      "Bash(head **/.env*)",
+      "Bash(tail **/.env*)",
+      "Bash(grep **/.env*)",
+      "Read(**/creds.txt)",
+      "Edit(**/creds.txt)",
+      "Glob(**/creds.txt)",
+      "Grep(**/creds.txt)",
+      "Bash(cat **/creds.txt)",
+      "Bash(head **/creds.txt)",
+      "Bash(tail **/creds.txt)",
+      "Read(**/.claude/discord/access.json)",
+      "Edit(**/.claude/discord/access.json)",
+      "Read(**/.claude/discord/**)",
+      "Bash(cat **/.claude/discord/*)",
+      "Bash(head **/.claude/discord/*)",
+      "Bash(tail **/.claude/discord/*)"
+    ]
+  }
+}

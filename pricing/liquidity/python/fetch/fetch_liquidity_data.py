@@ -6,6 +6,7 @@ Data fetching only - computations are done in OCaml.
 
 import argparse
 import json
+import logging
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +17,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 import yfinance as yf
 
 from lib.python.retry import retry_with_backoff
+
+# yfinance spams stderr with per-ticker HTTP Error 401 (from crumb-gated .info) and
+# "possibly delisted" warnings during bulk download. Suppress at the logger level.
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 
 def fetch_ticker_data(ticker: str, period: str = "3mo") -> dict | None:
@@ -48,6 +53,60 @@ def fetch_ticker_data(ticker: str, period: str = "3mo") -> dict | None:
     except Exception as e:
         print(f"Error fetching {ticker}: {e}", file=sys.stderr)
         return None
+
+
+def fetch_tickers_batch(tickers: list[str], period: str = "3mo") -> list[dict]:
+    """Batch-fetch OHLCV for many tickers via a single yf.download call.
+
+    Much faster than looping fetch_ticker_data. Does NOT fetch shares_outstanding
+    or market_cap: Yahoo's quoteSummary endpoint (behind .info and fast_info['shares'])
+    is crumb-gated and throws HTTP 401 under even light concurrent load (2026-04).
+    Downstream scoring tolerates shares=0 because depth credit now comes from
+    avg_dollar_volume (see pricing/liquidity/ocaml/lib/scoring.ml).
+
+    Tickers with <30 bars or no data are skipped silently.
+    """
+    if not tickers:
+        return []
+
+    df = retry_with_backoff(lambda: yf.download(
+        tickers=tickers,
+        period=period,
+        group_by="ticker",
+        auto_adjust=False,
+        progress=False,
+        threads=True,
+    ))
+
+    results: list[dict] = []
+    single = len(tickers) == 1
+    for ticker in tickers:
+        try:
+            if single:
+                hist = df
+            elif ticker in df.columns.get_level_values(0):
+                hist = df[ticker]
+            else:
+                continue
+
+            hist = hist.dropna(how="all")
+            if hist.empty or len(hist) < 30:
+                continue
+
+            results.append({
+                "ticker": ticker,
+                "shares_outstanding": 0,
+                "market_cap": 0,
+                "dates": [d.strftime("%Y-%m-%d") for d in hist.index],
+                "open": hist["Open"].fillna(0.0).tolist(),
+                "high": hist["High"].fillna(0.0).tolist(),
+                "low": hist["Low"].fillna(0.0).tolist(),
+                "close": hist["Close"].fillna(0.0).tolist(),
+                "volume": hist["Volume"].fillna(0.0).tolist(),
+            })
+        except Exception as e:
+            print(f"Error processing {ticker}: {e}", file=sys.stderr)
+    return results
 
 
 def main():

@@ -20,7 +20,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from pricing.liquidity.python.fetch.fetch_liquidity_data import fetch_ticker_data
+from pricing.liquidity.python.fetch.fetch_liquidity_data import fetch_tickers_batch
 
 DATA_DIR = PROJECT_ROOT / "pricing" / "liquidity" / "data"
 PROGRESS_FILE = DATA_DIR / "filter_progress.json"
@@ -29,14 +29,18 @@ BATCH_RESULTS_FILE = DATA_DIR / "batch_results.json"
 
 
 def load_tickers(input_path: Path) -> list[str]:
-    """Load ticker symbols from optionable_tickers.csv."""
+    """Load ticker symbols from optionable_tickers.csv.
+
+    CBOE uses dot notation for US class shares (BRK.B, BF.B, CWEN.A); yfinance
+    needs hyphens (BRK-B, BF-B, CWEN-A). CBOE is US-only, so no international
+    suffix tickers (e.g. SAN.PA) appear here — the translation is safe.
+    """
     tickers = []
     with open(input_path) as f:
         reader = csv.DictReader(f)
-        # Normalize header whitespace
         reader.fieldnames = [field.strip() for field in reader.fieldnames]
         for row in reader:
-            symbol = row.get("Stock Symbol", "").strip().strip('"')
+            symbol = row.get("Stock Symbol", "").strip().strip('"').replace(".", "-")
             if symbol:
                 tickers.append(symbol)
     return tickers
@@ -78,19 +82,13 @@ def read_liquid_tickers(output_path: Path) -> list[str]:
 
 
 def fetch_batch(tickers: list[str], delay: float) -> list[dict]:
-    """Fetch market data for a batch of tickers."""
-    results = []
-    for i, ticker in enumerate(tickers):
-        print(f"  {ticker}...", end=" ", flush=True)
-        data = fetch_ticker_data(ticker)
-        if data:
-            results.append(data)
-            print("ok")
-        else:
-            print("skip")
-        # Delay between tickers (not after last one)
-        if delay > 0 and i < len(tickers) - 1:
-            time.sleep(delay)
+    """Fetch market data for a batch of tickers via batched yfinance call."""
+    results = fetch_tickers_batch(tickers)
+    got = {r["ticker"] for r in results}
+    missing = [t for t in tickers if t not in got]
+    print(f"  {len(results)}/{len(tickers)} fetched" + (f", {len(missing)} skipped" if missing else ""))
+    if delay > 0:
+        time.sleep(delay)
     return results
 
 
@@ -142,9 +140,9 @@ def main():
         default=str(DATA_DIR / "liquid_tickers.txt"),
         help="Output file for liquid tickers",
     )
-    parser.add_argument("--batch-size", type=int, default=20, help="Tickers per batch")
+    parser.add_argument("--batch-size", type=int, default=100, help="Tickers per batch")
     parser.add_argument("--min-score", type=float, default=75, help="Minimum liquidity score")
-    parser.add_argument("--delay", type=float, default=10, help="Seconds between tickers")
+    parser.add_argument("--delay", type=float, default=2, help="Seconds between batches")
     parser.add_argument("--no-resume", action="store_true", help="Ignore progress, start fresh")
 
     args = parser.parse_args()

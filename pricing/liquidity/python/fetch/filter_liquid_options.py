@@ -78,21 +78,25 @@ def check_chain_depth(ticker: str, min_expiries: int, min_strikes: int) -> dict 
     if len(valid_expiries) < min_expiries:
         return None
 
-    # Get spot for OTM classification
+    # Get spot for OTM classification. Avoid .info (crumb-gated 401s); use a
+    # 1-day history bar, which hits the unauthenticated chart endpoint.
     try:
-        info = stock.info
-        spot = info.get("regularMarketPrice") or info.get("previousClose") or info.get("currentPrice", 0)
+        hist = stock.history(period="1d")
+        spot = float(hist["Close"].iloc[-1]) if not hist.empty else 0.0
     except Exception:
-        spot = 0
+        spot = 0.0
 
     if spot <= 0:
         return None
 
-    # Check strikes per expiry (only need min_strikes OTM on at least 2 expiries)
+    # Check strikes per expiry. Need min_strikes OTM on >=2 expiries.
+    # For many names, the nearest weeklies are thin (few strikes) while monthly
+    # LEAPS further out have deep chains, so we scan all valid expiries — but
+    # short-circuit as soon as 2 qualify, keeping API cost low for liquid names.
     deep_expiries = 0
     total_otm_strikes = 0
 
-    for exp_str in valid_expiries[:5]:  # Check up to 5 nearest to avoid excessive API calls
+    for exp_str in valid_expiries:
         try:
             chain = stock.option_chain(exp_str)
         except Exception:
@@ -105,6 +109,8 @@ def check_chain_depth(ticker: str, min_expiries: int, min_strikes: int) -> dict 
 
         if n_otm >= min_strikes:
             deep_expiries += 1
+            if deep_expiries >= 2:
+                break
 
     if deep_expiries < 2:
         return None

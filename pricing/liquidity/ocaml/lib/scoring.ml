@@ -88,8 +88,38 @@ let spread_proxy high low close ~window =
     done;
     (!sum /. float_of_int window) *. 100.0
 
+(** Average daily dollar volume over the last [window] bars *)
+let avg_dollar_volume close volume ~window =
+  let n = Array.length close in
+  if n < 1 then 0.0
+  else
+    let w = min window n in
+    let sum = ref 0.0 in
+    for i = n - w to n - 1 do
+      sum := !sum +. (close.(i) *. volume.(i))
+    done;
+    !sum /. float_of_int w
+
+(** Turnover band: higher is better. Mechanical ratio, hostile to high-share-count names. *)
+let turnover_band turnover =
+  if turnover > 0.05 then 15.0
+  else if turnover > 0.02 then 10.0
+  else if turnover > 0.01 then 5.0
+  else if turnover < 0.001 then -10.0
+  else 0.0
+
+(** Dollar-volume band: absolute depth, captures mega-caps that turnover penalises.
+    Thresholds target USD equities: >$1B/day is top-of-book liquid (AAPL/NVDA/SPY),
+    $250M–$1B is solid large-cap, $50M–$250M is mid-cap optionable, <$5M is thin. *)
+let dollar_volume_band dollar_volume =
+  if dollar_volume >= 1e9 then 15.0
+  else if dollar_volume >= 2.5e8 then 10.0
+  else if dollar_volume >= 5e7 then 5.0
+  else if dollar_volume < 5e6 then -10.0
+  else 0.0
+
 (** Calculate composite liquidity score (0-100) *)
-let liquidity_score ~amihud ~turnover ~vol_vol ~spread =
+let liquidity_score ~amihud ~turnover ~dollar_volume ~vol_vol ~spread =
   let score = ref 50.0 in
 
   (* Amihud: lower is better *)
@@ -99,11 +129,10 @@ let liquidity_score ~amihud ~turnover ~vol_vol ~spread =
   else if amihud > 10.0 then score := !score -. 15.0
   else if amihud > 5.0 then score := !score -. 10.0;
 
-  (* Turnover: higher is better *)
-  if turnover > 0.05 then score := !score +. 15.0
-  else if turnover > 0.02 then score := !score +. 10.0
-  else if turnover > 0.01 then score := !score +. 5.0
-  else if turnover < 0.001 then score := !score -. 10.0;
+  (* Depth: either high turnover (small/mid-cap signature) OR high dollar volume
+     (mega-cap signature) earns the bonus. max() combines bonuses and penalties so a
+     stock is only penalised when BOTH measures are weak. *)
+  score := !score +. max (turnover_band turnover) (dollar_volume_band dollar_volume);
 
   (* Volume volatility: lower is better *)
   if vol_vol < 0.3 then score := !score +. 10.0
@@ -132,7 +161,8 @@ let compute_metrics (data : ticker_data) ~window : liquidity_metrics =
   let rel_vol = relative_volume ohlcv.volume ~window in
   let vol_vol = volume_volatility ohlcv.volume ~window in
   let spread = spread_proxy ohlcv.high ohlcv.low ohlcv.close ~window in
-  let score = liquidity_score ~amihud ~turnover ~vol_vol ~spread in
+  let dollar_vol = avg_dollar_volume ohlcv.close ohlcv.volume ~window in
+  let score = liquidity_score ~amihud ~turnover ~dollar_volume:dollar_vol ~vol_vol ~spread in
   let tier = liquidity_tier score in
   {
     amihud_ratio = amihud;

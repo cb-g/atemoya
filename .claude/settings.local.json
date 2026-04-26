@@ -1,37 +1,15 @@
 {
+  "env": {
+    "DISCORD_STATE_DIR": "/home/uuu/repos/atemoya/.claude/discord"
+  },
+  "enabledPlugins": {
+    "discord@claude-plugins-official": true
+  },
   "permissions": {
     "allow": [
-      "Bash(cat:*)",
-      "Bash(find:*)",
-      "Bash(dune build:*)",
-      "Bash(dune clean:*)",
-      "Bash(ls:*)",
-      "Bash(pdflatex:*)",
-      "Bash(opam list:*)",
-      "Bash(grep:*)",
-      "Bash(docker compose exec:*)",
-      "WebFetch(domain:http-docs.thetadata.us)",
-      "WebFetch(domain:docs.thetadata.us)",
-      "WebSearch",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:www.thetadata.net)"
-    ],
-    "deny": [
-      "Read(**/.env)",
-      "Edit(**/.env)",
-      "Glob(**/.env)",
-      "Grep(**/.env)",
-      "Bash(cat **/.env)",
-      "Bash(head **/.env)",
-      "Bash(tail **/.env)",
-      "Bash(grep **/.env)",
-      "Read(**/creds.txt)",
-      "Edit(**/creds.txt)",
-      "Glob(**/creds.txt)",
-      "Grep(**/creds.txt)",
-      "Bash(cat **/creds.txt)",
-      "Bash(head **/creds.txt)",
-      "Bash(tail **/creds.txt)"
+      "mcp__plugin_discord_discord__fetch_messages",
+      "mcp__plugin_discord_discord__reply",
+      "mcp__plugin_discord_discord__react"
     ]
   }
 }
