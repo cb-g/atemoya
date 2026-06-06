@@ -10,7 +10,7 @@
     "France": 0.015,
     "Italy": 0.012,
     "Japan": 0.01,
-    "China": 0.045,
+    "China": 0.03,
     "India": 0.04,
     "Brazil": 0.035,
     "Australia": 0.022,
@@ -21,7 +21,12 @@
     "South Korea": 0.030,
     "Spain": 0.018,
     "Hong Kong": 0.025,
-    "British Virgin Islands": 0.020
+    "British Virgin Islands": 0.020,
+    "Finland": 0.015,
+    "Ireland": 0.018,
+    "Israel": 0.025,
+    "Sweden": 0.018,
+    "Kazakhstan": 0.035
   },
   "growth_clamp": {
     "upper": 0.5,

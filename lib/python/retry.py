@@ -46,6 +46,14 @@ def retry_with_backoff(
             "database is locked",
             "Connection reset",
             "Read timed out",
+            # Transient yfinance / HTTP signatures (rate limits, truncated responses)
+            "Too Many Requests",
+            "429",
+            "Expecting value",            # JSON decode on a truncated yfinance response
+            "Failed to perform",          # curl_cffi transient
+            "Remote end closed connection",
+            "Connection aborted",
+            "Max retries exceeded",
         ]
 
     delay = initial_delay

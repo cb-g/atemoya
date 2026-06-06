@@ -1,6 +1,7 @@
 """Module execution: data fetching and analysis orchestration."""
 
 import os
+import random
 import subprocess
 import sys
 import time
@@ -131,6 +132,30 @@ def _run_cmd(cmd: str, use_shell: bool = False, timeout: int = 300) -> tuple[int
         return -1, str(e)
 
 
+def _run_cmd_retry(
+    cmd: str,
+    use_shell: bool = False,
+    timeout: int = 300,
+    retries: int = 2,
+    base_delay: float = 2.0,
+) -> tuple[int, str]:
+    """Run a command, retrying on non-zero exit / timeout with bounded backoff.
+
+    Safe because every fetcher writes its output by full overwrite (open 'w' +
+    json.dump) and the OCaml binaries overwrite their -json-output, so a retried
+    run reproduces the same file with no double-write. Covers the dominant
+    transient failure: yfinance flakiness (empty .info / 429) that surfaces as a
+    non-zero subprocess exit the single-shot path never retried.
+    """
+    code, output = _run_cmd(cmd, use_shell=use_shell, timeout=timeout)
+    attempt = 0
+    while code != 0 and attempt < retries:
+        time.sleep(base_delay * (2 ** attempt) + random.uniform(0, 0.5))
+        attempt += 1
+        code, output = _run_cmd(cmd, use_shell=use_shell, timeout=timeout)
+    return code, output
+
+
 def fetch_data(
     execution_plan: dict[str, list[str]],
     fresh: bool = False,
@@ -176,7 +201,7 @@ def fetch_data(
         ticker, module, script, args_template = task
         args = args_template.format(ticker=ticker)
         cmd = f"uv run {script} {args}"
-        code, output = _run_cmd(cmd, timeout=120)
+        code, output = _run_cmd_retry(cmd, timeout=120)
         return ticker, module, code == 0, output
 
     with ThreadPoolExecutor(max_workers=max_parallel) as pool:
@@ -250,7 +275,7 @@ def run_analysis(
     def _do_analyze(task):
         ticker, module, cmd, use_shell = task
         timeout = 600 if module == "dcf_probabilistic" else 180
-        code, output = _run_cmd(cmd, use_shell=use_shell, timeout=timeout)
+        code, output = _run_cmd_retry(cmd, use_shell=use_shell, timeout=timeout)
         return ticker, module, code == 0, output
 
     with ThreadPoolExecutor(max_workers=max_parallel) as pool:

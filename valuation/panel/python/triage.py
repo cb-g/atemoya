@@ -96,14 +96,29 @@ def triage_ticker(ticker: str) -> dict:
 
 
 def triage_all(tickers: list[str], max_workers: int = 10) -> list[dict]:
-    """Triage all tickers in parallel."""
+    """Triage all tickers in parallel, with a one-shot re-run for errored tickers.
+
+    A ticker that errors in triage is dropped before the execution plan is built,
+    so it never reaches collect_results' 0-module flagging. The retry pass recovers
+    tickers that hit transient yfinance flakiness on the first attempt.
+    """
     results = []
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {pool.submit(triage_ticker, t): t for t in tickers}
         for future in as_completed(futures):
             results.append(future.result())
-    # Preserve original order
     by_ticker = {r["ticker"]: r for r in results}
+
+    errored = [t for t in tickers if by_ticker.get(t, {}).get("error")]
+    if errored:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {pool.submit(triage_ticker, t): t for t in errored}
+            for future in as_completed(futures):
+                r = future.result()
+                if not r.get("error"):
+                    by_ticker[r["ticker"]] = r
+
+    # Preserve original order
     return [by_ticker[t] for t in tickers if t in by_ticker]
 
 

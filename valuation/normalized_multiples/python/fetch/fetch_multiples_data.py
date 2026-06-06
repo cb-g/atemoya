@@ -19,6 +19,11 @@ sys.path.insert(0, str(Path(__file__).parents[4]))
 import yfinance as yf
 
 from lib.python.retry import retry_with_backoff
+from lib.python.yfinance_utils import (
+    get_financial_value,
+    financial_fx_factor,
+    to_trading_basis,
+)
 
 
 def fetch_multiples_data(ticker_symbol: str) -> dict:
@@ -30,51 +35,85 @@ def fetch_multiples_data(ticker_symbol: str) -> dict:
         if not info or "currentPrice" not in info and "regularMarketPrice" not in info:
             return {"ticker": ticker_symbol, "error": "No data available"}
 
-        # Basic data
         price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
         market_cap = info.get("marketCap") or 0.0
-        shares = info.get("sharesOutstanding") or 0.0
+        fx, trading_ccy, financial_ccy, fx_ok = financial_fx_factor(info)
+        if not fx_ok:
+            print(
+                f"WARN: FX {financial_ccy}->{trading_ccy} unavailable for {ticker_symbol}; "
+                f"multiples may be currency-mismatched",
+                file=sys.stderr,
+            )
 
-        # Enterprise value calculation
-        total_debt = info.get("totalDebt") or 0.0
-        total_cash = info.get("totalCash") or 0.0
-        ev = info.get("enterpriseValue") or (market_cap + total_debt - total_cash)
+        if financial_ccy == trading_ccy:
+            # Same currency (US / local listing): yfinance .info precomputed fields
+            # are reliable and match reported EPS -> keep original behavior exactly.
+            shares = info.get("sharesOutstanding") or 0.0
+            total_debt = info.get("totalDebt") or 0.0
+            total_cash = info.get("totalCash") or 0.0
+            ev = info.get("enterpriseValue") or (market_cap + total_debt - total_cash)
+            eps_ttm = info.get("trailingEps") or 0.0
+            pe_ttm = info.get("trailingPE") or 0.0
+            eps_ntm = info.get("forwardEps") or 0.0
+            pe_ntm = info.get("forwardPE") or 0.0
+            revenue = info.get("totalRevenue") or 0.0
+            ps_ttm = info.get("priceToSalesTrailing12Months") or 0.0
+            revenue_per_share = revenue / shares if shares > 0 else 0.0
+            book_value = info.get("bookValue") or 0.0
+            pb_ttm = info.get("priceToBook") or 0.0
+            fcf = info.get("freeCashflow") or 0.0
+            fcf_per_share = fcf / shares if shares > 0 else 0.0
+            p_fcf_ttm = price / fcf_per_share if fcf_per_share > 0 else 0.0
+            ebitda = info.get("ebitda") or 0.0
+            ev_ebitda_ttm = info.get("enterpriseToEbitda") or 0.0
+            ebit = info.get("operatingIncome") or 0.0
+            ev_ebit_ttm = ev / ebit if ebit > 0 else 0.0
+            ev_sales_ttm = info.get("enterpriseToRevenue") or 0.0
+            ev_fcf_ttm = ev / fcf if fcf > 0 else 0.0
+        else:
+            # Cross-currency (ADR / foreign-reporting): .info per-share fields have
+            # unreliable, per-field AND per-ticker-inconsistent currency. The
+            # financial statements ARE internally consistent (financialCurrency),
+            # so derive everything from statement TOTALS x fx, with an effective
+            # share count = marketCap/price (matches the price's share unit, which
+            # cancels both the currency and the ADR ratio).
+            income_stmt = retry_with_backoff(lambda: ticker.income_stmt)
+            balance_sheet = retry_with_backoff(lambda: ticker.balance_sheet)
+            cash_flow = retry_with_backoff(lambda: ticker.cash_flow)
+            shares = (market_cap / price) if (market_cap > 0 and price > 0) \
+                else (info.get("sharesOutstanding") or 0.0)
 
-        # TTM (Trailing) metrics
-        eps_ttm = info.get("trailingEps") or 0.0
-        pe_ttm = info.get("trailingPE") or 0.0
+            ni_t = get_financial_value(income_stmt, ["Net Income", "Net Income Common Stockholders"]) * fx
+            revenue = get_financial_value(income_stmt, ["Total Revenue", "Operating Revenue"]) * fx
+            ebit = get_financial_value(income_stmt, ["EBIT", "Operating Income", "Operating Income Loss"]) * fx
+            dna = abs(get_financial_value(cash_flow, ["Depreciation And Amortization", "Depreciation", "Reconciled Depreciation"])) * fx
+            ebitda = (ebit + dna) if ebit else 0.0
+            equity_t = get_financial_value(balance_sheet, ["Stockholders Equity", "Total Equity Gross Minority Interest", "Common Stock Equity"]) * fx
+            ocf = get_financial_value(cash_flow, ["Operating Cash Flow", "Total Cash From Operating Activities", "Cash Flow From Continuing Operating Activities"]) * fx
+            capex = abs(get_financial_value(cash_flow, ["Capital Expenditure", "Capital Expenditures"])) * fx
+            fcf = (ocf - capex) if ocf else 0.0
+            debt_t = get_financial_value(balance_sheet, ["Total Debt", "Long Term Debt"]) * fx
+            cash_t = get_financial_value(balance_sheet, ["Cash And Cash Equivalents", "Cash Cash Equivalents And Short Term Investments"]) * fx
 
-        # NTM (Forward) metrics - consensus estimates
-        eps_ntm = info.get("forwardEps") or 0.0
-        pe_ntm = info.get("forwardPE") or 0.0
+            ev = market_cap + debt_t - cash_t
 
-        # Revenue and P/S
-        revenue = info.get("totalRevenue") or 0.0
-        ps_ttm = info.get("priceToSalesTrailing12Months") or 0.0
-        revenue_per_share = revenue / shares if shares > 0 else 0.0
+            eps_ttm = ni_t / shares if shares > 0 else 0.0
+            # Forward EPS isn't in the statements; normalize the .info value against
+            # the trustworthy statement-derived trailing anchor (its currency varies).
+            eps_ntm = to_trading_basis(info.get("forwardEps") or 0.0, eps_ttm, fx)
+            revenue_per_share = revenue / shares if shares > 0 else 0.0
+            book_value = equity_t / shares if shares > 0 else 0.0
+            fcf_per_share = fcf / shares if shares > 0 else 0.0
 
-        # Book value and P/B
-        book_value = info.get("bookValue") or 0.0
-        pb_ttm = info.get("priceToBook") or 0.0
-
-        # FCF and P/FCF
-        fcf = info.get("freeCashflow") or 0.0
-        fcf_per_share = fcf / shares if shares > 0 else 0.0
-        p_fcf_ttm = price / fcf_per_share if fcf_per_share > 0 else 0.0
-
-        # EBITDA and EV/EBITDA
-        ebitda = info.get("ebitda") or 0.0
-        ev_ebitda_ttm = info.get("enterpriseToEbitda") or 0.0
-
-        # EBIT (operating income) and EV/EBIT
-        ebit = info.get("operatingIncome") or 0.0
-        ev_ebit_ttm = ev / ebit if ebit > 0 else 0.0
-
-        # EV/Sales
-        ev_sales_ttm = info.get("enterpriseToRevenue") or 0.0
-
-        # EV/FCF
-        ev_fcf_ttm = ev / fcf if fcf > 0 else 0.0
+            pe_ttm = price / eps_ttm if eps_ttm > 0 else 0.0
+            pe_ntm = price / eps_ntm if eps_ntm > 0 else 0.0
+            ps_ttm = price / revenue_per_share if revenue_per_share > 0 else 0.0
+            pb_ttm = price / book_value if book_value > 0 else 0.0
+            p_fcf_ttm = price / fcf_per_share if fcf_per_share > 0 else 0.0
+            ev_ebitda_ttm = ev / ebitda if ebitda > 0 else 0.0
+            ev_ebit_ttm = ev / ebit if ebit > 0 else 0.0
+            ev_sales_ttm = ev / revenue if revenue > 0 else 0.0
+            ev_fcf_ttm = ev / fcf if fcf > 0 else 0.0
 
         # Growth rates
         revenue_growth = info.get("revenueGrowth") or 0.0
@@ -122,6 +161,10 @@ def fetch_multiples_data(ticker_symbol: str) -> dict:
             "market_cap": market_cap,
             "enterprise_value": ev,
             "shares_outstanding": shares,
+            "currency": trading_ccy,
+            "financial_currency": financial_ccy,
+            "fx_to_trading": fx,
+            "fx_ok": fx_ok,
             # P/E with explicit time windows
             "pe_ttm": {
                 "name": "P/E",

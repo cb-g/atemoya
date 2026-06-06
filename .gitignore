@@ -891,3 +891,9 @@ CLAUDE.md
 
 .claude/discord/
 .claude/settings.local.json
+
+# Scratch run logs from backfill / refresh / replay chains (regenerated each run)
+tmp_refresh_*.log
+tmp_replay_*.log
+tmp_backfill_*.log
+tmp_ff_rerun_*.log

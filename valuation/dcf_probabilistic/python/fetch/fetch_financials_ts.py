@@ -23,6 +23,23 @@ sys.path.insert(0, str(Path(__file__).parents[4]))
 import yfinance as yf
 
 from lib.python.retry import retry_with_backoff
+from lib.python.yfinance_utils import fx_rate, convert_financial_fields
+
+# Sector-specific monetary fields embedded in market_data (financialCurrency).
+# Excludes trading-currency values (price/mve/mvb/debt), ratios (combined/loss/
+# expense), ratio histories (roe/cr/yield), and physical O&G quantities.
+_MARKET_FINANCIAL_KEYS = [
+    "book_value_equity", "net_income", "tangible_book_value",
+    "net_interest_income", "non_interest_income", "non_interest_expense",
+    "total_deposits", "total_loans",
+    "premiums_earned", "losses_incurred", "underwriting_expenses", "investment_income",
+    "float_amount",
+]
+# Time-series monetary lists (financialCurrency), converted element-wise.
+_TS_FINANCIAL_KEYS = [
+    "ebit", "net_income", "capex", "depreciation", "dividend_payout",
+    "current_assets", "current_liabilities", "book_value_equity", "invested_capital",
+]
 
 
 def detect_model_type(info):
@@ -64,10 +81,20 @@ def fetch_market_data(ticker_obj, ticker_symbol):
         "mvb": info.get("totalDebt", 0.0),
         "shares_outstanding": info.get("sharesOutstanding", 0.0),
         "currency": info.get("currency", "USD"),
+        "financial_currency": info.get("financialCurrency") or info.get("currency") or "USD",
         "country": info.get("country", "USA"),
         "sector": info.get("sector", "Unknown"),
         "industry": info.get("industry", "Unknown"),
     }
+
+    # For cross-currency listings (ADRs / foreign reporting) use an effective
+    # ADR-equivalent share count (marketCap/price) so per-share intrinsic value is
+    # comparable to the trading price even when 1 ADR != 1 ordinary share. Same-
+    # currency (US/local) names keep yfinance's reported share count unchanged.
+    if (market_data["financial_currency"] != market_data["currency"]
+            and market_data["mve"] and market_data["price"]):
+        market_data["shares_reported"] = market_data["shares_outstanding"]
+        market_data["shares_outstanding"] = market_data["mve"] / market_data["price"]
 
     model_type = detect_model_type(info)
     market_data["model_type"] = model_type
@@ -373,6 +400,26 @@ def main():
             raise ValueError("Shares outstanding is zero or not available")
         if market_data["price"] == 0.0:
             raise ValueError("Current price is zero or not available")
+
+        # Currency normalization: convert financialCurrency fields (sector fields
+        # in market_data + all time-series monetary lists) onto the trading basis,
+        # so fcfe_mean/fcff_mean per share are comparable to the trading price.
+        # No-op when financialCurrency == trading currency (most tickers).
+        trading_ccy = market_data.get("currency", "USD")
+        financial_ccy = market_data.get("financial_currency", trading_ccy)
+        fx = fx_rate(financial_ccy, trading_ccy)
+        fx_ok = fx is not None
+        if not fx_ok:
+            print(
+                f"WARN: FX {financial_ccy}->{trading_ccy} unavailable for {ticker_symbol}; "
+                f"financial fields left unconverted",
+                file=sys.stderr,
+            )
+            fx = 1.0
+        convert_financial_fields(market_data, _MARKET_FINANCIAL_KEYS, fx)
+        convert_financial_fields(time_series, _TS_FINANCIAL_KEYS, fx)
+        market_data["fx_to_trading"] = fx
+        market_data["fx_ok"] = fx_ok
 
         print(f"  Model type: {market_data['model_type']}")
 

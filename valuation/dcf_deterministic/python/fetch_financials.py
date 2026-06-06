@@ -18,6 +18,21 @@ sys.path.insert(0, str(Path(__file__).parents[3]))
 import yfinance as yf
 
 from lib.python.retry import retry_with_backoff
+from lib.python.yfinance_utils import fx_rate, convert_financial_fields
+
+# financial_data fields denominated in the reporting (financialCurrency) currency.
+# These are scaled onto the trading-currency basis when the two differ (ADRs), so
+# the OCaml ivps = PV(cash flows)/shares is comparable to the trading-currency price.
+# Excludes ratios (loss/expense/combined/tier1/npl), physical/per-BOE quantities
+# (reserves, production, oil_pct, finding/lifting cost), and boolean flags.
+_FINANCIAL_CCY_KEYS = [
+    "ebit", "net_income", "interest_expense", "taxes", "capex", "depreciation",
+    "delta_wc", "book_value_equity", "invested_capital",
+    "net_interest_income", "non_interest_income", "non_interest_expense",
+    "provision_for_loan_losses", "tangible_book_value", "total_loans", "total_deposits",
+    "premiums_earned", "losses_incurred", "underwriting_expenses", "investment_income",
+    "float_amount", "ebitdax", "exploration_expense", "dd_and_a",
+]
 
 
 def fetch_market_data(ticker_obj, ticker_symbol):
@@ -32,9 +47,19 @@ def fetch_market_data(ticker_obj, ticker_symbol):
         "mvb": info.get("totalDebt", 0.0),
         "shares_outstanding": info.get("sharesOutstanding", 0.0),
         "currency": info.get("currency", "USD"),
+        "financial_currency": info.get("financialCurrency") or info.get("currency") or "USD",
         "country": info.get("country", "USA"),
         "industry": info.get("industry", "Unknown"),
     }
+
+    # For cross-currency listings (ADRs / foreign reporting) use an effective
+    # ADR-equivalent share count (marketCap/price) so per-share intrinsic value is
+    # comparable to the trading price even when 1 ADR != 1 ordinary share. Same-
+    # currency (US/local) names keep yfinance's reported share count unchanged.
+    if (market_data["financial_currency"] != market_data["currency"]
+            and market_data["mve"] and market_data["price"]):
+        market_data["shares_reported"] = market_data["shares_outstanding"]
+        market_data["shares_outstanding"] = market_data["mve"] / market_data["price"]
 
     return market_data
 
@@ -479,6 +504,25 @@ def main():
             raise ValueError("Shares outstanding is zero or not available")
         if market_data["price"] == 0.0:
             raise ValueError("Current price is zero or not available")
+
+        # Currency normalization: statement-derived financial_data is in
+        # financialCurrency; price/mve/mvb are in the trading currency. For ADRs
+        # these differ, so convert the financial fields onto the trading basis
+        # (no-op when they match). Leaves market_data trading-currency values alone.
+        trading_ccy = market_data.get("currency", "USD")
+        financial_ccy = market_data.get("financial_currency", trading_ccy)
+        fx = fx_rate(financial_ccy, trading_ccy)
+        fx_ok = fx is not None
+        if not fx_ok:
+            print(
+                f"WARN: FX {financial_ccy}->{trading_ccy} unavailable for {ticker_symbol}; "
+                f"financial fields left unconverted (DCF may be currency-mismatched)",
+                file=sys.stderr,
+            )
+            fx = 1.0
+        convert_financial_fields(financial_data, _FINANCIAL_CCY_KEYS, fx)
+        market_data["fx_to_trading"] = fx
+        market_data["fx_ok"] = fx_ok
 
         # For O&G companies, optionally fetch reserve data from SEC filings
         if financial_data.get("is_oil_gas") and args.fetch_sec_reserves:

@@ -5,6 +5,14 @@ open Types
 (** Maximum reasonable growth rate (50% is very high but plausible for high-growth stocks) *)
 let max_reasonable_growth = 50.0
 
+(** Explicit high-growth horizon (years) over which near-term growth fades to the
+    terminal rate in the justified-P/E model. *)
+let high_growth_years = 10
+
+(** Hard cap on the near-term growth rate fed to the justified-P/E model (decimal).
+    Even a fading model shouldn't start from an implausibly high rate. *)
+let max_initial_growth = 0.40
+
 (** Select the best available growth rate from the data.
     Strategy:
     1. Prefer eps_growth_1y (forward vs trailing EPS) - most grounded
@@ -118,6 +126,59 @@ let implied_fair_price (eps : float) (fair_pe : float option) : float option =
   | None -> None
   | Some _ when eps <= 0.0 -> None
   | Some pe -> Some (eps *. pe)
+
+
+(** Justified (fair) TRAILING P/E from a two-stage earnings model.
+
+    Replaces the naive PEG = 1.0 rule (fair P/E = growth%), which systematically
+    over-values high growth because it assigns a P/E equal to the growth rate with
+    no discounting, no fade, and no risk adjustment. Here:
+      - near-term [growth] fades LINEARLY to [terminal_growth] over [years];
+      - each year's earnings are split into payout vs. retention via the
+        sustainable-growth identity (retention = g / ROE), so fast growers
+        reinvest more and distribute less;
+      - the payout stream + a Gordon terminal value are discounted at the
+        firm's cost of equity [cost_of_equity] (CAPM, computed upstream).
+
+    Returns a trailing justified P/E (value per unit of trailing EPS, with E0
+    normalized to 1.0), or None when the discount rate does not exceed terminal
+    growth. All rate arguments are decimals (0.15 = 15%). *)
+let justified_fair_pe
+    ~(growth : float) ~(terminal_growth : float)
+    ~(cost_of_equity : float) ~(roe : float) ~(years : int) : float option =
+  let r = cost_of_equity in
+  let gt = terminal_growth in
+  if r <= gt +. 0.005 then None  (* need r > g_terminal for a finite terminal value *)
+  else begin
+    (* Cap initial growth at the firm's ROE (Higgins sustainable-growth ceiling:
+       EPS cannot compound faster than ROE under <=100% retention) and at an
+       absolute max. Guards the model against spurious one-off EPS-growth inputs. *)
+    let growth_ceiling = if roe > 0.0 then min max_initial_growth roe else max_initial_growth in
+    let g0 = max 0.0 (min growth_ceiling growth) in
+    let n = max 1 years in
+    (* Payout funded by what isn't retained to grow at the firm's ROE; fall back
+       to a mature payout when ROE is missing/degenerate. *)
+    let payout_for g =
+      if roe > 0.01 then max 0.0 (min 1.0 (1.0 -. g /. roe))
+      else 0.5
+    in
+    let nf = float_of_int n in
+    (* Stage 1: discrete linear fade of growth from g0 (year 1) to gt (year n). *)
+    let rec accum t e_prev pv =
+      if t > n then (pv, e_prev)
+      else
+        let g_t = g0 +. (gt -. g0) *. (float_of_int t /. nf) in
+        let e_t = e_prev *. (1.0 +. g_t) in
+        let pv' = pv +. (payout_for g_t *. e_t) /. ((1.0 +. r) ** float_of_int t) in
+        accum (t + 1) e_t pv'
+    in
+    let pv_stage1, e_n = accum 1 1.0 0.0 in  (* E0 normalized to 1.0 *)
+    (* Stage 2: Gordon terminal value on year-n earnings grown one more period. *)
+    let tv_n = payout_for gt *. e_n *. (1.0 +. gt) /. (r -. gt) in
+    let pv_terminal = tv_n /. ((1.0 +. r) ** nf) in
+    let pe = pv_stage1 +. pv_terminal in
+    if pe > 0.0 then Some pe else None
+  end
 
 
 (** Calculate upside/downside to fair price *)

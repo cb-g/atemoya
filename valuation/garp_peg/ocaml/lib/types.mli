@@ -36,6 +36,10 @@ type garp_data = {
   dividend_rate : float;
   sector : string;
   industry : string;
+  (* Discount-rate inputs for the justified-P/E model (computed in the fetcher
+     via CAPM from the shared country config + beta; 0.0 -> use defaults) *)
+  cost_of_equity : float;
+  terminal_growth : float;
 }
 
 val pp_garp_data : Format.formatter -> garp_data -> unit

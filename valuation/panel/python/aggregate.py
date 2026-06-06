@@ -2,6 +2,7 @@
 
 import json
 import statistics
+import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parents[3]
@@ -243,6 +244,16 @@ def collect_results(
 
             module_results.append(result)
 
+        status = "ok" if module_results else "no_modules"
+        if not module_results:
+            # Previously emitted silently; make 0-module tickers loud so a batch
+            # that quietly dropped a name is visible rather than mistaken for "covered".
+            print(
+                f"  [WARN] {ticker}: 0 modules produced results "
+                f"(failed: {modules_failed or 'none routed'})",
+                file=sys.stderr,
+            )
+
         aggregated.append({
             "ticker": ticker,
             "company_name": company_name,
@@ -252,6 +263,7 @@ def collect_results(
             "modules_run": [r["module"] for r in module_results],
             "modules_failed": modules_failed,
             "module_results": module_results,
+            "status": status,
         })
 
     return aggregated

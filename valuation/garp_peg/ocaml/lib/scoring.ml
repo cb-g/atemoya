@@ -149,13 +149,25 @@ let analyze (data : garp_data) : garp_result =
   let garp_score = calculate_garp_score peg_metrics data in
   let signal = determine_signal garp_score peg_metrics in
 
-  (* Calculate fair value estimates *)
-  let implied_fair_pe = Peg.implied_fair_pe peg_metrics.growth_rate_used in
+  (* Calculate fair value via the justified two-stage P/E model (replaces the
+     naive PEG=1 rule). growth_rate_used is a percentage -> convert to decimal;
+     cost_of_equity / terminal_growth come from the fetcher (CAPM on the shared
+     country config), with sensible fallbacks when absent. *)
+  let cost_of_equity = if data.cost_of_equity > 0.0 then data.cost_of_equity else 0.09 in
+  let terminal_growth = if data.terminal_growth > 0.0 then data.terminal_growth else 0.04 in
+  let implied_fair_pe = Peg.justified_fair_pe
+    ~growth:(peg_metrics.growth_rate_used /. 100.0)
+    ~terminal_growth
+    ~cost_of_equity
+    ~roe:data.roe
+    ~years:Peg.high_growth_years
+  in
 
-  (* Use forward EPS for fair price calculation *)
+  (* The justified P/E is a TRAILING multiple (E0-normalized), so anchor it to
+     trailing EPS (forward EPS would double-count the growth premium). *)
   let eps_for_valuation =
-    if data.eps_forward > 0.0 then data.eps_forward
-    else data.eps_trailing
+    if data.eps_trailing > 0.0 then data.eps_trailing
+    else data.eps_forward
   in
   let implied_fair_price = Peg.implied_fair_price eps_for_valuation implied_fair_pe in
   let upside_downside = Peg.calculate_upside_downside data.price implied_fair_price in

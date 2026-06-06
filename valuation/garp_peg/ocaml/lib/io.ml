@@ -63,6 +63,9 @@ let read_garp_data (filename : string) : garp_data =
 
     sector = get_string json "sector" "Unknown";
     industry = get_string json "industry" "Unknown";
+
+    cost_of_equity = get_float json "cost_of_equity" 0.0;
+    terminal_growth = get_float json "terminal_growth" 0.0;
   }
 
 

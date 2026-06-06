@@ -56,6 +56,11 @@ type garp_data = {
   (* Classification *)
   sector : string;
   industry : string;
+
+  (* Discount-rate inputs for the justified-P/E model (computed in the fetcher
+     via CAPM from the shared country config + beta; 0.0 -> use defaults) *)
+  cost_of_equity : float;
+  terminal_growth : float;
 }
 [@@deriving show]
 

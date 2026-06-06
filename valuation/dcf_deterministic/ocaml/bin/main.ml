@@ -54,26 +54,63 @@ let () =
     exit 1
   end;
 
+  (* Sanity bound on |margin of safety|: a DCF implying more than this in either
+     direction (or a non-finite fair value) is treated as a model failure
+     (degenerate balance-sheet perpetuity, currency mis-scaling, etc.) and emitted
+     as a FAILED signal rather than a confident number. Silent pollution of the
+     panel with a runaway fair value is worse than a clean gap. Override with the
+     DCF_MAX_ABS_MOS env var (e.g. "5.0" for +/-500%). *)
+  let max_abs_mos =
+    match Sys.getenv_opt "DCF_MAX_ABS_MOS" with
+    | Some s -> (try float_of_string s with _ -> 3.0)
+    | None -> 3.0
+  in
+
   (* Helper: write JSON summary for panel integration *)
   let write_json_output (result : Types.valuation_result) =
     if !json_output <> "" then begin
       let open Yojson.Basic in
       let opt_float = function Some v -> `Float v | None -> `Null in
-      let json = `Assoc [
-        ("ticker", `String result.ticker);
-        ("price", `Float result.price);
-        ("ivps_fcfe", `Float result.ivps_fcfe);
-        ("ivps_fcff", `Float result.ivps_fcff);
-        ("margin_of_safety_fcfe", `Float result.margin_of_safety_fcfe);
-        ("margin_of_safety_fcff", `Float result.margin_of_safety_fcff);
-        ("implied_growth_fcfe", opt_float result.implied_growth_fcfe);
-        ("implied_growth_fcff", opt_float result.implied_growth_fcff);
-        ("signal", `String (Signal.signal_to_string result.signal));
-        ("cost_of_equity", `Float result.cost_of_capital.ce);
-        ("wacc", `Float result.cost_of_capital.wacc);
-        ("growth_rate_equity", `Float result.projection.growth_rate_fcfe);
-        ("growth_rate_firm", `Float result.projection.growth_rate_fcff);
-      ] in
+      let finite v = match classify_float v with FP_infinite | FP_nan -> false | _ -> true in
+      let m1 = result.margin_of_safety_fcfe and m2 = result.margin_of_safety_fcff in
+      let sane =
+        finite result.ivps_fcfe && finite result.ivps_fcff
+        && finite m1 && finite m2
+        && abs_float m1 <= max_abs_mos && abs_float m2 <= max_abs_mos
+      in
+      let json =
+        if sane then `Assoc [
+          ("ticker", `String result.ticker);
+          ("price", `Float result.price);
+          ("ivps_fcfe", `Float result.ivps_fcfe);
+          ("ivps_fcff", `Float result.ivps_fcff);
+          ("margin_of_safety_fcfe", `Float result.margin_of_safety_fcfe);
+          ("margin_of_safety_fcff", `Float result.margin_of_safety_fcff);
+          ("implied_growth_fcfe", opt_float result.implied_growth_fcfe);
+          ("implied_growth_fcff", opt_float result.implied_growth_fcff);
+          ("signal", `String (Signal.signal_to_string result.signal));
+          ("cost_of_equity", `Float result.cost_of_capital.ce);
+          ("wacc", `Float result.cost_of_capital.wacc);
+          ("growth_rate_equity", `Float result.projection.growth_rate_fcfe);
+          ("growth_rate_firm", `Float result.projection.growth_rate_fcff);
+        ] else begin
+          Printf.eprintf
+            "FAILED: %s fair value failed sanity bound (|MoS| > %.0f%% or non-finite); emitting FAILED signal\n"
+            result.ticker (max_abs_mos *. 100.0);
+          `Assoc [
+            ("ticker", `String result.ticker);
+            ("price", `Float result.price);
+            ("ivps_fcfe", `Null);
+            ("ivps_fcff", `Null);
+            ("margin_of_safety_fcfe", `Null);
+            ("margin_of_safety_fcff", `Null);
+            ("implied_growth_fcfe", `Null);
+            ("implied_growth_fcff", `Null);
+            ("signal", `String "FAILED");
+            ("failed_reason", `String "fair_value_sanity_bound");
+          ]
+        end
+      in
       let oc = open_out !json_output in
       output_string oc (pretty_to_string json);
       output_char oc '\n';
