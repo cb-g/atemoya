@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).parents[3]))
 
 import yfinance as yf
 from lib.python.retry import retry_with_backoff
+from lib.python.yfinance_utils import get_financial_value
 
 # Reuse universe definitions from analyst_upside
 sys.path.insert(0, str(Path(__file__).parents[2] / "analyst_upside" / "python"))
@@ -73,18 +74,40 @@ def _load_portfolio_tickers(include_watching=True, watching_only=False) -> list[
 def triage_ticker(ticker: str) -> dict:
     """Fetch metadata for a single ticker and classify it."""
     try:
-        info = retry_with_backoff(lambda: yf.Ticker(ticker).info)
+        tk = yf.Ticker(ticker)
+        info = retry_with_backoff(lambda: tk.info)
+        price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
+        shares = info.get("sharesOutstanding") or 0.0
+        eps_trailing = info.get("trailingEps")
+        trailing_pe = info.get("trailingPE")
+
+        # Sparse .info (common for non-US listings, e.g. Korean .KS) leaves
+        # trailingEps/trailingPE None, which would route the ticker away from the
+        # statement-based models (DCF / multiples / GARP) even though the financial
+        # statements ARE available. Backfill EPS / trailing P/E from the statements
+        # so those models still route. Lazy: only when .info lacks them.
+        if eps_trailing is None and shares > 0:
+            try:
+                ni = get_financial_value(
+                    tk.income_stmt, ["Net Income", "Net Income Common Stockholders"])
+                if ni:
+                    eps_trailing = ni / shares
+                    if trailing_pe is None and eps_trailing > 0 and price > 0:
+                        trailing_pe = price / eps_trailing
+            except Exception:
+                pass
+
         return {
             "ticker": ticker,
             "quote_type": info.get("quoteType", "EQUITY"),
             "sector": info.get("sector", ""),
             "industry": info.get("industry", ""),
-            "current_price": info.get("currentPrice") or info.get("regularMarketPrice") or 0.0,
+            "current_price": price,
             "market_cap": info.get("marketCap", 0),
             "has_dividends": bool(info.get("dividendRate")),
-            "trailing_pe": info.get("trailingPE"),
+            "trailing_pe": trailing_pe,
             "forward_pe": info.get("forwardPE"),
-            "eps_trailing": info.get("trailingEps"),
+            "eps_trailing": eps_trailing,
             "eps_forward": info.get("forwardEps"),
             "analyst_count": info.get("numberOfAnalystOpinions", 0),
             "revenue_growth": info.get("revenueGrowth"),

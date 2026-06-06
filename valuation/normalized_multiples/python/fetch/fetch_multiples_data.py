@@ -45,9 +45,9 @@ def fetch_multiples_data(ticker_symbol: str) -> dict:
                 file=sys.stderr,
             )
 
-        if financial_ccy == trading_ccy:
-            # Same currency (US / local listing): yfinance .info precomputed fields
-            # are reliable and match reported EPS -> keep original behavior exactly.
+        if financial_ccy == trading_ccy and info.get("trailingEps") is not None:
+            # Same currency (US / local listing) WITH complete .info: the precomputed
+            # fields are reliable and match reported EPS -> keep original behavior.
             shares = info.get("sharesOutstanding") or 0.0
             total_debt = info.get("totalDebt") or 0.0
             total_cash = info.get("totalCash") or 0.0
@@ -71,10 +71,11 @@ def fetch_multiples_data(ticker_symbol: str) -> dict:
             ev_sales_ttm = info.get("enterpriseToRevenue") or 0.0
             ev_fcf_ttm = ev / fcf if fcf > 0 else 0.0
         else:
-            # Cross-currency (ADR / foreign-reporting): .info per-share fields have
-            # unreliable, per-field AND per-ticker-inconsistent currency. The
-            # financial statements ARE internally consistent (financialCurrency),
-            # so derive everything from statement TOTALS x fx, with an effective
+            # Cross-currency ADR, or sparse same-currency .info (e.g. Korean .KS
+            # with no trailingEps): .info per-share fields are unreliable or
+            # missing. The financial statements ARE internally consistent
+            # (financialCurrency), so derive everything from statement TOTALS x fx
+            # (fx=1 when same-currency), with an effective
             # share count = marketCap/price (matches the price's share unit, which
             # cancels both the currency and the ADR ratio).
             income_stmt = retry_with_backoff(lambda: ticker.income_stmt)

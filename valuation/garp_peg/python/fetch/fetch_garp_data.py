@@ -101,9 +101,9 @@ def fetch_garp_data(ticker_obj, ticker_symbol):
             file=sys.stderr,
         )
 
-    if financial_ccy == trading_ccy:
-        # Same currency (US / local listing): .info fields are reliable and match
-        # reported EPS -> keep original behavior exactly.
+    if financial_ccy == trading_ccy and info.get("trailingEps") is not None:
+        # Same currency (US / local listing) WITH complete .info: fields are
+        # reliable and match reported EPS -> keep original behavior.
         shares_outstanding = info.get("sharesOutstanding", 0.0)
         eps_trailing = info.get("trailingEps", 0.0)
         eps_forward = info.get("forwardEps", 0.0)
@@ -118,10 +118,11 @@ def fetch_garp_data(ticker_obj, ticker_symbol):
         book_value_ps = info.get("bookValue", 0.0)
         total_equity = book_value_ps * shares_outstanding if book_value_ps and shares_outstanding else 0.0
     else:
-        # Cross-currency (ADR / foreign-reporting): .info per-share fields have
-        # unreliable, per-ticker-inconsistent currency, so derive monetary figures
-        # from the statements (consistently financialCurrency) x fx, with an
-        # effective share count = marketCap/price (cancels currency AND ADR ratio).
+        # Cross-currency ADR, or sparse same-currency .info (e.g. Korean .KS with
+        # no trailingEps): .info per-share fields are unreliable or missing, so
+        # derive monetary figures from the statements (consistently
+        # financialCurrency) x fx (fx=1 when same-currency), with an effective
+        # share count = marketCap/price (cancels currency AND ADR ratio).
         income_stmt = ticker_obj.income_stmt
         balance_sheet = ticker_obj.balance_sheet
         cash_flow = ticker_obj.cash_flow
