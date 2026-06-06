@@ -15,6 +15,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parents[3]))
 from lib.python.notify import send_notification, get_topic
+from pricing.volatility_arbitrage.python.filter import vol_env_block
 
 DEFAULT_SCAN = Path(__file__).resolve().parents[1] / "output" / "signal_scan.csv"
 MODULE_NAME = "Dispersion"
@@ -69,6 +70,8 @@ def main():
 
     df = pd.read_csv(scan_path)
     message = format_message(df)
+    if message:  # attach cross-module vol environment (IV-vs-RV) context (index ticker col)
+        message += vol_env_block(df, ticker_col="index")
 
     if not message:
         print("No actionable dispersion signals to send.")
