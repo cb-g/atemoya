@@ -25,42 +25,38 @@ try:
     from lib.python.context import load_macro_regime
 except ImportError:
     load_macro_regime = lambda: None
+from lib.python.iv_history import prefer_thetadata
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 
 
 def load_history(data_dir: Path, min_days: int) -> pd.DataFrame | None:
-    """Load dispersion history, merging the yfinance + ThetaData sources by date.
+    """Load dispersion history from a single source, ThetaData preferred.
 
-    Mirrors the other pricing scanners (e.g. variance_swaps): read both the live
-    (dispersion_history.csv) and backfill (dispersion_history_thetadata.csv)
-    histories, concatenate, and deduplicate by date with ThetaData preferred on
-    overlap (convention flipped to thetadata-preferred 2026-04-12 — its chains are
-    deeper). Previously this read only the yfinance file, which doesn't exist, so
-    the scanner returned no signals while the backfilled ThetaData data sat unused.
+    Mirrors the other pricing scanners: prefer the ThetaData backfill
+    (dispersion_history_thetadata.csv) when it has >= min_days rows, else fall
+    back to the live yfinance file (dispersion_history.csv). The two are never
+    concatenated — yfinance ATM IV runs ~4 vol pts hot vs ThetaData, so a mixed
+    series would put a level discontinuity at the source boundary and corrupt the
+    z-score (see lib.python.iv_history.prefer_thetadata).
     """
-    frames = []
-    for fname in ("dispersion_history_thetadata.csv", "dispersion_history.csv"):
-        f = data_dir / fname
+    def _read(name: str) -> list[pd.DataFrame]:
+        f = data_dir / name
         if not f.exists():
-            continue
+            return []
         try:
-            frames.append(pd.read_csv(f))
+            df = pd.read_csv(f)
+            return [df] if not df.empty else []
         except Exception:
-            pass
-    if not frames:
-        return None
-    df = pd.concat(frames, ignore_index=True)
-    if "date" in df.columns:
-        df = (
-            df.drop_duplicates(subset=["date"], keep="first")
-            .sort_values("date")
-            .reset_index(drop=True)
-        )
-    if len(df) >= min_days:
-        return df
-    return None
+            return []
+
+    return prefer_thetadata(
+        _read("dispersion_history_thetadata.csv"),
+        _read("dispersion_history.csv"),
+        ["date"],
+        min_days,
+    )
 
 
 def compute_z_scores(df: pd.DataFrame, window: int = 0) -> dict[str, float]:

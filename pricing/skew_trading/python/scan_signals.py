@@ -25,6 +25,7 @@ try:
     from lib.python.context import load_macro_regime
 except ImportError:
     load_macro_regime = lambda: None
+from lib.python.iv_history import prefer_thetadata
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
@@ -78,23 +79,24 @@ def load_histories(data_dir: Path, min_days: int) -> dict[str, pd.DataFrame]:
     EOD dates), requires at least min_days observations.
     """
     histories = {}
-    ticker_dfs: dict[str, list[pd.DataFrame]] = {}
-    for pattern in ("*_skew_history_thetadata.csv", "*_skew_history_yfinance.csv"):
-        for f in sorted(data_dir.glob(pattern)):
-            ticker = f.stem.replace("_skew_history_yfinance", "").replace("_skew_history_thetadata", "")
+    td_frames: dict[str, list[pd.DataFrame]] = {}
+    yf_frames: dict[str, list[pd.DataFrame]] = {}
+    for source, store in (("thetadata", td_frames), ("yfinance", yf_frames)):
+        for f in sorted(data_dir.glob(f"*_skew_history_{source}.csv")):
+            ticker = f.stem.replace(f"_skew_history_{source}", "")
             try:
                 df = pd.read_csv(f, names=COLUMNS, header=0)
                 if not df.empty:
-                    ticker_dfs.setdefault(ticker, []).append(df)
+                    store.setdefault(ticker, []).append(df)
             except Exception:
                 continue
 
-    for ticker, dfs in ticker_dfs.items():
-        merged = pd.concat(dfs, ignore_index=True)
-        merged = merged.drop_duplicates(subset=["timestamp"], keep="first")
-        merged = merged.sort_values("timestamp").reset_index(drop=True)
-        if len(merged) >= min_days:
-            histories[ticker] = merged
+    for ticker in set(td_frames) | set(yf_frames):
+        chosen = prefer_thetadata(
+            td_frames.get(ticker, []), yf_frames.get(ticker, []), ["timestamp"], min_days
+        )
+        if chosen is not None:
+            histories[ticker] = chosen
 
     return histories
 
