@@ -31,16 +31,35 @@ OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
 
 
 def load_history(data_dir: Path, min_days: int) -> pd.DataFrame | None:
-    """Load dispersion history CSV."""
-    history_file = data_dir / "dispersion_history.csv"
-    if not history_file.exists():
+    """Load dispersion history, merging the yfinance + ThetaData sources by date.
+
+    Mirrors the other pricing scanners (e.g. variance_swaps): read both the live
+    (dispersion_history.csv) and backfill (dispersion_history_thetadata.csv)
+    histories, concatenate, and deduplicate by date with ThetaData preferred on
+    overlap (convention flipped to thetadata-preferred 2026-04-12 — its chains are
+    deeper). Previously this read only the yfinance file, which doesn't exist, so
+    the scanner returned no signals while the backfilled ThetaData data sat unused.
+    """
+    frames = []
+    for fname in ("dispersion_history_thetadata.csv", "dispersion_history.csv"):
+        f = data_dir / fname
+        if not f.exists():
+            continue
+        try:
+            frames.append(pd.read_csv(f))
+        except Exception:
+            pass
+    if not frames:
         return None
-    try:
-        df = pd.read_csv(history_file)
-        if len(df) >= min_days:
-            return df
-    except Exception:
-        pass
+    df = pd.concat(frames, ignore_index=True)
+    if "date" in df.columns:
+        df = (
+            df.drop_duplicates(subset=["date"], keep="first")
+            .sort_values("date")
+            .reset_index(drop=True)
+        )
+    if len(df) >= min_days:
+        return df
     return None
 
 
