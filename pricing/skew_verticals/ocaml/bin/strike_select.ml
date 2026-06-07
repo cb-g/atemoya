@@ -73,15 +73,14 @@ let () =
         put_skew = 0.0; put_skew_zscore = 0.0; atm_iv; atm_call_25delta_iv = 0.0;
         atm_put_25delta_iv = 0.0; realized_vol_30d = 0.0; vrp = 0.0 }
     in
-    let min_rr_debit = 1.5 and min_rr_credit = 0.10 in
+    (* "Sell the rich skew" is a CREDIT spread on that side: bullish sells the rich
+       put skew (bull_put), bearish sells the rich call skew (bear_call). The debit
+       spreads are off-thesis directional bets, so they're not emitted here. *)
+    let min_rr_credit = 0.10 in
     let candidates =
       match !direction with
-      | "bullish" ->
-        [ Spreads.find_best_bull_call ~chain ~skew ~min_reward_risk:min_rr_debit;
-          Spreads.find_best_bull_put ~chain ~skew ~min_reward_risk:min_rr_credit ]
-      | "bearish" ->
-        [ Spreads.find_best_bear_put ~chain ~skew ~min_reward_risk:min_rr_debit;
-          Spreads.find_best_bear_call ~chain ~skew ~min_reward_risk:min_rr_credit ]
+      | "bullish" -> [ Spreads.find_best_bull_put ~chain ~skew ~min_reward_risk:min_rr_credit ]
+      | "bearish" -> [ Spreads.find_best_bear_call ~chain ~skew ~min_reward_risk:min_rr_credit ]
       | d -> fail (Printf.sprintf "direction must be bullish|bearish, got %s" d)
     in
     let valid = List.filter_map (fun x -> x) candidates in

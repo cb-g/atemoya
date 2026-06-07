@@ -38,12 +38,14 @@ CHAIN_HEADER = "strike,option_type,implied_vol,bid,ask,open_interest,volume,mid_
 
 
 def bs_delta(opt_type, S, K, T, sigma, r=fo.RISK_FREE_RATE):
-    """Black-Scholes delta (ThetaData carries no greeks, and the OCaml chain CSV
-    reports a delta column)."""
+    """Black-Scholes delta as a POSITIVE magnitude (ThetaData carries no greeks).
+    The OCaml strike selector identifies the 25Δ leg via find_option_by_delta, whose
+    convention (and compute_skew_metrics') is a positive put delta — a 25Δ put is
+    0.25, not -0.25 — so we return |delta| for both calls and puts."""
     if S <= 0 or K <= 0 or T <= 0 or sigma <= 0:
         return 0.0
     d1 = (math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * math.sqrt(T))
-    return float(norm.cdf(d1)) if opt_type == "call" else float(norm.cdf(d1) - 1.0)
+    return float(norm.cdf(d1)) if opt_type == "call" else float(1.0 - norm.cdf(d1))
 
 
 def fetch_chain(ticker):

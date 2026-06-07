@@ -291,74 +291,57 @@ let find_best_bear_put
           ) valid_spreads in
           Some (List.hd sorted)
 
-(** Find best bull put spread (credit spread - sell put, buy lower put) *)
-let find_best_bull_put
+(** Skew-selling credit spread. The signal sells the RICH skew, which is a credit
+    spread on that side: sell ~25-delta (the strike the skew is measured at), buy
+    ~10-delta further OTM for defined risk. Replaces the older fixed 5-10% bands +
+    "pick the widest by EV", which produced over-wide spreads. Put delta is a
+    positive magnitude here (matching find_option_by_delta / compute_skew_metrics). *)
+let short_target_delta = 0.25
+let long_target_delta = 0.10
+
+let find_best_credit_spread
     ~(chain : options_chain)
     ~(skew : skew_metrics)
     ~(min_reward_risk : float)
+    ~(spread_type : string)
     : vertical_spread option =
-
-  (* Sell higher strike OTM put (collect premium from high put skew) *)
-  (* Buy lower strike put (protection) *)
-
-  let puts = chain.puts in
-  if Array.length puts < 2 then None
-  else
-    (* Find OTM put to sell (5-10% below spot, where put skew is rich) *)
-    let spot = chain.spot_price in
-    let short_candidates = Array.to_list puts |> List.filter (fun p ->
-      p.strike >= spot *. 0.90 && p.strike <= spot *. 0.95 &&
-      p.mid_price >= 0.20 &&                      (* Meaningful premium *)
-      p.implied_vol > 0.05 && p.implied_vol < 2.0 (* Reasonable IV - allow up to 200% for high-vol stocks *)
-    ) in
-
-    if List.length short_candidates = 0 then None
-    else
-      (* Pick the strike with highest IV (most premium to collect) *)
-      let short_opt = List.fold_left (fun best p ->
-        if p.implied_vol > best.implied_vol then p else best
-      ) (List.hd short_candidates) short_candidates in
-
-      (* Find lower strike put to buy (5-10% below short strike) *)
-      let min_long_strike = short_opt.strike *. 0.90 in
-      let max_long_strike = short_opt.strike *. 0.95 in
-
-      let long_candidates = Array.to_list puts |> List.filter (fun p ->
-        p.strike >= min_long_strike &&
-        p.strike <= max_long_strike &&
-        p.mid_price >= 0.05 &&
-        p.implied_vol < 2.0 &&
-        p.implied_vol < skew.atm_iv *. 2.5
+  let is_put = spread_type = "bull_put" in
+  let legs = if is_put then chain.puts else chain.calls in
+  let spot = chain.spot_price in
+  let otm = Array.of_list (
+    Array.to_list legs |> List.filter (fun (o : option_data) ->
+      o.mid_price >= 0.05 && o.implied_vol > 0.05 && o.implied_vol < 2.0
+      && (if is_put then o.strike < spot else o.strike > spot))
+  ) in
+  match Skew.find_option_by_delta ~options:otm ~target_delta:short_target_delta with
+  | None -> None
+  | Some short_opt ->
+    if abs_float (short_opt.delta -. short_target_delta) > 0.20 then None  (* no ~25Δ strike present *)
+    else begin
+      let further = Array.of_list (
+        Array.to_list otm |> List.filter (fun (o : option_data) ->
+          if is_put then o.strike < short_opt.strike else o.strike > short_opt.strike)
       ) in
-
-      if List.length long_candidates = 0 then None
-      else
-        let spreads = List.map (fun long_opt ->
-          let (debit, max_profit, max_loss, reward_risk, breakeven) =
-            calculate_spread_economics
-              ~long_price:long_opt.mid_price
-              ~short_price:short_opt.mid_price
-              ~long_strike:long_opt.strike
-              ~short_strike:short_opt.strike
-              ~spread_type:"bull_put"
-          in
-
-          let prob_profit = estimate_prob_profit
-            ~spot:chain.spot_price
-            ~breakeven
-            ~iv:skew.atm_iv
-            ~days_to_expiry:chain.days_to_expiry
-            ~spread_type:"bull_put"
-          in
-
-          let expected_value = (prob_profit *. max_profit) -. ((1.0 -. prob_profit) *. max_loss) in
-          let expected_return_pct = if max_loss > 0.0 then expected_value /. max_loss *. 100.0 else 0.0 in
-
-          {
+      match Skew.find_option_by_delta ~options:further ~target_delta:long_target_delta with
+      | None -> None
+      | Some long_opt ->
+        let (debit, max_profit, max_loss, reward_risk, breakeven) =
+          calculate_spread_economics
+            ~long_price:long_opt.mid_price ~short_price:short_opt.mid_price
+            ~long_strike:long_opt.strike ~short_strike:short_opt.strike ~spread_type
+        in
+        let prob_profit = estimate_prob_profit
+          ~spot ~breakeven ~iv:skew.atm_iv
+          ~days_to_expiry:chain.days_to_expiry ~spread_type
+        in
+        let expected_value = (prob_profit *. max_profit) -. ((1.0 -. prob_profit) *. max_loss) in
+        let expected_return_pct = if max_loss > 0.0 then expected_value /. max_loss *. 100.0 else 0.0 in
+        if max_loss > 0.0 && reward_risk >= min_reward_risk then
+          Some {
             ticker = chain.ticker;
             expiration = chain.expiration;
             days_to_expiry = chain.days_to_expiry;
-            spread_type = "bull_put";
+            spread_type;
             long_strike = long_opt.strike;
             long_delta = long_opt.delta;
             long_iv = long_opt.implied_vol;
@@ -376,110 +359,16 @@ let find_best_bull_put
             expected_value;
             expected_return_pct;
           }
-        ) long_candidates in
+        else None
+    end
 
-        let valid_spreads = List.filter (fun s -> s.reward_risk_ratio >= min_reward_risk) spreads in
-        if List.length valid_spreads = 0 then None
-        else
-          let sorted = List.sort (fun a b ->
-            compare b.expected_value a.expected_value
-          ) valid_spreads in
-          Some (List.hd sorted)
+(** Find best bull put spread (credit - sell ~25Δ put, buy ~10Δ put) *)
+let find_best_bull_put ~chain ~skew ~min_reward_risk =
+  find_best_credit_spread ~chain ~skew ~min_reward_risk ~spread_type:"bull_put"
 
-(** Find best bear call spread (credit spread - sell call, buy higher call) *)
-let find_best_bear_call
-    ~(chain : options_chain)
-    ~(skew : skew_metrics)
-    ~(min_reward_risk : float)
-    : vertical_spread option =
-
-  (* Sell lower strike OTM call (collect premium from call skew) *)
-  (* Buy higher strike call (protection) *)
-
-  let calls = chain.calls in
-  if Array.length calls < 2 then None
-  else
-    (* Find OTM call to sell (5-10% above spot) *)
-    let spot = chain.spot_price in
-    let short_candidates = Array.to_list calls |> List.filter (fun c ->
-      c.strike >= spot *. 1.05 && c.strike <= spot *. 1.10 &&
-      c.mid_price >= 0.20 &&                      (* Meaningful premium *)
-      c.implied_vol > 0.05 && c.implied_vol < 2.0 (* Reasonable IV - allow up to 200% for high-vol stocks *)
-    ) in
-
-    if List.length short_candidates = 0 then None
-    else
-      (* Pick the strike with highest IV (most premium to collect) *)
-      let short_opt = List.fold_left (fun best c ->
-        if c.implied_vol > best.implied_vol then c else best
-      ) (List.hd short_candidates) short_candidates in
-
-      (* Find higher strike call to buy (5-10% above short strike) *)
-      let min_long_strike = short_opt.strike *. 1.05 in
-      let max_long_strike = short_opt.strike *. 1.10 in
-
-      let long_candidates = Array.to_list calls |> List.filter (fun c ->
-        c.strike >= min_long_strike &&
-        c.strike <= max_long_strike &&
-        c.mid_price >= 0.05 &&
-        c.implied_vol < 2.0 &&
-        c.implied_vol < skew.atm_iv *. 2.5
-      ) in
-
-      if List.length long_candidates = 0 then None
-      else
-        let spreads = List.map (fun long_opt ->
-          let (debit, max_profit, max_loss, reward_risk, breakeven) =
-            calculate_spread_economics
-              ~long_price:long_opt.mid_price
-              ~short_price:short_opt.mid_price
-              ~long_strike:long_opt.strike
-              ~short_strike:short_opt.strike
-              ~spread_type:"bear_call"
-          in
-
-          let prob_profit = estimate_prob_profit
-            ~spot:chain.spot_price
-            ~breakeven
-            ~iv:skew.atm_iv
-            ~days_to_expiry:chain.days_to_expiry
-            ~spread_type:"bear_call"
-          in
-
-          let expected_value = (prob_profit *. max_profit) -. ((1.0 -. prob_profit) *. max_loss) in
-          let expected_return_pct = if max_loss > 0.0 then expected_value /. max_loss *. 100.0 else 0.0 in
-
-          {
-            ticker = chain.ticker;
-            expiration = chain.expiration;
-            days_to_expiry = chain.days_to_expiry;
-            spread_type = "bear_call";
-            long_strike = long_opt.strike;
-            long_delta = long_opt.delta;
-            long_iv = long_opt.implied_vol;
-            long_price = long_opt.mid_price;
-            short_strike = short_opt.strike;
-            short_delta = short_opt.delta;
-            short_iv = short_opt.implied_vol;
-            short_price = short_opt.mid_price;
-            debit;
-            max_profit;
-            max_loss;
-            reward_risk_ratio = reward_risk;
-            breakeven;
-            prob_profit;
-            expected_value;
-            expected_return_pct;
-          }
-        ) long_candidates in
-
-        let valid_spreads = List.filter (fun s -> s.reward_risk_ratio >= min_reward_risk) spreads in
-        if List.length valid_spreads = 0 then None
-        else
-          let sorted = List.sort (fun a b ->
-            compare b.expected_value a.expected_value
-          ) valid_spreads in
-          Some (List.hd sorted)
+(** Find best bear call spread (credit - sell ~25Δ call, buy ~10Δ call) *)
+let find_best_bear_call ~chain ~skew ~min_reward_risk =
+  find_best_credit_spread ~chain ~skew ~min_reward_risk ~spread_type:"bear_call"
 
 (** Print vertical spread *)
 let print_vertical_spread (spread : vertical_spread) : unit =
