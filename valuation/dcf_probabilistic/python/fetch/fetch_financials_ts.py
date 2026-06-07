@@ -115,9 +115,14 @@ def fetch_market_data(ticker_obj, ticker_symbol):
 
     model_type = detect_model_type(info, ticker_obj)
     market_data["model_type"] = model_type
-    if not info.get("industry") and model_type in ("bank", "insurance"):
-        print(f"WARN {ticker_symbol}: empty .info industry (likely throttled) — "
-              f"classified via statement signature as {model_type}", file=sys.stderr)
+    if not info.get("industry"):
+        # banks/insurers are recovered from statement signatures; oil&gas and other
+        # specialized models have no robust statement signature, so surface the
+        # potential silent misroute instead of hiding it.
+        detail = (f"recovered via statement signature as {model_type}"
+                  if model_type in ("bank", "insurance")
+                  else "no statement signature — model selection may be degraded (e.g. oil&gas -> generic)")
+        print(f"WARN {ticker_symbol}: empty .info industry (likely throttled); {detail}", file=sys.stderr)
 
     # Add sector-specific fields
     if model_type == "bank":

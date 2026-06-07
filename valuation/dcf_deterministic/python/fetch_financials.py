@@ -129,10 +129,16 @@ def fetch_financial_data(ticker_obj):
     ]) > 0.0
     is_bank = is_bank_stmt or is_bank_info
     is_insurance = (is_insurance_stmt or is_insurance_info) and not is_bank
-    if not industry and (is_bank or is_insurance):
+    if not industry:
+        # empty industry means the classification signal was lost (throttling). Banks/
+        # insurers are recovered from statement signatures above; oil&gas and other
+        # specialized models have NO robust statement signature in yfinance, so make the
+        # potential misroute visible rather than silent.
+        recovered = "bank" if is_bank else "insurer" if is_insurance else None
+        detail = (f"recovered via statement signature as {recovered}" if recovered
+                  else "no statement signature — model selection may be degraded (e.g. oil&gas -> generic)")
         print(f"WARN {getattr(ticker_obj, 'ticker', '?')}: empty .info industry "
-              f"(likely throttled) — classified via statement signature as "
-              f"{'bank' if is_bank else 'insurer'}", file=sys.stderr)
+              f"(likely throttled); {detail}", file=sys.stderr)
 
     # Check if this is an Oil & Gas E&P company
     is_oil_gas = any(term in industry for term in [
