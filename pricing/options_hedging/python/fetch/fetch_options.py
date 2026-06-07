@@ -93,7 +93,7 @@ def fetch_chain_yfinance(ticker: str, min_days: int = 7, max_days: int = 730) ->
     return _finalize(full_chain)
 
 
-def fetch_chain_thetadata(ticker: str, min_days: int = 7, max_days: int = 730):
+def fetch_chain_thetadata(ticker: str, min_days: int = 7, max_days: int = 730, otm_only: bool = True):
     """Fetch the current EOD chain from ThetaData, computing IV from mid-quotes.
 
     ThetaData carries no IV, so it's inverted via Newton-Raphson. Restricted to
@@ -136,11 +136,12 @@ def fetch_chain_thetadata(ticker: str, min_days: int = 7, max_days: int = 730):
         mid = 0.5 * (c.bid + c.ask)
         if mid < 0.05 or (c.ask - c.bid) / mid >= 1.0:       # liquidity gates
             continue
-        is_otm = (c.option_type == "call" and c.strike > spot) or (
-            c.option_type == "put" and c.strike < spot
-        )
-        if not is_otm:                                       # OTM-only for clean IV
-            continue
+        if otm_only:
+            is_otm = (c.option_type == "call" and c.strike > spot) or (
+                c.option_type == "put" and c.strike < spot
+            )
+            if not is_otm:                                   # OTM-only for clean IV fits
+                continue
         rows.append((c.option_type, c.strike, dte / 365.0, c.bid, c.ask, mid))
 
     if not rows:

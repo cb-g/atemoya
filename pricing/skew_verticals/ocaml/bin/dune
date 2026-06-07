@@ -2,3 +2,7 @@
  (name main)
  (public_name skew_verticals)
  (libraries skew_verticals_lib unix))
+
+(executable
+ (name strike_select)
+ (libraries skew_verticals_lib unix))
