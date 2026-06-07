@@ -46,6 +46,8 @@ typeset/atemoya.log
 **/data/benchmark_*.json
 
 # Module-specific data directories that are entirely fetched
+valuation/factor_rank/data/
+valuation/factor_rank/output/
 pricing/pairs_trading/data/
 pricing/regime_downside/data/
 pricing/market_regime_forecast/data/

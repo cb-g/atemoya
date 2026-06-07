@@ -1,0 +1,5 @@
+(library
+ (name factor_rank)
+ (public_name atemoya.factor_rank)
+ (libraries yojson unix)
+ (modules Types Io Factors Sector_policy Rank_engine))
