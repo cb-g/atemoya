@@ -42,31 +42,48 @@ _TS_FINANCIAL_KEYS = [
 ]
 
 
-def detect_model_type(info):
-    """Detect specialized model type from yfinance industry classification."""
+def detect_model_type(info, ticker_obj=None):
+    """Detect specialized model type. Statement signatures (robust endpoints) take
+    precedence over the rate-limit-fragile .info["industry"] string, which under the
+    panel's parallel load often returns empty and silently routed banks/insurers to
+    the generic corporate DCF."""
     industry = info.get("industry", "").lower()
-
-    if any(term in industry for term in [
+    info_bank = any(term in industry for term in [
         "bank", "regional banks", "diversified banks", "money center",
         "investment banking", "capital markets",
         "credit services",
-    ]):
-        return "bank"
-
-    if any(term in industry for term in [
+    ])
+    info_ins = any(term in industry for term in [
         "insurance", "property & casualty", "life insurance", "health insurance",
         "reinsurance", "insurance brokers", "insurance—diversified",
         "insurance—property & casualty", "insurance—life",
-    ]):
-        return "insurance"
-
-    if any(term in industry for term in [
+    ])
+    info_og = any(term in industry for term in [
         "oil & gas e&p", "oil & gas exploration", "oil & gas production",
         "oil & gas integrated", "oil & gas midstream", "oil & gas drilling",
         "oil & gas refining", "oil & gas equipment",
-    ]):
-        return "oil_gas"
+    ])
+    stmt_bank = stmt_ins = False
+    if ticker_obj is not None:
+        try:
+            bs, inc = ticker_obj.balance_sheet, ticker_obj.income_stmt
+            stmt_bank = (_get_value(bs, ["Total Deposits", "Deposits"]) > 0.0
+                         or _get_value(inc, ["Net Interest Income"]) > 0.0)
+            # CLEAN premium lines only (the insurer field read elsewhere falls back to
+            # Total Revenue, which every company has — useless as a signature).
+            stmt_ins = _get_value(inc, [
+                "Net Premiums Earned", "Total Premiums Earned", "Premiums Earned",
+                "Insurance Premiums", "Net Premium Earned",
+            ]) > 0.0
+        except Exception:
+            pass
 
+    if stmt_bank or info_bank:
+        return "bank"
+    if stmt_ins or info_ins:
+        return "insurance"
+    if info_og:
+        return "oil_gas"
     return "standard"
 
 
@@ -96,8 +113,11 @@ def fetch_market_data(ticker_obj, ticker_symbol):
         market_data["shares_reported"] = market_data["shares_outstanding"]
         market_data["shares_outstanding"] = market_data["mve"] / market_data["price"]
 
-    model_type = detect_model_type(info)
+    model_type = detect_model_type(info, ticker_obj)
     market_data["model_type"] = model_type
+    if not info.get("industry") and model_type in ("bank", "insurance"):
+        print(f"WARN {ticker_symbol}: empty .info industry (likely throttled) — "
+              f"classified via statement signature as {model_type}", file=sys.stderr)
 
     # Add sector-specific fields
     if model_type == "bank":

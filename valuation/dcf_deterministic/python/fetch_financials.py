@@ -99,21 +99,40 @@ def fetch_financial_data(ticker_obj):
         if ebt != 0.0:
             ebit = ebt + abs(interest_exp)  # Interest expense is usually negative
 
-    # Check if this is a bank (financial services)
-    # Includes commercial banks, investment banks, and credit card companies
+    # Specialized-model classification. yfinance .info["industry"] is the single most
+    # rate-limit-fragile field: under the panel's parallel load it frequently returns
+    # empty, which used to silently route banks/insurers to the GENERIC corporate DCF
+    # (no error, no FAILED — FCFE==FCFF is the tell). So drive classification from the
+    # ROBUST statement endpoints first (only depositories report Total Deposits / Net
+    # Interest Income; clean premium lines for insurers), OR'd with .info when present.
     industry = info.get("industry", "").lower()
-    is_bank = any(term in industry for term in [
+    is_bank_info = any(term in industry for term in [
         "bank", "regional banks", "diversified banks", "money center",
         "investment banking", "capital markets",  # Investment banks (GS, MS)
         "credit services",  # Credit card companies (COF, DFS)
     ])
-
-    # Check if this is an insurance company
-    is_insurance = any(term in industry for term in [
+    is_insurance_info = any(term in industry for term in [
         "insurance", "property & casualty", "life insurance", "health insurance",
         "reinsurance", "insurance brokers", "insurance—diversified",
         "insurance—property & casualty", "insurance—life",
     ])
+    # Statement signatures (from the robust statement endpoints, not the flaky .info).
+    is_bank_stmt = (
+        get_value(balance_sheet, ["Total Deposits", "Deposits"]) > 0.0
+        or get_value(income_stmt, ["Net Interest Income"]) > 0.0
+    )
+    # NOTE: do NOT use the insurer premiums read further down as a signature — it falls
+    # back to Total Revenue (which every company has). Probe CLEAN premium lines only.
+    is_insurance_stmt = get_value(income_stmt, [
+        "Net Premiums Earned", "Total Premiums Earned", "Premiums Earned",
+        "Insurance Premiums", "Net Premium Earned",
+    ]) > 0.0
+    is_bank = is_bank_stmt or is_bank_info
+    is_insurance = (is_insurance_stmt or is_insurance_info) and not is_bank
+    if not industry and (is_bank or is_insurance):
+        print(f"WARN {getattr(ticker_obj, 'ticker', '?')}: empty .info industry "
+              f"(likely throttled) — classified via statement signature as "
+              f"{'bank' if is_bank else 'insurer'}", file=sys.stderr)
 
     # Check if this is an Oil & Gas E&P company
     is_oil_gas = any(term in industry for term in [
