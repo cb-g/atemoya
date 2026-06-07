@@ -33,7 +33,7 @@ try:
     from lib.python.context import load_ticker_sentiment
 except ImportError:
     load_ticker_sentiment = lambda t: None
-from lib.python.iv_history import prefer_thetadata
+from lib.python.iv_history import prefer_thetadata, filter_stale
 
 import re
 
@@ -90,7 +90,7 @@ def load_histories(data_dir: Path) -> dict[str, pd.DataFrame]:
         if chosen is not None:
             histories[ticker] = chosen
 
-    return histories
+    return filter_stale(histories, "date", "pre_earnings_straddle")
 
 
 def classify_signal(row: pd.Series) -> tuple[str, str]:

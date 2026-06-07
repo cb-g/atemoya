@@ -29,7 +29,7 @@ try:
     from lib.python.context import load_macro_regime
 except ImportError:
     load_macro_regime = lambda: None
-from lib.python.iv_history import prefer_thetadata
+from lib.python.iv_history import prefer_thetadata, filter_stale
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
@@ -92,7 +92,7 @@ def load_histories(data_dir: Path, min_days: int) -> dict[str, pd.DataFrame]:
         if chosen is not None:
             histories[ticker] = chosen
 
-    return histories
+    return filter_stale(histories, "date", "skew_verticals")
 
 
 def compute_z_score(series: pd.Series, window: int = 0) -> float:

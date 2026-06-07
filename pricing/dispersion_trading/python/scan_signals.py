@@ -25,7 +25,7 @@ try:
     from lib.python.context import load_macro_regime
 except ImportError:
     load_macro_regime = lambda: None
-from lib.python.iv_history import prefer_thetadata
+from lib.python.iv_history import prefer_thetadata, is_stale
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output"
@@ -51,12 +51,15 @@ def load_history(data_dir: Path, min_days: int) -> pd.DataFrame | None:
         except Exception:
             return []
 
-    return prefer_thetadata(
+    df = prefer_thetadata(
         _read("dispersion_history_thetadata.csv"),
         _read("dispersion_history.csv"),
         ["date"],
         min_days,
     )
+    if df is not None and is_stale(df, "date", "dispersion"):
+        return None
+    return df
 
 
 def compute_z_scores(df: pd.DataFrame, window: int = 0) -> dict[str, float]:
