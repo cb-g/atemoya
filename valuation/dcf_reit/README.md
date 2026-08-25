@@ -7,7 +7,7 @@ Specialized valuation model for REITs using industry-standard metrics: FFO/AFFO,
 Traditional DCF models don't work well for REITs because:
 
 1. **Depreciation is non-economic**: Real estate typically appreciates, not depreciates
-2. **Mandatory distributions**: REITs must pay out 90%+ of taxable income as dividends
+2. **Mandatory distributions (U.S.)**: To maintain REIT status, U.S. REITs generally must distribute at least 90% of REIT taxable income, excluding net capital gain, as dividends
 3. **Growth comes externally**: REITs grow through debt/equity issuance, not retained earnings
 4. **NAV matters**: Property values (NOI/cap rate) are often more relevant than cash flow projections
 
