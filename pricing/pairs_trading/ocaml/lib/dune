@@ -1,3 +1,0 @@
-(library
- (name pairs_trading_lib)
- (modules types cointegration spread))

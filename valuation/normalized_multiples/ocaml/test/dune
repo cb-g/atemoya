@@ -1,3 +1,0 @@
-(test
- (name test_normalized_multiples)
- (libraries normalized_multiples alcotest))

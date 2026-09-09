@@ -1,3 +1,0 @@
-(test
- (name test_pre_earnings_straddle)
- (libraries pre_earnings_straddle_lib alcotest))

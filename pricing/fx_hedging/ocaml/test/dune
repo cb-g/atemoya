@@ -1,3 +1,0 @@
-(test
- (name test_fx_hedging)
- (libraries fx_hedging_lib))

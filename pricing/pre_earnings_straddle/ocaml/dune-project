@@ -1,3 +1,0 @@
-(lang dune 3.0)
-(name pre_earnings_straddle)
-(generate_opam_files true)

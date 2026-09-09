@@ -1,3 +1,0 @@
-(test
- (name test_gamma_scalping)
- (libraries gamma_scalping_lib alcotest))

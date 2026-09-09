@@ -1,3 +1,0 @@
-(test
- (name test_dcf_deterministic)
- (libraries dcf_deterministic alcotest))

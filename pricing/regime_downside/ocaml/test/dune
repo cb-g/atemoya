@@ -1,3 +1,0 @@
-(test
- (name test_regime_downside)
- (libraries regime_downside alcotest owl))

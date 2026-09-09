@@ -1,3 +1,0 @@
-(library
- (name market_regime_forecast)
- (libraries yojson))

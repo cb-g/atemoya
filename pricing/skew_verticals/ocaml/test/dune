@@ -1,3 +1,0 @@
-(test
- (name test_skew_verticals)
- (libraries skew_verticals_lib alcotest))

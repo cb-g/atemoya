@@ -1,3 +1,0 @@
-(test
- (name test_options_hedging)
- (libraries options_hedging alcotest))

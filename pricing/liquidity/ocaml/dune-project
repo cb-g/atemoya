@@ -1,3 +1,0 @@
-(lang dune 3.0)
-(name liquidity)
-(generate_opam_files true)

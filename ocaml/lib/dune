@@ -1,0 +1,17 @@
+(library
+ (name atemoya)
+ (public_name atemoya)
+ (libraries atdgen-runtime yojson))
+
+; Boundary types and JSON serialisers are generated from the single schema.
+(rule
+ (targets boundary_t.ml boundary_t.mli)
+ (deps %{project_root}/schema/boundary.atd)
+ (action
+  (run atdgen -t -o boundary %{deps})))
+
+(rule
+ (targets boundary_j.ml boundary_j.mli)
+ (deps %{project_root}/schema/boundary.atd)
+ (action
+  (run atdgen -j -o boundary %{deps})))

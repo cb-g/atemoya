@@ -7,17 +7,18 @@
 (package
  (name atemoya)
  (synopsis "Quantitative finance models for investment analysis")
- (description "A collection of pricing and valuation models implemented in OCaml, covering portfolio optimization, regime detection, and fundamental valuation.")
+ (description
+  "Fundamentals-based fair-value anchoring for equities, with OCaml valuation engines fed by Python data collection.")
  (license MIT)
  (maintainers "cb-g")
  (authors "cb-g")
  (homepage "https://github.com/cb-g/atemoya")
  (bug_reports "https://github.com/cb-g/atemoya/issues")
  (depends
-  (ocaml (>= 5.0))
+  (ocaml (>= 5.3))
   dune
-  (owl (>= 1.1))
+  (atdgen (and (>= 4.2) :build))
+  (atdgen-runtime (>= 4.2))
+  (atdpy (and (>= 4.2) :build))
   (yojson (>= 2.0))
-  (csv (>= 2.4))
-  (ppx_deriving (>= 5.2))
   (alcotest :with-test)))

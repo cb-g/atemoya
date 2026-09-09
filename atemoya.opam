@@ -3,19 +3,19 @@ opam-version: "2.0"
 version: "0.1.0"
 synopsis: "Quantitative finance models for investment analysis"
 description:
-  "A collection of pricing and valuation models implemented in OCaml, covering portfolio optimization, regime detection, and fundamental valuation."
+  "Fundamentals-based fair-value anchoring for equities, with OCaml valuation engines fed by Python data collection."
 maintainer: ["cb-g"]
 authors: ["cb-g"]
 license: "MIT"
 homepage: "https://github.com/cb-g/atemoya"
 bug-reports: "https://github.com/cb-g/atemoya/issues"
 depends: [
-  "ocaml" {>= "5.0"}
+  "ocaml" {>= "5.3"}
   "dune" {>= "3.17"}
-  "owl" {>= "1.1"}
+  "atdgen" {>= "4.2" & build}
+  "atdgen-runtime" {>= "4.2"}
+  "atdpy" {>= "4.2" & build}
   "yojson" {>= "2.0"}
-  "csv" {>= "2.4"}
-  "ppx_deriving" {>= "5.2"}
   "alcotest" {with-test}
   "odoc" {with-doc}
 ]

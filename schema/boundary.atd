@@ -1,0 +1,92 @@
+(* The boundary between Python (vendor ingestion) and OCaml (valuation).
+
+   This file is the only definition of the wire types. atdgen generates the OCaml side
+   (Boundary_t, Boundary_j) at build time; atdpy generates python/boundary.py, which dune
+   promotes into the source tree. Neither side hand-writes these types.
+
+   Contract for [financials] (Python -> OCaml):
+   - Every money field is an absolute amount (not thousands or millions) in [currency].
+     If no single currency basis could be established, [currency] is null and the
+     valuation must fail rather than guess.
+   - A null field means the vendor supplied nothing usable. Never a substituted value.
+   - No NaN or infinity crosses the boundary in either direction.
+   - [periods] are annual fiscal periods, most recent first. A period in which every
+     statement field is null is omitted.
+
+   Contract for [valuation] (OCaml -> consumers): one record per ticker. [fair_value],
+   [margin_of_safety] and [signal] are non-null iff [status] is [Ok]; [failed_reason] is
+   non-null iff [status] is [Failed]; [inputs] is non-null iff the arithmetic ran to
+   completion, which includes a valuation that then failed a sanity check. *)
+
+type fiscal_period = {
+  period_end : string;                        (* ISO 8601 date, fiscal year end *)
+  ebit : float nullable;                      (* operating income; any sign *)
+  pretax_income : float nullable;             (* any sign *)
+  tax_provision : float nullable;             (* income tax expense; negative = benefit *)
+  depreciation_amortization : float nullable; (* >= 0; non-cash add-back *)
+  capex : float nullable;                     (* capital expenditure; >= 0 = cash spent *)
+  delta_nwc : float nullable;                 (* increase in net working capital; > 0 = cash absorbed *)
+  cash : float nullable;                      (* cash, equivalents and short-term investments; >= 0 *)
+  total_debt : float nullable;                (* >= 0 *)
+}
+
+type financials = {
+  ticker : string;
+  as_of : string;                (* ISO 8601 UTC timestamp of the fetch *)
+  currency : string nullable;    (* ISO 4217; basis of every money field; null = no single basis *)
+  price : float nullable;        (* last price per share; > 0 *)
+  market_cap : float nullable;   (* > 0 *)
+  periods : fiscal_period list;
+  notes : string list;           (* free-text provenance and data-quality notes; never branched on *)
+}
+
+(* Closed variants: consumers must match every constructor. *)
+type model = [ Generic ]
+type status = [ Ok | Failed ]
+type signal = [ Buy | Hold | Sell ]
+type tax_rate_source = [ Effective | Statutory ]
+
+(* Every value the valuation used, plus the intermediates, for audit. Money in
+   [valuation.currency]; rates are decimal fractions per year. *)
+type inputs = {
+  fiscal_period_end : string;
+  price : float;
+  market_cap : float;
+  shares : float;                     (* effective shares = market_cap / price *)
+  ebit : float;
+  tax_rate : float;
+  tax_rate_source : tax_rate_source;
+  depreciation_amortization : float;
+  capex : float;
+  delta_nwc : float;
+  fcff : float;                       (* ebit * (1 - tax_rate) + d&a - capex - delta_nwc *)
+  cash : float;
+  total_debt : float;
+  net_debt : float;                   (* total_debt - cash *)
+  risk_free_rate : float;
+  equity_risk_premium : float;
+  beta : float;
+  cost_of_equity : float;             (* risk_free_rate + beta * equity_risk_premium *)
+  debt_spread : float;
+  cost_of_debt : float;               (* pre-tax; risk_free_rate + debt_spread *)
+  wacc : float;
+  growth_rate : float;                (* explicit projection, per year *)
+  terminal_growth_rate : float;
+  projection_years : int;
+  enterprise_value : float;
+  equity_value : float;               (* enterprise_value - net_debt *)
+}
+
+type valuation = {
+  ticker : string;
+  as_of : string;
+  currency : string nullable;         (* basis of price and fair_value *)
+  price : float nullable;
+  fair_value : float nullable;        (* per share *)
+  margin_of_safety : float nullable;  (* (fair_value - price) / price *)
+  signal : signal nullable;
+  model : model;
+  status : status;
+  failed_reason : string nullable;
+  inputs : inputs nullable;
+}

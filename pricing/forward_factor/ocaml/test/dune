@@ -1,3 +1,0 @@
-(test
- (name test_forward_factor)
- (libraries forward_factor alcotest))

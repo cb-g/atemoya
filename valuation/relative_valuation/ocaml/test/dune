@@ -1,3 +1,0 @@
-(test
- (name test_relative_valuation)
- (libraries relative_valuation alcotest))

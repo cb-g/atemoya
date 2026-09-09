@@ -1,4 +1,0 @@
-(executable
- (name main)
- (public_name pre_earnings_straddle)
- (libraries pre_earnings_straddle_lib))

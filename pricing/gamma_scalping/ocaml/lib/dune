@@ -1,4 +1,0 @@
-(library
- (name gamma_scalping_lib)
- (public_name gamma_scalping.lib)
- (libraries unix))

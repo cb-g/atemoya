@@ -1,3 +1,0 @@
-(test
- (name test_variance_swaps)
- (libraries variance_swaps_lib alcotest))

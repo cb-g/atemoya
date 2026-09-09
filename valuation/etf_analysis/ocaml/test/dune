@@ -1,3 +1,0 @@
-(test
- (name test_etf_analysis)
- (libraries etf_analysis alcotest))

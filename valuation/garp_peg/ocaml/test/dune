@@ -1,3 +1,0 @@
-(test
- (name test_garp_peg)
- (libraries garp_peg alcotest))

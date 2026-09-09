@@ -1,3 +1,0 @@
-(test
- (name test_growth_analysis)
- (libraries growth_analysis alcotest))

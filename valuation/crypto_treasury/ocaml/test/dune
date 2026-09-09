@@ -1,3 +1,0 @@
-(test
- (name test_crypto_treasury)
- (libraries crypto_treasury alcotest))

@@ -1,3 +1,0 @@
-(test
- (name test_dispersion_trading)
- (libraries dispersion_trading_lib alcotest))

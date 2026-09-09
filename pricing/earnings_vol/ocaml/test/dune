@@ -1,3 +1,0 @@
-(test
- (name test_earnings_vol)
- (libraries earnings_vol_lib alcotest))

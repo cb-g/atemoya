@@ -1,3 +1,0 @@
-(test
- (name test_dcf_probabilistic)
- (libraries dcf_probabilistic alcotest))

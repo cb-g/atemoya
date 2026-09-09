@@ -1,3 +1,0 @@
-(test
- (name test_tail_risk_forecast)
- (libraries tail_risk_forecast alcotest))

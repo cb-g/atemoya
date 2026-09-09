@@ -1,3 +1,0 @@
-(test
- (name test_market_regime_forecast)
- (libraries market_regime_forecast alcotest))

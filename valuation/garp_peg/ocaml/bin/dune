@@ -1,4 +1,0 @@
-(executable
- (name main)
- (public_name garp_peg)
- (libraries garp_peg))
