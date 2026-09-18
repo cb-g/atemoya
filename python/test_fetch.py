@@ -89,3 +89,17 @@ def test_bank_balance_and_income_rows() -> None:
     )
     assert inc.net_income == 57.05
     assert (inc.provision_for_credit_losses, inc.provision_for_credit_losses_row) == (None, None)
+
+
+def test_minor_unit_price_is_converted_and_market_cap_kept() -> None:
+    q = fetch.Quote.model_validate({"currency": "GBp", "financial_currency": "USD", "price": 12500.0, "market_cap": 1.9e11})
+    assert (q.trading_currency, q.price_unit_divisor, q.major_price) == ("GBP", 100.0, 125.0)
+    notes: list[str] = []
+    f = fetch.quote_fields(q, notes)
+    assert f["price"] == 125.0 and f["market_cap"] == 1.9e11 and f["trading_currency"] == "GBP"
+    assert f["financial_currency"] == "USD" and f["currency"] is None  # no single basis: cross-currency
+    assert f["price_unit_divisor"] == 100.0 and isinstance(f["price_unit"], fetch.boundary.PriceUnit)
+    assert any("divided by 100" in n for n in notes)
+    same = fetch.Quote.model_validate({"currency": "USD", "financial_currency": "USD", "price": 10.0, "market_cap": 5e3})
+    g = fetch.quote_fields(same, [])
+    assert (g["currency"], g["price"], g["price_unit_divisor"]) == ("USD", 10.0, 1.0)

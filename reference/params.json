@@ -53,6 +53,12 @@
     "as_of": "2026-09-18",
     "max_age_days": 400
   },
+  "mature_market_erp": {
+    "value": 0.0423,
+    "source": "Damodaran, mature-market equity risk premium, January 2026 vintage (the base of the total-ERP table); a domicile's country risk premium is its total ERP less this",
+    "as_of": "2026-01-01",
+    "max_age_days": 400
+  },
   "terminal_growth_rate": {
     "source": "per-country long-run nominal growth estimates, June 2026 vintage",
     "as_of": "2026-06-01",

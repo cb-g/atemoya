@@ -43,7 +43,8 @@ request to identify its sender: put `"<name> <email>"` after `SEC_EDGAR_IDENTITY
 ```sh
 uv run python/fetch.py AAPL MSFT            # yfinance -> data/financials/<TICKER>.json
 dune exec atemoya -- data/financials/*.json # one valuation record per line on stdout
-uv run python/refresh_rates.py              # U.S. curve from FRED -> reference/risk_free_rates.json
+uv run python/refresh_rates.py --all        # sovereign curves per reference/rate_sources.json
+uv run python/refresh_fx.py --all           # FX via FRED H.10 -> reference/fx_rates.json
 
 uv run python/fetch_all.py                  # every ticker in reference/universe.json (insurers via SEC XBRL)
 uv run python/fetch_sec.py ALL MET PGR      # filed statements from SEC XBRL -> data/financials/<TICKER>.json
@@ -61,7 +62,11 @@ what each other class is judged on instead; an inadmissible class fails with tha
 named. `docs/flow.md` charts every branch from ticker to record. A record is either
 `Ok` with a fair value, or `Failed` with a reason; it never carries a guessed number.
 Every record carries a `floor` (present, absent by definition, or not assessable here,
-with its basis) that gates nothing. With `--out`, the summary checks each ticker against
+with its basis) that gates nothing. A name whose statements and price are in different
+currencies is converted at one recorded FX rate (statement totals, never per-share
+fields) and valued in the trading currency with that currency's country's rates plus the
+domicile's country risk premium; prices quoted in pence or cents are converted to the
+major unit at the fetch. With `--out`, the summary checks each ticker against
 the expected outcome in the universe file; a deviation there is a finding, not something
 to tune away.
 Valuation never fetches, so running it twice on the same inputs with `--today` pinned gives

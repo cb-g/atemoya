@@ -48,16 +48,24 @@ let floor_verified ~currency (inputs : model_inputs) ~fair_value : floor =
   in
   { present = Some true; basis }
 
+let with_conversion conversion (inputs : model_inputs) : model_inputs =
+  match inputs with
+  | `Dcf i -> `Dcf { i with conversion = Some conversion }
+  | `Residual_income i -> `Residual_income { i with conversion = Some conversion }
+  | `Residual_income_insurer i ->
+      `Residual_income_insurer { i with core = { i.core with conversion = Some conversion } }
+
 let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declaration
-    (fin : financials) : valuation =
+    (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
   let lens_note, scope_limits =
     match declaration with
     | Some d -> (d.lens_note, d.scope_limits)
     | None -> ("", [])
   in
-  let record ?model ?class_check ?inputs ?fair_value ?margin_of_safety ?signal
-      ?failed_reason ~price ~status ~floor () =
+  (* [fin] is the record the model saw: the original, or its converted copy. *)
+  let record ~(fin : financials) ?model ?class_check ?inputs ?fair_value ?margin_of_safety
+      ?signal ?failed_reason ~price ~status ~floor () =
     {
       ticker = fin.ticker;
       as_of = fin.as_of;
@@ -78,8 +86,8 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
       inputs;
     }
   in
-  let failed ?model ?class_check ?inputs ~floor reason =
-    record ?model ?class_check ?inputs ~price:fin.price ~status:`Failed
+  let failed ?(fin = original) ?model ?class_check ?inputs ~floor reason =
+    record ~fin ?model ?class_check ?inputs ~price:fin.price ~status:`Failed
       ~failed_reason:reason ~floor ()
   in
   let floor_default () =
@@ -90,8 +98,8 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
     | None -> floor_undeclared
   in
   (* After a model produced a fair value: applicability, sanity bound, signal, floor. *)
-  let conclude ~model ~class_check ~rule ~price (inputs : model_inputs) fair_value =
-    let failed = failed ~model ~class_check ~inputs ~floor:(floor_of_rule rule) in
+  let conclude ~fin ~model ~class_check ~rule ~price (inputs : model_inputs) fair_value =
+    let failed = failed ~fin ~model ~class_check ~inputs ~floor:(floor_of_rule rule) in
     if fair_value <= 0. then
       failed (Printf.sprintf "non-positive fair value %g: model not applicable" fair_value)
     else
@@ -104,20 +112,25 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
              margin_of_safety thresholds.sanity_bound)
       else
         let currency = Option.value fin.currency ~default:"" in
-        record ~model ~class_check ~inputs ~fair_value ~margin_of_safety
+        record ~fin ~model ~class_check ~inputs ~fair_value ~margin_of_safety
           ~signal:(signal thresholds margin_of_safety)
           ~price:(Some price) ~status:`Ok
           ~floor:(floor_verified ~currency inputs ~fair_value)
           ()
   in
-  let run_model ~model ~class_check ~rule ~country assumptions =
-    let failed = failed ~model ~class_check ~floor:(floor_of_rule rule) in
+  let run_model ~fin ?conversion ~model ~class_check ~rule ~country assumptions =
+    let failed = failed ~fin ~model ~class_check ~floor:(floor_of_rule rule) in
+    let finish ~price inputs fair_value =
+      let inputs =
+        match conversion with Some c -> with_conversion c inputs | None -> inputs
+      in
+      conclude ~fin ~model ~class_check ~rule ~price inputs fair_value
+    in
     match model with
     | `Dcf -> (
         match Dcf.value assumptions ~country fin with
         | Error reason -> failed reason
-        | Ok (inputs, fair_value) ->
-            conclude ~model ~class_check ~rule ~price:inputs.price (`Dcf inputs) fair_value)
+        | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Dcf inputs) fair_value)
     | `Residual_income -> (
         match Params.bank_terminal_roe_spread params ~today with
         | Error reason -> failed reason
@@ -125,8 +138,7 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
             match Residual_income.value assumptions ~terminal_spread ~country fin with
             | Error reason -> failed reason
             | Ok (inputs, fair_value) ->
-                conclude ~model ~class_check ~rule ~price:inputs.price
-                  (`Residual_income inputs) fair_value))
+                finish ~price:inputs.price (`Residual_income inputs) fair_value))
     | `Residual_income_insurer -> (
         match Params.insurer_terminal_roe_spread params ~today with
         | Error reason -> failed reason
@@ -134,13 +146,57 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
             match Insurer.value assumptions ~terminal_spread ~country fin with
             | Error reason -> failed reason
             | Ok (inputs, fair_value) ->
-                conclude ~model ~class_check ~rule ~price:inputs.core.price
-                  (`Residual_income_insurer inputs) fair_value))
+                finish ~price:inputs.core.price (`Residual_income_insurer inputs) fair_value))
+  in
+  (* The currency gate: the same-currency path untouched, else convert and re-source. *)
+  let value ~model ~class_check ~rule ~country =
+    let failed = failed ~model ~class_check ~floor:(floor_of_rule rule) in
+    match (original.financial_currency, original.trading_currency) with
+    | None, _ -> failed "missing market data: financial_currency"
+    | _, None -> failed "missing market data: trading_currency"
+    | Some financial, Some trading when financial = trading -> (
+        match Params.resolve params ~today ~country ~industry:original.industry with
+        | Error reason -> failed reason
+        | Ok assumptions ->
+            run_model ~fin:original ~model ~class_check ~rule ~country assumptions)
+    | Some financial, Some trading -> (
+        match Fx.rate params.fx_sources params.fx_rates ~today ~financial ~trading with
+        | Error reason -> failed reason
+        | Ok legs -> (
+            match Fx.country_of params.fx_sources trading with
+            | Error reason -> failed reason
+            | Ok rate_country -> (
+                match
+                  Params.resolve_cross params ~today ~domicile:country ~rate_country
+                    ~industry:original.industry
+                with
+                | Error reason -> failed reason
+                | Ok assumptions ->
+                    let converted = Fx.convert ~rate:legs.fx_rate original in
+                    let conversion =
+                      {
+                        financial_currency = financial;
+                        trading_currency = trading;
+                        fx_rate = legs.fx_rate;
+                        fx_usd_per_financial = legs.usd_per_financial;
+                        fx_usd_per_trading = legs.usd_per_trading;
+                        fx_source = legs.source;
+                        fx_as_of = legs.as_of;
+                        fx_age_days = legs.age_days;
+                        domicile = country;
+                        rate_country;
+                        growth_country = rate_country;
+                        price_unit = original.price_unit;
+                        price_unit_divisor = original.price_unit_divisor;
+                      }
+                    in
+                    run_model ~fin:converted ~conversion ~model ~class_check ~rule ~country
+                      assumptions)))
   in
   match Params.classification_threshold params ~today with
   | Error reason -> failed ~floor:(floor_default ()) reason
   | Ok threshold -> (
-      let s = Classify.signature ~threshold fin in
+      let s = Classify.signature ~threshold original in
       match Classify.check ~declared s with
       | Classify.Refuse (reason, class_check) ->
           failed ~class_check ~floor:(floor_default ()) reason
@@ -157,15 +213,8 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
                         (Printf.sprintf "dcf not admissible for %s; lens: %s"
                            (Admissibility.class_name cls) rule.lens)
                   | Some model -> (
-                      match fin.country with
+                      match original.country with
                       | None ->
                           failed ~model ~class_check ~floor:(floor_of_rule rule)
                             "country not determinable from the fetch"
-                      | Some country -> (
-                          match
-                            Params.resolve params ~today ~country ~industry:fin.industry
-                          with
-                          | Error reason ->
-                              failed ~model ~class_check ~floor:(floor_of_rule rule) reason
-                          | Ok assumptions ->
-                              run_model ~model ~class_check ~rule ~country assumptions))))))
+                      | Some country -> value ~model ~class_check ~rule ~country)))))

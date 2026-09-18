@@ -127,7 +127,12 @@ let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumption
         in
         let retention = 1. -. payout_ratio in
         let cost_of_equity =
-          a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value)
+          let domestic =
+            a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value)
+          in
+          match a.country_risk_premium with
+          | None -> domestic
+          | Some crp -> domestic +. crp.value
         in
         let terminal_growth_rate = a.terminal_growth_rate.value in
         if cost_of_equity <= terminal_growth_rate then
@@ -183,9 +188,11 @@ let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumption
                   dividends_paid_row = p.dividends_paid_row;
                   risk_free_rate = a.risk_free_rate;
                   equity_risk_premium = a.equity_risk_premium;
+                  country_risk_premium = a.country_risk_premium;
                   beta = a.beta;
                   beta_source = a.beta_source;
                   cost_of_equity;
+                  conversion = None;
                   mean_reversion_lambda = a.mean_reversion_lambda;
                   terminal_growth_rate = a.terminal_growth_rate;
                   terminal_roe_spread = terminal_spread;

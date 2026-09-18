@@ -37,16 +37,24 @@ DEFAULT_OUT = REPO_ROOT / "data" / "financials"
 # rules live in the validators. Field names and signs are already canonical here.
 
 
+# Vendor codes for prices quoted in a currency's minor unit -> (major code, divisor). The
+# vendor's market cap is already in the major unit (AZN.L: price 12500 GBp, market cap
+# 1.9e11 GBP), so only the price is divided; the field report's -98% on an LSE name was a
+# pence price against a pounds fair value.
+MINOR_UNITS: dict[str, tuple[str, float]] = {"GBp": ("GBP", 100.0), "GBX": ("GBP", 100.0), "ZAc": ("ZAR", 100.0), "ILA": ("ILS", 100.0)}
+
+
 class Quote(BaseModel):
     """Price-level fields from `.info`. Only these: fundamentals come from statements,
-    which are served from a more robust endpoint and are internally consistent."""
+    which are served from a more robust endpoint and are internally consistent. Per-share
+    fields are never read: their currency is unreliable per field and per ticker."""
 
     model_config = ConfigDict(frozen=True, strict=True)
 
-    currency: str | None  # trading currency of price and market_cap
+    currency: str | None  # trading currency of price and market_cap, as the vendor codes it
     financial_currency: str | None  # currency of the statements
-    price: float | None
-    market_cap: float | None
+    price: float | None  # as quoted, possibly in a minor unit
+    market_cap: float | None  # in the major unit
 
     @field_validator("currency", "financial_currency")
     @classmethod
@@ -54,6 +62,19 @@ class Quote(BaseModel):
         if v is not None and not (len(v) == 3 and v.isalpha()):
             raise ValueError(f"not a currency code: {v!r}")
         return v
+
+    @property
+    def trading_currency(self) -> str | None:
+        """The major-unit code of the price's currency."""
+        return MINOR_UNITS[self.currency][0] if self.currency in MINOR_UNITS else self.currency
+
+    @property
+    def price_unit_divisor(self) -> float:
+        return MINOR_UNITS[self.currency][1] if self.currency in MINOR_UNITS else 1.0
+
+    @property
+    def major_price(self) -> float | None:
+        return None if self.price is None else self.price / self.price_unit_divisor
 
     @field_validator("price", "market_cap")
     @classmethod
@@ -330,15 +351,31 @@ def _statement[S: Statement](
 
 
 def _single_currency(quote: Quote, notes: list[str]) -> str | None:
-    """One basis for price, market cap and statements, or None. Cross-currency is a
-    later layer; until then a mismatch is reported, never converted or assumed."""
-    if quote.currency is not None and quote.currency == quote.financial_currency:
-        return quote.currency
+    """One basis for price, market cap and statements, or None. A mismatch is the
+    cross-currency path's job downstream; it is noted here, never converted or assumed."""
+    if quote.trading_currency is not None and quote.trading_currency == quote.financial_currency:
+        return quote.trading_currency
     notes.append(
-        f"no single currency basis: price currency {quote.currency!r}, "
+        f"no single currency basis: price currency {quote.trading_currency!r}, "
         f"statement currency {quote.financial_currency!r}"
     )
     return None
+
+
+def quote_fields(quote: Quote | None, notes: list[str]) -> dict[str, object]:
+    """The currency, unit and price fields of a boundary record from a validated quote."""
+    if quote is None:
+        return {"currency": None, "financial_currency": None, "trading_currency": None,
+                "price_unit": boundary.PriceUnit(boundary.Major()), "price_unit_divisor": 1.0,
+                "price": None, "market_cap": None}
+    minor = quote.currency in MINOR_UNITS
+    if minor:
+        notes.append(f"price quoted in {quote.currency}: divided by {quote.price_unit_divisor:g} to {quote.trading_currency}; market cap already in {quote.trading_currency}")
+    return {"currency": _single_currency(quote, notes),
+            "financial_currency": quote.financial_currency, "trading_currency": quote.trading_currency,
+            "price_unit": boundary.PriceUnit(boundary.Minor() if minor else boundary.Major()),
+            "price_unit_divisor": quote.price_unit_divisor,
+            "price": quote.major_price, "market_cap": quote.market_cap}
 
 
 def _depreciation(
@@ -414,12 +451,17 @@ def fetch(symbol: str, as_of: datetime) -> boundary.Financials:
         else:
             periods.append(period)
 
+    q = quote_fields(quote, notes)
     return boundary.Financials(
         ticker=symbol,
         as_of=as_of.isoformat(timespec="seconds"),
-        currency=_single_currency(quote, notes) if quote else None,
-        price=quote.price if quote else None,
-        market_cap=quote.market_cap if quote else None,
+        currency=q["currency"],  # pyright: ignore[reportArgumentType]
+        financial_currency=q["financial_currency"],  # pyright: ignore[reportArgumentType]
+        trading_currency=q["trading_currency"],  # pyright: ignore[reportArgumentType]
+        price_unit=q["price_unit"],  # pyright: ignore[reportArgumentType]
+        price_unit_divisor=q["price_unit_divisor"],  # pyright: ignore[reportArgumentType]
+        price=q["price"],  # pyright: ignore[reportArgumentType]
+        market_cap=q["market_cap"],  # pyright: ignore[reportArgumentType]
         country=profile.country if profile else None,
         industry=profile.industry if profile else None,
         periods=periods,

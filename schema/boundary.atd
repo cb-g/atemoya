@@ -72,12 +72,20 @@ type fiscal_period = {
   ?claims_liability_row : string option;
 }
 
+(* Whether the vendor quoted the price in the currency's major unit or a minor one (pence,
+   cents, agorot). The fetch converts to the major unit and records the divisor. *)
+type price_unit = [ Major <json name="major"> | Minor <json name="minor"> ]
+
 type financials = {
   ticker : string;
   as_of : string;                (* ISO 8601 UTC timestamp of the fetch *)
-  currency : string nullable;    (* ISO 4217; basis of every money field; null = no single basis *)
-  price : float nullable;        (* last price per share; > 0 *)
-  market_cap : float nullable;   (* > 0 *)
+  currency : string nullable;    (* ISO 4217; the single basis of every money field when statements and price agree; null otherwise *)
+  financial_currency : string nullable;   (* what the statements are in *)
+  trading_currency : string nullable;     (* what the price and market cap are in, major unit *)
+  price_unit : price_unit;       (* how the vendor quoted the price *)
+  price_unit_divisor : float;    (* 1 for major; the minor-unit divisor already applied to the price *)
+  price : float nullable;        (* last price per share in trading_currency, major unit; > 0 *)
+  market_cap : float nullable;   (* in trading_currency; > 0 *)
   country : string nullable;     (* domicile as the vendor spells it, e.g. "United States" *)
   industry : string nullable;    (* industry as the vendor spells it, e.g. "Consumer Electronics" *)
   periods : fiscal_period list;
@@ -127,6 +135,26 @@ type growth_source = [
   | Historical_capped_at_roic <json name="historical_capped_at_roic"> (* revenue CAGR, held to roic *)
   | Historical <json name="historical">                              (* revenue CAGR *)
 ]
+
+(* How a cross-currency record was converted: every statement total was multiplied by
+   [fx_rate] (trading currency per unit of financial currency, through USD) before the
+   model ran; the discount rate and terminal growth are the trading currency's country's,
+   the tax rate the domicile's. Present only on the cross-currency path. *)
+type conversion = {
+  financial_currency : string;
+  trading_currency : string;
+  fx_rate : float;                  (* trading per financial *)
+  fx_usd_per_financial : float;
+  fx_usd_per_trading : float;
+  fx_source : string;
+  fx_as_of : string;
+  fx_age_days : int;
+  domicile : string;
+  rate_country : string;            (* risk-free rate and terminal growth *)
+  growth_country : string;
+  price_unit : price_unit;
+  price_unit_divisor : float;
+}
 
 (* A parameter as used, with its provenance. *)
 type parameter = {
@@ -221,10 +249,12 @@ type inputs = {
   mean_reversion_lambda : parameter;
   growth_path : float list;           (* g_1 .. g_N: terminal + (g0 - terminal) * exp(-lambda * t) *)
   risk_free_rate : parameter;         (* tenor matches projection_years *)
-  equity_risk_premium : parameter;    (* the country's total ERP *)
+  equity_risk_premium : parameter;    (* the domicile's total ERP; on the cross-currency path the mature-market base *)
+  ?country_risk_premium : parameter option;   (* cross-currency only: domicile total ERP less the mature-market base *)
   beta : parameter;
   beta_source : beta_source;
-  cost_of_equity : float;             (* risk_free_rate + beta * equity_risk_premium *)
+  cost_of_equity : float;             (* risk_free_rate + beta * equity_risk_premium (+ country_risk_premium) *)
+  ?conversion : conversion option;    (* cross-currency only *)
   debt_spread : parameter;
   cost_of_debt : float;               (* pre-tax; risk_free_rate + debt_spread *)
   wacc : float;
@@ -257,10 +287,12 @@ type residual_income_inputs = {
   dividends_paid : float nullable;    (* latest period *)
   dividends_paid_row : string nullable;
   risk_free_rate : parameter;
-  equity_risk_premium : parameter;
+  equity_risk_premium : parameter;    (* the domicile's total ERP; on the cross-currency path the mature-market base *)
+  ?country_risk_premium : parameter option;   (* cross-currency only *)
   beta : parameter;
   beta_source : beta_source;
-  cost_of_equity : float;             (* risk_free_rate + beta * equity_risk_premium *)
+  cost_of_equity : float;             (* risk_free_rate + beta * equity_risk_premium (+ country_risk_premium) *)
+  ?conversion : conversion option;    (* cross-currency only *)
   mean_reversion_lambda : parameter;
   terminal_growth_rate : parameter;
   terminal_roe_spread : parameter;    (* terminal excess return over cost of equity, on book; the class's own parameter *)

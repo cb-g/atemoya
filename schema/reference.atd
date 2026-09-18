@@ -90,6 +90,7 @@ type params = {
   mean_reversion_lambda : scalar;     (* growth, and a bank's ROE, decay toward their anchor at exp(-lambda * t) *)
   bank_terminal_roe_spread : scalar;  (* terminal excess return over cost of equity, on book, for the residual-income model *)
   insurer_terminal_roe_spread : scalar;   (* the same, on AOCI-adjusted book, for the insurer model *)
+  mature_market_erp : scalar;         (* the international CAPM's mature-market base; a domicile's total ERP less this is its country risk premium *)
   terminal_growth_rate : country_table;
   unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
 }
@@ -127,4 +128,35 @@ type admissibility = {
   as_of : string;
   ~notes : string list;
   classes : (string * class_rule) list <json repr="object">;
+}
+
+(* FX: where each currency's USD rate comes from, and which country's curve and terminal
+   growth a trading currency uses. *)
+type fx_source = {
+  series : string;                      (* FRED series id *)
+  direction : string;                   (* usd_per_unit | units_per_usd, the series' own quote *)
+  ~notes : string list;
+}
+
+type fx_sources = {
+  source : string;
+  as_of : string;
+  max_age_days : int;
+  currency_countries : (string * string) list <json repr="object">;   (* currency -> country whose curve and terminal growth it uses *)
+  currencies : (string * fx_source) list <json repr="object">;
+  ~notes : string list;
+}
+
+type fx_rate = {
+  series : string;
+  direction : string;
+  as_of : string;                       (* observation date *)
+  quoted : float;                       (* as the series quotes it *)
+  usd_per_unit : float;                 (* normalised: U.S. dollars per one unit of the currency *)
+}
+
+type fx_rates = {
+  source : string;
+  ~notes : string list;
+  currencies : (string * fx_rate) list <json repr="object">;
 }

@@ -9,6 +9,8 @@ type t = {
   industry_betas : industry_table;
   params : params;
   admissibility : admissibility;
+  fx_sources : fx_sources;
+  fx_rates : fx_rates;
 }
 
 let read reader path =
@@ -37,7 +39,19 @@ let load ~dir =
   let* admissibility =
     read Reference_j.read_admissibility (file "admissibility.json")
   in
-  Ok { risk_free; equity_risk_premiums; tax_rates; industry_betas; params; admissibility }
+  let* fx_sources = read Reference_j.read_fx_sources (file "fx_sources.json") in
+  let* fx_rates = read Reference_j.read_fx_rates (file "fx_rates.json") in
+  Ok
+    {
+      risk_free;
+      equity_risk_premiums;
+      tax_rates;
+      industry_betas;
+      params;
+      admissibility;
+      fx_sources;
+      fx_rates;
+    }
 
 let days_between = Date.days_between
 
@@ -173,6 +187,67 @@ let resolve t ~today ~country ~industry =
     {
       Dcf.risk_free_rate;
       equity_risk_premium;
+      country_risk_premium = None;
+      beta;
+      beta_source;
+      debt_spread;
+      growth_clamp_lower;
+      growth_clamp_upper;
+      mean_reversion_lambda;
+      terminal_growth_rate;
+      projection_years;
+      statutory_tax_rate;
+    }
+
+let resolve_cross t ~today ~domicile ~rate_country ~industry =
+  let* projection_years =
+    let p = t.params.projection_years in
+    let* age_days =
+      age ~today ~name:"projection_years" ~key:"global" ~as_of:p.as_of
+        ~max_age_days:p.max_age_days
+    in
+    Ok
+      ({ value = p.value; key = "global"; source = p.source; as_of = p.as_of; age_days }
+        : Boundary_t.int_parameter)
+  in
+  let tenor = Printf.sprintf "%dy" projection_years.value in
+  let* risk_free_rate = risk_free t.risk_free ~today ~country:rate_country ~tenor in
+  let* terminal_growth_rate =
+    country_value t.params.terminal_growth_rate ~today ~name:"terminal_growth_rate"
+      ~country:rate_country
+  in
+  let* statutory_tax_rate =
+    country_value t.tax_rates ~today ~name:"statutory_tax_rate" ~country:domicile
+  in
+  let* mature =
+    scalar t.params.mature_market_erp ~today ~name:"mature_market_erp"
+  in
+  let* total_erp =
+    country_value t.equity_risk_premiums ~today ~name:"equity_risk_premium" ~country:domicile
+  in
+  let country_risk_premium =
+    parameter
+      ~value:(total_erp.value -. mature.value)
+      ~key:total_erp.key
+      ~source:(total_erp.source ^ ", less the mature-market base")
+      ~as_of:total_erp.as_of ~age_days:total_erp.age_days ()
+  in
+  let* growth_clamp_lower =
+    scalar t.params.growth_clamp_lower ~today ~name:"growth_clamp_lower"
+  in
+  let* growth_clamp_upper =
+    scalar t.params.growth_clamp_upper ~today ~name:"growth_clamp_upper"
+  in
+  let* mean_reversion_lambda =
+    scalar t.params.mean_reversion_lambda ~today ~name:"mean_reversion_lambda"
+  in
+  let* debt_spread = scalar t.params.debt_spread ~today ~name:"debt_spread" in
+  let* beta, beta_source = beta t.industry_betas ~today ~industry in
+  Ok
+    {
+      Dcf.risk_free_rate;
+      equity_risk_premium = { mature with key = "mature market" };
+      country_risk_premium = Some country_risk_premium;
       beta;
       beta_source;
       debt_spread;

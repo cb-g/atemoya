@@ -16,6 +16,8 @@
 type assumptions = {
   risk_free_rate : Boundary_t.parameter;
   equity_risk_premium : Boundary_t.parameter;
+  country_risk_premium : Boundary_t.parameter option;
+      (** cross-currency only: added to the cost of equity outside beta *)
   beta : Boundary_t.parameter;
   beta_source : Boundary_t.beta_source;
   debt_spread : Boundary_t.parameter;

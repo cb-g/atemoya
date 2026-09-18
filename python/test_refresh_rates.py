@@ -104,3 +104,12 @@ def test_validation_rejects_bad_range_future_stale_and_missing() -> None:
         rr.validate(rr.Fetched(as_of=date(2026, 6, 1), rates={"7y": 0.04, "10y": 0.041}), r, today)
     with pytest.raises(rr.RefreshError, match="missing tenor"):
         rr.validate(rr.Fetched(as_of=date(2026, 9, 17), rates={"7y": 0.04}), r, today)
+
+
+def test_fx_normalisation_follows_the_quote_direction() -> None:
+    import refresh_fx
+    assert refresh_fx.normalise(1.25, "usd_per_unit") == 1.25
+    assert abs(refresh_fx.normalise(5.0, "units_per_usd") - 1 / 5.0) < 1e-12
+    with pytest.raises(rr.RefreshError):
+        refresh_fx.normalise(1.0, "sideways")
+    assert rr.parse_fred_latest(json.dumps({"observations": [{"date": "2026-09-11", "value": "5.0"}]}).encode(), "DEXBZUS") == (date(2026, 9, 11), "5.0")

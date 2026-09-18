@@ -6,7 +6,7 @@ are the exact `failed_reason` strings, with variable parts in parentheses, so th
 checkable against `output/summary.txt`; a test asserts every reason string in the code
 appears here. **Every change that adds a branch updates this file in the same commit.**
 
-Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model.
+Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer.
 
 ```mermaid
 flowchart TD
@@ -35,7 +35,15 @@ flowchart TD
     ADM -- "residual_income_insurer (Insurer) (08)" --> COUNTRY
 
     COUNTRY{"country in the fetch?"} -- no --> F_COUNTRY["country not determinable from the fetch"]:::failed
-    COUNTRY -- yes --> PARAMS["resolve parameters: projection_years, risk-free (country, 7y), ERP, statutory tax, terminal growth, debt spread, growth clamp, lambda, beta (industry table or default 1.0)"]
+    COUNTRY -- yes --> CUR{"currency gate (09): financial_currency and trading_currency present? equal?"}:::new
+    CUR -- "a field missing" --> F_CUR["missing market data: financial_currency, or missing market data: trading_currency (09)"]:::failed
+    CUR -- "equal: the same-currency path, untouched" --> PARAMS
+    CUR -- "differ: cross-currency (09)" --> FX{"FX both legs through USD from reference/fx_rates.json, fresh? (09)"}:::new
+    FX -- "no series for a leg" --> F_FX["fx not available for (financial)/(trading) (09)"]:::failed
+    FX -- "a leg stale or future" --> F_FXSTALE["fx for (code) (as_of date) is N days old, older than its max_age_days M (09)"]:::failed
+    FX -- ok --> CONV["convert every statement total by fx_rate into the trading currency; price and market cap untouched (minor-unit prices were already divided at the fetch and the divisor recorded); parameters via resolve_cross: risk-free and terminal growth from the trading currency's country, tax from the domicile, cost of equity = rf + beta x mature ERP + country risk premium (domicile total ERP less the base); the same model runs on the converted record and the conversion rides on its inputs (09)"]:::new
+    CONV --> PARAMS
+    PARAMS["resolve parameters: projection_years, risk-free (country, 7y), ERP, statutory tax, terminal growth, debt spread, growth clamp, lambda, beta (industry table or default 1.0)"]
     PARAMS -. "risk-free curve tier (07): official (issuer or central bank) / fred_oecd_10y (the 7y taken from the OECD 10y, recorded as tenor_used) / manual (hand-copied, ages out under the 45-day gate); tier, tenor_requested and tenor_used ride on the parameter" .-> PARAMS
     PARAMS -- "country absent" --> F_NOCURVE["no risk-free curve for country (country)"]:::failed
     PARAMS -- "country absent" --> F_NOPARAM["no (equity_risk_premium|statutory_tax_rate|terminal_growth_rate) for country (country)"]:::failed
@@ -116,3 +124,6 @@ into it.
 - insurer model (08): a second statements provider (filed statements via SEC XBRL) for insurers,
   the insurer model on AOCI-adjusted book, and the `Failed` string for an insurer whose
   provider had no filed statements.
+- cross-currency (09): the currency gate, the cross-currency conversion and international CAPM, the
+  minor-unit price guard at the fetch, and the `Failed` strings for a missing currency
+  field, a missing FX pair and a stale FX leg.

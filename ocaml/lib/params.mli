@@ -18,10 +18,12 @@ type t = {
   industry_betas : Reference_t.industry_table;
   params : Reference_t.params;
   admissibility : Reference_t.admissibility;
+  fx_sources : Reference_t.fx_sources;
+  fx_rates : Reference_t.fx_rates;
 }
 
 val load : dir:string -> (t, string) result
-(** Reads the six files under [dir]; the error names the file and the parse
+(** Reads the eight files under [dir]; the error names the file and the parse
     problem. *)
 
 val days_between : from:string -> until:string -> (int, string) result
@@ -47,6 +49,20 @@ val resolve :
   country:string ->
   industry:string option ->
   (Dcf.assumptions, string) result
-(** [country] and [industry] are the vendor's strings; aliases in the tables map
+(** The same-currency path: every parameter from [country], domestic CAPM.
+    [country] and [industry] are the vendor's strings; aliases in the tables map
     alternate country spellings to the canonical key. The risk-free tenor is
     ["<projection_years>y"]. *)
+
+val resolve_cross :
+  t ->
+  today:string ->
+  domicile:string ->
+  rate_country:string ->
+  industry:string option ->
+  (Dcf.assumptions, string) result
+(** The cross-currency path: the risk-free rate and terminal growth from
+    [rate_country] (the trading currency's), the statutory tax rate from the
+    [domicile], and the international CAPM's components: [equity_risk_premium]
+    is the mature-market base and [country_risk_premium] the domicile's total
+    ERP less that base. Beta from the industry table as always. *)

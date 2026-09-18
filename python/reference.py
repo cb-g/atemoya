@@ -658,6 +658,7 @@ class Params:
     mean_reversion_lambda: Scalar
     bank_terminal_roe_spread: Scalar
     insurer_terminal_roe_spread: Scalar
+    mature_market_erp: Scalar
     terminal_growth_rate: CountryTable
     unwired: Any
 
@@ -673,6 +674,7 @@ class Params:
                 mean_reversion_lambda=Scalar.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('Params', 'mean_reversion_lambda'),
                 bank_terminal_roe_spread=Scalar.from_json(x['bank_terminal_roe_spread']) if 'bank_terminal_roe_spread' in x else _atd_missing_json_field('Params', 'bank_terminal_roe_spread'),
                 insurer_terminal_roe_spread=Scalar.from_json(x['insurer_terminal_roe_spread']) if 'insurer_terminal_roe_spread' in x else _atd_missing_json_field('Params', 'insurer_terminal_roe_spread'),
+                mature_market_erp=Scalar.from_json(x['mature_market_erp']) if 'mature_market_erp' in x else _atd_missing_json_field('Params', 'mature_market_erp'),
                 terminal_growth_rate=CountryTable.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Params', 'terminal_growth_rate'),
                 unwired=(lambda x: x)(x['unwired']) if 'unwired' in x else _atd_missing_json_field('Params', 'unwired'),
             )
@@ -689,6 +691,7 @@ class Params:
         res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
         res['bank_terminal_roe_spread'] = (lambda x: x.to_json())(self.bank_terminal_roe_spread)
         res['insurer_terminal_roe_spread'] = (lambda x: x.to_json())(self.insurer_terminal_roe_spread)
+        res['mature_market_erp'] = (lambda x: x.to_json())(self.mature_market_erp)
         res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
         res['unwired'] = (lambda x: x)(self.unwired)
         return res
@@ -736,6 +739,161 @@ class IndustryTable:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'IndustryTable':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class FxSource:
+    """Original type: fx_source = { ... }
+    """
+
+    series: str
+    direction: str
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FxSource':
+        if isinstance(x, dict):
+            return cls(
+                series=_atd_read_string(x['series']) if 'series' in x else _atd_missing_json_field('FxSource', 'series'),
+                direction=_atd_read_string(x['direction']) if 'direction' in x else _atd_missing_json_field('FxSource', 'direction'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('FxSource', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['series'] = _atd_write_string(self.series)
+        res['direction'] = _atd_write_string(self.direction)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FxSource':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class FxSources:
+    """Original type: fx_sources = { ... }
+    """
+
+    source: str
+    as_of: str
+    max_age_days: int
+    currency_countries: List[Tuple[str, str]]
+    currencies: List[Tuple[str, FxSource]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FxSources':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('FxSources', 'source'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('FxSources', 'as_of'),
+                max_age_days=_atd_read_int(x['max_age_days']) if 'max_age_days' in x else _atd_missing_json_field('FxSources', 'max_age_days'),
+                currency_countries=_atd_read_assoc_object_into_list(_atd_read_string)(x['currency_countries']) if 'currency_countries' in x else _atd_missing_json_field('FxSources', 'currency_countries'),
+                currencies=_atd_read_assoc_object_into_list(FxSource.from_json)(x['currencies']) if 'currencies' in x else _atd_missing_json_field('FxSources', 'currencies'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('FxSources', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['max_age_days'] = _atd_write_int(self.max_age_days)
+        res['currency_countries'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.currency_countries)
+        res['currencies'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.currencies)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FxSources':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class FxRate:
+    """Original type: fx_rate = { ... }
+    """
+
+    series: str
+    direction: str
+    as_of: str
+    quoted: float
+    usd_per_unit: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FxRate':
+        if isinstance(x, dict):
+            return cls(
+                series=_atd_read_string(x['series']) if 'series' in x else _atd_missing_json_field('FxRate', 'series'),
+                direction=_atd_read_string(x['direction']) if 'direction' in x else _atd_missing_json_field('FxRate', 'direction'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('FxRate', 'as_of'),
+                quoted=_atd_read_float(x['quoted']) if 'quoted' in x else _atd_missing_json_field('FxRate', 'quoted'),
+                usd_per_unit=_atd_read_float(x['usd_per_unit']) if 'usd_per_unit' in x else _atd_missing_json_field('FxRate', 'usd_per_unit'),
+            )
+        else:
+            _atd_bad_json('FxRate', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['series'] = _atd_write_string(self.series)
+        res['direction'] = _atd_write_string(self.direction)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['quoted'] = _atd_write_float(self.quoted)
+        res['usd_per_unit'] = _atd_write_float(self.usd_per_unit)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FxRate':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class FxRates:
+    """Original type: fx_rates = { ... }
+    """
+
+    source: str
+    currencies: List[Tuple[str, FxRate]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FxRates':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('FxRates', 'source'),
+                currencies=_atd_read_assoc_object_into_list(FxRate.from_json)(x['currencies']) if 'currencies' in x else _atd_missing_json_field('FxRates', 'currencies'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('FxRates', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['currencies'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.currencies)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FxRates':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:

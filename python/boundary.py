@@ -488,6 +488,75 @@ class Signal:
 
 
 @dataclass
+class Major:
+    """Original type: price_unit = [ ... | Major | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Major'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'major'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Minor:
+    """Original type: price_unit = [ ... | Minor | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Minor'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'minor'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class PriceUnit:
+    """Original type: price_unit = [ ... ]
+    """
+
+    value: Union[Major, Minor]
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return self.value.kind
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'PriceUnit':
+        if isinstance(x, str):
+            if x == 'major':
+                return cls(Major())
+            if x == 'minor':
+                return cls(Minor())
+            _atd_bad_json('PriceUnit', x)
+        _atd_bad_json('PriceUnit', x)
+
+    def to_json(self) -> Any:
+        return self.value.to_json()
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'PriceUnit':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Parameter:
     """Original type: parameter = { ... }
     """
@@ -575,6 +644,71 @@ class IntParameter:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'IntParameter':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Conversion:
+    """Original type: conversion = { ... }
+    """
+
+    financial_currency: str
+    trading_currency: str
+    fx_rate: float
+    fx_usd_per_financial: float
+    fx_usd_per_trading: float
+    fx_source: str
+    fx_as_of: str
+    fx_age_days: int
+    domicile: str
+    rate_country: str
+    growth_country: str
+    price_unit: PriceUnit
+    price_unit_divisor: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Conversion':
+        if isinstance(x, dict):
+            return cls(
+                financial_currency=_atd_read_string(x['financial_currency']) if 'financial_currency' in x else _atd_missing_json_field('Conversion', 'financial_currency'),
+                trading_currency=_atd_read_string(x['trading_currency']) if 'trading_currency' in x else _atd_missing_json_field('Conversion', 'trading_currency'),
+                fx_rate=_atd_read_float(x['fx_rate']) if 'fx_rate' in x else _atd_missing_json_field('Conversion', 'fx_rate'),
+                fx_usd_per_financial=_atd_read_float(x['fx_usd_per_financial']) if 'fx_usd_per_financial' in x else _atd_missing_json_field('Conversion', 'fx_usd_per_financial'),
+                fx_usd_per_trading=_atd_read_float(x['fx_usd_per_trading']) if 'fx_usd_per_trading' in x else _atd_missing_json_field('Conversion', 'fx_usd_per_trading'),
+                fx_source=_atd_read_string(x['fx_source']) if 'fx_source' in x else _atd_missing_json_field('Conversion', 'fx_source'),
+                fx_as_of=_atd_read_string(x['fx_as_of']) if 'fx_as_of' in x else _atd_missing_json_field('Conversion', 'fx_as_of'),
+                fx_age_days=_atd_read_int(x['fx_age_days']) if 'fx_age_days' in x else _atd_missing_json_field('Conversion', 'fx_age_days'),
+                domicile=_atd_read_string(x['domicile']) if 'domicile' in x else _atd_missing_json_field('Conversion', 'domicile'),
+                rate_country=_atd_read_string(x['rate_country']) if 'rate_country' in x else _atd_missing_json_field('Conversion', 'rate_country'),
+                growth_country=_atd_read_string(x['growth_country']) if 'growth_country' in x else _atd_missing_json_field('Conversion', 'growth_country'),
+                price_unit=PriceUnit.from_json(x['price_unit']) if 'price_unit' in x else _atd_missing_json_field('Conversion', 'price_unit'),
+                price_unit_divisor=_atd_read_float(x['price_unit_divisor']) if 'price_unit_divisor' in x else _atd_missing_json_field('Conversion', 'price_unit_divisor'),
+            )
+        else:
+            _atd_bad_json('Conversion', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['financial_currency'] = _atd_write_string(self.financial_currency)
+        res['trading_currency'] = _atd_write_string(self.trading_currency)
+        res['fx_rate'] = _atd_write_float(self.fx_rate)
+        res['fx_usd_per_financial'] = _atd_write_float(self.fx_usd_per_financial)
+        res['fx_usd_per_trading'] = _atd_write_float(self.fx_usd_per_trading)
+        res['fx_source'] = _atd_write_string(self.fx_source)
+        res['fx_as_of'] = _atd_write_string(self.fx_as_of)
+        res['fx_age_days'] = _atd_write_int(self.fx_age_days)
+        res['domicile'] = _atd_write_string(self.domicile)
+        res['rate_country'] = _atd_write_string(self.rate_country)
+        res['growth_country'] = _atd_write_string(self.growth_country)
+        res['price_unit'] = (lambda x: x.to_json())(self.price_unit)
+        res['price_unit_divisor'] = _atd_write_float(self.price_unit_divisor)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Conversion':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -695,6 +829,8 @@ class ResidualIncomeInputs:
     net_loans: Optional[float]
     net_loans_row: Optional[str]
     provision_to_net_loans: Optional[float]
+    country_risk_premium: Optional[Parameter] = None
+    conversion: Optional[Conversion] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'ResidualIncomeInputs':
@@ -740,6 +876,8 @@ class ResidualIncomeInputs:
                 net_loans=_atd_read_nullable(_atd_read_float)(x['net_loans']) if 'net_loans' in x else _atd_missing_json_field('ResidualIncomeInputs', 'net_loans'),
                 net_loans_row=_atd_read_nullable(_atd_read_string)(x['net_loans_row']) if 'net_loans_row' in x else _atd_missing_json_field('ResidualIncomeInputs', 'net_loans_row'),
                 provision_to_net_loans=_atd_read_nullable(_atd_read_float)(x['provision_to_net_loans']) if 'provision_to_net_loans' in x else _atd_missing_json_field('ResidualIncomeInputs', 'provision_to_net_loans'),
+                country_risk_premium=Parameter.from_json(x['country_risk_premium']) if 'country_risk_premium' in x else None,
+                conversion=Conversion.from_json(x['conversion']) if 'conversion' in x else None,
             )
         else:
             _atd_bad_json('ResidualIncomeInputs', x)
@@ -786,6 +924,10 @@ class ResidualIncomeInputs:
         res['net_loans'] = _atd_write_nullable(_atd_write_float)(self.net_loans)
         res['net_loans_row'] = _atd_write_nullable(_atd_write_string)(self.net_loans_row)
         res['provision_to_net_loans'] = _atd_write_nullable(_atd_write_float)(self.provision_to_net_loans)
+        if self.country_risk_premium is not None:
+            res['country_risk_premium'] = (lambda x: x.to_json())(self.country_risk_premium)
+        if self.conversion is not None:
+            res['conversion'] = (lambda x: x.to_json())(self.conversion)
         return res
 
     @classmethod
@@ -1045,6 +1187,8 @@ class Inputs:
     projection_years: IntParameter
     enterprise_value: float
     equity_value: float
+    country_risk_premium: Optional[Parameter] = None
+    conversion: Optional[Conversion] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Inputs':
@@ -1098,6 +1242,8 @@ class Inputs:
                 projection_years=IntParameter.from_json(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('Inputs', 'projection_years'),
                 enterprise_value=_atd_read_float(x['enterprise_value']) if 'enterprise_value' in x else _atd_missing_json_field('Inputs', 'enterprise_value'),
                 equity_value=_atd_read_float(x['equity_value']) if 'equity_value' in x else _atd_missing_json_field('Inputs', 'equity_value'),
+                country_risk_premium=Parameter.from_json(x['country_risk_premium']) if 'country_risk_premium' in x else None,
+                conversion=Conversion.from_json(x['conversion']) if 'conversion' in x else None,
             )
         else:
             _atd_bad_json('Inputs', x)
@@ -1152,6 +1298,10 @@ class Inputs:
         res['projection_years'] = (lambda x: x.to_json())(self.projection_years)
         res['enterprise_value'] = _atd_write_float(self.enterprise_value)
         res['equity_value'] = _atd_write_float(self.equity_value)
+        if self.country_risk_premium is not None:
+            res['country_risk_premium'] = (lambda x: x.to_json())(self.country_risk_premium)
+        if self.conversion is not None:
+            res['conversion'] = (lambda x: x.to_json())(self.conversion)
         return res
 
     @classmethod
@@ -2114,6 +2264,10 @@ class Financials:
     ticker: str
     as_of: str
     currency: Optional[str]
+    financial_currency: Optional[str]
+    trading_currency: Optional[str]
+    price_unit: PriceUnit
+    price_unit_divisor: float
     price: Optional[float]
     market_cap: Optional[float]
     country: Optional[str]
@@ -2130,6 +2284,10 @@ class Financials:
                 ticker=_atd_read_string(x['ticker']) if 'ticker' in x else _atd_missing_json_field('Financials', 'ticker'),
                 as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Financials', 'as_of'),
                 currency=_atd_read_nullable(_atd_read_string)(x['currency']) if 'currency' in x else _atd_missing_json_field('Financials', 'currency'),
+                financial_currency=_atd_read_nullable(_atd_read_string)(x['financial_currency']) if 'financial_currency' in x else _atd_missing_json_field('Financials', 'financial_currency'),
+                trading_currency=_atd_read_nullable(_atd_read_string)(x['trading_currency']) if 'trading_currency' in x else _atd_missing_json_field('Financials', 'trading_currency'),
+                price_unit=PriceUnit.from_json(x['price_unit']) if 'price_unit' in x else _atd_missing_json_field('Financials', 'price_unit'),
+                price_unit_divisor=_atd_read_float(x['price_unit_divisor']) if 'price_unit_divisor' in x else _atd_missing_json_field('Financials', 'price_unit_divisor'),
                 price=_atd_read_nullable(_atd_read_float)(x['price']) if 'price' in x else _atd_missing_json_field('Financials', 'price'),
                 market_cap=_atd_read_nullable(_atd_read_float)(x['market_cap']) if 'market_cap' in x else _atd_missing_json_field('Financials', 'market_cap'),
                 country=_atd_read_nullable(_atd_read_string)(x['country']) if 'country' in x else _atd_missing_json_field('Financials', 'country'),
@@ -2147,6 +2305,10 @@ class Financials:
         res['ticker'] = _atd_write_string(self.ticker)
         res['as_of'] = _atd_write_string(self.as_of)
         res['currency'] = _atd_write_nullable(_atd_write_string)(self.currency)
+        res['financial_currency'] = _atd_write_nullable(_atd_write_string)(self.financial_currency)
+        res['trading_currency'] = _atd_write_nullable(_atd_write_string)(self.trading_currency)
+        res['price_unit'] = (lambda x: x.to_json())(self.price_unit)
+        res['price_unit_divisor'] = _atd_write_float(self.price_unit_divisor)
         res['price'] = _atd_write_nullable(_atd_write_float)(self.price)
         res['market_cap'] = _atd_write_nullable(_atd_write_float)(self.market_cap)
         res['country'] = _atd_write_nullable(_atd_write_string)(self.country)

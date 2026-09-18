@@ -1,0 +1,158 @@
+{
+  "source": "FRED H.10 foreign exchange rates, daily noon buying rates in New York (Federal Reserve Board); every series verified live on 2026-09-18",
+  "as_of": "2026-09-18",
+  "max_age_days": 10,
+  "notes": [
+    "H.10 is released weekly on Monday for the week through the previous Friday, so the newest observation can be nine days old on a Sunday; 10 days is the tightest gate that does not fail every weekend.",
+    "Cross rates go through USD: trading per financial = usd_per_unit(financial) / usd_per_unit(trading), both legs recorded. USD itself is 1 by definition.",
+    "A currency with no FRED series (KZT, ILS) is never scraped: the valuation fails naming the pair until a human wires a source.",
+    "currency_countries names the country whose curve and terminal growth a trading currency uses; EUR uses Germany, the euro benchmark curve."
+  ],
+  "currency_countries": {
+    "USD": "United States",
+    "EUR": "Germany",
+    "GBP": "United Kingdom",
+    "JPY": "Japan",
+    "CHF": "Switzerland",
+    "CAD": "Canada",
+    "AUD": "Australia",
+    "KRW": "South Korea",
+    "TWD": "Taiwan",
+    "BRL": "Brazil",
+    "INR": "India",
+    "CNY": "China",
+    "HKD": "Hong Kong",
+    "SGD": "Singapore",
+    "SEK": "Sweden",
+    "ILS": "Israel",
+    "KZT": "Kazakhstan"
+  },
+  "currencies": {
+    "BRL": {
+      "series": "DEXBZUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Brazilian reais per U.S. dollar"
+      ]
+    },
+    "INR": {
+      "series": "DEXINUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Indian rupees per U.S. dollar"
+      ]
+    },
+    "KRW": {
+      "series": "DEXKOUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "South Korean won per U.S. dollar"
+      ]
+    },
+    "TWD": {
+      "series": "DEXTAUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "New Taiwan dollars per U.S. dollar"
+      ]
+    },
+    "JPY": {
+      "series": "DEXJPUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Japanese yen per U.S. dollar"
+      ]
+    },
+    "EUR": {
+      "series": "DEXUSEU",
+      "direction": "usd_per_unit",
+      "notes": [
+        "U.S. dollars per euro"
+      ]
+    },
+    "GBP": {
+      "series": "DEXUSUK",
+      "direction": "usd_per_unit",
+      "notes": [
+        "U.S. dollars per pound sterling"
+      ]
+    },
+    "CHF": {
+      "series": "DEXSZUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Swiss francs per U.S. dollar"
+      ]
+    },
+    "CAD": {
+      "series": "DEXCAUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Canadian dollars per U.S. dollar"
+      ]
+    },
+    "AUD": {
+      "series": "DEXUSAL",
+      "direction": "usd_per_unit",
+      "notes": [
+        "U.S. dollars per Australian dollar"
+      ]
+    },
+    "CNY": {
+      "series": "DEXCHUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Chinese yuan per U.S. dollar"
+      ]
+    },
+    "HKD": {
+      "series": "DEXHKUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Hong Kong dollars per U.S. dollar"
+      ]
+    },
+    "SGD": {
+      "series": "DEXSIUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Singapore dollars per U.S. dollar"
+      ]
+    },
+    "SEK": {
+      "series": "DEXSDUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Swedish kronor per U.S. dollar"
+      ]
+    },
+    "ZAR": {
+      "series": "DEXSFUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "South African rand per U.S. dollar"
+      ]
+    },
+    "MXN": {
+      "series": "DEXMXUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Mexican pesos per U.S. dollar"
+      ]
+    },
+    "NOK": {
+      "series": "DEXNOUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Norwegian kroner per U.S. dollar"
+      ]
+    },
+    "DKK": {
+      "series": "DEXDNUS",
+      "direction": "units_per_usd",
+      "notes": [
+        "Danish kroner per U.S. dollar"
+      ]
+    }
+  }
+}

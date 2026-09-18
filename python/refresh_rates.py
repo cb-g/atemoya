@@ -123,16 +123,22 @@ def _month_end(d: date) -> date:
 # --- parsers: pure functions of fetched text, tested on saved fixtures -------------------
 
 
-def parse_fred_series(body: bytes, series_id: str) -> tuple[date, float]:
-    """The newest observation with a value from one FRED observations response."""
+def parse_fred_latest(body: bytes, series_id: str) -> tuple[date, str]:
+    """The newest observation with a value from one FRED observations response, as text."""
     try:
         parsed = Observations.model_validate_json(body)
     except ValidationError as e:
         raise RefreshError(f"{series_id}: unexpected FRED response: {e}") from e
     for observation in parsed.observations:  # newest first: sort_order=desc
         if observation.value != ".":
-            return observation.date, _percent(observation.value, series_id)
+            return observation.date, observation.value
     raise RefreshError(f"{series_id}: none of the last {len(parsed.observations)} observations has a value")
+
+
+def parse_fred_series(body: bytes, series_id: str) -> tuple[date, float]:
+    """The newest observation as a decimal rate (FRED quotes yields in percent)."""
+    observed, text = parse_fred_latest(body, series_id)
+    return observed, _percent(text, series_id)
 
 
 def parse_boc_valet(body: bytes, series: Mapping[str, str]) -> Fetched:

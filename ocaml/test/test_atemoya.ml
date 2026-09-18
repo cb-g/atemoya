@@ -56,7 +56,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     claims_liability_row;
   }
 
-let financials ?(currency = Some "USD") ?(price = Some 10.)
+let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
+    ?(price_unit = `Major) ?(price_unit_divisor = 1.0) ?(price = Some 10.)
     ?(market_cap = Some 5000.) ?(country = Some "United States")
     ?(industry = Some "Consumer Electronics") ?(provider = "yfinance")
     ?(statements_unavailable = "") periods : Boundary_t.financials =
@@ -64,6 +65,10 @@ let financials ?(currency = Some "USD") ?(price = Some 10.)
     ticker = "TEST";
     as_of = "2026-09-10T00:00:00+00:00";
     currency;
+    financial_currency = Option.value financial_currency ~default:currency;
+    trading_currency = Option.value trading_currency ~default:currency;
+    price_unit;
+    price_unit_divisor;
     price;
     market_cap;
     country;
@@ -109,6 +114,7 @@ let assumptions : Dcf.assumptions =
     beta = param 1.0;
     beta_source = `Industry_table;
     debt_spread = param 0.02;
+    country_risk_premium = None;
     growth_clamp_lower = param (-0.20);
     growth_clamp_upper = param 0.50;
     mean_reversion_lambda = param 0.25;
@@ -154,9 +160,10 @@ let params_json =
   "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "bank_terminal_roe_spread": {"value": 0.02, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
   "insurer_terminal_roe_spread": {"value": 0.02, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
+  "mature_market_erp": {"value": 0.0423, "source": "Damodaran mature base", "as_of": "2026-01-01", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
-    "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03}},
+    "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03, "Brazil": 0.035}},
   "unwired": {"growth_clamp": {"upper": 0.5}}
   }|}
 
@@ -166,11 +173,11 @@ let params : Params.t =
     equity_risk_premiums =
       Reference_j.country_table_of_string
         (country_table_json ~source:"Damodaran Jan 2026"
-           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423, "South Korea": 0.0487}|});
+           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423, "South Korea": 0.0487, "Brazil": 0.0747}|});
     tax_rates =
       Reference_j.country_table_of_string
         (country_table_json ~source:"PwC 2026"
-           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30, "South Korea": 0.275}|});
+           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30, "South Korea": 0.275, "Brazil": 0.34}|});
     industry_betas =
       Reference_j.industry_table_of_string
         {|{"source": "sector betas 2026", "as_of": "2026-01-01", "max_age_days": 400,
@@ -184,6 +191,19 @@ let params : Params.t =
             "Insurer": {"lens": "operating-profit multiple with the solvency ratio", "admissible_models": ["residual_income_insurer"], "never": "an FCFF DCF", "floor_basis_default": "adjusted book value per share"},
             "PreProfit": {"lens": "cash runway vs the catalyst calendar", "admissible_models": [], "never": "any multiple", "floor_basis_default": "no floor until the catalyst", "floor_present_default": false},
             "Wrapper": {"lens": "NAV premium or discount", "admissible_models": [], "never": "headline yield", "floor_basis_default": "NAV per unit"}}}|};
+    fx_sources =
+      Reference_j.fx_sources_of_string
+        {|{"source": "test", "as_of": "2026-09-10", "max_age_days": 10,
+           "currency_countries": {"USD": "United States", "GBP": "United Kingdom", "BRL": "Brazil", "EUR": "Germany"},
+           "currencies": {"BRL": {"series": "DEXBZUS", "direction": "units_per_usd"},
+                          "EUR": {"series": "DEXUSEU", "direction": "usd_per_unit"},
+                          "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit"}}}|};
+    fx_rates =
+      Reference_j.fx_rates_of_string
+        {|{"source": "test", "currencies": {
+            "BRL": {"series": "DEXBZUS", "direction": "units_per_usd", "as_of": "2026-09-08", "quoted": 5.0, "usd_per_unit": 0.2},
+            "EUR": {"series": "DEXUSEU", "direction": "usd_per_unit", "as_of": "2026-09-09", "quoted": 1.25, "usd_per_unit": 1.25},
+            "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit", "as_of": "2026-08-01", "quoted": 1.3, "usd_per_unit": 1.3}}}|};
   }
 
 let declaration ?(lens_note = "") ?(scope_limits = []) entity_class =
@@ -1008,7 +1028,9 @@ let test_flow_chart_names_every_reason () =
       "growth not derivable"; "fair value is not finite"; "non-positive fair value";
       "exceeds sanity bound"; "likely structural break; check entity_class";
       "is not positive"; "roe not derivable"; "payout not derivable"; "cost of equity";
-      "insurer model requires filed-statement data" ]
+      "insurer model requires filed-statement data"; "fx not available for";
+      "missing market data: financial_currency"; "missing market data: trading_currency";
+      "fx for" ]
 
 (* --- the insurer model --- *)
 
@@ -1106,6 +1128,167 @@ let test_insurer_routes_and_floors () =
   check_reason refused [ "insurer model requires filed-statement data; no SEC filings for ALV.DE" ];
   Alcotest.(check (option model)) "routed but never ran" (Some `Residual_income_insurer) refused.model;
   check_floor "not assessed" refused None
+
+(* --- cross-currency and ADR --- *)
+
+let brl_bank ?(price = Some 10.) ?(market_cap = Some 1000.) () =
+  (* the bank fixture's statements, declared in BRL under a USD line *)
+  financials ~currency:None ~financial_currency:(Some "BRL") ~trading_currency:(Some "USD")
+    ~country:(Some "Brazil") ~industry:(Some "Banks - Diversified") ~price ~market_cap
+    (bank_history ())
+
+let test_fx_rate_through_usd () =
+  let legs = get (Fx.rate params.fx_sources params.fx_rates ~today ~financial:"BRL" ~trading:"USD") in
+  check_float "BRL to USD" 0.2 legs.fx_rate;
+  check_float "usd per BRL" 0.2 legs.usd_per_financial;
+  check_float "usd per USD" 1.0 legs.usd_per_trading;
+  Alcotest.(check string) "dated by the BRL leg" "2026-09-08" legs.as_of;
+  Alcotest.(check int) "age" 2 legs.age_days;
+  check_mentions "source" legs.source [ "BRL via FRED DEXBZUS" ];
+  let legs = get (Fx.rate params.fx_sources params.fx_rates ~today ~financial:"BRL" ~trading:"EUR") in
+  check_float "cross rate" (0.2 /. 1.25) legs.fx_rate;
+  check_mentions "both legs" legs.source [ "BRL via FRED DEXBZUS"; "EUR via FRED DEXUSEU"; "through USD" ];
+  Alcotest.(check string) "the older leg dates it" "2026-09-08" legs.as_of;
+  check_error "missing pair" (Fx.rate params.fx_sources params.fx_rates ~today ~financial:"KZT" ~trading:"USD")
+    [ "fx not available for KZT/USD" ];
+  check_error "stale leg" (Fx.rate params.fx_sources params.fx_rates ~today ~financial:"USD" ~trading:"GBP")
+    [ "fx for GBP"; "40 days old"; "max_age_days 10" ];
+  Alcotest.(check string) "trading currency's country" "United Kingdom" (get (Fx.country_of params.fx_sources "GBP"));
+  check_error "unknown currency" (Fx.country_of params.fx_sources "XXX") [ "XXX" ]
+
+let test_fx_convert_scales_totals_only () =
+  let c = Fx.convert ~rate:2.0 (brl_bank ()) in
+  let p = List.hd c.periods in
+  Alcotest.(check (option approx)) "net income doubled" (Some 400.) p.net_income;
+  Alcotest.(check (option approx)) "book doubled" (Some 2000.) p.book_equity;
+  Alcotest.(check (option approx)) "dividends doubled" (Some 200.) p.dividends_paid;
+  Alcotest.(check (option approx)) "revenue doubled" (Some 2000.) p.total_revenue;
+  Alcotest.(check (option approx)) "price untouched" (Some 10.) c.price;
+  Alcotest.(check (option approx)) "market cap untouched" (Some 1000.) c.market_cap;
+  Alcotest.(check (option string)) "currency becomes the trading one" (Some "USD") c.currency;
+  Alcotest.(check (option string)) "ratio unchanged: signature still fires"
+    (Some "Banks - Diversified") c.industry
+
+let test_international_capm () =
+  let a = get (Params.resolve_cross params ~today ~domicile:"Brazil" ~rate_country:"United States" ~industry:None) in
+  check_float "risk-free from the trading country" 0.0468 a.risk_free_rate.value;
+  Alcotest.(check string) "rf key" "United States/7y" a.risk_free_rate.key;
+  check_float "terminal growth from the trading country" 0.02 a.terminal_growth_rate.value;
+  check_float "tax from the domicile" 0.34 a.statutory_tax_rate.value;
+  check_float "mature base as the erp" 0.0423 a.equity_risk_premium.value;
+  Alcotest.(check string) "erp key" "mature market" a.equity_risk_premium.key;
+  (match a.country_risk_premium with
+  | None -> Alcotest.fail "no country risk premium"
+  | Some crp ->
+      check_float "crp = total less base" (0.0747 -. 0.0423) crp.value;
+      Alcotest.(check string) "crp key is the domicile" "Brazil" crp.key;
+      check_mentions "crp source" crp.source [ "less the mature-market base" ]);
+  let inputs, _ =
+    get (Residual_income.value a ~terminal_spread:spread ~country:"Brazil" (Fx.convert ~rate:0.2 (brl_bank ())))
+  in
+  check_float "ke = rf + beta * mature + crp" (0.0468 +. (1.0 *. 0.0423) +. (0.0747 -. 0.0423)) inputs.cost_of_equity;
+  let domestic = get (Params.resolve params ~today ~country:"United States" ~industry:None) in
+  Alcotest.(check bool) "same-currency path has no crp" true (Option.is_none domestic.country_risk_premium);
+  let inputs, _ = get (Residual_income.value domestic ~terminal_spread:spread ~country:"United States" (bank_financials (bank_history ()))) in
+  check_float "domestic ke unchanged" (0.0468 +. (1.0 *. 0.0446)) inputs.cost_of_equity
+
+let test_adr_ratio_invariance () =
+  (* the same company: one line at price 10 (1:1), one at price 50 (1:5), same market cap *)
+  let ordinary = run ~declared:(Some (declaration `Bank)) (brl_bank ~price:(Some 10.) ()) in
+  let adr = run ~declared:(Some (declaration `Bank)) (brl_bank ~price:(Some 50.) ()) in
+  Alcotest.check status "ordinary ok" `Ok ordinary.status;
+  Alcotest.check status "adr ok" `Ok adr.status;
+  let fv r = Option.get r.Boundary_t.fair_value and mos r = Option.get r.Boundary_t.margin_of_safety in
+  check_float "margin of safety identical" (mos ordinary) (mos adr);
+  check_float "fair value per ADR is five ordinaries" (5. *. fv ordinary) (fv adr);
+  Alcotest.(check (option string)) "valued in the trading currency" (Some "USD") adr.currency;
+  match adr.inputs with
+  | Some (`Residual_income i) -> (
+      match i.conversion with
+      | None -> Alcotest.fail "no conversion recorded"
+      | Some c ->
+          check_float "fx rate" 0.2 c.fx_rate;
+          Alcotest.(check string) "rate country" "United States" c.rate_country;
+          Alcotest.(check string) "growth country" "United States" c.growth_country;
+          Alcotest.(check string) "domicile" "Brazil" c.domicile;
+          Alcotest.(check string) "fx as_of" "2026-09-08" c.fx_as_of;
+          check_float "book converted" 200. i.book_equity;
+          Alcotest.(check bool) "crp recorded" true (Option.is_some i.country_risk_premium))
+  | _ -> Alcotest.fail "wrong inputs"
+
+let test_minor_unit_guard () =
+  (* USD statements under a GBP line quoted in pence: the fetch divides the price by 100.
+     With effective shares = market cap / price the margin of safety is invariant to the
+     unit, but the reported fair value is not: unconverted it comes out in pence. *)
+  let gbp price ~price_unit ~price_unit_divisor =
+    financials ~currency:None ~financial_currency:(Some "USD") ~trading_currency:(Some "GBP")
+      ~country:(Some "United Kingdom") ~price:(Some price) ~market_cap:(Some 5000.)
+      ~price_unit ~price_unit_divisor (history ())
+  in
+  let fresh_gbp = { params with fx_rates = Reference_j.fx_rates_of_string
+    {|{"source": "t", "currencies": {"GBP": {"series": "DEXUSUK", "direction": "usd_per_unit", "as_of": "2026-09-09", "quoted": 1.25, "usd_per_unit": 1.25}}}|} } in
+  let uk_rates = { fresh_gbp with risk_free = Reference_j.risk_free_rates_of_string
+    {|{"max_age_days": 45, "tenors": ["7y"], "countries": {"United Kingdom": {"source": "t", "tier": "official", "as_of": "2026-09-08", "rates": {"7y": 0.0468}}}}|};
+    equity_risk_premiums = Reference_j.country_table_of_string (country_table_json ~source:"t" {|{"United States": 0.0446, "United Kingdom": 0.0501}|});
+    tax_rates = Reference_j.country_table_of_string (country_table_json ~source:"t" {|{"United States": 0.21, "United Kingdom": 0.25}|});
+    params = Reference_j.params_of_string (String.concat "" [ {|{"projection_years": {"value": 7, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
+      "debt_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
+      "bank_nii_ratio_threshold": {"value": 0.25, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
+      "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
+      "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
+      "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
+      "bank_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
+      "insurer_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
+      "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
+      "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400, "values": {"United States": 0.02, "United Kingdom": 0.0}},
+      "unwired": {}}|} ]) } in
+  let run_gbp fin = Valuation.run uk_rates ~today ~declaration:(Some (declaration `OperatingCompany)) fin in
+  let converted = run_gbp (gbp 10. ~price_unit:`Minor ~price_unit_divisor:100.) in
+  let unconverted = run_gbp (gbp 1000. ~price_unit:`Major ~price_unit_divisor:1.) in
+  (match converted.failed_reason with Some r -> Alcotest.failf "converted: %s" r | None -> ());
+  (match unconverted.failed_reason with Some r -> Alcotest.failf "unconverted: %s" r | None -> ());
+  let fv r = Option.get r.Boundary_t.fair_value and mos r = Option.get r.Boundary_t.margin_of_safety in
+  check_float "the unit error cancels in the margin of safety" (mos converted) (mos unconverted);
+  check_float "but the unconverted fair value is 100x, in pence" (100. *. fv converted) (fv unconverted);
+  Alcotest.(check bool) "converted fair value is in pounds, on the order of the price" true
+    (fv converted > 1. && fv converted < 100.);
+  match converted.inputs with
+  | Some (`Dcf i) -> (
+      match i.conversion with
+      | Some c ->
+          Alcotest.(check bool) "unit recorded" true (c.price_unit = `Minor);
+          check_float "divisor recorded" 100. c.price_unit_divisor;
+          Alcotest.(check string) "rate country" "United Kingdom" c.rate_country;
+          check_float "USD statements to GBP" (1. /. 1.25) c.fx_rate
+      | None -> Alcotest.fail "no conversion")
+  | _ -> Alcotest.fail "wrong inputs"
+
+let test_currency_gate_failures () =
+  let v = run ~declared:(Some (declaration `Bank)) (financials ~financial_currency:None (bank_history ())) in
+  check_reason v [ "missing market data: financial_currency" ];
+  let v =
+    run ~declared:(Some (declaration `Bank))
+      (financials ~currency:None ~financial_currency:(Some "USD") ~trading_currency:None (bank_history ()))
+  in
+  check_reason v [ "missing market data: trading_currency" ];
+  let kzt =
+    financials ~currency:None ~financial_currency:(Some "KZT") ~trading_currency:(Some "USD")
+      ~country:(Some "Brazil") ~industry:(Some "Banks - Diversified") (bank_history ())
+  in
+  let v = run ~declared:(Some (declaration `Bank)) kzt in
+  check_reason v [ "fx not available for KZT/USD" ];
+  Alcotest.(check (option model)) "routed before the gate" (Some `Residual_income) v.model;
+  Alcotest.(check bool) "nothing computed" true (Option.is_none v.inputs)
+
+let test_same_currency_path_carries_no_conversion () =
+  let v = run (financials (history ())) in
+  match v.inputs with
+  | Some (`Dcf i) ->
+      Alcotest.(check bool) "no conversion" true (Option.is_none i.conversion);
+      Alcotest.(check bool) "no crp" true (Option.is_none i.country_risk_premium);
+      check_mentions "json omits them" (Boundary_j.string_of_valuation v) [ {|"cost_of_equity"|} ];
+      if contains (Boundary_j.string_of_valuation v) "conversion" then Alcotest.fail "conversion leaked into a same-currency record"
+  | _ -> Alcotest.fail "wrong inputs"
 
 (* --- batch summary --- *)
 
@@ -1246,13 +1429,13 @@ let test_missing_statement_fields () =
   check_nulls v
 
 let test_missing_market_data () =
-  let v =
-    run
-      (financials ~currency:None ~market_cap:None [ full_period () ])
-  in
-  check_reason v [ "currency"; "market_cap" ];
-  check_nulls v
-
+  let v = run (financials ~market_cap:None (history ())) in
+  check_reason v [ "missing market data"; "market_cap" ];
+  check_nulls v;
+  (* a missing currency stops at the gate, before any model *)
+  let v = run (financials ~currency:None (history ())) in
+  check_reason v [ "missing market data: financial_currency" ];
+  Alcotest.(check bool) "nothing computed" true (Option.is_none v.inputs)
 let test_wacc_below_terminal_growth () =
   let v =
     Valuation.run ~declaration:(Some (declaration `OperatingCompany))
@@ -1267,6 +1450,7 @@ let test_wacc_below_terminal_growth () =
                "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "bank_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
                "insurer_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
+               "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
                "unwired": {}}|} }
@@ -1385,6 +1569,16 @@ let () =
           case "guards fail, never zero" test_ri_guards;
           case "loan-loss ratios recorded" test_ri_loan_loss_recorded;
           case "a bank routes to residual income, never the dcf" test_bank_routes_to_residual_income;
+        ] );
+      ( "cross-currency",
+        [
+          case "fx rate through usd, dated by the older leg" test_fx_rate_through_usd;
+          case "conversion scales totals, not price" test_fx_convert_scales_totals_only;
+          case "international capm decomposes; domestic form untouched" test_international_capm;
+          case "adr ratio invariance" test_adr_ratio_invariance;
+          case "minor-unit price guard" test_minor_unit_guard;
+          case "currency gate failures name the field or pair" test_currency_gate_failures;
+          case "same-currency record carries no conversion" test_same_currency_path_carries_no_conversion;
         ] );
       ( "insurer",
         [

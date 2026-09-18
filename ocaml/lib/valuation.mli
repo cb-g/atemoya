@@ -1,15 +1,17 @@
 (** Assembles the per-ticker output contract: the declared entity class checked
-    against the statement signatures, the admissibility decision, parameter
-    resolution, the routed model, sanity checks, signal, floor, and the
-    [`Failed]-with-nulls shape.
+    against the statement signatures, the admissibility decision, the currency
+    gate, parameter resolution, the routed model, sanity checks, signal, floor,
+    and the [`Failed]-with-nulls shape.
 
-    Order: declaration and class check -> admissibility -> country -> resolve
-    parameters -> the first admissible model -> sanity bound -> record. No
-    declaration, or a signature contradicting a declared [`OperatingCompany],
-    is [`Failed] before anything else. A class the table admits no model for is
-    [`Failed] with the lens named. Each model's arithmetic lives in its own
-    module; [Dcf.value] is unchanged by the addition of [Residual_income].
-    [floor] is always populated and gates nothing. *)
+    Order: declaration and class check -> admissibility -> country -> currency
+    gate -> resolve parameters -> the first admissible model -> sanity bound ->
+    record. The currency gate: with both currencies present and equal the
+    same-currency path runs exactly as before; otherwise the record's statement
+    totals are converted at one recorded FX rate into the trading currency, the
+    parameters come from [Params.resolve_cross], the same model runs on the
+    converted record, and the conversion rides on its inputs. A missing currency
+    field or FX pair is [`Failed] naming it. Each model's arithmetic lives in its
+    own module. [floor] is always populated and gates nothing. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)

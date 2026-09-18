@@ -1,1 +1,1 @@
-{"ticker": "NIL", "as_of": "2026-09-18T00:00:00+00:00", "currency": null, "price": null, "market_cap": null, "country": null, "industry": null, "periods": [], "notes": ["fixture: nothing fetched"]}
+{"ticker": "NIL", "as_of": "2026-09-18T00:00:00+00:00", "currency": null, "price": null, "market_cap": null, "country": null, "industry": null, "periods": [], "notes": ["fixture: nothing fetched"], "financial_currency": null, "trading_currency": null, "price_unit": "major", "price_unit_divisor": 1.0}

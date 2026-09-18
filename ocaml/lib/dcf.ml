@@ -3,6 +3,7 @@ open Boundary_t
 type assumptions = {
   risk_free_rate : parameter;
   equity_risk_premium : parameter;
+  country_risk_premium : parameter option;
   beta : parameter;
   beta_source : beta_source;
   debt_spread : parameter;
@@ -146,7 +147,12 @@ let value a ~country (fin : financials) =
             ~pretax_income:p.pretax_income ~tax_provision:p.tax_provision
         in
         let cost_of_equity =
-          a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value)
+          let domestic =
+            a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value)
+          in
+          match a.country_risk_premium with
+          | None -> domestic
+          | Some crp -> domestic +. crp.value
         in
         let cost_of_debt = a.risk_free_rate.value +. a.debt_spread.value in
         let wacc =
@@ -227,9 +233,11 @@ let value a ~country (fin : financials) =
                   growth_path;
                   risk_free_rate = a.risk_free_rate;
                   equity_risk_premium = a.equity_risk_premium;
+                  country_risk_premium = a.country_risk_premium;
                   beta = a.beta;
                   beta_source = a.beta_source;
                   cost_of_equity;
+                  conversion = None;
                   debt_spread = a.debt_spread;
                   cost_of_debt;
                   wacc;

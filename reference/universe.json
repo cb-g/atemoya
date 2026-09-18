@@ -96,20 +96,18 @@
     {
       "ticker": "IBN",
       "entity_class": "Bank",
-      "note": "foreign bank ADR, INR statements; Bank, admissible, then fails on its stale non-U.S. curve",
+      "note": "Indian bank ADR, INR statements under a USD line; as HDB",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "risk_free_rate for"
+      "expected_status": "Ok"
     },
     {
       "ticker": "ITUB",
       "entity_class": "Bank",
-      "note": "foreign bank ADR, BRL statements under a USD price; Brazil's curve is fetched, so it now stops on the single-currency rule, which is the cross-currency layer's job",
+      "note": "foreign bank ADR, BRL statements under a USD line; converted at the FRED rate, discounted at the U.S. curve with Brazil's country risk premium",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "missing market data: currency"
+      "expected_status": "Ok"
     },
     {
       "ticker": "ALL",
@@ -147,11 +145,10 @@
     {
       "ticker": "HDB",
       "entity_class": "Bank",
-      "note": "Indian bank ADR; was a +5316% currency bug in the previous implementation; Bank, admissible, then fails on its stale non-U.S. curve",
+      "note": "Indian bank ADR, INR statements under a USD line; converted at the FRED rate and discounted at the U.S. curve with India's country risk premium, so India's manual curve no longer gates it",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "risk_free_rate for"
+      "expected_status": "Ok"
     },
     {
       "ticker": "GS",
@@ -172,20 +169,19 @@
     {
       "ticker": "KSPI",
       "entity_class": "Bank",
-      "note": "Kazakh ADR; Generic until the Kazakh curve is refreshed; Bank, admissible, then fails on its stale non-U.S. curve",
+      "note": "fintech; .info says Software, no NII row; KZT statements under a USD line and FRED carries no tenge series, so the pair is refused until a source is wired",
       "lens_note": "fintech; .info says Software, no NII row on the vendor's statements. The human declaration wins.",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "risk_free_rate for"
+      "expected_reason": "fx not available for KZT/USD"
     },
     {
       "ticker": "TSM",
       "entity_class": "OperatingCompany",
-      "note": "Taiwanese ADR; Generic until the Taiwanese curve is refreshed",
+      "note": "Taiwanese ADR, TWD statements under a USD line; converted and discounted at the U.S. curve with Taiwan's country risk premium, so Taiwan's manual curve no longer gates it",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "risk_free_rate for"
+      "expected_status": "Ok"
     },
     {
       "ticker": "005930.KS",
@@ -199,6 +195,30 @@
       "ticker": "000660.KS",
       "entity_class": "OperatingCompany",
       "note": "Korean listing; South Korea's curve is the OECD 10y via FRED, 7y substituted and recorded",
+      "lens_note": "",
+      "scope_limits": [],
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "SAP",
+      "entity_class": "OperatingCompany",
+      "note": "ADR, EUR statements under a USD line; Germany's curve is official-fresh but the U.S. curve applies (the line trades in USD)",
+      "lens_note": "",
+      "scope_limits": [],
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "SONY",
+      "entity_class": "OperatingCompany",
+      "note": "ADR, JPY statements under a USD line",
+      "lens_note": "",
+      "scope_limits": [],
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "AZN.L",
+      "entity_class": "OperatingCompany",
+      "note": "USD statements under a GBp (pence) price: both the currency and the minor-unit conversion; the UK curve applies",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Ok"

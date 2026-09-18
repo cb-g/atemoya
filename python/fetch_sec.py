@@ -222,12 +222,17 @@ def fetch_filed(symbol: str, as_of: datetime, user_agent: str, tickers: Mapping[
             unavailable = f"SEC companyfacts for CIK {cik}: HTTP {e.code}"
         except (urllib.error.URLError, ValueError) as e:
             unavailable = f"SEC companyfacts for CIK {cik}: {type(e).__name__}: {e}"
+    q = fetch.quote_fields(quote, notes)
     return boundary.Financials(
         ticker=symbol,
         as_of=as_of.isoformat(timespec="seconds"),
-        currency=fetch._single_currency(quote, notes) if quote else None,  # pyright: ignore[reportPrivateUsage]
-        price=quote.price if quote else None,
-        market_cap=quote.market_cap if quote else None,
+        currency=q["currency"],  # pyright: ignore[reportArgumentType]
+        financial_currency=q["financial_currency"],  # pyright: ignore[reportArgumentType]
+        trading_currency=q["trading_currency"],  # pyright: ignore[reportArgumentType]
+        price_unit=q["price_unit"],  # pyright: ignore[reportArgumentType]
+        price_unit_divisor=q["price_unit_divisor"],  # pyright: ignore[reportArgumentType]
+        price=q["price"],  # pyright: ignore[reportArgumentType]
+        market_cap=q["market_cap"],  # pyright: ignore[reportArgumentType]
         country=profile.country if profile else None,
         industry=profile.industry if profile else None,
         periods=periods,
