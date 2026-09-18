@@ -60,3 +60,32 @@ def test_period_carries_the_labels() -> None:
     assert period.depreciation_amortization is None and period.depreciation_amortization_row is None
     assert not fetch._is_empty(period)  # pyright: ignore[reportPrivateUsage]
     assert fetch._is_empty(fetch._period(end, None, None, None))  # pyright: ignore[reportPrivateUsage]
+
+
+def test_dividends_are_flipped_to_cash_paid_and_labelled() -> None:
+    end = date(2025, 12, 31)
+    cf = fetch.CashFlowStatement.model_validate(
+        {"period_end": end, **fetch._cashflow_values({"Cash Dividends Paid": -16.62, "Capital Expenditure": -1.0, "Change In Working Capital": 0.0})}  # pyright: ignore[reportPrivateUsage]
+    )
+    assert (cf.dividends_paid, cf.dividends_paid_row) == (16.62, "Cash Dividends Paid")
+    zero = fetch.CashFlowStatement.model_validate(
+        {"period_end": end, **fetch._cashflow_values({"Common Stock Dividend Paid": 0.0, "Capital Expenditure": -1.0})}  # pyright: ignore[reportPrivateUsage]
+    )
+    assert (zero.dividends_paid, zero.dividends_paid_row) == (0.0, "Common Stock Dividend Paid")
+    none = fetch.CashFlowStatement.model_validate(
+        {"period_end": end, **fetch._cashflow_values({"Capital Expenditure": -1.0})}  # pyright: ignore[reportPrivateUsage]
+    )
+    assert (none.dividends_paid, none.dividends_paid_row) == (None, None)
+
+
+def test_bank_balance_and_income_rows() -> None:
+    end = date(2025, 12, 31)
+    bs = fetch.BalanceSheet.model_validate(
+        {"period_end": end, **fetch._balance_values({"Loans Receivable": 7172.16, "Stockholders Equity": 2491.84, "Total Debt": 1.0})}  # pyright: ignore[reportPrivateUsage]
+    )
+    assert (bs.net_loans, bs.net_loans_row) == (7172.16, "Loans Receivable")
+    inc = fetch.IncomeStatement.model_validate(
+        {"period_end": end, **fetch._income_values({"Net Income": 57.05, "Net Interest Income": 95.44})}  # pyright: ignore[reportPrivateUsage]
+    )
+    assert inc.net_income == 57.05
+    assert (inc.provision_for_credit_losses, inc.provision_for_credit_losses_row) == (None, None)

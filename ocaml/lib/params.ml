@@ -124,6 +124,9 @@ let scalar (s : scalar) ~today ~name =
 let classification_threshold t ~today =
   scalar t.params.bank_nii_ratio_threshold ~today ~name:"bank_nii_ratio_threshold"
 
+let bank_terminal_roe_spread t ~today =
+  scalar t.params.bank_terminal_roe_spread ~today ~name:"bank_terminal_roe_spread"
+
 let resolve t ~today ~country ~industry =
   let* projection_years =
     let p = t.params.projection_years in

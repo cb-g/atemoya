@@ -22,9 +22,9 @@
    iff none was made; [model] is the model the record was routed to and is null when no
    model was admissible for the class or routing failed before one was chosen;
    [class_check] is null iff the signature threshold parameter could not be resolved;
-   [inputs] is non-null iff the arithmetic ran to completion, which includes a valuation
-   that then failed a sanity check. A model never runs on a class the admissibility table
-   does not admit it for. [floor] is always present with a non-empty basis and gates
+   [inputs] is non-null iff a model's arithmetic ran to completion, which includes a
+   valuation that then failed a sanity check, and is tagged with the model that produced
+   it. A model never runs on a class the admissibility table does not admit it for. [floor] is always present with a non-empty basis and gates
    nothing here. Every parameter carries its value, lookup key, source, as_of and age in
    days measured at [valued_on], so "where did this number come from" is answerable from
    the record alone. *)
@@ -46,6 +46,13 @@ type fiscal_period = {
   total_debt : float nullable;                (* >= 0; never a substituted zero *)
   total_debt_source : string nullable;        (* the vendor row or row sum that supplied it *)
   book_equity : float nullable;               (* total stockholders' equity at period end; any sign *)
+  net_income : float nullable;                (* any sign *)
+  dividends_paid : float nullable;            (* >= 0; cash dividends paid in the period *)
+  dividends_paid_row : string nullable;
+  provision_for_credit_losses : float nullable;   (* >= 0; the vendor exposes no such row on any bank probed (2026-09-18) *)
+  provision_for_credit_losses_row : string nullable;
+  net_loans : float nullable;                 (* >= 0; banks only *)
+  net_loans_row : string nullable;
 }
 
 type financials = {
@@ -64,7 +71,10 @@ type financials = {
 
 (* The valuation models that exist. A model runs only where reference/admissibility.json
    lists it for the declared entity class. *)
-type model = [ Dcf <json name="dcf"> ]
+type model = [
+  | Dcf <json name="dcf">                             (* FCFF DCF; OperatingCompany *)
+  | Residual_income <json name="residual_income">     (* excess returns over book; Bank *)
+]
 
 (* What a company is judged on: a controlled vocabulary of economic drivers, not sectors.
    Declared by a human in reference/universe.json (or on the command line), never inferred.
@@ -201,6 +211,60 @@ type inputs = {
   equity_value : float;               (* enterprise_value - net_debt *)
 }
 
+(* Every value the residual-income model used, plus the intermediates. Fair equity value
+   = book value today + PV of excess returns (ROE_t - cost of equity) x start-of-year book,
+   with ROE mean-reverting toward the cost of equity and book compounding by retained
+   earnings, plus a terminal excess return at a provenanced spread. Never an earnings
+   multiple, anywhere. The loan-loss ratios are recorded for the reader and gate nothing. *)
+type residual_income_inputs = {
+  fiscal_period_end : string;
+  country : string;
+  industry : string nullable;
+  price : float;
+  market_cap : float;
+  shares : float;                     (* effective shares = market_cap / price *)
+  book_equity : float;                (* latest period; > 0 *)
+  book_value_per_share : float;
+  net_income : float;                 (* latest period *)
+  roe_0 : float;                      (* mean of net_income / book_equity over roe_periods *)
+  roe_periods : string list;          (* at least 2 *)
+  payout_ratio : float;               (* mean of dividends_paid / net_income over payout_periods, clamped to [0, 1] *)
+  retention : float;                  (* 1 - payout_ratio; buybacks are not payout here *)
+  payout_periods : string list;       (* at least 2 *)
+  dividends_paid : float nullable;    (* latest period *)
+  dividends_paid_row : string nullable;
+  risk_free_rate : parameter;
+  equity_risk_premium : parameter;
+  beta : parameter;
+  beta_source : beta_source;
+  cost_of_equity : float;             (* risk_free_rate + beta * equity_risk_premium *)
+  mean_reversion_lambda : parameter;
+  terminal_growth_rate : parameter;
+  bank_terminal_roe_spread : parameter;   (* terminal excess return over cost of equity, on book *)
+  projection_years : int_parameter;
+  roe_path : float list;              (* ROE_1 .. ROE_N: ke + (roe_0 - ke) * exp(-lambda * t) *)
+  book_value_path : float list;       (* start-of-year book for years 1 .. N *)
+  excess_return_path : float list;    (* (ROE_t - ke) * book at start of t *)
+  pv_excess_returns : float;
+  terminal_value : float;             (* spread * book at end of N / (ke - terminal growth), at N *)
+  pv_terminal_value : float;
+  equity_value : float;               (* book_equity + pv_excess_returns + pv_terminal_value *)
+  justified_price_to_book : float;    (* equity_value / book_equity *)
+  net_interest_income : float nullable;
+  provision_for_credit_losses : float nullable;
+  provision_for_credit_losses_row : string nullable;
+  provision_to_net_interest_income : float nullable;
+  net_loans : float nullable;
+  net_loans_row : string nullable;
+  provision_to_net_loans : float nullable;
+}
+
+(* The inputs of whichever model ran, tagged with it. *)
+type model_inputs = [
+  | Dcf <json name="dcf"> of inputs
+  | Residual_income <json name="residual_income"> of residual_income_inputs
+]
+
 type valuation = {
   ticker : string;
   as_of : string;                     (* the fetch timestamp, from financials *)
@@ -218,5 +282,5 @@ type valuation = {
   scope_limits : string list;             (* what the models cannot see for this name, verbatim from the declaration *)
   status : status;
   failed_reason : string nullable;
-  inputs : inputs nullable;
+  inputs : model_inputs nullable;
 }

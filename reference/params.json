@@ -41,6 +41,12 @@
       "Mean reversion causes growth rates to decay toward terminal growth. lambda controls speed: 0.1=slow (reaches terminal ~year 10), 0.25=moderate (~year 4), 0.5=fast (~year 2). Set enabled=false for constant growth (legacy behavior)."
     ]
   },
+  "bank_terminal_roe_spread": {
+    "value": 0.02,
+    "source": "assumption: excess return over the cost of equity, on book value, that a bank earns in perpetuity after the explicit horizon; the previous implementation hardcoded ROE = cost of equity + 2%",
+    "as_of": "2026-09-18",
+    "max_age_days": 400
+  },
   "terminal_growth_rate": {
     "source": "per-country long-run nominal growth estimates, June 2026 vintage",
     "as_of": "2026-06-01",

@@ -71,47 +71,45 @@
     {
       "ticker": "JPM",
       "entity_class": "Bank",
-      "note": "U.S. bank",
+      "note": "U.S. bank; valued by residual income",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Bank"
+      "expected_status": "Ok"
     },
     {
       "ticker": "BAC",
       "entity_class": "Bank",
-      "note": "U.S. bank",
+      "note": "U.S. bank; valued by residual income",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Bank"
+      "expected_status": "Ok"
     },
     {
       "ticker": "NU",
       "entity_class": "Bank",
-      "note": "foreign bank ADR, reports in USD",
+      "note": "foreign bank ADR, reports in USD; Bank, admissible, then fails on its stale non-U.S. curve",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Bank"
+      "expected_reason": "risk_free_rate for"
     },
     {
       "ticker": "IBN",
       "entity_class": "Bank",
-      "note": "foreign bank ADR, INR statements",
+      "note": "foreign bank ADR, INR statements; Bank, admissible, then fails on its stale non-U.S. curve",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Bank"
+      "expected_reason": "risk_free_rate for"
     },
     {
       "ticker": "ITUB",
       "entity_class": "Bank",
-      "note": "foreign bank ADR, BRL statements; net-interest-income ratio 0.215 on 2026-09-18, a bank under the 0.15 threshold",
+      "note": "foreign bank ADR, BRL statements; net-interest-income ratio 0.215 on 2026-09-18, a bank under the 0.15 threshold; Bank, admissible, then fails on its stale non-U.S. curve",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Bank"
+      "expected_reason": "risk_free_rate for"
     },
     {
       "ticker": "ALL",
@@ -152,38 +150,36 @@
     {
       "ticker": "HDB",
       "entity_class": "Bank",
-      "note": "Indian bank ADR; was a +5316% currency bug in the previous implementation",
+      "note": "Indian bank ADR; was a +5316% currency bug in the previous implementation; Bank, admissible, then fails on its stale non-U.S. curve",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Bank"
+      "expected_reason": "risk_free_rate for"
     },
     {
       "ticker": "GS",
       "entity_class": "Bank",
-      "note": "fee-heavy investment bank; .info says Capital Markets, so only the statement ratio (0.233 on 2026-09-18) keeps it out of the generic dcf",
+      "note": "fee-heavy investment bank; .info says Capital Markets, so only the statement ratio (0.233 on 2026-09-18) keeps it out of the generic dcf; valued by residual income",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Bank"
+      "expected_status": "Ok"
     },
     {
       "ticker": "MS",
       "entity_class": "Bank",
-      "note": "fee-heavy investment bank; .info says Capital Markets; ratio 0.152 on 2026-09-18 sits a knife edge above the 0.15 threshold",
+      "note": "fee-heavy investment bank; .info says Capital Markets; ratio 0.152 on 2026-09-18 sits a knife edge above the 0.15 threshold; valued by residual income",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Bank"
+      "expected_status": "Ok"
     },
     {
       "ticker": "KSPI",
       "entity_class": "Bank",
-      "note": "Kazakh ADR; Generic until the Kazakh curve is refreshed",
+      "note": "Kazakh ADR; Generic until the Kazakh curve is refreshed; Bank, admissible, then fails on its stale non-U.S. curve",
       "lens_note": "fintech; .info says Software, no NII row on the vendor's statements. The human declaration wins.",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Bank"
+      "expected_reason": "risk_free_rate for"
     },
     {
       "ticker": "TSM",

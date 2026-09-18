@@ -89,6 +89,9 @@ NON_NEGATIVE = frozenset(
         "capex",
         "cash",
         "total_debt",
+        "dividends_paid",
+        "provision_for_credit_losses",
+        "net_loans",
     }
 )
 
@@ -129,6 +132,9 @@ class IncomeStatement(Statement):
     premiums_earned: float | None
     premiums_earned_row: str | None  # the vendor row label that supplied premiums_earned
     reconciled_depreciation: float | None  # the income statement's depreciation line, a D&A fallback
+    net_income: float | None
+    provision_for_credit_losses: float | None
+    provision_for_credit_losses_row: str | None
 
 
 class CashFlowStatement(Statement):
@@ -136,6 +142,8 @@ class CashFlowStatement(Statement):
     depreciation_amortization_row: str | None
     capex: float | None
     delta_nwc: float | None
+    dividends_paid: float | None  # positive = cash paid
+    dividends_paid_row: str | None
 
 
 class BalanceSheet(Statement):
@@ -143,6 +151,8 @@ class BalanceSheet(Statement):
     total_debt: float | None
     total_debt_source: str | None  # the row, or row sum, that supplied total_debt
     book_equity: float | None
+    net_loans: float | None
+    net_loans_row: str | None
 
 
 # --- yfinance specifics -------------------------------------------------------------
@@ -161,7 +171,18 @@ INCOME_ROWS: RowSpec = {
     "total_revenue": ("Total Revenue", 1.0),
     "net_interest_income": ("Net Interest Income", 1.0),
     "reconciled_depreciation": ("Reconciled Depreciation", 1.0),
+    "net_income": ("Net Income", 1.0),
 }
+# Bank rows. None of the provision labels exists on any bank on yfinance 1.7.0 (2026-09-18);
+# kept so a vendor that does expose one is read, and the matched label is recorded.
+PROVISION_ROWS = (
+    "Credit Losses Provision",
+    "Provision For Loan Losses",
+    "Provision For Credit Losses",
+    "Provision For Doubtful Accounts",
+)
+DIVIDEND_ROWS = ("Cash Dividends Paid", "Common Stock Dividend Paid")  # outflows, negative on the vendor's statement
+NET_LOAN_ROWS = ("Net Loan", "Net Loans", "Loans Receivable")
 # Insurer signature: the first of these rows that carries a value. Verified absent for
 # ALL, MET, PGR and ALV.DE on yfinance 1.7.0 (2026-09-18); kept so a vendor that does
 # expose one is read, and the matched label is recorded for audit.
@@ -223,12 +244,15 @@ def _first_present(rows: Mapping[str, object], labels: tuple[str, ...]) -> tuple
 def _income_values(rows: Mapping[str, object]) -> dict[str, object]:
     out = _canonical_values(rows, INCOME_ROWS)
     out["premiums_earned"], out["premiums_earned_row"] = _first_present(rows, PREMIUM_ROWS)
+    out["provision_for_credit_losses"], out["provision_for_credit_losses_row"] = _first_present(rows, PROVISION_ROWS)
     return out
 
 
 def _cashflow_values(rows: Mapping[str, object]) -> dict[str, object]:
     out = _canonical_values(rows, CASHFLOW_ROWS)
     out["depreciation_amortization"], out["depreciation_amortization_row"] = _first_present(rows, DNA_ROWS)
+    dividends, row = _first_present(rows, DIVIDEND_ROWS)
+    out["dividends_paid"], out["dividends_paid_row"] = (None if dividends is None else 0.0 - dividends), row
     return out
 
 
@@ -245,6 +269,7 @@ def _total_debt(rows: Mapping[str, object]) -> tuple[float | None, str | None]:
 def _balance_values(rows: Mapping[str, object]) -> dict[str, object]:
     out = _canonical_values(rows, BALANCE_ROWS)
     out["total_debt"], out["total_debt_source"] = _total_debt(rows)
+    out["net_loans"], out["net_loans_row"] = _first_present(rows, NET_LOAN_ROWS)
     return out
 
 
@@ -350,11 +375,26 @@ def _period(
         total_debt=balance.total_debt if balance else None,
         total_debt_source=balance.total_debt_source if balance else None,
         book_equity=balance.book_equity if balance else None,
+        net_income=income.net_income if income else None,
+        dividends_paid=cashflow.dividends_paid if cashflow else None,
+        dividends_paid_row=cashflow.dividends_paid_row if cashflow else None,
+        provision_for_credit_losses=income.provision_for_credit_losses if income else None,
+        provision_for_credit_losses_row=income.provision_for_credit_losses_row if income else None,
+        net_loans=balance.net_loans if balance else None,
+        net_loans_row=balance.net_loans_row if balance else None,
     )
 
 
 def _is_empty(period: boundary.FiscalPeriod) -> bool:
-    labels = {"period_end", "premiums_earned_row", "depreciation_amortization_row", "total_debt_source"}
+    labels = {
+        "period_end",
+        "premiums_earned_row",
+        "depreciation_amortization_row",
+        "total_debt_source",
+        "dividends_paid_row",
+        "provision_for_credit_losses_row",
+        "net_loans_row",
+    }
     return all(getattr(period, f.name) is None for f in fields(period) if f.name not in labels)
 
 

@@ -1,15 +1,15 @@
 (** Assembles the per-ticker output contract: the declared entity class checked
     against the statement signatures, the admissibility decision, parameter
-    resolution, the model, sanity checks, signal, floor, and the
+    resolution, the routed model, sanity checks, signal, floor, and the
     [`Failed]-with-nulls shape.
 
     Order: declaration and class check -> admissibility -> country -> resolve
-    parameters -> value. No declaration, or a signature contradicting a declared
-    [`OperatingCompany], is [`Failed] before anything else. A class the table
-    does not admit the dcf for is [`Failed] with the lens named, so the reader
-    learns what the right measurement is. Nothing here moves a number: the
-    arithmetic is [Dcf.value], unchanged. [floor] is always populated and gates
-    nothing. *)
+    parameters -> the first admissible model -> sanity bound -> record. No
+    declaration, or a signature contradicting a declared [`OperatingCompany],
+    is [`Failed] before anything else. A class the table admits no model for is
+    [`Failed] with the lens named. Each model's arithmetic lives in its own
+    module; [Dcf.value] is unchanged by the addition of [Residual_income].
+    [floor] is always populated and gates nothing. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)

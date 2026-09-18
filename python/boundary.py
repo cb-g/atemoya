@@ -532,55 +532,6 @@ class Parameter:
 
 
 @dataclass
-class Dcf:
-    """Original type: model = [ ... | Dcf | ... ]
-    """
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'Dcf'
-
-    @staticmethod
-    def to_json() -> Any:
-        return 'dcf'
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class Model:
-    """Original type: model = [ ... ]
-    """
-
-    value: Union[Dcf]
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return self.value.kind
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'Model':
-        if isinstance(x, str):
-            if x == 'dcf':
-                return cls(Dcf())
-            _atd_bad_json('Model', x)
-        _atd_bad_json('Model', x)
-
-    def to_json(self) -> Any:
-        return self.value.to_json()
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'Model':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
 class IntParameter:
     """Original type: int_parameter = { ... }
     """
@@ -615,6 +566,221 @@ class IntParameter:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'IntParameter':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class IndustryTable:
+    """Original type: beta_source = [ ... | Industry_table | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'IndustryTable'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'industry_table'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class DefaultNoIndustry:
+    """Original type: beta_source = [ ... | Default_no_industry | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'DefaultNoIndustry'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'default_no_industry'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BetaSource:
+    """Original type: beta_source = [ ... ]
+    """
+
+    value: Union[IndustryTable, DefaultNoIndustry]
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return self.value.kind
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BetaSource':
+        if isinstance(x, str):
+            if x == 'industry_table':
+                return cls(IndustryTable())
+            if x == 'default_no_industry':
+                return cls(DefaultNoIndustry())
+            _atd_bad_json('BetaSource', x)
+        _atd_bad_json('BetaSource', x)
+
+    def to_json(self) -> Any:
+        return self.value.to_json()
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BetaSource':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ResidualIncomeInputs:
+    """Original type: residual_income_inputs = { ... }
+    """
+
+    fiscal_period_end: str
+    country: str
+    industry: Optional[str]
+    price: float
+    market_cap: float
+    shares: float
+    book_equity: float
+    book_value_per_share: float
+    net_income: float
+    roe_0: float
+    roe_periods: List[str]
+    payout_ratio: float
+    retention: float
+    payout_periods: List[str]
+    dividends_paid: Optional[float]
+    dividends_paid_row: Optional[str]
+    risk_free_rate: Parameter
+    equity_risk_premium: Parameter
+    beta: Parameter
+    beta_source: BetaSource
+    cost_of_equity: float
+    mean_reversion_lambda: Parameter
+    terminal_growth_rate: Parameter
+    bank_terminal_roe_spread: Parameter
+    projection_years: IntParameter
+    roe_path: List[float]
+    book_value_path: List[float]
+    excess_return_path: List[float]
+    pv_excess_returns: float
+    terminal_value: float
+    pv_terminal_value: float
+    equity_value: float
+    justified_price_to_book: float
+    net_interest_income: Optional[float]
+    provision_for_credit_losses: Optional[float]
+    provision_for_credit_losses_row: Optional[str]
+    provision_to_net_interest_income: Optional[float]
+    net_loans: Optional[float]
+    net_loans_row: Optional[str]
+    provision_to_net_loans: Optional[float]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ResidualIncomeInputs':
+        if isinstance(x, dict):
+            return cls(
+                fiscal_period_end=_atd_read_string(x['fiscal_period_end']) if 'fiscal_period_end' in x else _atd_missing_json_field('ResidualIncomeInputs', 'fiscal_period_end'),
+                country=_atd_read_string(x['country']) if 'country' in x else _atd_missing_json_field('ResidualIncomeInputs', 'country'),
+                industry=_atd_read_nullable(_atd_read_string)(x['industry']) if 'industry' in x else _atd_missing_json_field('ResidualIncomeInputs', 'industry'),
+                price=_atd_read_float(x['price']) if 'price' in x else _atd_missing_json_field('ResidualIncomeInputs', 'price'),
+                market_cap=_atd_read_float(x['market_cap']) if 'market_cap' in x else _atd_missing_json_field('ResidualIncomeInputs', 'market_cap'),
+                shares=_atd_read_float(x['shares']) if 'shares' in x else _atd_missing_json_field('ResidualIncomeInputs', 'shares'),
+                book_equity=_atd_read_float(x['book_equity']) if 'book_equity' in x else _atd_missing_json_field('ResidualIncomeInputs', 'book_equity'),
+                book_value_per_share=_atd_read_float(x['book_value_per_share']) if 'book_value_per_share' in x else _atd_missing_json_field('ResidualIncomeInputs', 'book_value_per_share'),
+                net_income=_atd_read_float(x['net_income']) if 'net_income' in x else _atd_missing_json_field('ResidualIncomeInputs', 'net_income'),
+                roe_0=_atd_read_float(x['roe_0']) if 'roe_0' in x else _atd_missing_json_field('ResidualIncomeInputs', 'roe_0'),
+                roe_periods=_atd_read_list(_atd_read_string)(x['roe_periods']) if 'roe_periods' in x else _atd_missing_json_field('ResidualIncomeInputs', 'roe_periods'),
+                payout_ratio=_atd_read_float(x['payout_ratio']) if 'payout_ratio' in x else _atd_missing_json_field('ResidualIncomeInputs', 'payout_ratio'),
+                retention=_atd_read_float(x['retention']) if 'retention' in x else _atd_missing_json_field('ResidualIncomeInputs', 'retention'),
+                payout_periods=_atd_read_list(_atd_read_string)(x['payout_periods']) if 'payout_periods' in x else _atd_missing_json_field('ResidualIncomeInputs', 'payout_periods'),
+                dividends_paid=_atd_read_nullable(_atd_read_float)(x['dividends_paid']) if 'dividends_paid' in x else _atd_missing_json_field('ResidualIncomeInputs', 'dividends_paid'),
+                dividends_paid_row=_atd_read_nullable(_atd_read_string)(x['dividends_paid_row']) if 'dividends_paid_row' in x else _atd_missing_json_field('ResidualIncomeInputs', 'dividends_paid_row'),
+                risk_free_rate=Parameter.from_json(x['risk_free_rate']) if 'risk_free_rate' in x else _atd_missing_json_field('ResidualIncomeInputs', 'risk_free_rate'),
+                equity_risk_premium=Parameter.from_json(x['equity_risk_premium']) if 'equity_risk_premium' in x else _atd_missing_json_field('ResidualIncomeInputs', 'equity_risk_premium'),
+                beta=Parameter.from_json(x['beta']) if 'beta' in x else _atd_missing_json_field('ResidualIncomeInputs', 'beta'),
+                beta_source=BetaSource.from_json(x['beta_source']) if 'beta_source' in x else _atd_missing_json_field('ResidualIncomeInputs', 'beta_source'),
+                cost_of_equity=_atd_read_float(x['cost_of_equity']) if 'cost_of_equity' in x else _atd_missing_json_field('ResidualIncomeInputs', 'cost_of_equity'),
+                mean_reversion_lambda=Parameter.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('ResidualIncomeInputs', 'mean_reversion_lambda'),
+                terminal_growth_rate=Parameter.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('ResidualIncomeInputs', 'terminal_growth_rate'),
+                bank_terminal_roe_spread=Parameter.from_json(x['bank_terminal_roe_spread']) if 'bank_terminal_roe_spread' in x else _atd_missing_json_field('ResidualIncomeInputs', 'bank_terminal_roe_spread'),
+                projection_years=IntParameter.from_json(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('ResidualIncomeInputs', 'projection_years'),
+                roe_path=_atd_read_list(_atd_read_float)(x['roe_path']) if 'roe_path' in x else _atd_missing_json_field('ResidualIncomeInputs', 'roe_path'),
+                book_value_path=_atd_read_list(_atd_read_float)(x['book_value_path']) if 'book_value_path' in x else _atd_missing_json_field('ResidualIncomeInputs', 'book_value_path'),
+                excess_return_path=_atd_read_list(_atd_read_float)(x['excess_return_path']) if 'excess_return_path' in x else _atd_missing_json_field('ResidualIncomeInputs', 'excess_return_path'),
+                pv_excess_returns=_atd_read_float(x['pv_excess_returns']) if 'pv_excess_returns' in x else _atd_missing_json_field('ResidualIncomeInputs', 'pv_excess_returns'),
+                terminal_value=_atd_read_float(x['terminal_value']) if 'terminal_value' in x else _atd_missing_json_field('ResidualIncomeInputs', 'terminal_value'),
+                pv_terminal_value=_atd_read_float(x['pv_terminal_value']) if 'pv_terminal_value' in x else _atd_missing_json_field('ResidualIncomeInputs', 'pv_terminal_value'),
+                equity_value=_atd_read_float(x['equity_value']) if 'equity_value' in x else _atd_missing_json_field('ResidualIncomeInputs', 'equity_value'),
+                justified_price_to_book=_atd_read_float(x['justified_price_to_book']) if 'justified_price_to_book' in x else _atd_missing_json_field('ResidualIncomeInputs', 'justified_price_to_book'),
+                net_interest_income=_atd_read_nullable(_atd_read_float)(x['net_interest_income']) if 'net_interest_income' in x else _atd_missing_json_field('ResidualIncomeInputs', 'net_interest_income'),
+                provision_for_credit_losses=_atd_read_nullable(_atd_read_float)(x['provision_for_credit_losses']) if 'provision_for_credit_losses' in x else _atd_missing_json_field('ResidualIncomeInputs', 'provision_for_credit_losses'),
+                provision_for_credit_losses_row=_atd_read_nullable(_atd_read_string)(x['provision_for_credit_losses_row']) if 'provision_for_credit_losses_row' in x else _atd_missing_json_field('ResidualIncomeInputs', 'provision_for_credit_losses_row'),
+                provision_to_net_interest_income=_atd_read_nullable(_atd_read_float)(x['provision_to_net_interest_income']) if 'provision_to_net_interest_income' in x else _atd_missing_json_field('ResidualIncomeInputs', 'provision_to_net_interest_income'),
+                net_loans=_atd_read_nullable(_atd_read_float)(x['net_loans']) if 'net_loans' in x else _atd_missing_json_field('ResidualIncomeInputs', 'net_loans'),
+                net_loans_row=_atd_read_nullable(_atd_read_string)(x['net_loans_row']) if 'net_loans_row' in x else _atd_missing_json_field('ResidualIncomeInputs', 'net_loans_row'),
+                provision_to_net_loans=_atd_read_nullable(_atd_read_float)(x['provision_to_net_loans']) if 'provision_to_net_loans' in x else _atd_missing_json_field('ResidualIncomeInputs', 'provision_to_net_loans'),
+            )
+        else:
+            _atd_bad_json('ResidualIncomeInputs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['fiscal_period_end'] = _atd_write_string(self.fiscal_period_end)
+        res['country'] = _atd_write_string(self.country)
+        res['industry'] = _atd_write_nullable(_atd_write_string)(self.industry)
+        res['price'] = _atd_write_float(self.price)
+        res['market_cap'] = _atd_write_float(self.market_cap)
+        res['shares'] = _atd_write_float(self.shares)
+        res['book_equity'] = _atd_write_float(self.book_equity)
+        res['book_value_per_share'] = _atd_write_float(self.book_value_per_share)
+        res['net_income'] = _atd_write_float(self.net_income)
+        res['roe_0'] = _atd_write_float(self.roe_0)
+        res['roe_periods'] = _atd_write_list(_atd_write_string)(self.roe_periods)
+        res['payout_ratio'] = _atd_write_float(self.payout_ratio)
+        res['retention'] = _atd_write_float(self.retention)
+        res['payout_periods'] = _atd_write_list(_atd_write_string)(self.payout_periods)
+        res['dividends_paid'] = _atd_write_nullable(_atd_write_float)(self.dividends_paid)
+        res['dividends_paid_row'] = _atd_write_nullable(_atd_write_string)(self.dividends_paid_row)
+        res['risk_free_rate'] = (lambda x: x.to_json())(self.risk_free_rate)
+        res['equity_risk_premium'] = (lambda x: x.to_json())(self.equity_risk_premium)
+        res['beta'] = (lambda x: x.to_json())(self.beta)
+        res['beta_source'] = (lambda x: x.to_json())(self.beta_source)
+        res['cost_of_equity'] = _atd_write_float(self.cost_of_equity)
+        res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
+        res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
+        res['bank_terminal_roe_spread'] = (lambda x: x.to_json())(self.bank_terminal_roe_spread)
+        res['projection_years'] = (lambda x: x.to_json())(self.projection_years)
+        res['roe_path'] = _atd_write_list(_atd_write_float)(self.roe_path)
+        res['book_value_path'] = _atd_write_list(_atd_write_float)(self.book_value_path)
+        res['excess_return_path'] = _atd_write_list(_atd_write_float)(self.excess_return_path)
+        res['pv_excess_returns'] = _atd_write_float(self.pv_excess_returns)
+        res['terminal_value'] = _atd_write_float(self.terminal_value)
+        res['pv_terminal_value'] = _atd_write_float(self.pv_terminal_value)
+        res['equity_value'] = _atd_write_float(self.equity_value)
+        res['justified_price_to_book'] = _atd_write_float(self.justified_price_to_book)
+        res['net_interest_income'] = _atd_write_nullable(_atd_write_float)(self.net_interest_income)
+        res['provision_for_credit_losses'] = _atd_write_nullable(_atd_write_float)(self.provision_for_credit_losses)
+        res['provision_for_credit_losses_row'] = _atd_write_nullable(_atd_write_string)(self.provision_for_credit_losses_row)
+        res['provision_to_net_interest_income'] = _atd_write_nullable(_atd_write_float)(self.provision_to_net_interest_income)
+        res['net_loans'] = _atd_write_nullable(_atd_write_float)(self.net_loans)
+        res['net_loans_row'] = _atd_write_nullable(_atd_write_string)(self.net_loans_row)
+        res['provision_to_net_loans'] = _atd_write_nullable(_atd_write_float)(self.provision_to_net_loans)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ResidualIncomeInputs':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -704,75 +870,6 @@ class GrowthSource:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'GrowthSource':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class IndustryTable:
-    """Original type: beta_source = [ ... | Industry_table | ... ]
-    """
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'IndustryTable'
-
-    @staticmethod
-    def to_json() -> Any:
-        return 'industry_table'
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class DefaultNoIndustry:
-    """Original type: beta_source = [ ... | Default_no_industry | ... ]
-    """
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'DefaultNoIndustry'
-
-    @staticmethod
-    def to_json() -> Any:
-        return 'default_no_industry'
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class BetaSource:
-    """Original type: beta_source = [ ... ]
-    """
-
-    value: Union[IndustryTable, DefaultNoIndustry]
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return self.value.kind
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'BetaSource':
-        if isinstance(x, str):
-            if x == 'industry_table':
-                return cls(IndustryTable())
-            if x == 'default_no_industry':
-                return cls(DefaultNoIndustry())
-            _atd_bad_json('BetaSource', x)
-        _atd_bad_json('BetaSource', x)
-
-    def to_json(self) -> Any:
-        return self.value.to_json()
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'BetaSource':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -943,6 +1040,147 @@ class Inputs:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'Inputs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Dcf:
+    """Original type: model_inputs = [ ... | Dcf of ... | ... ]
+    """
+
+    value: Inputs
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Dcf'
+
+    def to_json(self) -> Any:
+        return ['dcf', (lambda x: x.to_json())(self.value)]
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ResidualIncome:
+    """Original type: model_inputs = [ ... | Residual_income of ... | ... ]
+    """
+
+    value: ResidualIncomeInputs
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'ResidualIncome'
+
+    def to_json(self) -> Any:
+        return ['residual_income', (lambda x: x.to_json())(self.value)]
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ModelInputs:
+    """Original type: model_inputs = [ ... ]
+    """
+
+    value: Union[Dcf, ResidualIncome]
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return self.value.kind
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ModelInputs':
+        if isinstance(x, List) and len(x) == 2:
+            cons = x[0]
+            if cons == 'dcf':
+                return cls(Dcf(Inputs.from_json(x[1])))
+            if cons == 'residual_income':
+                return cls(ResidualIncome(ResidualIncomeInputs.from_json(x[1])))
+            _atd_bad_json('ModelInputs', x)
+        _atd_bad_json('ModelInputs', x)
+
+    def to_json(self) -> Any:
+        return self.value.to_json()
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ModelInputs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Dcf_:
+    """Original type: model = [ ... | Dcf | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Dcf_'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'dcf'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ResidualIncome_:
+    """Original type: model = [ ... | Residual_income | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'ResidualIncome_'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'residual_income'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Model:
+    """Original type: model = [ ... ]
+    """
+
+    value: Union[Dcf_, ResidualIncome_]
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return self.value.kind
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Model':
+        if isinstance(x, str):
+            if x == 'dcf':
+                return cls(Dcf_())
+            if x == 'residual_income':
+                return cls(ResidualIncome_())
+            _atd_bad_json('Model', x)
+        _atd_bad_json('Model', x)
+
+    def to_json(self) -> Any:
+        return self.value.to_json()
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Model':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -1496,7 +1734,7 @@ class Valuation:
     scope_limits: List[str]
     status: Status
     failed_reason: Optional[str]
-    inputs: Optional[Inputs]
+    inputs: Optional[ModelInputs]
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -1518,7 +1756,7 @@ class Valuation:
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('Valuation', 'scope_limits'),
                 status=Status.from_json(x['status']) if 'status' in x else _atd_missing_json_field('Valuation', 'status'),
                 failed_reason=_atd_read_nullable(_atd_read_string)(x['failed_reason']) if 'failed_reason' in x else _atd_missing_json_field('Valuation', 'failed_reason'),
-                inputs=_atd_read_nullable(Inputs.from_json)(x['inputs']) if 'inputs' in x else _atd_missing_json_field('Valuation', 'inputs'),
+                inputs=_atd_read_nullable(ModelInputs.from_json)(x['inputs']) if 'inputs' in x else _atd_missing_json_field('Valuation', 'inputs'),
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -1573,6 +1811,13 @@ class FiscalPeriod:
     total_debt: Optional[float]
     total_debt_source: Optional[str]
     book_equity: Optional[float]
+    net_income: Optional[float]
+    dividends_paid: Optional[float]
+    dividends_paid_row: Optional[str]
+    provision_for_credit_losses: Optional[float]
+    provision_for_credit_losses_row: Optional[str]
+    net_loans: Optional[float]
+    net_loans_row: Optional[str]
 
     @classmethod
     def from_json(cls, x: Any) -> 'FiscalPeriod':
@@ -1594,6 +1839,13 @@ class FiscalPeriod:
                 total_debt=_atd_read_nullable(_atd_read_float)(x['total_debt']) if 'total_debt' in x else _atd_missing_json_field('FiscalPeriod', 'total_debt'),
                 total_debt_source=_atd_read_nullable(_atd_read_string)(x['total_debt_source']) if 'total_debt_source' in x else _atd_missing_json_field('FiscalPeriod', 'total_debt_source'),
                 book_equity=_atd_read_nullable(_atd_read_float)(x['book_equity']) if 'book_equity' in x else _atd_missing_json_field('FiscalPeriod', 'book_equity'),
+                net_income=_atd_read_nullable(_atd_read_float)(x['net_income']) if 'net_income' in x else _atd_missing_json_field('FiscalPeriod', 'net_income'),
+                dividends_paid=_atd_read_nullable(_atd_read_float)(x['dividends_paid']) if 'dividends_paid' in x else _atd_missing_json_field('FiscalPeriod', 'dividends_paid'),
+                dividends_paid_row=_atd_read_nullable(_atd_read_string)(x['dividends_paid_row']) if 'dividends_paid_row' in x else _atd_missing_json_field('FiscalPeriod', 'dividends_paid_row'),
+                provision_for_credit_losses=_atd_read_nullable(_atd_read_float)(x['provision_for_credit_losses']) if 'provision_for_credit_losses' in x else _atd_missing_json_field('FiscalPeriod', 'provision_for_credit_losses'),
+                provision_for_credit_losses_row=_atd_read_nullable(_atd_read_string)(x['provision_for_credit_losses_row']) if 'provision_for_credit_losses_row' in x else _atd_missing_json_field('FiscalPeriod', 'provision_for_credit_losses_row'),
+                net_loans=_atd_read_nullable(_atd_read_float)(x['net_loans']) if 'net_loans' in x else _atd_missing_json_field('FiscalPeriod', 'net_loans'),
+                net_loans_row=_atd_read_nullable(_atd_read_string)(x['net_loans_row']) if 'net_loans_row' in x else _atd_missing_json_field('FiscalPeriod', 'net_loans_row'),
             )
         else:
             _atd_bad_json('FiscalPeriod', x)
@@ -1616,6 +1868,13 @@ class FiscalPeriod:
         res['total_debt'] = _atd_write_nullable(_atd_write_float)(self.total_debt)
         res['total_debt_source'] = _atd_write_nullable(_atd_write_string)(self.total_debt_source)
         res['book_equity'] = _atd_write_nullable(_atd_write_float)(self.book_equity)
+        res['net_income'] = _atd_write_nullable(_atd_write_float)(self.net_income)
+        res['dividends_paid'] = _atd_write_nullable(_atd_write_float)(self.dividends_paid)
+        res['dividends_paid_row'] = _atd_write_nullable(_atd_write_string)(self.dividends_paid_row)
+        res['provision_for_credit_losses'] = _atd_write_nullable(_atd_write_float)(self.provision_for_credit_losses)
+        res['provision_for_credit_losses_row'] = _atd_write_nullable(_atd_write_string)(self.provision_for_credit_losses_row)
+        res['net_loans'] = _atd_write_nullable(_atd_write_float)(self.net_loans)
+        res['net_loans_row'] = _atd_write_nullable(_atd_write_string)(self.net_loans_row)
         return res
 
     @classmethod

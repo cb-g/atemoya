@@ -2,7 +2,7 @@
   "source": "two field reports from a project that ran the previous implementation daily for about 14 months on about 215 names (a DCF on a bank, a DCF on a regulated utility mid capex cycle, an AISC screen on a royalty company, an insurer pinned at +571.9% upside), plus that implementation's own findings",
   "as_of": "2026-09-18",
   "notes": [
-    "Only dcf exists as a model today, so admissible_models is [\"dcf\"] or [].",
+    "Models today: dcf (OperatingCompany) and residual_income (Bank). A class with [] has no admissible model yet and is refused with its lens named.",
     "Inadmissible is Failed with the lens named: the reader learns what the right measurement is.",
     "Anything that fits no class gets a class added to the boundary variant and a row here, never a place in OperatingCompany."
   ],
@@ -17,9 +17,11 @@
     },
     "Bank": {
       "lens": "price/book against ROE, with loan-loss provisioning coverage as the check",
-      "admissible_models": [],
+      "admissible_models": [
+        "residual_income"
+      ],
       "never": "an FCFF DCF: capex, working capital and debt have no operating meaning for a bank",
-      "floor_basis_default": "tangible book value per share, read with provisioning coverage"
+      "floor_basis_default": "book value per share, read with provisioning coverage; the residual-income model verifies it"
     },
     "Insurer": {
       "lens": "operating-profit multiple read with the solvency ratio",

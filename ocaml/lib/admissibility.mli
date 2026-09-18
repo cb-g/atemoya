@@ -13,6 +13,12 @@ val class_of_string : string -> Boundary_t.entity_class option
 
 val model_name : Boundary_t.model -> string
 
+val model_of_string : string -> Boundary_t.model option
+(** ["dcf"] -> [Some `Dcf]; a name that is not a model -> [None]. *)
+
+val routed : Reference_t.class_rule -> Boundary_t.model option
+(** The first model in the row's [admissible_models] that exists. *)
+
 val rule :
   Reference_t.admissibility ->
   Boundary_t.entity_class ->

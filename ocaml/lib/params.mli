@@ -33,6 +33,11 @@ val classification_threshold :
 (** The bank net-interest-income ratio threshold, with provenance and the same
     freshness rule as every other parameter. *)
 
+val bank_terminal_roe_spread :
+  t -> today:string -> (Boundary_t.parameter, string) result
+(** The residual-income model's terminal excess return, with provenance and
+    the same freshness rule as every other parameter. *)
+
 val resolve :
   t ->
   today:string ->

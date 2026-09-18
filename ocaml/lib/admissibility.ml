@@ -40,7 +40,17 @@ let class_of_string s =
   | c -> Some c
   | exception (Yojson.Json_error _ | Atdgen_runtime.Oj_run.Error _ | Failure _) -> None
 
-let model_name : Boundary_t.model -> string = function `Dcf -> "dcf"
+let model_name : Boundary_t.model -> string = function
+  | `Dcf -> "dcf"
+  | `Residual_income -> "residual_income"
+
+let model_of_string s =
+  match Boundary_j.model_of_string (Yojson.Safe.to_string (`String s)) with
+  | m -> Some m
+  | exception (Yojson.Json_error _ | Atdgen_runtime.Oj_run.Error _ | Failure _) -> None
+
+let routed (r : Reference_t.class_rule) =
+  List.find_map model_of_string r.admissible_models
 
 let rule (table : Reference_t.admissibility) cls =
   match List.assoc_opt (class_name cls) table.classes with
