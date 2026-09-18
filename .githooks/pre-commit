@@ -1,0 +1,29 @@
+#!/bin/sh
+# Secrets never enter the tree. Checks what is STAGED. FAILS CLOSED: if any scan step
+# errors, the commit is refused rather than passed blind. Patterns avoid engine-specific
+# escapes (\+, \s) so they behave the same under GNU grep, ugrep, and BusyBox.
+
+refuse() { printf 'pre-commit: %s\n' "$1" >&2; exit 1; }
+
+# 1. Refuse any .env file other than the tracked placeholder.
+staged=$(git diff --cached --name-only) || refuse "could not list staged files"
+bad=$(printf '%s\n' "$staged" | sed -n -E '\#(^|/)\.env(\.[^/]+)?$#p' | sed -n '/\.env\.example$/!p')
+[ -n "$bad" ] && refuse "refusing to commit an env file: $bad"
+
+# 2. Refuse added lines that look like a filled-in credential: any identifier containing
+#    key/secret/token/password/cred/auth, followed by =/: and a 16+ char value.
+#    An empty placeholder like FRED_API_KEY= passes. sed extracts added lines (no grep
+#    escapes involved); the '+++ b/file' header is excluded by the address.
+#    Generated files are not scanned: python/boundary.py and python/reference.py are pure
+#    functions of schema/*.atd, which is scanned, so nothing can be in them that is not in
+#    the schema. A new generated file trips the scan until it is listed here (fail closed).
+added=$(git diff --cached -U0 --no-color -- . ':!python/boundary.py' ':!python/reference.py' | sed -n '/^+++/!s/^+//p') || refuse "could not extract staged diff"
+#    A value immediately followed by '(' is a function being called, never a credential.
+pat="(key|secret|token|passw(or)?d|cred|auth)[A-Za-z0-9_]*[[:space:]]*[=:][[:space:]]*[\"']?[A-Za-z0-9_-]{16,}([^A-Za-z0-9_(-]|$)"
+hit=$(printf '%s
+' "$added" | grep -iE "$pat")
+rc=$?
+[ "$rc" -eq 0 ] && refuse "staged content looks like a credential:
+$(printf '%s\n' "$hit" | cut -c1-80 | sed 's/^/  /')"
+[ "$rc" -ge 2 ] && refuse "credential scan errored (rc=$rc); refusing rather than passing blind"
+exit 0

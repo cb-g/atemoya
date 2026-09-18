@@ -1,0 +1,4 @@
+#!/bin/sh
+# This repo does not use Co-Authored-By (or any) trailers in commit messages.
+# Strip them mechanically so no assistant, harness default, or forgetful session can add one.
+sed -i -E '/^[Cc]o-[Aa]uthored-[Bb]y:/d' "$1"
