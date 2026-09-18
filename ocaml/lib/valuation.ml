@@ -36,6 +36,15 @@ let floor_verified ~currency (inputs : model_inputs) ~fair_value : floor =
            fair value %.2f %s per share against price %.2f, justified price/book %.2f"
           i.book_value_per_share currency i.fiscal_period_end fair_value currency i.price
           i.justified_price_to_book
+    | `Residual_income_insurer (i : insurer_inputs) ->
+        Printf.sprintf
+          "residual income on AOCI-adjusted book: adjusted book value %.2f %s per share \
+           (reported %.4g, AOCI %.4g removed) for the fiscal period ending %s, fair value \
+           %.2f %s per share against price %.2f, justified price/book %.2f; reserve adequacy \
+           not assessed"
+          i.core.book_value_per_share currency i.reported_book_equity i.aoci
+          i.core.fiscal_period_end fair_value currency i.core.price
+          i.core.justified_price_to_book
   in
   { present = Some true; basis }
 
@@ -118,6 +127,15 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
             | Ok (inputs, fair_value) ->
                 conclude ~model ~class_check ~rule ~price:inputs.price
                   (`Residual_income inputs) fair_value))
+    | `Residual_income_insurer -> (
+        match Params.insurer_terminal_roe_spread params ~today with
+        | Error reason -> failed reason
+        | Ok terminal_spread -> (
+            match Insurer.value assumptions ~terminal_spread ~country fin with
+            | Error reason -> failed reason
+            | Ok (inputs, fair_value) ->
+                conclude ~model ~class_check ~rule ~price:inputs.core.price
+                  (`Residual_income_insurer inputs) fair_value))
   in
   match Params.classification_threshold params ~today with
   | Error reason -> failed ~floor:(floor_default ()) reason

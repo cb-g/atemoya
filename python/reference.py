@@ -657,6 +657,7 @@ class Params:
     growth_clamp_upper: Scalar
     mean_reversion_lambda: Scalar
     bank_terminal_roe_spread: Scalar
+    insurer_terminal_roe_spread: Scalar
     terminal_growth_rate: CountryTable
     unwired: Any
 
@@ -671,6 +672,7 @@ class Params:
                 growth_clamp_upper=Scalar.from_json(x['growth_clamp_upper']) if 'growth_clamp_upper' in x else _atd_missing_json_field('Params', 'growth_clamp_upper'),
                 mean_reversion_lambda=Scalar.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('Params', 'mean_reversion_lambda'),
                 bank_terminal_roe_spread=Scalar.from_json(x['bank_terminal_roe_spread']) if 'bank_terminal_roe_spread' in x else _atd_missing_json_field('Params', 'bank_terminal_roe_spread'),
+                insurer_terminal_roe_spread=Scalar.from_json(x['insurer_terminal_roe_spread']) if 'insurer_terminal_roe_spread' in x else _atd_missing_json_field('Params', 'insurer_terminal_roe_spread'),
                 terminal_growth_rate=CountryTable.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Params', 'terminal_growth_rate'),
                 unwired=(lambda x: x)(x['unwired']) if 'unwired' in x else _atd_missing_json_field('Params', 'unwired'),
             )
@@ -686,6 +688,7 @@ class Params:
         res['growth_clamp_upper'] = (lambda x: x.to_json())(self.growth_clamp_upper)
         res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
         res['bank_terminal_roe_spread'] = (lambda x: x.to_json())(self.bank_terminal_roe_spread)
+        res['insurer_terminal_roe_spread'] = (lambda x: x.to_json())(self.insurer_terminal_roe_spread)
         res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
         res['unwired'] = (lambda x: x)(self.unwired)
         return res

@@ -6,7 +6,7 @@ are the exact `failed_reason` strings, with variable parts in parentheses, so th
 checkable against `output/summary.txt`; a test asserts every reason string in the code
 appears here. **Every change that adds a branch updates this file in the same commit.**
 
-Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers.
+Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model.
 
 ```mermaid
 flowchart TD
@@ -15,6 +15,7 @@ flowchart TD
     classDef new stroke-dasharray: 4 3
 
     IN[/"ticker: data/financials/(TICKER).json"/] --> FETCHED{"file parses as boundary financials?"}
+    PROVIDER["statements provider (08): the vendor feed (fetch.py, yfinance) for every class but Insurer; filed statements (fetch_sec.py, SEC XBRL companyfacts) for Insurer, with the us-gaap tag per field, filing date and accession on each period; a ticker SEC does not know gets a record with statements_unavailable set"]:::new -.-> IN
     FETCHED -- no --> UNREAD["stderr: cannot read financials; no record"]:::failed
     FETCHED -- yes --> THR{"bank_nii_ratio_threshold fresh?"}
     THR -- "stale / future / missing" --> PFAIL
@@ -28,9 +29,10 @@ flowchart TD
 
     ROW -- no --> F_NOROW["no admissibility row for entity class (class) in the reference table"]:::failed
     ROW -- yes --> ADM{"first admissible model in the row"}
-    ADM -- "none (Insurer, RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, PreProfit, Wrapper, ConstructionStage, UnderBid, Ballast)" --> F_INADM["dcf not admissible for (class); lens: (lens)"]:::failed
+    ADM -- "none (RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, PreProfit, Wrapper, ConstructionStage, UnderBid, Ballast)" --> F_INADM["dcf not admissible for (class); lens: (lens)"]:::failed
     ADM -- "dcf (OperatingCompany)" --> COUNTRY
     ADM -- "residual_income (Bank) (06)" --> COUNTRY
+    ADM -- "residual_income_insurer (Insurer) (08)" --> COUNTRY
 
     COUNTRY{"country in the fetch?"} -- no --> F_COUNTRY["country not determinable from the fetch"]:::failed
     COUNTRY -- yes --> PARAMS["resolve parameters: projection_years, risk-free (country, 7y), ERP, statutory tax, terminal growth, debt spread, growth clamp, lambda, beta (industry table or default 1.0)"]
@@ -69,6 +71,14 @@ flowchart TD
     RI_EV -- "not finite" --> F_RINAN["fair value is not finite (equity value (e), shares (n)) (06)"]:::failed
     RI_EV --> CONCLUDE
 
+    WHICH -- "residual_income_insurer (08)" --> INS_FILED{"filed statements with AOCI and premiums earned? (08)"}:::new
+    INS_FILED -- "provider had none, or no AOCI / premiums on the latest period" --> F_FILED["insurer model requires filed-statement data; (why: no SEC filings for (ticker), or the period carries no AOCI or premiums earned) (08)"]:::failed
+    INS_FILED -- yes --> INS_CORE["book per period = reported stockholders' equity - AOCI; then the residual-income core above (same guards: roe, payout, cost of equity vs terminal growth); underwriting checks recorded, never gates: combined-ratio proxy, reserves over premiums, AOCI over reported book; solvency null, basis stated (08)"]:::new
+    INS_CORE -- "core guard fails" --> F_ROE
+    INS_CORE -- "core guard fails" --> F_PAYOUT
+    INS_CORE -- "core guard fails" --> F_KE
+    INS_CORE --> CONCLUDE
+
     CONCLUDE{"fair value > 0?"} -- no --> F_NONPOS["non-positive fair value (v): model not applicable"]:::failed
     CONCLUDE -- yes --> BOUND{"margin of safety <= sanity bound 5.0?"}
     BOUND -- no --> F_BOUND["margin of safety (m) exceeds sanity bound 5.00: likely structural break; check entity_class"]:::failed
@@ -81,6 +91,7 @@ flowchart TD
     F_GROWTH --> FLOOR
     F_ROE --> FLOOR
     F_PAYOUT --> FLOOR
+    F_FILED --> FLOOR
     F_NONPOS --> FLOOR
     F_BOUND --> FLOOR
     OK --> RECORD
@@ -102,3 +113,6 @@ into it.
   admissibility branch now routes to the first admissible model in the row.
 - risk-free fetchers (07): risk-free curves come from a source registry in three tiers; a tenor
   substitution is recorded on the parameter, never silent. No new `Failed` string.
+- insurer model (08): a second statements provider (filed statements via SEC XBRL) for insurers,
+  the insurer model on AOCI-adjusted book, and the `Failed` string for an insurer whose
+  provider had no filed statements.

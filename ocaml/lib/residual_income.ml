@@ -45,7 +45,8 @@ let mean_ratio rows ~min_periods =
 
 let absent name opt = if Option.is_none opt then Some name else None
 
-let value (a : Dcf.assumptions) ~(terminal_spread : parameter) ~country (fin : financials) =
+let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumptions)
+    ~(terminal_spread : parameter) ~country (fin : financials) =
   let ( let* ) = Result.bind in
   let* p =
     match Period.latest fin with
@@ -62,7 +63,7 @@ let value (a : Dcf.assumptions) ~(terminal_spread : parameter) ~country (fin : f
   in
   let statement =
     List.filter_map Fun.id
-      [ absent "book_equity" p.book_equity; absent "net_income" p.net_income ]
+      [ absent "book_equity" (book p); absent "net_income" p.net_income ]
   in
   let part label = function
     | [] -> None
@@ -79,7 +80,7 @@ let value (a : Dcf.assumptions) ~(terminal_spread : parameter) ~country (fin : f
              statement;
          ])
   in
-  match (fin.currency, fin.price, fin.market_cap, p.book_equity, p.net_income) with
+  match (fin.currency, fin.price, fin.market_cap, book p, p.net_income) with
   | Some _currency, Some price, Some market_cap, Some book_equity, Some net_income ->
       if price <= 0. || market_cap <= 0. then
         Error (Printf.sprintf "price %g and market cap %g must be positive" price market_cap)
@@ -90,7 +91,7 @@ let value (a : Dcf.assumptions) ~(terminal_spread : parameter) ~country (fin : f
         let roe_rows =
           List.filter_map
             (fun (q : fiscal_period) ->
-              match (q.net_income, q.book_equity) with
+              match (q.net_income, book q) with
               | Some ni, Some be -> Some (q.period_end, ni, be)
               | _ -> None)
             fin.periods
@@ -187,7 +188,7 @@ let value (a : Dcf.assumptions) ~(terminal_spread : parameter) ~country (fin : f
                   cost_of_equity;
                   mean_reversion_lambda = a.mean_reversion_lambda;
                   terminal_growth_rate = a.terminal_growth_rate;
-                  bank_terminal_roe_spread = terminal_spread;
+                  terminal_roe_spread = terminal_spread;
                   projection_years = a.projection_years;
                   roe_path;
                   book_value_path = s.book_value_path;

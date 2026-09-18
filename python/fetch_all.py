@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 import fetch
+import fetch_sec
 import reference
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -30,9 +31,14 @@ def main(argv: list[str]) -> int:
     universe_path: Path = args.universe
     out: Path = args.out
     universe = reference.Universe.from_json_string(universe_path.read_text())
-    tickers = [entry.ticker for entry in universe.tickers]
-    print(f"{len(tickers)} tickers from {universe_path}")
-    return fetch.main([*tickers, "--out", str(out)])
+    # Insurers need filed statements; everything else reads the vendor feed.
+    filed = [e.ticker for e in universe.tickers if e.entity_class == "Insurer"]
+    vendor = [e.ticker for e in universe.tickers if e.entity_class != "Insurer"]
+    print(f"{len(vendor) + len(filed)} tickers from {universe_path}: {len(vendor)} via yfinance, {len(filed)} via SEC XBRL")
+    status = fetch.main([*vendor, "--out", str(out)]) if vendor else 0
+    if filed:
+        status = max(status, fetch_sec.main([*filed, "--out", str(out)]))
+    return status
 
 
 if __name__ == "__main__":

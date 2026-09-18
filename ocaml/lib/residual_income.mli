@@ -33,8 +33,11 @@ val mean_ratio :
     fewer than [min_periods] usable. The periods used, most recent first. *)
 
 val value :
+  ?book:(Boundary_t.fiscal_period -> float option) ->
   Dcf.assumptions ->
   terminal_spread:Boundary_t.parameter ->
   country:string ->
   Boundary_t.financials ->
   (Boundary_t.residual_income_inputs * float, string) result
+(** [book] is the book value read from a period; the default is reported
+    stockholders' equity. The insurer model passes AOCI-adjusted book. *)

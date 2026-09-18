@@ -131,6 +131,9 @@ let classification_threshold t ~today =
 let bank_terminal_roe_spread t ~today =
   scalar t.params.bank_terminal_roe_spread ~today ~name:"bank_terminal_roe_spread"
 
+let insurer_terminal_roe_spread t ~today =
+  scalar t.params.insurer_terminal_roe_spread ~today ~name:"insurer_terminal_roe_spread"
+
 let resolve t ~today ~country ~industry =
   let* projection_years =
     let p = t.params.projection_years in

@@ -424,6 +424,7 @@ def fetch(symbol: str, as_of: datetime) -> boundary.Financials:
         industry=profile.industry if profile else None,
         periods=periods,
         notes=notes,
+        provider="yfinance",
     )
 
 

@@ -34,8 +34,9 @@ git config core.hooksPath .githooks
 
 The U.S. risk-free curve is refreshed from FRED and needs an API key, free from
 <https://fred.stlouisfed.org/docs/api/api_key.html>. Copy `.env.example` to `.env` and put
-the key after `FRED_API_KEY=`. `.env` is gitignored and the pre-commit hook refuses it;
-nothing else needs it.
+the key after `FRED_API_KEY=`. Insurers are fetched from SEC XBRL, which requires every
+request to identify its sender: put `"<name> <email>"` after `SEC_EDGAR_IDENTITY=`, quoted.
+`.env` is gitignored and the pre-commit hook refuses it.
 
 ## Run
 
@@ -44,7 +45,8 @@ uv run python/fetch.py AAPL MSFT            # yfinance -> data/financials/<TICKE
 dune exec atemoya -- data/financials/*.json # one valuation record per line on stdout
 uv run python/refresh_rates.py              # U.S. curve from FRED -> reference/risk_free_rates.json
 
-uv run python/fetch_all.py                  # every ticker in reference/universe.json
+uv run python/fetch_all.py                  # every ticker in reference/universe.json (insurers via SEC XBRL)
+uv run python/fetch_sec.py ALL MET PGR      # filed statements from SEC XBRL -> data/financials/<TICKER>.json
 dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl + summary.txt
 ```
 
@@ -53,7 +55,8 @@ measures their age against today's UTC date (`--today YYYY-MM-DD` to override). 
 be files or directories. Every ticker needs a declared `entity_class`, from its entry in
 `reference/universe.json` or from `--entity-class CLASS` for an ad-hoc run; without one the
 record fails as undeclared. `reference/admissibility.json` says which models may run on
-which class (today the FCFF DCF on `OperatingCompany` and residual income on `Bank`) and
+which class (today the FCFF DCF on `OperatingCompany`, residual income on `Bank`, and
+residual income on AOCI-adjusted book from filed statements on `Insurer`) and
 what each other class is judged on instead; an inadmissible class fails with that lens
 named. `docs/flow.md` charts every branch from ticker to record. A record is either
 `Ok` with a fair value, or `Failed` with a reason; it never carries a guessed number.

@@ -9,7 +9,11 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?depreciation_amortization ?depreciation_amortization_row ?capex ?delta_nwc
     ?cash ?total_debt ?total_debt_source ?book_equity ?net_income ?dividends_paid
     ?dividends_paid_row ?provision_for_credit_losses ?provision_for_credit_losses_row
-    ?net_loans ?net_loans_row () : Boundary_t.fiscal_period =
+    ?net_loans ?net_loans_row ?filed ?accession ?aoci ?aoci_row ?claims_incurred
+    ?claims_incurred_row ?benefits_losses_and_expenses ?benefits_losses_and_expenses_row
+    ?policy_acquisition_expense ?policy_acquisition_expense_row ?operating_expense
+    ?operating_expense_row ?future_policy_benefits ?future_policy_benefits_row
+    ?claims_liability ?claims_liability_row () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -34,11 +38,28 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     provision_for_credit_losses_row;
     net_loans;
     net_loans_row;
+    filed;
+    accession;
+    aoci;
+    aoci_row;
+    claims_incurred;
+    claims_incurred_row;
+    benefits_losses_and_expenses;
+    benefits_losses_and_expenses_row;
+    policy_acquisition_expense;
+    policy_acquisition_expense_row;
+    operating_expense;
+    operating_expense_row;
+    future_policy_benefits;
+    future_policy_benefits_row;
+    claims_liability;
+    claims_liability_row;
   }
 
 let financials ?(currency = Some "USD") ?(price = Some 10.)
     ?(market_cap = Some 5000.) ?(country = Some "United States")
-    ?(industry = Some "Consumer Electronics") periods : Boundary_t.financials =
+    ?(industry = Some "Consumer Electronics") ?(provider = "yfinance")
+    ?(statements_unavailable = "") periods : Boundary_t.financials =
   {
     ticker = "TEST";
     as_of = "2026-09-10T00:00:00+00:00";
@@ -49,6 +70,8 @@ let financials ?(currency = Some "USD") ?(price = Some 10.)
     industry;
     periods;
     notes = [];
+    provider;
+    statements_unavailable;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -130,6 +153,7 @@ let params_json =
   "growth_clamp_upper": {"value": 0.5, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "bank_terminal_roe_spread": {"value": 0.02, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
+  "insurer_terminal_roe_spread": {"value": 0.02, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
     "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03}},
@@ -157,7 +181,7 @@ let params : Params.t =
         {|{"source": "test", "as_of": "2026-09-18", "classes": {
             "OperatingCompany": {"lens": "FCFF-based DCF", "admissible_models": ["dcf"], "never": "a DCF through a break", "floor_basis_default": "a completed FCFF DCF"},
             "Bank": {"lens": "price/book against ROE", "admissible_models": ["residual_income"], "never": "an FCFF DCF", "floor_basis_default": "tangible book value per share"},
-            "Insurer": {"lens": "operating-profit multiple with the solvency ratio", "admissible_models": [], "never": "an FCFF DCF", "floor_basis_default": "adjusted book value per share"},
+            "Insurer": {"lens": "operating-profit multiple with the solvency ratio", "admissible_models": ["residual_income_insurer"], "never": "an FCFF DCF", "floor_basis_default": "adjusted book value per share"},
             "PreProfit": {"lens": "cash runway vs the catalyst calendar", "admissible_models": [], "never": "any multiple", "floor_basis_default": "no floor until the catalyst", "floor_present_default": false},
             "Wrapper": {"lens": "NAV premium or discount", "admissible_models": [], "never": "headline yield", "floor_basis_default": "NAV per unit"}}}|};
   }
@@ -704,26 +728,27 @@ let check_floor name (v : Boundary_t.valuation) present =
 let test_inadmissible_refuses_with_lens () =
   (* Full generic statement fields present: the dcf could run, and must not. *)
   let v =
-    run ~declared:(Some (declaration ~lens_note:"note" ~scope_limits:[ "a"; "b" ] `Insurer))
+    run ~declared:(Some (declaration ~lens_note:"note" ~scope_limits:[ "a"; "b" ] `Wrapper))
       (financials (history ()))
   in
-  check_reason v [ "dcf not admissible for Insurer"; "lens: operating-profit multiple" ];
+  check_reason v [ "dcf not admissible for Wrapper"; "lens: NAV premium or discount" ];
   check_nulls v;
-  Alcotest.(check (option entity_class)) "class" (Some `Insurer) v.entity_class;
+  Alcotest.(check (option entity_class)) "class" (Some `Wrapper) v.entity_class;
   Alcotest.(check (option model)) "no model ran" None v.model;
   Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs);
-  check_floor "insurer" v None;
-  check_mentions "floor basis" v.floor.basis [ "adjusted book value" ];
+  check_floor "wrapper" v None;
+  check_mentions "floor basis" v.floor.basis [ "NAV per unit" ];
   Alcotest.(check string) "lens_note carried" "note" v.lens_note;
   Alcotest.(check (list string)) "scope_limits carried" [ "a"; "b" ] v.scope_limits;
   match v.class_check with
   | None -> Alcotest.fail "no class_check evidence"
-  | Some e -> Alcotest.check class_check_outcome "signature absent" `Signature_absent e.outcome
+  | Some e -> Alcotest.check class_check_outcome "consistent" `Consistent e.outcome
 
 let test_insurer_declared_without_signature () =
-  (* What yfinance cannot signal, the declaration carries: not "unresolved", refused. *)
+  (* What yfinance cannot signal, the declaration carries: not "unresolved". The insurer
+     model then refuses vendor rows that lack filed fields, naming what would fix it. *)
   let v = run ~declared:(Some (declaration `Insurer)) (financials (history ())) in
-  check_reason v [ "dcf not admissible for Insurer"; "solvency ratio" ];
+  check_reason v [ "insurer model requires filed-statement data"; "no AOCI or premiums earned" ];
   match v.class_check with
   | None -> Alcotest.fail "no evidence"
   | Some e -> Alcotest.check class_check_outcome "signature absent" `Signature_absent e.outcome
@@ -796,6 +821,9 @@ let test_table_and_variant_agree () =
           Alcotest.(check bool)
             (Admissibility.class_name c ^ " admits residual income iff it is a bank")
             (c = `Bank) (Admissibility.admits r `Residual_income);
+          Alcotest.(check bool)
+            (Admissibility.class_name c ^ " admits the insurer model iff it is an insurer")
+            (c = `Insurer) (Admissibility.admits r `Residual_income_insurer);
           Alcotest.(check bool) "routed model exists iff some model is admissible"
             (r.admissible_models <> []) (Option.is_some (Admissibility.routed r))
       | Error e -> Alcotest.fail e)
@@ -880,8 +908,8 @@ let test_ri_value_by_hand () =
   check_float "equity value" 1431.8181818181818 inputs.equity_value;
   check_float "justified P/B" 1.4318181818181818 inputs.justified_price_to_book;
   check_float "book value per share" 10. inputs.book_value_per_share;
-  check_float "spread provenance value" 0.02 inputs.bank_terminal_roe_spread.value;
-  Alcotest.(check string) "spread source" "assumption" inputs.bank_terminal_roe_spread.source
+  check_float "spread provenance value" 0.02 inputs.terminal_roe_spread.value;
+  Alcotest.(check string) "spread source" "assumption" inputs.terminal_roe_spread.source
 
 let test_ri_retention_derivation () =
   (* payout 100/200 and 50/200 -> mean 0.375; a loss year is skipped; dividends above
@@ -955,8 +983,9 @@ let test_bank_routes_to_residual_income () =
   (match v.inputs with
   | Some (`Residual_income i) ->
       Alcotest.(check int) "roe path spans the horizon" 7 (List.length i.roe_path);
-      Alcotest.(check string) "spread provenance" "assumption" i.bank_terminal_roe_spread.source
+      Alcotest.(check string) "spread provenance" "assumption" i.terminal_roe_spread.source
   | Some (`Dcf _) -> Alcotest.fail "a bank reached the dcf"
+  | Some (`Residual_income_insurer _) -> Alcotest.fail "a bank reached the insurer model"
   | None -> Alcotest.fail "no inputs");
   match v.class_check with
   | Some e -> Alcotest.check class_check_outcome "signature consistent" `Consistent e.outcome
@@ -978,7 +1007,105 @@ let test_flow_chart_names_every_reason () =
       "must be positive"; "years is negative"; "does not exceed terminal growth";
       "growth not derivable"; "fair value is not finite"; "non-positive fair value";
       "exceeds sanity bound"; "likely structural break; check entity_class";
-      "is not positive"; "roe not derivable"; "payout not derivable"; "cost of equity" ]
+      "is not positive"; "roe not derivable"; "payout not derivable"; "cost of equity";
+      "insurer model requires filed-statement data" ]
+
+(* --- the insurer model --- *)
+
+(* The bank fixture's numbers with book split into reported equity 1200 and AOCI 200, so
+   the adjusted book is 1000 and every core figure equals the bank case: fair value
+   14.318, justified P/B 1.4318 on adjusted book. *)
+let insurer_history ?(aoci = 200.) ?claims ?(total = Some 900.) ?acq ?opex ?fpb ?(claims_liability = Some 3000.) () =
+  List.map
+    (fun period_end ->
+      period ~period_end ~total_revenue:1200. ~net_income:200. ~dividends_paid:100.
+        ~dividends_paid_row:"PaymentsOfDividendsCommonStock" ~book_equity:1200. ~aoci
+        ~aoci_row:"AccumulatedOtherComprehensiveIncomeLossNetOfTax" ~premiums_earned:1000.
+        ~premiums_earned_row:"PremiumsEarnedNet" ?claims_incurred:claims
+        ?benefits_losses_and_expenses:total ?policy_acquisition_expense:acq ?operating_expense:opex
+        ?future_policy_benefits:fpb ?claims_liability ~filed:"2026-02-20" ~accession:"0001-26-1" ())
+    [ "2025-12-31"; "2024-12-31" ]
+
+let insurer_financials ?(provider = "SEC XBRL companyfacts") ?statements_unavailable periods =
+  financials ~price:(Some 10.) ~market_cap:(Some 1000.) ~industry:(Some "Insurance - Life")
+    ~provider ?statements_unavailable periods
+
+let test_insurer_aoci_adjustment () =
+  let inputs, fair_value =
+    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T" (insurer_financials (insurer_history ())))
+  in
+  check_float "fair value on adjusted book equals the bank case" (1431.8181818181818 /. 100.) fair_value;
+  check_float "core book is adjusted" 1000. inputs.core.book_equity;
+  check_float "reported book recorded" 1200. inputs.reported_book_equity;
+  check_float "aoci recorded" 200. inputs.aoci;
+  check_float "aoci share of reported book" (200. /. 1200.) inputs.aoci_to_reported_book;
+  check_float "roe on adjusted book" 0.2 inputs.core.roe_0;
+  Alcotest.(check string) "provider" "SEC XBRL companyfacts" inputs.provider;
+  Alcotest.(check (option string)) "filed" (Some "2026-02-20") inputs.filed;
+  Alcotest.(check (option string)) "aoci row" (Some "AccumulatedOtherComprehensiveIncomeLossNetOfTax") inputs.aoci_row;
+  Alcotest.(check (option approx)) "solvency null" None inputs.solvency;
+  check_mentions "solvency basis" inputs.solvency_basis [ "not available from filed financial statements" ];
+  (* a negative AOCI raises the adjusted book *)
+  let inputs, _ =
+    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T"
+           (insurer_financials (insurer_history ~aoci:(-300.) ())))
+  in
+  check_float "negative aoci adds back" 1500. inputs.core.book_equity
+
+let test_insurer_underwriting_checks () =
+  let inputs, _ =
+    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T" (insurer_financials (insurer_history ())))
+  in
+  Alcotest.(check (option approx)) "combined via the filed total" (Some 0.9) inputs.combined_ratio_proxy;
+  check_mentions "basis" inputs.combined_ratio_basis [ "filed total" ];
+  Alcotest.(check (option approx)) "reserves over premiums" (Some 3.0) inputs.reserves_to_premiums;
+  let inputs, _ =
+    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T"
+           (insurer_financials (insurer_history ~total:None ~claims:800. ~acq:50. ~opex:70. ~fpb:500. ())))
+  in
+  Alcotest.(check (option approx)) "combined via claims plus expenses" (Some 0.92) inputs.combined_ratio_proxy;
+  check_mentions "basis" inputs.combined_ratio_basis [ "claims incurred plus" ];
+  Alcotest.(check (option approx)) "reserves sum both liabilities" (Some 3.5) inputs.reserves_to_premiums;
+  let inputs, _ =
+    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T"
+           (insurer_financials (insurer_history ~total:None ~claims_liability:None ())))
+  in
+  Alcotest.(check (option approx)) "no claims line, no ratio" None inputs.combined_ratio_proxy;
+  Alcotest.(check (option approx)) "no reserves, no ratio" None inputs.reserves_to_premiums
+
+let test_insurer_requires_filed_statements () =
+  check_error "vendor rows"
+    (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T" (financials (history ())))
+    [ "insurer model requires filed-statement data"; "no AOCI or premiums earned"; "provider yfinance" ];
+  check_error "provider had nothing"
+    (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T"
+       (insurer_financials ~statements_unavailable:"no SEC filings for ALV.DE: not in company_tickers.json" []))
+    [ "insurer model requires filed-statement data; no SEC filings for ALV.DE" ];
+  check_error "no periods at all"
+    (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T" (insurer_financials []))
+    [ "insurer model requires filed-statement data; no filed statements for TEST" ]
+
+let test_insurer_routes_and_floors () =
+  let v = run ~declared:(Some (declaration `Insurer)) (insurer_financials (insurer_history ())) in
+  Alcotest.check status "status" `Ok v.status;
+  Alcotest.(check (option model)) "routed model" (Some `Residual_income_insurer) v.model;
+  check_floor "verified" v (Some true);
+  check_mentions "floor basis" v.floor.basis
+    [ "AOCI-adjusted book"; "reserve adequacy not assessed"; "justified price/book" ];
+  (match v.inputs with
+  | Some (`Residual_income_insurer i) ->
+      Alcotest.(check string) "spread provenance" "assumption" i.core.terminal_roe_spread.source;
+      Alcotest.(check int) "roe path spans the horizon" 7 (List.length i.core.roe_path)
+  | Some _ -> Alcotest.fail "an insurer reached another model"
+  | None -> Alcotest.fail "no inputs");
+  (match v.class_check with
+  | Some e -> Alcotest.check class_check_outcome "premium row fires, consistent" `Consistent e.outcome
+  | None -> Alcotest.fail "no evidence");
+  let refused = run ~declared:(Some (declaration `Insurer))
+      (insurer_financials ~statements_unavailable:"no SEC filings for ALV.DE: not in company_tickers.json" []) in
+  check_reason refused [ "insurer model requires filed-statement data; no SEC filings for ALV.DE" ];
+  Alcotest.(check (option model)) "routed but never ran" (Some `Residual_income_insurer) refused.model;
+  check_floor "not assessed" refused None
 
 (* --- batch summary --- *)
 
@@ -987,7 +1114,7 @@ let test_batch_summary () =
     Reference_j.universe_of_string
       {|{"tickers": [
           {"ticker": "TEST", "entity_class": "OperatingCompany", "note": "ok", "expected_status": "Ok"},
-          {"ticker": "INS", "entity_class": "Insurer", "note": "insurer", "expected_status": "Failed", "expected_reason": "dcf not admissible for Insurer"},
+          {"ticker": "WRP", "entity_class": "Wrapper", "note": "wrapper", "expected_status": "Failed", "expected_reason": "dcf not admissible for Wrapper"},
           {"ticker": "WRONG", "entity_class": "OperatingCompany", "note": "expects ok", "expected_status": "Ok"},
           {"ticker": "ABSENT", "entity_class": "Wrapper", "note": "never run", "expected_status": "Ok"}]}|}
   in
@@ -995,14 +1122,14 @@ let test_batch_summary () =
   let vs =
     [
       run (financials (history ()));
-      rename "INS" (run ~declared:(Some (declaration `Insurer)) (financials [ bank_period () ]));
+      rename "WRP" (run ~declared:(Some (declaration `Wrapper)) (financials [ bank_period () ]));
       rename "WRONG" (run (financials []));
     ]
   in
   let s = Batch.summary ~universe vs in
   check_mentions "summary" s
-    [ "3 records, 1 Ok, 2 Failed"; "by class: OperatingCompany 2, Insurer 1";
-      "1  dcf not admissible for Insurer"; "1  no fiscal periods in statements";
+    [ "3 records, 1 Ok, 2 Failed"; "by class: OperatingCompany 2, Wrapper 1";
+      "1  dcf not admissible for Wrapper"; "1  no fiscal periods in statements";
       "TEST       Ok      OperatingCompany   fair_value"; "as expected";
       "WRONG      Failed  OperatingCompany   no fiscal periods in statements  EXPECTED Ok";
       "in the universe but not run: ABSENT" ];
@@ -1023,7 +1150,7 @@ let test_ok () =
   Alcotest.(check bool) "signal present" true (Option.is_some v.signal);
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
-  | Some (`Residual_income _) -> Alcotest.fail "routed to the wrong model"
+  | Some (`Residual_income _ | `Residual_income_insurer _) -> Alcotest.fail "routed to the wrong model"
   | Some (`Dcf i) ->
       Alcotest.(check string) "country" "United States" i.country;
       Alcotest.(check (option string)) "industry" (Some "Consumer Electronics") i.industry;
@@ -1081,7 +1208,7 @@ let test_no_industry () =
   Alcotest.check status "status" `Ok v.status;
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
-  | Some (`Residual_income _) -> Alcotest.fail "routed to the wrong model"
+  | Some (`Residual_income _ | `Residual_income_insurer _) -> Alcotest.fail "routed to the wrong model"
   | Some (`Dcf i) ->
       check_float "beta" 1.0 i.beta.value;
       Alcotest.check beta_source "beta_source" `Default_no_industry i.beta_source;
@@ -1139,6 +1266,7 @@ let test_wacc_below_terminal_growth () =
                "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "bank_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
+               "insurer_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
                "unwired": {}}|} }
@@ -1257,6 +1385,13 @@ let () =
           case "guards fail, never zero" test_ri_guards;
           case "loan-loss ratios recorded" test_ri_loan_loss_recorded;
           case "a bank routes to residual income, never the dcf" test_bank_routes_to_residual_income;
+        ] );
+      ( "insurer",
+        [
+          case "aoci adjustment applied and recorded" test_insurer_aoci_adjustment;
+          case "underwriting checks recorded, never gates" test_insurer_underwriting_checks;
+          case "requires filed statements, names the fix" test_insurer_requires_filed_statements;
+          case "routes to the insurer model with a verified floor" test_insurer_routes_and_floors;
         ] );
       ( "valuation",
         [

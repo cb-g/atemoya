@@ -114,38 +114,35 @@
     {
       "ticker": "ALL",
       "entity_class": "Insurer",
-      "note": "U.S. insurer",
+      "note": "U.S. insurer; statements from SEC XBRL, valued by residual income on AOCI-adjusted book",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Insurer"
+      "expected_status": "Ok"
     },
     {
       "ticker": "MET",
       "entity_class": "Insurer",
-      "note": "U.S. insurer",
+      "note": "U.S. insurer; statements from SEC XBRL, valued by residual income on AOCI-adjusted book",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Insurer"
+      "expected_status": "Ok"
     },
     {
       "ticker": "PGR",
       "entity_class": "Insurer",
-      "note": "U.S. insurer",
+      "note": "U.S. insurer; statements from SEC XBRL, valued by residual income on AOCI-adjusted book",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Insurer"
+      "expected_status": "Ok"
     },
     {
       "ticker": "ALV.DE",
       "entity_class": "Insurer",
-      "note": "European insurer with no premium row on the vendor's statements",
+      "note": "European insurer with no SEC filings (ALV in SEC's ticker map is Autoliv); the insurer model needs filed statements",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Insurer"
+      "expected_reason": "insurer model requires filed-statement data"
     },
     {
       "ticker": "HDB",

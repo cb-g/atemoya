@@ -53,6 +53,23 @@ type fiscal_period = {
   provision_for_credit_losses_row : string nullable;
   net_loans : float nullable;                 (* >= 0; banks only *)
   net_loans_row : string nullable;
+  (* Present only when the provider is filed statements (optional fields: omitted otherwise). *)
+  ?filed : string option;                     (* filing date of the statement this period came from *)
+  ?accession : string option;
+  ?aoci : float option;                       (* accumulated other comprehensive income, net of tax; any sign *)
+  ?aoci_row : string option;
+  ?claims_incurred : float option;            (* >= 0; policyholder benefits and claims incurred *)
+  ?claims_incurred_row : string option;
+  ?benefits_losses_and_expenses : float option;   (* >= 0; the total including acquisition and operating expense *)
+  ?benefits_losses_and_expenses_row : string option;
+  ?policy_acquisition_expense : float option; (* >= 0 *)
+  ?policy_acquisition_expense_row : string option;
+  ?operating_expense : float option;          (* >= 0 *)
+  ?operating_expense_row : string option;
+  ?future_policy_benefits : float option;     (* >= 0; liability at period end *)
+  ?future_policy_benefits_row : string option;
+  ?claims_liability : float option;           (* >= 0; liability at period end *)
+  ?claims_liability_row : string option;
 }
 
 type financials = {
@@ -65,6 +82,8 @@ type financials = {
   industry : string nullable;    (* industry as the vendor spells it, e.g. "Consumer Electronics" *)
   periods : fiscal_period list;
   notes : string list;           (* free-text provenance and data-quality notes; never branched on *)
+  ~provider : string;            (* where the statements came from, e.g. "yfinance" or "SEC XBRL companyfacts" *)
+  ~statements_unavailable : string;   (* why the provider had no statements for this ticker; empty when it had *)
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -74,6 +93,7 @@ type financials = {
 type model = [
   | Dcf <json name="dcf">                             (* FCFF DCF; OperatingCompany *)
   | Residual_income <json name="residual_income">     (* excess returns over book; Bank *)
+  | Residual_income_insurer <json name="residual_income_insurer">   (* excess returns over AOCI-adjusted book; Insurer *)
 ]
 
 (* What a company is judged on: a controlled vocabulary of economic drivers, not sectors.
@@ -243,7 +263,7 @@ type residual_income_inputs = {
   cost_of_equity : float;             (* risk_free_rate + beta * equity_risk_premium *)
   mean_reversion_lambda : parameter;
   terminal_growth_rate : parameter;
-  bank_terminal_roe_spread : parameter;   (* terminal excess return over cost of equity, on book *)
+  terminal_roe_spread : parameter;    (* terminal excess return over cost of equity, on book; the class's own parameter *)
   projection_years : int_parameter;
   roe_path : float list;              (* ROE_1 .. ROE_N: ke + (roe_0 - ke) * exp(-lambda * t) *)
   book_value_path : float list;       (* start-of-year book for years 1 .. N *)
@@ -262,10 +282,45 @@ type residual_income_inputs = {
   provision_to_net_loans : float nullable;
 }
 
+(* The insurer model: the residual-income core run on AOCI-adjusted book (reported
+   stockholders' equity less accumulated other comprehensive income, per period), from
+   filed statements, plus the underwriting checks the lens says to read it with. The
+   checks are recorded, never gates; solvency is declared null, never fabricated. *)
+type insurer_inputs = {
+  core : residual_income_inputs;      (* core.book_equity is the AOCI-adjusted book *)
+  provider : string;
+  filed : string nullable;
+  accession : string nullable;
+  reported_book_equity : float;
+  aoci : float;
+  aoci_row : string nullable;
+  aoci_to_reported_book : float;      (* how much of reported book was adjusted away *)
+  premiums_earned : float;
+  premiums_earned_row : string nullable;
+  claims_incurred : float nullable;
+  claims_incurred_row : string nullable;
+  benefits_losses_and_expenses : float nullable;
+  benefits_losses_and_expenses_row : string nullable;
+  policy_acquisition_expense : float nullable;
+  policy_acquisition_expense_row : string nullable;
+  operating_expense : float nullable;
+  operating_expense_row : string nullable;
+  combined_ratio_proxy : float nullable;
+  combined_ratio_basis : string;
+  future_policy_benefits : float nullable;
+  future_policy_benefits_row : string nullable;
+  claims_liability : float nullable;
+  claims_liability_row : string nullable;
+  reserves_to_premiums : float nullable;
+  solvency : float nullable;          (* always null: RBC and Solvency II live in regulatory filings, not financial statements *)
+  solvency_basis : string;
+}
+
 (* The inputs of whichever model ran, tagged with it. *)
 type model_inputs = [
   | Dcf <json name="dcf"> of inputs
   | Residual_income <json name="residual_income"> of residual_income_inputs
+  | Residual_income_insurer <json name="residual_income_insurer"> of insurer_inputs
 ]
 
 type valuation = {

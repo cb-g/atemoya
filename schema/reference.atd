@@ -89,6 +89,7 @@ type params = {
   growth_clamp_upper : scalar;
   mean_reversion_lambda : scalar;     (* growth, and a bank's ROE, decay toward their anchor at exp(-lambda * t) *)
   bank_terminal_roe_spread : scalar;  (* terminal excess return over cost of equity, on book, for the residual-income model *)
+  insurer_terminal_roe_spread : scalar;   (* the same, on AOCI-adjusted book, for the insurer model *)
   terminal_growth_rate : country_table;
   unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
 }
