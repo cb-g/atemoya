@@ -9,10 +9,33 @@
 
 type curve = {
   source : string;
-  as_of : string;                                       (* observation or copy date *)
-  rates : (string * float) list <json repr="object">;   (* tenor, e.g. "7y" -> rate *)
+  ~tier : string;                                       (* official | fred_oecd_10y | manual; "" on legacy entries *)
+  as_of : string;                                       (* observation date (period end for a monthly average), or copy date *)
+  rates : (string * float) list <json repr="object">;   (* requested tenor, e.g. "7y" -> rate *)
   ~estimated : string list;                             (* tenors interpolated, not sourced *)
+  ~tenor_used : (string * string) list <json repr="object">;   (* requested tenor -> tenor actually used, where they differ *)
   ~notes : string list;
+}
+
+(* Where each country's curve comes from and how it is refreshed. Read by
+   python/refresh_rates.py; OCaml reads it only to check it agrees with the rate file. *)
+type rate_source = {
+  tier : string;                                        (* official | fred_oecd_10y | manual *)
+  source : string;                                      (* the issuer or publisher, for the curve's source field *)
+  parser : string;                                      (* fred_dgs | fred_oecd_10y | boc_valet | ecb_yc | bundesbank_bbsis | mof_jgb | tesouro_direto | proxy | manual *)
+  ~url : string;
+  ~series : (string * string) list <json repr="object">;      (* tenor -> series id, column or key, per parser *)
+  ~substitute : (string * string) list <json repr="object">;  (* requested tenor -> available tenor to use in its place *)
+  ~proxy_of : string;                                   (* another country whose curve stands in *)
+  tenors : string list;                                 (* the tenors this source provides, after substitution *)
+  ~notes : string list;
+}
+
+type rate_sources = {
+  source : string;
+  as_of : string;
+  ~notes : string list;
+  countries : (string * rate_source) list <json repr="object">;
 }
 
 type risk_free_rates = {

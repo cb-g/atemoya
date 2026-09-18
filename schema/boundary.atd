@@ -116,6 +116,9 @@ type parameter = {
   as_of : string;        (* ISO 8601 date of the source value *)
   age_days : int;        (* valued_on - as_of *)
   ~estimated : bool;     (* the source marks this cell as an interpolation, not a quote *)
+  ~tier : string;        (* risk-free only: official | fred_oecd_10y | manual *)
+  ~tenor_requested : string;   (* risk-free only: the tenor the horizon asked for *)
+  ~tenor_used : string;        (* risk-free only: the tenor supplied; differs on a recorded substitution *)
 }
 
 type int_parameter = {

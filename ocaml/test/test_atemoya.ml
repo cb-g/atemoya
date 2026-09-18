@@ -70,7 +70,7 @@ let history ?ebit ?pretax_income ?capex ?delta_nwc () =
 
 let param ?(key = "k") ?(source = "test") ?(as_of = today) ?(age_days = 0)
     ?(estimated = false) value : Boundary_t.parameter =
-  { value; key; source; as_of; age_days; estimated }
+  { value; key; source; as_of; age_days; estimated; tier = ""; tenor_requested = ""; tenor_used = "" }
 
 (* The first version's round numbers, now as provenance-carrying parameters:
    tax 500 / 1000 = 0.5;  fcff = 1200 * 0.5 + 200 - 50 - 50 = 700
@@ -104,8 +104,10 @@ let risk_free_json =
   "tenors": ["1y", "3y", "5y", "7y", "10y"],
   "aliases": {"USA": "United States"},
   "countries": {
-    "United States": {"source": "FRED", "as_of": "2026-09-08",
+    "United States": {"source": "FRED", "tier": "official", "as_of": "2026-09-08",
       "rates": {"1y": 0.037, "3y": 0.040, "5y": 0.043, "7y": 0.0468, "10y": 0.050}},
+    "South Korea": {"source": "OECD via FRED", "tier": "fred_oecd_10y", "as_of": "2026-08-31",
+      "rates": {"7y": 0.045, "10y": 0.045}, "tenor_used": {"7y": "10y"}},
     "Singapore": {"source": "copied", "as_of": "2026-09-08",
       "rates": {"1y": 0.015, "3y": 0.016, "5y": 0.017, "7y": 0.018, "10y": 0.019},
       "estimated": ["3y", "7y"]},
@@ -130,7 +132,7 @@ let params_json =
   "bank_terminal_roe_spread": {"value": 0.02, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
-    "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015}},
+    "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03}},
   "unwired": {"growth_clamp": {"upper": 0.5}}
   }|}
 
@@ -140,11 +142,11 @@ let params : Params.t =
     equity_risk_premiums =
       Reference_j.country_table_of_string
         (country_table_json ~source:"Damodaran Jan 2026"
-           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423}|});
+           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423, "South Korea": 0.0487}|});
     tax_rates =
       Reference_j.country_table_of_string
         (country_table_json ~source:"PwC 2026"
-           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30}|});
+           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30, "South Korea": 0.275}|});
     industry_betas =
       Reference_j.industry_table_of_string
         {|{"source": "sector betas 2026", "as_of": "2026-01-01", "max_age_days": 400,
@@ -496,6 +498,17 @@ let test_resolve_provenance () =
   Alcotest.(check int) "projection_years" 7 a.projection_years.value;
   Alcotest.(check int) "projection_years age" 101 a.projection_years.age_days
 
+let test_resolve_tenor_substitution () =
+  let a = get (Params.resolve params ~today ~country:"South Korea" ~industry:None) in
+  check_float "the 10y value stands in" 0.045 a.risk_free_rate.value;
+  Alcotest.(check string) "requested" "7y" a.risk_free_rate.tenor_requested;
+  Alcotest.(check string) "used" "10y" a.risk_free_rate.tenor_used;
+  Alcotest.(check string) "tier" "fred_oecd_10y" a.risk_free_rate.tier;
+  Alcotest.(check int) "age from the month end" 10 a.risk_free_rate.age_days;
+  let us = get (Params.resolve params ~today ~country:"United States" ~industry:None) in
+  Alcotest.(check string) "no substitution: used equals requested" "7y" us.risk_free_rate.tenor_used;
+  Alcotest.(check string) "official" "official" us.risk_free_rate.tier
+
 let test_resolve_alias () =
   let a = get (Params.resolve params ~today ~country:"USA" ~industry:None) in
   Alcotest.(check string) "rf key canonical" "United States/7y" a.risk_free_rate.key;
@@ -543,19 +556,43 @@ let test_reference_files_load () =
   (* The tracked reference/ tree, as copied into the test's build directory. *)
   let t = get (Params.load ~dir:"../../reference") in
   let tenors = t.risk_free.tenors in
+  let horizon = Printf.sprintf "%dy" t.params.projection_years.value in
+  let registry =
+    Atdgen_runtime.Util.Json.from_file Reference_j.read_rate_sources
+      "../../reference/rate_sources.json"
+  in
   List.iter
     (fun (country, (curve : Reference_t.curve)) ->
+      if not (List.mem_assoc horizon curve.rates) then
+        Alcotest.failf "%s lacks the %s tenor the horizon needs" country horizon;
+      List.iter
+        (fun (tenor, _) ->
+          if not (List.mem tenor tenors) then
+            Alcotest.failf "%s carries unknown tenor %s" country tenor)
+        curve.rates;
       List.iter
         (fun tenor ->
           if not (List.mem_assoc tenor curve.rates) then
-            Alcotest.failf "%s lacks the %s tenor" country tenor)
-        tenors;
+            Alcotest.failf "%s marks %s as estimated but does not carry it" country tenor)
+        curve.estimated;
       List.iter
-        (fun tenor ->
-          if not (List.mem tenor tenors) then
-            Alcotest.failf "%s marks unknown tenor %s as estimated" country tenor)
-        curve.estimated)
+        (fun (requested, used) ->
+          if not (List.mem_assoc requested curve.rates && List.mem_assoc used curve.rates) then
+            Alcotest.failf "%s records a substitution %s<-%s it does not carry" country requested used)
+        curve.tenor_used;
+      match List.assoc_opt country registry.countries with
+      | None -> Alcotest.failf "%s has a curve but no registry entry" country
+      | Some (r : Reference_t.rate_source) ->
+          if List.mem curve.tier [ "official"; "fred_oecd_10y"; "manual" ] |> not then
+            Alcotest.failf "%s has tier %S" country curve.tier;
+          if curve.tier <> "manual" && curve.tier <> r.tier then
+            Alcotest.failf "%s: curve tier %s but registry tier %s" country curve.tier r.tier)
     t.risk_free.countries;
+  List.iter
+    (fun (country, _) ->
+      if not (List.mem_assoc country t.risk_free.countries) then
+        Alcotest.failf "registry lists %s but the rate file has no curve" country)
+    registry.countries;
   Alcotest.(check (list string)) "Singapore estimated cells" [ "3y"; "7y" ]
     (List.assoc "Singapore" t.risk_free.countries).estimated;
   Alcotest.(check (list string)) "Taiwan estimated cells" [ "1y"; "3y"; "7y" ]
@@ -1184,6 +1221,7 @@ let () =
           case "days between dates" test_days_between;
           case "estimated cells round-trip" test_estimated_round_trip;
           case "resolve carries provenance" test_resolve_provenance;
+          case "resolve records a tenor substitution and tier" test_resolve_tenor_substitution;
           case "resolve follows aliases" test_resolve_alias;
           case "unknown country is an error naming it" test_resolve_unknown_country;
           case "stale parameter is an error naming it and its age" test_resolve_stale;

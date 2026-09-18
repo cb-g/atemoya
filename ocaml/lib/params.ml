@@ -59,9 +59,9 @@ let age ~today ~name ~key ~as_of ~max_age_days =
          name key as_of age_days max_age_days)
   else Ok age_days
 
-let parameter ?(estimated = false) ~value ~key ~source ~as_of ~age_days () :
-    Boundary_t.parameter =
-  { value; key; source; as_of; age_days; estimated }
+let parameter ?(estimated = false) ?(tier = "") ?(tenor_requested = "")
+    ?(tenor_used = "") ~value ~key ~source ~as_of ~age_days () : Boundary_t.parameter =
+  { value; key; source; as_of; age_days; estimated; tier; tenor_requested; tenor_used }
 
 let country_value (table : country_table) ~today ~name ~country =
   let key = canonical table.aliases country in
@@ -88,10 +88,14 @@ let risk_free (rf : risk_free_rates) ~today ~country ~tenor =
             age ~today ~name:"risk_free_rate" ~key ~as_of:curve.as_of
               ~max_age_days:rf.max_age_days
           in
+          let tenor_used =
+            Option.value (List.assoc_opt tenor curve.tenor_used) ~default:tenor
+          in
           Ok
             (parameter
                ~estimated:(List.mem tenor curve.estimated)
-               ~value ~key ~source:curve.source ~as_of:curve.as_of ~age_days ()))
+               ~tier:curve.tier ~tenor_requested:tenor ~tenor_used ~value ~key
+               ~source:curve.source ~as_of:curve.as_of ~age_days ()))
 
 let beta (table : industry_table) ~today ~industry =
   let default key =

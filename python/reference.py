@@ -389,7 +389,9 @@ class Curve:
     source: str
     as_of: str
     rates: List[Tuple[str, float]]
+    tier: str = field(default_factory=lambda: "")
     estimated: List[str] = field(default_factory=lambda: [])
+    tenor_used: List[Tuple[str, str]] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -399,7 +401,9 @@ class Curve:
                 source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('Curve', 'source'),
                 as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Curve', 'as_of'),
                 rates=_atd_read_assoc_object_into_list(_atd_read_float)(x['rates']) if 'rates' in x else _atd_missing_json_field('Curve', 'rates'),
+                tier=_atd_read_string(x['tier']) if 'tier' in x else "",
                 estimated=_atd_read_list(_atd_read_string)(x['estimated']) if 'estimated' in x else [],
+                tenor_used=_atd_read_assoc_object_into_list(_atd_read_string)(x['tenor_used']) if 'tenor_used' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -410,7 +414,9 @@ class Curve:
         res['source'] = _atd_write_string(self.source)
         res['as_of'] = _atd_write_string(self.as_of)
         res['rates'] = _atd_write_assoc_list_to_object(_atd_write_float)(self.rates)
+        res['tier'] = _atd_write_string(self.tier)
         res['estimated'] = _atd_write_list(_atd_write_string)(self.estimated)
+        res['tenor_used'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.tenor_used)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 
@@ -457,6 +463,97 @@ class RiskFreeRates:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'RiskFreeRates':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class RateSource:
+    """Original type: rate_source = { ... }
+    """
+
+    tier: str
+    source: str
+    parser: str
+    tenors: List[str]
+    url: str = field(default_factory=lambda: "")
+    series: List[Tuple[str, str]] = field(default_factory=lambda: [])
+    substitute: List[Tuple[str, str]] = field(default_factory=lambda: [])
+    proxy_of: str = field(default_factory=lambda: "")
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'RateSource':
+        if isinstance(x, dict):
+            return cls(
+                tier=_atd_read_string(x['tier']) if 'tier' in x else _atd_missing_json_field('RateSource', 'tier'),
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('RateSource', 'source'),
+                parser=_atd_read_string(x['parser']) if 'parser' in x else _atd_missing_json_field('RateSource', 'parser'),
+                tenors=_atd_read_list(_atd_read_string)(x['tenors']) if 'tenors' in x else _atd_missing_json_field('RateSource', 'tenors'),
+                url=_atd_read_string(x['url']) if 'url' in x else "",
+                series=_atd_read_assoc_object_into_list(_atd_read_string)(x['series']) if 'series' in x else [],
+                substitute=_atd_read_assoc_object_into_list(_atd_read_string)(x['substitute']) if 'substitute' in x else [],
+                proxy_of=_atd_read_string(x['proxy_of']) if 'proxy_of' in x else "",
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('RateSource', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['tier'] = _atd_write_string(self.tier)
+        res['source'] = _atd_write_string(self.source)
+        res['parser'] = _atd_write_string(self.parser)
+        res['tenors'] = _atd_write_list(_atd_write_string)(self.tenors)
+        res['url'] = _atd_write_string(self.url)
+        res['series'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.series)
+        res['substitute'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.substitute)
+        res['proxy_of'] = _atd_write_string(self.proxy_of)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'RateSource':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class RateSources:
+    """Original type: rate_sources = { ... }
+    """
+
+    source: str
+    as_of: str
+    countries: List[Tuple[str, RateSource]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'RateSources':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('RateSources', 'source'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('RateSources', 'as_of'),
+                countries=_atd_read_assoc_object_into_list(RateSource.from_json)(x['countries']) if 'countries' in x else _atd_missing_json_field('RateSources', 'countries'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('RateSources', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['countries'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.countries)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'RateSources':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:

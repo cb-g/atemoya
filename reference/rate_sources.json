@@ -1,0 +1,448 @@
+{
+  "source": "verified live on 2026-09-18: each official or fred_oecd_10y entry returned a dated observation to python/refresh_rates.py before it was recorded here",
+  "as_of": "2026-09-18",
+  "notes": [
+    "Tiers: official (issuer or central bank, machine-readable) > fred_oecd_10y (OECD monthly 10y via FRED; the 7y is taken from the 10y and recorded as a substitution) > manual (hand-copied; the 45-day gate forces the refresh).",
+    "Aggregators (worldgovernmentbonds, tradingeconomics) are never a programmatic source; they are where a human reads a manual entry from.",
+    "A failed fetch writes nothing; the existing entry stays and ages out."
+  ],
+  "countries": {
+    "United States": {
+      "tier": "official",
+      "source": "FRED",
+      "parser": "fred_dgs",
+      "series": {
+        "1y": "DGS1",
+        "3y": "DGS3",
+        "5y": "DGS5",
+        "7y": "DGS7",
+        "10y": "DGS10"
+      },
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "Constant-maturity Treasury yields, daily; the latest observation whose value is not \".\"."
+      ]
+    },
+    "Canada": {
+      "tier": "official",
+      "source": "Bank of Canada Valet, Government of Canada benchmark bond yields",
+      "parser": "boc_valet",
+      "url": "https://www.bankofcanada.ca/valet/observations/{series}/json?recent=5",
+      "series": {
+        "3y": "BD.CDN.3YR.DQ.YLD",
+        "5y": "BD.CDN.5YR.DQ.YLD",
+        "7y": "BD.CDN.7YR.DQ.YLD",
+        "10y": "BD.CDN.10YR.DQ.YLD"
+      },
+      "tenors": [
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "Keyless JSON. No 1y benchmark bond; the curve carries 3y to 10y."
+      ]
+    },
+    "Germany": {
+      "tier": "official",
+      "source": "Deutsche Bundesbank, listed Federal securities term structure (Svensson), daily",
+      "parser": "bundesbank_bbsis",
+      "url": "https://api.statistiken.bundesbank.de/rest/data/BBSIS/{series}?lastNObservations=5&format=csv",
+      "series": {
+        "1y": "D.I.ZST.ZI.EUR.S1311.B.A604.R01XX.R.A.A._Z._Z.A",
+        "3y": "D.I.ZST.ZI.EUR.S1311.B.A604.R03XX.R.A.A._Z._Z.A",
+        "5y": "D.I.ZST.ZI.EUR.S1311.B.A604.R05XX.R.A.A._Z._Z.A",
+        "7y": "D.I.ZST.ZI.EUR.S1311.B.A604.R07XX.R.A.A._Z._Z.A",
+        "10y": "D.I.ZST.ZI.EUR.S1311.B.A604.R10XX.R.A.A._Z._Z.A"
+      },
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "Semicolon CSV with a decimal comma; one request per tenor."
+      ]
+    },
+    "Netherlands": {
+      "tier": "official",
+      "source": "ECB Data Portal, euro-area AAA-rated government bond spot curve (euro_area_aaa_proxy)",
+      "parser": "ecb_yc",
+      "url": "https://data-api.ecb.europa.eu/service/data/YC/B.U2.EUR.4F.G_N_A.SV_C_YM.{series}?lastNObservations=5&format=csvdata",
+      "series": {
+        "1y": "SR_1Y",
+        "3y": "SR_3Y",
+        "5y": "SR_5Y",
+        "7y": "SR_7Y",
+        "10y": "SR_10Y"
+      },
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "The euro-area AAA curve stands in for AAA members only; never applied to Italy, Spain or France, whose spreads are the point."
+      ]
+    },
+    "Japan": {
+      "tier": "official",
+      "source": "Japan Ministry of Finance, JGB market yields, daily",
+      "parser": "mof_jgb",
+      "url": "https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/jgbcme.csv",
+      "series": {
+        "1y": "1Y",
+        "3y": "3Y",
+        "5y": "5Y",
+        "7y": "7Y",
+        "10y": "10Y"
+      },
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "Current-month CSV; the last dated row is the latest observation."
+      ]
+    },
+    "Brazil": {
+      "tier": "official",
+      "source": "Tesouro Nacional, Tesouro Direto daily prices and yields (Tesouro Prefixado and Prefixado com Juros Semestrais)",
+      "parser": "tesouro_direto",
+      "url": "https://www.tesourotransparente.gov.br/ckan/dataset/df56aa42-484a-4a59-8184-7676580c81e3/resource/796d2059-14e9-44e3-80c9-2d9e30b405c1/download/PrecoTaxaTesouroDireto.csv",
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "Every tenor is linearly interpolated between the two fixed-rate bonds whose maturities bracket it, on the mid of the morning buy and sell yields, and is therefore marked estimated.",
+        "The BCB SGS swap series 7805-7810 stopped in 2019; SGS carries no sovereign spot curve."
+      ]
+    },
+    "British Virgin Islands": {
+      "tier": "official",
+      "source": "U.S. Treasury curve via FRED as a proxy: no sovereign curve of its own",
+      "parser": "proxy",
+      "proxy_of": "United States",
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ]
+    },
+    "South Korea": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01KRM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01KRM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete"
+      ]
+    },
+    "United Kingdom": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01GBM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01GBM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete",
+        "UK DMO's D4H export returned an HTML page, not the CSV, on 2026-09-18."
+      ]
+    },
+    "Australia": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01AUM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01AUM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete",
+        "RBA's F2 CSV refused the request with HTTP 403 on 2026-09-18."
+      ]
+    },
+    "Switzerland": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01CHM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01CHM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete",
+        "SNB's rendoblim cube ends at 2025-07 (published 2025-09-01); too old to pass the 90-day fetch check."
+      ]
+    },
+    "Italy": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01ITM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01ITM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete"
+      ]
+    },
+    "Spain": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01ESM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01ESM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete"
+      ]
+    },
+    "France": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01FRM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01FRM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete"
+      ]
+    },
+    "Sweden": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01SEM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01SEM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete"
+      ]
+    },
+    "Finland": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01FIM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01FIM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete"
+      ]
+    },
+    "Ireland": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01IEM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01IEM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete"
+      ]
+    },
+    "Israel": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01ILM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01ILM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete"
+      ]
+    },
+    "India": {
+      "tier": "manual",
+      "source": "hand-copied sovereign yield curve",
+      "parser": "manual",
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "No programmatic source verified on 2026-09-18. Refresh by hand from the RBI Database on Indian Economy or the CCIL benchmark curve: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors.",
+        "FRED carries no OECD series for India (IRLTLT01INM156N does not exist)."
+      ]
+    },
+    "China": {
+      "tier": "manual",
+      "source": "hand-copied sovereign yield curve",
+      "parser": "manual",
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "No programmatic source verified on 2026-09-18. Refresh by hand from ChinaBond (yield.chinabond.com.cn) government bond curve: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors.",
+        "FRED carries no OECD series for China."
+      ]
+    },
+    "Singapore": {
+      "tier": "manual",
+      "source": "hand-copied sovereign yield curve",
+      "parser": "manual",
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "No programmatic source verified on 2026-09-18. Refresh by hand from MAS SGS prices and yields: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors.",
+        "MAS eservices answered with a maintenance page on 2026-09-18; retry the datastore API later."
+      ]
+    },
+    "Hong Kong": {
+      "tier": "manual",
+      "source": "hand-copied sovereign yield curve",
+      "parser": "manual",
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "No programmatic source verified on 2026-09-18. Refresh by hand from HKMA Government Bond Programme yields: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors.",
+        "The HKMA API path tried on 2026-09-18 answered 'API not found'."
+      ]
+    },
+    "Taiwan": {
+      "tier": "manual",
+      "source": "hand-copied sovereign yield curve",
+      "parser": "manual",
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "No programmatic source verified on 2026-09-18. Refresh by hand from the Central Bank of the Republic of China (Taiwan) government bond statistics: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors."
+      ]
+    },
+    "Kazakhstan": {
+      "tier": "manual",
+      "source": "hand-copied sovereign yield curve",
+      "parser": "manual",
+      "tenors": [
+        "1y",
+        "3y",
+        "5y",
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "No programmatic source verified on 2026-09-18. Refresh by hand from the National Bank of Kazakhstan government securities statistics: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors."
+      ]
+    }
+  }
+}

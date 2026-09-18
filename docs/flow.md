@@ -6,7 +6,7 @@ are the exact `failed_reason` strings, with variable parts in parentheses, so th
 checkable against `output/summary.txt`; a test asserts every reason string in the code
 appears here. **Every change that adds a branch updates this file in the same commit.**
 
-Nodes marked *(06)* were added by the bank model.
+Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers.
 
 ```mermaid
 flowchart TD
@@ -34,6 +34,7 @@ flowchart TD
 
     COUNTRY{"country in the fetch?"} -- no --> F_COUNTRY["country not determinable from the fetch"]:::failed
     COUNTRY -- yes --> PARAMS["resolve parameters: projection_years, risk-free (country, 7y), ERP, statutory tax, terminal growth, debt spread, growth clamp, lambda, beta (industry table or default 1.0)"]
+    PARAMS -. "risk-free curve tier (07): official (issuer or central bank) / fred_oecd_10y (the 7y taken from the OECD 10y, recorded as tenor_used) / manual (hand-copied, ages out under the 45-day gate); tier, tenor_requested and tenor_used ride on the parameter" .-> PARAMS
     PARAMS -- "country absent" --> F_NOCURVE["no risk-free curve for country (country)"]:::failed
     PARAMS -- "country absent" --> F_NOPARAM["no (equity_risk_premium|statutory_tax_rate|terminal_growth_rate) for country (country)"]:::failed
     PARAMS -- "tenor absent" --> F_NOTENOR["risk-free curve for (key) has no (tenor) tenor"]:::failed
@@ -99,3 +100,5 @@ into it.
 - entity class (05): declaration, class check, admissibility, floor.
 - bank model (06): the residual-income model for `Bank`, its guards and its inputs; the
   admissibility branch now routes to the first admissible model in the row.
+- risk-free fetchers (07): risk-free curves come from a source registry in three tiers; a tenor
+  substitution is recorded on the parameter, never silent. No new `Failed` string.

@@ -87,11 +87,11 @@
     {
       "ticker": "NU",
       "entity_class": "Bank",
-      "note": "foreign bank ADR, reports in USD; Bank, admissible, then fails on its stale non-U.S. curve",
+      "note": "foreign bank ADR, reports in USD; Brazil's curve is fetched from Tesouro Nacional, so it now stops at the next gate: the vendor has no dividends row for it",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "risk_free_rate for"
+      "expected_reason": "payout not derivable"
     },
     {
       "ticker": "IBN",
@@ -105,11 +105,11 @@
     {
       "ticker": "ITUB",
       "entity_class": "Bank",
-      "note": "foreign bank ADR, BRL statements; net-interest-income ratio 0.215 on 2026-09-18, a bank under the 0.15 threshold; Bank, admissible, then fails on its stale non-U.S. curve",
+      "note": "foreign bank ADR, BRL statements under a USD price; Brazil's curve is fetched, so it now stops on the single-currency rule, which is the cross-currency layer's job",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "risk_free_rate for"
+      "expected_reason": "missing market data: currency"
     },
     {
       "ticker": "ALL",
@@ -193,20 +193,18 @@
     {
       "ticker": "005930.KS",
       "entity_class": "OperatingCompany",
-      "note": "Korean listing; Generic until the Korean curve is refreshed",
+      "note": "Korean listing; South Korea's curve is the OECD 10y via FRED, 7y substituted and recorded",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "risk_free_rate for"
+      "expected_status": "Ok"
     },
     {
       "ticker": "000660.KS",
       "entity_class": "OperatingCompany",
-      "note": "Korean listing; Generic until the Korean curve is refreshed",
+      "note": "Korean listing; South Korea's curve is the OECD 10y via FRED, 7y substituted and recorded",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "risk_free_rate for"
+      "expected_status": "Ok"
     },
     {
       "ticker": "SPY",

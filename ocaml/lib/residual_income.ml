@@ -52,15 +52,32 @@ let value (a : Dcf.assumptions) ~(terminal_spread : parameter) ~country (fin : f
     | None -> Error "no fiscal periods in statements"
     | Some p -> Ok p
   in
-  let missing =
+  let market =
     List.filter_map Fun.id
       [
         absent "currency" fin.currency;
         absent "price" fin.price;
         absent "market_cap" fin.market_cap;
-        absent "book_equity" p.book_equity;
-        absent "net_income" p.net_income;
       ]
+  in
+  let statement =
+    List.filter_map Fun.id
+      [ absent "book_equity" p.book_equity; absent "net_income" p.net_income ]
+  in
+  let part label = function
+    | [] -> None
+    | names -> Some (label ^ ": " ^ String.concat ", " names)
+  in
+  let missing =
+    String.concat "; "
+      (List.filter_map Fun.id
+         [
+           part "missing market data" market;
+           part
+             (Printf.sprintf "missing statement fields for fiscal period ending %s"
+                p.period_end)
+             statement;
+         ])
   in
   match (fin.currency, fin.price, fin.market_cap, p.book_equity, p.net_income) with
   | Some _currency, Some price, Some market_cap, Some book_equity, Some net_income ->
@@ -190,7 +207,4 @@ let value (a : Dcf.assumptions) ~(terminal_spread : parameter) ~country (fin : f
                   provision_to_net_loans = ratio p.provision_for_credit_losses p.net_loans;
                 },
                 fair_value )
-  | _ ->
-      Error
-        (Printf.sprintf "missing statement fields for fiscal period ending %s: %s"
-           p.period_end (String.concat ", " missing))
+  | _ -> Error missing

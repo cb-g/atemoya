@@ -498,6 +498,9 @@ class Parameter:
     as_of: str
     age_days: int
     estimated: bool = field(default_factory=lambda: False)
+    tier: str = field(default_factory=lambda: "")
+    tenor_requested: str = field(default_factory=lambda: "")
+    tenor_used: str = field(default_factory=lambda: "")
 
     @classmethod
     def from_json(cls, x: Any) -> 'Parameter':
@@ -509,6 +512,9 @@ class Parameter:
                 as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Parameter', 'as_of'),
                 age_days=_atd_read_int(x['age_days']) if 'age_days' in x else _atd_missing_json_field('Parameter', 'age_days'),
                 estimated=_atd_read_bool(x['estimated']) if 'estimated' in x else False,
+                tier=_atd_read_string(x['tier']) if 'tier' in x else "",
+                tenor_requested=_atd_read_string(x['tenor_requested']) if 'tenor_requested' in x else "",
+                tenor_used=_atd_read_string(x['tenor_used']) if 'tenor_used' in x else "",
             )
         else:
             _atd_bad_json('Parameter', x)
@@ -521,6 +527,9 @@ class Parameter:
         res['as_of'] = _atd_write_string(self.as_of)
         res['age_days'] = _atd_write_int(self.age_days)
         res['estimated'] = _atd_write_bool(self.estimated)
+        res['tier'] = _atd_write_string(self.tier)
+        res['tenor_requested'] = _atd_write_string(self.tenor_requested)
+        res['tenor_used'] = _atd_write_string(self.tenor_used)
         return res
 
     @classmethod
