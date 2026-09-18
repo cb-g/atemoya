@@ -2,10 +2,14 @@
     resolution, model dispatch, sanity checks, signal, and the
     [`Failed]-with-nulls shape.
 
-    A fetch without a country, a country missing from the reference tables, a
-    stale parameter, a non-positive fair value, or a margin of safety beyond
-    [sanity_bound] is [`Failed] with the reason. When the arithmetic completed
-    first, [inputs] is kept for audit. *)
+    Order: classify -> country -> resolve parameters -> value. A [`Bank] or
+    [`Insurer] is [`Failed] with "model not implemented" before any parameter is
+    resolved, so it never reaches the generic arithmetic and its reason is not
+    masked by a stale rate. An unresolved classification, a fetch without a
+    country, a country missing from the reference tables, a stale parameter, a
+    non-positive fair value, or a margin of safety beyond [sanity_bound] is
+    [`Failed] with the reason. When the arithmetic completed first, [inputs] is
+    kept for audit. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)

@@ -80,7 +80,9 @@ class Profile(BaseModel):
         return v
 
 
-NON_NEGATIVE = frozenset({"depreciation_amortization", "capex", "cash", "total_debt"})
+NON_NEGATIVE = frozenset(
+    {"total_revenue", "premiums_earned", "depreciation_amortization", "capex", "cash", "total_debt"}
+)
 
 
 class Statement(BaseModel):
@@ -114,6 +116,10 @@ class IncomeStatement(Statement):
     ebit: float | None
     pretax_income: float | None
     tax_provision: float | None
+    total_revenue: float | None
+    net_interest_income: float | None
+    premiums_earned: float | None
+    premiums_earned_row: str | None  # the vendor row label that supplied premiums_earned
 
 
 class CashFlowStatement(Statement):
@@ -140,7 +146,19 @@ INCOME_ROWS: RowSpec = {
     "ebit": ("Operating Income", 1.0),
     "pretax_income": ("Pretax Income", 1.0),
     "tax_provision": ("Tax Provision", 1.0),
+    "total_revenue": ("Total Revenue", 1.0),
+    "net_interest_income": ("Net Interest Income", 1.0),
 }
+# Insurer signature: the first of these rows that carries a value. Verified absent for
+# ALL, MET, PGR and ALV.DE on yfinance 1.7.0 (2026-09-18); kept so a vendor that does
+# expose one is read, and the matched label is recorded for audit.
+PREMIUM_ROWS = (
+    "Net Premiums Earned",
+    "Total Premiums Earned",
+    "Premiums Earned",
+    "Insurance Premiums",
+    "Net Premium Earned",
+)
 CASHFLOW_ROWS: RowSpec = {
     "depreciation_amortization": ("Depreciation And Amortization", 1.0),
     "capex": ("Capital Expenditure", -1.0),
@@ -170,6 +188,28 @@ def _canonical_values(rows: Mapping[str, object], spec: RowSpec) -> dict[str, ob
             value = float(value) * sign
         out[field] = value
     return out
+
+
+def _first_present(rows: Mapping[str, object], labels: tuple[str, ...]) -> tuple[float | None, str | None]:
+    for label in labels:
+        value = rows.get(label)
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and not math.isnan(value):
+            return float(value), label
+    return None, None
+
+
+def _income_values(rows: Mapping[str, object]) -> dict[str, object]:
+    out = _canonical_values(rows, INCOME_ROWS)
+    out["premiums_earned"], out["premiums_earned_row"] = _first_present(rows, PREMIUM_ROWS)
+    return out
+
+
+def _cashflow_values(rows: Mapping[str, object]) -> dict[str, object]:
+    return _canonical_values(rows, CASHFLOW_ROWS)
+
+
+def _balance_values(rows: Mapping[str, object]) -> dict[str, object]:
+    return _canonical_values(rows, BALANCE_ROWS)
 
 
 def _info(ticker: yf.Ticker, notes: list[str]) -> tuple[Quote | None, Profile | None]:
@@ -205,7 +245,7 @@ def _statement[S: Statement](
     load: Callable[[yf.Ticker], pd.DataFrame],
     name: str,
     model: type[S],
-    spec: RowSpec,
+    canonical: Callable[[Mapping[str, object]], dict[str, object]],
     notes: list[str],
 ) -> dict[date, S]:
     """Every fiscal period of one statement that validates; the rest become notes."""
@@ -218,7 +258,7 @@ def _statement[S: Statement](
     for period_end, rows in columns.items():
         try:
             out[period_end] = model.model_validate(
-                {"period_end": period_end, **_canonical_values(rows, spec)}
+                {"period_end": period_end, **canonical(rows)}
             )
         except ValidationError as e:
             notes.append(f"{name} {period_end}: rejected: {e}")
@@ -251,6 +291,10 @@ def _period(
         ebit=income.ebit if income else None,
         pretax_income=income.pretax_income if income else None,
         tax_provision=income.tax_provision if income else None,
+        total_revenue=income.total_revenue if income else None,
+        net_interest_income=income.net_interest_income if income else None,
+        premiums_earned=income.premiums_earned if income else None,
+        premiums_earned_row=income.premiums_earned_row if income else None,
         depreciation_amortization=cashflow.depreciation_amortization if cashflow else None,
         capex=cashflow.capex if cashflow else None,
         delta_nwc=cashflow.delta_nwc if cashflow else None,
@@ -267,9 +311,9 @@ def fetch(symbol: str, as_of: datetime) -> boundary.Financials:
     notes: list[str] = []
     ticker = yf.Ticker(symbol)
     quote, profile = _info(ticker, notes)
-    income = _statement(ticker, lambda t: t.income_stmt, "income statement", IncomeStatement, INCOME_ROWS, notes)
-    cashflow = _statement(ticker, lambda t: t.cashflow, "cash flow statement", CashFlowStatement, CASHFLOW_ROWS, notes)
-    balance = _statement(ticker, lambda t: t.balance_sheet, "balance sheet", BalanceSheet, BALANCE_ROWS, notes)
+    income = _statement(ticker, lambda t: t.income_stmt, "income statement", IncomeStatement, _income_values, notes)
+    cashflow = _statement(ticker, lambda t: t.cashflow, "cash flow statement", CashFlowStatement, _cashflow_values, notes)
+    balance = _statement(ticker, lambda t: t.balance_sheet, "balance sheet", BalanceSheet, _balance_values, notes)
 
     periods: list[boundary.FiscalPeriod] = []
     for end in sorted(income.keys() | cashflow.keys() | balance.keys(), reverse=True):

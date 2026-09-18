@@ -27,6 +27,11 @@ val days_between : from:string -> until:string -> (int, string) result
 (** Calendar days from [from] to [until], both ISO 8601 dates (YYYY-MM-DD);
     negative when [until] is earlier. *)
 
+val classification_threshold :
+  t -> today:string -> (Boundary_t.parameter, string) result
+(** The bank net-interest-income ratio threshold, with provenance and the same
+    freshness rule as every other parameter. *)
+
 val resolve :
   t ->
   today:string ->

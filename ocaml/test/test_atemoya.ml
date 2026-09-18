@@ -5,6 +5,7 @@ let today = "2026-09-10"
 (* --- boundary fixtures --- *)
 
 let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
+    ?total_revenue ?net_interest_income ?premiums_earned ?premiums_earned_row
     ?depreciation_amortization ?capex ?delta_nwc ?cash ?total_debt () :
     Boundary_t.fiscal_period =
   {
@@ -12,6 +13,10 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ebit;
     pretax_income;
     tax_provision;
+    total_revenue;
+    net_interest_income;
+    premiums_earned;
+    premiums_earned_row;
     depreciation_amortization;
     capex;
     delta_nwc;
@@ -95,6 +100,7 @@ let params_json =
   "projection_years": {"value": 7, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "growth_rate": {"value": 0.05, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
   "debt_spread": {"value": 0.01, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
+  "bank_nii_ratio_threshold": {"value": 0.25, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
     "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015}},
@@ -130,6 +136,7 @@ let status = via_json Boundary_j.string_of_status
 let signal = via_json Boundary_j.string_of_signal
 let tax_rate_source = via_json Boundary_j.string_of_tax_rate_source
 let beta_source = via_json Boundary_j.string_of_beta_source
+let model = via_json Boundary_j.string_of_model
 let valuation = via_json Boundary_j.string_of_valuation
 let approx = Alcotest.float 1e-9
 let check_float = Alcotest.check approx
@@ -361,6 +368,182 @@ let test_reference_files_load () =
   Alcotest.(check bool) "no U.S. alias key duplicated in the tables" false
     (List.mem_assoc "USA" t.equity_risk_premiums.values)
 
+(* --- classification --- *)
+
+let threshold = param ~key:"global" ~source:"assumption" 0.25
+
+let classify_of ?(industry = Some "Consumer Electronics") periods =
+  Classify.classify ~threshold (financials ~industry periods)
+
+let check_outcome name expected (outcome, _) =
+  match (expected, outcome) with
+  | `Model m, Classify.Classified m' -> Alcotest.check model name m m'
+  | `Unresolved needles, Classify.Unresolved reason ->
+      check_mentions name reason needles
+  | `Model m, Classify.Unresolved reason ->
+      Alcotest.failf "%s: expected %s, got unresolved %S" name
+        (Classify.model_name m) reason
+  | `Unresolved _, Classify.Classified m ->
+      Alcotest.failf "%s: expected unresolved, got %s" name (Classify.model_name m)
+
+let bank_period ?(nii = 5000.) ?(revenue = 10000.) ?premiums_earned
+    ?premiums_earned_row () =
+  period ~total_revenue:revenue ~net_interest_income:nii ?premiums_earned
+    ?premiums_earned_row ()
+
+let test_bank_ratio () =
+  check_outcome "52% is a bank" (`Model `Bank) (classify_of [ bank_period () ]);
+  check_outcome "exactly at threshold is a bank" (`Model `Bank)
+    (classify_of [ bank_period ~nii:2500. () ]);
+  check_outcome "24% is not" (`Model `Generic)
+    (classify_of [ bank_period ~nii:2400. () ]);
+  check_outcome "MSFT-like tiny positive NII is not" (`Model `Generic)
+    (classify_of [ bank_period ~nii:250. ~revenue:331840. () ]);
+  check_outcome "negative NII is not" (`Model `Generic)
+    (classify_of [ bank_period ~nii:(-180.) () ]);
+  check_outcome "no revenue means no ratio" (`Model `Generic)
+    (classify_of [ period ~net_interest_income:5000. () ]);
+  let _, e = classify_of [ bank_period () ] in
+  Alcotest.(check (option approx)) "ratio recorded" (Some 0.5) e.nii_ratio;
+  check_float "threshold recorded" 0.25 e.bank_nii_ratio_threshold.value;
+  Alcotest.(check (option string)) "period recorded" (Some "2025-09-30") e.fiscal_period_end;
+  Alcotest.(check (option model)) "info not consulted" None e.info_hint
+
+let test_insurer_row () =
+  let with_row =
+    classify_of ~industry:(Some "Insurance - Life")
+      [ bank_period ~nii:(-100.) ~premiums_earned:5000.
+          ~premiums_earned_row:"Net Premiums Earned" () ]
+  in
+  check_outcome "premium row present and positive" (`Model `Insurer) with_row;
+  let _, e = with_row in
+  Alcotest.(check (option string)) "row recorded" (Some "Net Premiums Earned") e.premiums_earned_row;
+  check_outcome "premium row zero is no signature" (`Unresolved [ "Insurer" ])
+    (classify_of ~industry:(Some "Insurance - Life")
+       [ bank_period ~nii:(-100.) ~premiums_earned:0. ~premiums_earned_row:"Premiums Earned" () ]);
+  check_outcome "no premium row, no hint: generic" (`Model `Generic)
+    (classify_of [ bank_period ~nii:(-100.) () ])
+
+let test_bank_precedence () =
+  check_outcome "bank beats insurer" (`Model `Bank)
+    (classify_of
+       [ bank_period ~premiums_earned:5000. ~premiums_earned_row:"Premiums Earned" () ])
+
+let test_info_only_is_unresolved () =
+  let outcome, e =
+    classify_of ~industry:(Some "Insurance - Diversified") [ bank_period ~nii:(-60.) () ]
+  in
+  check_outcome "insurance in .info, no signature"
+    (`Unresolved [ "classification unresolved"; "Insurer"; "no statement signature" ])
+    (outcome, e);
+  Alcotest.(check (option model)) "hint recorded" (Some `Insurer) e.info_hint;
+  check_outcome "bank in .info, ratio below threshold"
+    (`Unresolved [ "Bank" ])
+    (classify_of ~industry:(Some "Banks - Regional") [ bank_period ~nii:2150. () ]);
+  check_outcome "case-insensitive" (`Unresolved [ "Bank" ])
+    (classify_of ~industry:(Some "BANKS") [ period () ])
+
+let test_oil_gas_is_generic () =
+  let outcome, e =
+    classify_of ~industry:(Some "Oil & Gas Integrated") [ bank_period ~nii:(-20.) () ]
+  in
+  check_outcome "no signature, no hint" (`Model `Generic) (outcome, e);
+  Alcotest.(check (option model)) "no hint" None e.info_hint
+
+let test_no_periods_classifies_generic () =
+  let outcome, e = classify_of ~industry:None [] in
+  check_outcome "nothing to read" (`Model `Generic) (outcome, e);
+  Alcotest.(check (option string)) "no period" None e.fiscal_period_end;
+  Alcotest.(check (option approx)) "no ratio" None e.nii_ratio
+
+let test_bank_never_valued () =
+  (* Full generic statement fields present: the generic DCF could run, and must not. *)
+  let full_bank =
+    period ~ebit:1200. ~pretax_income:1000. ~tax_provision:500. ~total_revenue:10000.
+      ~net_interest_income:5000. ~depreciation_amortization:200. ~capex:50.
+      ~delta_nwc:50. ~cash:1000. ~total_debt:5000. ()
+  in
+  let v = Valuation.run params ~today (financials [ full_bank ]) in
+  check_reason v [ "model not implemented: Bank" ];
+  check_nulls v;
+  Alcotest.(check (option model)) "model" (Some `Bank) v.model;
+  Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs);
+  match v.classification with
+  | None -> Alcotest.fail "no classification evidence"
+  | Some e -> Alcotest.(check (option approx)) "ratio" (Some 0.5) e.nii_ratio
+
+let test_insurer_never_valued () =
+  let v =
+    Valuation.run params ~today
+      (financials
+         [ period ~ebit:1200. ~pretax_income:1000. ~tax_provision:500.
+             ~premiums_earned:5000. ~premiums_earned_row:"Premiums Earned"
+             ~depreciation_amortization:200. ~capex:50. ~delta_nwc:50. ~cash:1000.
+             ~total_debt:5000. () ])
+  in
+  check_reason v [ "model not implemented: Insurer" ];
+  Alcotest.(check (option model)) "model" (Some `Insurer) v.model;
+  Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs)
+
+let test_classification_beats_stale_rates () =
+  (* Germany's curve is stale in the fixture; a German bank still reports as a bank. *)
+  let v =
+    Valuation.run params ~today
+      (financials ~country:(Some "Germany") [ bank_period () ])
+  in
+  check_reason v [ "model not implemented: Bank" ]
+
+let test_unresolved_record () =
+  let v =
+    Valuation.run params ~today
+      (financials ~industry:(Some "Insurance - Diversified") [ full_period () ])
+  in
+  check_reason v [ "classification unresolved"; "Insurer" ];
+  Alcotest.(check (option model)) "no model" None v.model;
+  Alcotest.(check bool) "evidence present" true (Option.is_some v.classification);
+  Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs)
+
+let test_generic_record_carries_evidence () =
+  let v = Valuation.run params ~today (financials [ full_period () ]) in
+  Alcotest.check status "status" `Ok v.status;
+  Alcotest.(check (option model)) "model" (Some `Generic) v.model;
+  match v.classification with
+  | None -> Alcotest.fail "no classification evidence"
+  | Some e ->
+      Alcotest.(check string) "threshold provenance" "assumption"
+        e.bank_nii_ratio_threshold.source;
+      Alcotest.(check int) "threshold age" 9 e.bank_nii_ratio_threshold.age_days
+
+(* --- batch summary --- *)
+
+let test_batch_summary () =
+  let universe =
+    Reference_j.universe_of_string
+      {|{"tickers": [
+          {"ticker": "TEST", "note": "ok", "expected_status": "Ok"},
+          {"ticker": "BNK", "note": "bank", "expected_status": "Failed", "expected_reason": "model not implemented: Bank"},
+          {"ticker": "WRONG", "note": "expects ok", "expected_status": "Ok"},
+          {"ticker": "ABSENT", "note": "never run", "expected_status": "Ok"}]}|}
+  in
+  let rename t (v : Boundary_t.valuation) = { v with ticker = t } in
+  let vs =
+    [
+      Valuation.run params ~today (financials [ full_period () ]);
+      rename "BNK" (Valuation.run params ~today (financials [ bank_period () ]));
+      rename "WRONG" (Valuation.run params ~today (financials []));
+    ]
+  in
+  let s = Batch.summary ~universe vs in
+  check_mentions "summary" s
+    [ "3 records, 1 Ok, 2 Failed"; "by model: Generic 2, Bank 1";
+      "1  model not implemented: Bank"; "1  no fiscal periods in statements";
+      "TEST       Ok      Generic    fair_value"; "as expected";
+      "WRONG      Failed  Generic    no fiscal periods in statements  EXPECTED Ok";
+      "in the universe but not run: ABSENT" ];
+  Alcotest.(check string) "reason key drops specifics" "risk_free_rate for Germany/7y"
+    (Batch.reason_key "risk_free_rate for Germany/7y (as_of 2026-06-05) is 97 days old");
+  Alcotest.(check string) "summary is deterministic" s (Batch.summary ~universe vs)
+
 (* --- valuation end to end --- *)
 
 let test_ok () =
@@ -478,6 +661,7 @@ let test_wacc_below_terminal_growth () =
             {|{"projection_years": {"value": 7, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
                "growth_rate": {"value": 0.05, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
                "debt_spread": {"value": 0.01, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
+               "bank_nii_ratio_threshold": {"value": 0.25, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
                "unwired": {}}|} }
@@ -520,7 +704,8 @@ let test_json_round_trip () =
     [ {|"status":"Failed"|}; {|"fair_value":null|}; {|"signal":null|};
       {|"inputs":null|}; {|"model":"Generic"|}; {|"valued_on":"2026-09-10"|} ];
   check_mentions "ok json" (Boundary_j.string_of_valuation ok)
-    [ {|"beta_source":"industry_table"|}; {|"source":"FRED"|}; {|"age_days":2|} ]
+    [ {|"beta_source":"industry_table"|}; {|"source":"FRED"|}; {|"age_days":2|};
+      {|"model":"Generic"|}; {|"classification":{|}; {|"nii_ratio":null|} ]
 
 let () =
   let case name f = Alcotest.test_case name `Quick f in
@@ -547,6 +732,21 @@ let () =
           case "as_of in the future is an error" test_resolve_future_as_of;
           case "beta defaults only without a listed industry" test_beta_default;
           case "tracked reference files load" test_reference_files_load;
+        ] );
+      ( "classification",
+        [
+          case "bank is a materiality ratio, not a sign test" test_bank_ratio;
+          case "insurer is a named premium row" test_insurer_row;
+          case "bank takes precedence" test_bank_precedence;
+          case ".info alone is unresolved, never a class" test_info_only_is_unresolved;
+          case "oil & gas stays generic" test_oil_gas_is_generic;
+          case "no periods classifies generic" test_no_periods_classifies_generic;
+          case "bank never reaches the generic dcf" test_bank_never_valued;
+          case "insurer never reaches the generic dcf" test_insurer_never_valued;
+          case "classification beats stale rates" test_classification_beats_stale_rates;
+          case "unresolved record shape" test_unresolved_record;
+          case "generic record carries the evidence" test_generic_record_carries_evidence;
+          case "batch summary" test_batch_summary;
         ] );
       ( "valuation",
         [

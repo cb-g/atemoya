@@ -43,13 +43,20 @@ nothing else needs it.
 uv run python/fetch.py AAPL MSFT            # yfinance -> data/financials/<TICKER>.json
 dune exec atemoya -- data/financials/*.json # one valuation record per line on stdout
 uv run python/refresh_rates.py              # U.S. curve from FRED -> reference/risk_free_rates.json
+
+uv run python/fetch_all.py                  # every ticker in reference/universe.json
+dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl + summary.txt
 ```
 
 `dune exec atemoya` reads parameters from `reference/` (`--reference DIR` to override) and
-measures their age against today's UTC date (`--today YYYY-MM-DD` to override). A record
-is either `Ok` with a fair value, or `Failed` with a reason; it never carries a guessed
-number. `data/` and `output/` are generated and gitignored; versioned inputs live in
-`reference/`.
+measures their age against today's UTC date (`--today YYYY-MM-DD` to override). Inputs may
+be files or directories. A record is either `Ok` with a fair value, or `Failed` with a
+reason; it never carries a guessed number, and a bank or insurer is never valued by the
+generic model. With `--out`, the summary checks each ticker against the expected outcome
+in `reference/universe.json`; a deviation there is a finding, not something to tune away.
+Valuation never fetches, so running it twice on the same inputs with `--today` pinned gives
+byte-identical output. `data/` and `output/` are generated and gitignored; versioned inputs
+live in `reference/`.
 
 Build, test, type-check:
 

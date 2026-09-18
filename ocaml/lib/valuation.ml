@@ -11,8 +11,7 @@ let signal t margin_of_safety : signal =
 
 let run ?(thresholds = default_thresholds) (params : Params.t) ~today
     (fin : financials) : valuation =
-  let model = Classify.classify fin in
-  let failed ?inputs reason =
+  let failed ?model ?classification ?inputs reason =
     {
       ticker = fin.ticker;
       as_of = fin.as_of;
@@ -23,12 +22,14 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today
       margin_of_safety = None;
       signal = None;
       model;
+      classification;
       status = `Failed;
       failed_reason = Some reason;
       inputs;
     }
   in
-  let generic ~country assumptions =
+  let generic ~classification ~country assumptions =
+    let failed = failed ~model:`Generic ~classification in
     match Dcf.value assumptions ~country fin with
     | Error reason -> failed reason
     | Ok (inputs, fair_value) ->
@@ -52,19 +53,33 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today
               fair_value = Some fair_value;
               margin_of_safety = Some margin_of_safety;
               signal = Some (signal thresholds margin_of_safety);
-              model;
+              model = Some `Generic;
+              classification = Some classification;
               status = `Ok;
               failed_reason = None;
               inputs = Some inputs;
             }
   in
-  match model with
-  | `Generic -> (
-      match fin.country with
-      | None -> failed "country not determinable from the fetch"
-      | Some country -> (
-          match
-            Params.resolve params ~today ~country ~industry:fin.industry
-          with
-          | Error reason -> failed reason
-          | Ok assumptions -> generic ~country assumptions))
+  let not_implemented classification model =
+    failed ~model ~classification
+      (Printf.sprintf "model not implemented: %s" (Classify.model_name model))
+  in
+  match Params.classification_threshold params ~today with
+  | Error reason -> failed reason
+  | Ok threshold -> (
+      let outcome, classification = Classify.classify ~threshold fin in
+      match outcome with
+      | Classify.Unresolved reason -> failed ~classification reason
+      | Classify.Classified `Bank -> not_implemented classification `Bank
+      | Classify.Classified `Insurer -> not_implemented classification `Insurer
+      | Classify.Classified `Generic -> (
+          match fin.country with
+          | None ->
+              failed ~model:`Generic ~classification
+                "country not determinable from the fetch"
+          | Some country -> (
+              match
+                Params.resolve params ~today ~country ~industry:fin.industry
+              with
+              | Error reason -> failed ~model:`Generic ~classification reason
+              | Ok assumptions -> generic ~classification ~country assumptions)))

@@ -62,6 +62,21 @@ type params = {
   projection_years : int_scalar;      (* also selects the risk-free tenor: N years -> "Ny" *)
   growth_rate : scalar;               (* explicit projection, per year *)
   debt_spread : scalar;               (* pre-tax cost of debt = risk-free + spread *)
+  bank_nii_ratio_threshold : scalar;  (* Bank iff net interest income / total revenue >= this *)
   terminal_growth_rate : country_table;
   unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
+}
+
+(* The fixed ticker set the batch runs over, with the outcome each is expected to
+   produce today. A deviation in the batch summary is a finding, never something to tune. *)
+type universe_entry = {
+  ticker : string;
+  note : string;                        (* why it is in the set *)
+  expected_status : string;             (* "Ok" or "Failed" *)
+  ?expected_reason : string option;     (* prefix the failed_reason must start with *)
+}
+
+type universe = {
+  ~notes : string list;
+  tickers : universe_entry list;
 }

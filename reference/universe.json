@@ -1,0 +1,138 @@
+{
+  "notes": [
+    "The previous implementation's verification set plus plain U.S. names. expected_status and expected_reason (a prefix of failed_reason) describe the outcome after the classification-and-batch layer; the batch summary marks every deviation.",
+    "Do not tune thresholds or this list to make the expectations come true; a deviation is a finding."
+  ],
+  "tickers": [
+    {
+      "ticker": "AAPL",
+      "note": "baseline",
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "MSFT",
+      "note": "plain U.S. non-financial; the net-interest-income false-positive test (tiny positive NII every year)",
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "GOOGL",
+      "note": "plain U.S. non-financial",
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "JNJ",
+      "note": "plain U.S. non-financial",
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "KO",
+      "note": "plain U.S. non-financial with negative net interest income",
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "COST",
+      "note": "plain U.S. non-financial",
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "XOM",
+      "note": "oil & gas: no statement signature, stays Generic",
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "CVX",
+      "note": "oil & gas: no statement signature, stays Generic",
+      "expected_status": "Ok"
+    },
+    {
+      "ticker": "JPM",
+      "note": "U.S. bank",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Bank"
+    },
+    {
+      "ticker": "BAC",
+      "note": "U.S. bank",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Bank"
+    },
+    {
+      "ticker": "NU",
+      "note": "foreign bank ADR, reports in USD",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Bank"
+    },
+    {
+      "ticker": "IBN",
+      "note": "foreign bank ADR, INR statements",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Bank"
+    },
+    {
+      "ticker": "ITUB",
+      "note": "foreign bank ADR, BRL statements",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Bank"
+    },
+    {
+      "ticker": "ALL",
+      "note": "U.S. insurer",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Insurer"
+    },
+    {
+      "ticker": "MET",
+      "note": "U.S. insurer",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Insurer"
+    },
+    {
+      "ticker": "PGR",
+      "note": "U.S. insurer",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Insurer"
+    },
+    {
+      "ticker": "ALV.DE",
+      "note": "European insurer with no premium row on the vendor's statements",
+      "expected_status": "Failed",
+      "expected_reason": "classification unresolved"
+    },
+    {
+      "ticker": "HDB",
+      "note": "Indian bank ADR; was a +5316% currency bug in the previous implementation",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Bank"
+    },
+    {
+      "ticker": "KSPI",
+      "note": "Kazakh ADR; Generic until the Kazakh curve is refreshed",
+      "expected_status": "Failed",
+      "expected_reason": "risk_free_rate for"
+    },
+    {
+      "ticker": "TSM",
+      "note": "Taiwanese ADR; Generic until the Taiwanese curve is refreshed",
+      "expected_status": "Failed",
+      "expected_reason": "risk_free_rate for"
+    },
+    {
+      "ticker": "005930.KS",
+      "note": "Korean listing; Generic until the Korean curve is refreshed",
+      "expected_status": "Failed",
+      "expected_reason": "risk_free_rate for"
+    },
+    {
+      "ticker": "000660.KS",
+      "note": "Korean listing; Generic until the Korean curve is refreshed",
+      "expected_status": "Failed",
+      "expected_reason": "risk_free_rate for"
+    },
+    {
+      "ticker": "SPY",
+      "note": "ETF: no country",
+      "expected_status": "Failed",
+      "expected_reason": "country not determinable"
+    }
+  ]
+}

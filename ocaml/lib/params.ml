@@ -138,6 +138,9 @@ let scalar (s : scalar) ~today ~name =
   in
   Ok (parameter ~value:s.value ~key:"global" ~source:s.source ~as_of:s.as_of ~age_days ())
 
+let classification_threshold t ~today =
+  scalar t.params.bank_nii_ratio_threshold ~today ~name:"bank_nii_ratio_threshold"
+
 let resolve t ~today ~country ~industry =
   let* projection_years =
     let p = t.params.projection_years in

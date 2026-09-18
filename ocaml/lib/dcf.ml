@@ -46,13 +46,10 @@ let tax_rate ~statutory ~pretax_income ~tax_provision =
       else (statutory, `Statutory)
   | _ -> (statutory, `Statutory)
 
-let latest_period (fin : financials) =
-  (* ISO dates order lexicographically. *)
-  match
-    List.sort (fun a b -> compare b.period_end a.period_end) fin.periods
-  with
-  | [] -> Error "no fiscal periods in statements"
-  | p :: _ -> Ok p
+let latest_period fin =
+  match Period.latest fin with
+  | None -> Error "no fiscal periods in statements"
+  | Some p -> Ok p
 
 let absent name opt = if Option.is_none opt then Some name else None
 

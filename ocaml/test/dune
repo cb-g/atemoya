@@ -3,3 +3,23 @@
  (libraries atemoya alcotest)
  (deps
   (source_tree ../../reference)))
+
+; Determinism: the valuation step over a fixed input directory with --today pinned must
+; be byte-identical across two runs. The fetch step is inherently non-deterministic; this
+; one must not be.
+(rule
+ (alias runtest)
+ (deps
+  (source_tree ../../reference)
+  (glob_files fixtures/financials/*.json))
+ (action
+  (progn
+   (with-stdout-to
+    determinism-run1.jsonl
+    (run %{exe:../bin/main.exe} --reference ../../reference --today 2026-09-18
+      fixtures/financials))
+   (with-stdout-to
+    determinism-run2.jsonl
+    (run %{exe:../bin/main.exe} --reference ../../reference --today 2026-09-18
+      fixtures/financials))
+   (diff determinism-run1.jsonl determinism-run2.jsonl))))

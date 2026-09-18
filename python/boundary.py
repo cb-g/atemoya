@@ -550,11 +550,47 @@ class Generic:
 
 
 @dataclass
+class Bank:
+    """Original type: model = [ ... | Bank | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Bank'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Bank'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Insurer:
+    """Original type: model = [ ... | Insurer | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Insurer'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Insurer'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Model:
     """Original type: model = [ ... ]
     """
 
-    value: Union[Generic]
+    value: Union[Generic, Bank, Insurer]
 
     @property
     def kind(self) -> str:
@@ -566,6 +602,10 @@ class Model:
         if isinstance(x, str):
             if x == 'Generic':
                 return cls(Generic())
+            if x == 'Bank':
+                return cls(Bank())
+            if x == 'Insurer':
+                return cls(Insurer())
             _atd_bad_json('Model', x)
         _atd_bad_json('Model', x)
 
@@ -807,6 +847,56 @@ class Inputs:
 
 
 @dataclass
+class Classification:
+    """Original type: classification = { ... }
+    """
+
+    fiscal_period_end: Optional[str]
+    total_revenue: Optional[float]
+    net_interest_income: Optional[float]
+    nii_ratio: Optional[float]
+    bank_nii_ratio_threshold: Parameter
+    premiums_earned: Optional[float]
+    premiums_earned_row: Optional[str]
+    info_hint: Optional[Model]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Classification':
+        if isinstance(x, dict):
+            return cls(
+                fiscal_period_end=_atd_read_nullable(_atd_read_string)(x['fiscal_period_end']) if 'fiscal_period_end' in x else _atd_missing_json_field('Classification', 'fiscal_period_end'),
+                total_revenue=_atd_read_nullable(_atd_read_float)(x['total_revenue']) if 'total_revenue' in x else _atd_missing_json_field('Classification', 'total_revenue'),
+                net_interest_income=_atd_read_nullable(_atd_read_float)(x['net_interest_income']) if 'net_interest_income' in x else _atd_missing_json_field('Classification', 'net_interest_income'),
+                nii_ratio=_atd_read_nullable(_atd_read_float)(x['nii_ratio']) if 'nii_ratio' in x else _atd_missing_json_field('Classification', 'nii_ratio'),
+                bank_nii_ratio_threshold=Parameter.from_json(x['bank_nii_ratio_threshold']) if 'bank_nii_ratio_threshold' in x else _atd_missing_json_field('Classification', 'bank_nii_ratio_threshold'),
+                premiums_earned=_atd_read_nullable(_atd_read_float)(x['premiums_earned']) if 'premiums_earned' in x else _atd_missing_json_field('Classification', 'premiums_earned'),
+                premiums_earned_row=_atd_read_nullable(_atd_read_string)(x['premiums_earned_row']) if 'premiums_earned_row' in x else _atd_missing_json_field('Classification', 'premiums_earned_row'),
+                info_hint=_atd_read_nullable(Model.from_json)(x['info_hint']) if 'info_hint' in x else _atd_missing_json_field('Classification', 'info_hint'),
+            )
+        else:
+            _atd_bad_json('Classification', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['fiscal_period_end'] = _atd_write_nullable(_atd_write_string)(self.fiscal_period_end)
+        res['total_revenue'] = _atd_write_nullable(_atd_write_float)(self.total_revenue)
+        res['net_interest_income'] = _atd_write_nullable(_atd_write_float)(self.net_interest_income)
+        res['nii_ratio'] = _atd_write_nullable(_atd_write_float)(self.nii_ratio)
+        res['bank_nii_ratio_threshold'] = (lambda x: x.to_json())(self.bank_nii_ratio_threshold)
+        res['premiums_earned'] = _atd_write_nullable(_atd_write_float)(self.premiums_earned)
+        res['premiums_earned_row'] = _atd_write_nullable(_atd_write_string)(self.premiums_earned_row)
+        res['info_hint'] = _atd_write_nullable((lambda x: x.to_json()))(self.info_hint)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Classification':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Valuation:
     """Original type: valuation = { ... }
     """
@@ -819,7 +909,8 @@ class Valuation:
     fair_value: Optional[float]
     margin_of_safety: Optional[float]
     signal: Optional[Signal]
-    model: Model
+    model: Optional[Model]
+    classification: Optional[Classification]
     status: Status
     failed_reason: Optional[str]
     inputs: Optional[Inputs]
@@ -836,7 +927,8 @@ class Valuation:
                 fair_value=_atd_read_nullable(_atd_read_float)(x['fair_value']) if 'fair_value' in x else _atd_missing_json_field('Valuation', 'fair_value'),
                 margin_of_safety=_atd_read_nullable(_atd_read_float)(x['margin_of_safety']) if 'margin_of_safety' in x else _atd_missing_json_field('Valuation', 'margin_of_safety'),
                 signal=_atd_read_nullable(Signal.from_json)(x['signal']) if 'signal' in x else _atd_missing_json_field('Valuation', 'signal'),
-                model=Model.from_json(x['model']) if 'model' in x else _atd_missing_json_field('Valuation', 'model'),
+                model=_atd_read_nullable(Model.from_json)(x['model']) if 'model' in x else _atd_missing_json_field('Valuation', 'model'),
+                classification=_atd_read_nullable(Classification.from_json)(x['classification']) if 'classification' in x else _atd_missing_json_field('Valuation', 'classification'),
                 status=Status.from_json(x['status']) if 'status' in x else _atd_missing_json_field('Valuation', 'status'),
                 failed_reason=_atd_read_nullable(_atd_read_string)(x['failed_reason']) if 'failed_reason' in x else _atd_missing_json_field('Valuation', 'failed_reason'),
                 inputs=_atd_read_nullable(Inputs.from_json)(x['inputs']) if 'inputs' in x else _atd_missing_json_field('Valuation', 'inputs'),
@@ -854,7 +946,8 @@ class Valuation:
         res['fair_value'] = _atd_write_nullable(_atd_write_float)(self.fair_value)
         res['margin_of_safety'] = _atd_write_nullable(_atd_write_float)(self.margin_of_safety)
         res['signal'] = _atd_write_nullable((lambda x: x.to_json()))(self.signal)
-        res['model'] = (lambda x: x.to_json())(self.model)
+        res['model'] = _atd_write_nullable((lambda x: x.to_json()))(self.model)
+        res['classification'] = _atd_write_nullable((lambda x: x.to_json()))(self.classification)
         res['status'] = (lambda x: x.to_json())(self.status)
         res['failed_reason'] = _atd_write_nullable(_atd_write_string)(self.failed_reason)
         res['inputs'] = _atd_write_nullable((lambda x: x.to_json()))(self.inputs)
@@ -877,6 +970,10 @@ class FiscalPeriod:
     ebit: Optional[float]
     pretax_income: Optional[float]
     tax_provision: Optional[float]
+    total_revenue: Optional[float]
+    net_interest_income: Optional[float]
+    premiums_earned: Optional[float]
+    premiums_earned_row: Optional[str]
     depreciation_amortization: Optional[float]
     capex: Optional[float]
     delta_nwc: Optional[float]
@@ -891,6 +988,10 @@ class FiscalPeriod:
                 ebit=_atd_read_nullable(_atd_read_float)(x['ebit']) if 'ebit' in x else _atd_missing_json_field('FiscalPeriod', 'ebit'),
                 pretax_income=_atd_read_nullable(_atd_read_float)(x['pretax_income']) if 'pretax_income' in x else _atd_missing_json_field('FiscalPeriod', 'pretax_income'),
                 tax_provision=_atd_read_nullable(_atd_read_float)(x['tax_provision']) if 'tax_provision' in x else _atd_missing_json_field('FiscalPeriod', 'tax_provision'),
+                total_revenue=_atd_read_nullable(_atd_read_float)(x['total_revenue']) if 'total_revenue' in x else _atd_missing_json_field('FiscalPeriod', 'total_revenue'),
+                net_interest_income=_atd_read_nullable(_atd_read_float)(x['net_interest_income']) if 'net_interest_income' in x else _atd_missing_json_field('FiscalPeriod', 'net_interest_income'),
+                premiums_earned=_atd_read_nullable(_atd_read_float)(x['premiums_earned']) if 'premiums_earned' in x else _atd_missing_json_field('FiscalPeriod', 'premiums_earned'),
+                premiums_earned_row=_atd_read_nullable(_atd_read_string)(x['premiums_earned_row']) if 'premiums_earned_row' in x else _atd_missing_json_field('FiscalPeriod', 'premiums_earned_row'),
                 depreciation_amortization=_atd_read_nullable(_atd_read_float)(x['depreciation_amortization']) if 'depreciation_amortization' in x else _atd_missing_json_field('FiscalPeriod', 'depreciation_amortization'),
                 capex=_atd_read_nullable(_atd_read_float)(x['capex']) if 'capex' in x else _atd_missing_json_field('FiscalPeriod', 'capex'),
                 delta_nwc=_atd_read_nullable(_atd_read_float)(x['delta_nwc']) if 'delta_nwc' in x else _atd_missing_json_field('FiscalPeriod', 'delta_nwc'),
@@ -906,6 +1007,10 @@ class FiscalPeriod:
         res['ebit'] = _atd_write_nullable(_atd_write_float)(self.ebit)
         res['pretax_income'] = _atd_write_nullable(_atd_write_float)(self.pretax_income)
         res['tax_provision'] = _atd_write_nullable(_atd_write_float)(self.tax_provision)
+        res['total_revenue'] = _atd_write_nullable(_atd_write_float)(self.total_revenue)
+        res['net_interest_income'] = _atd_write_nullable(_atd_write_float)(self.net_interest_income)
+        res['premiums_earned'] = _atd_write_nullable(_atd_write_float)(self.premiums_earned)
+        res['premiums_earned_row'] = _atd_write_nullable(_atd_write_string)(self.premiums_earned_row)
         res['depreciation_amortization'] = _atd_write_nullable(_atd_write_float)(self.depreciation_amortization)
         res['capex'] = _atd_write_nullable(_atd_write_float)(self.capex)
         res['delta_nwc'] = _atd_write_nullable(_atd_write_float)(self.delta_nwc)

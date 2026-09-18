@@ -261,6 +261,77 @@ def _atd_write_option(write_elt: Callable[[Any], Any]) \
 
 
 @dataclass
+class UniverseEntry:
+    """Original type: universe_entry = { ... }
+    """
+
+    ticker: str
+    note: str
+    expected_status: str
+    expected_reason: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'UniverseEntry':
+        if isinstance(x, dict):
+            return cls(
+                ticker=_atd_read_string(x['ticker']) if 'ticker' in x else _atd_missing_json_field('UniverseEntry', 'ticker'),
+                note=_atd_read_string(x['note']) if 'note' in x else _atd_missing_json_field('UniverseEntry', 'note'),
+                expected_status=_atd_read_string(x['expected_status']) if 'expected_status' in x else _atd_missing_json_field('UniverseEntry', 'expected_status'),
+                expected_reason=_atd_read_string(x['expected_reason']) if 'expected_reason' in x else None,
+            )
+        else:
+            _atd_bad_json('UniverseEntry', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['ticker'] = _atd_write_string(self.ticker)
+        res['note'] = _atd_write_string(self.note)
+        res['expected_status'] = _atd_write_string(self.expected_status)
+        if self.expected_reason is not None:
+            res['expected_reason'] = _atd_write_string(self.expected_reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'UniverseEntry':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Universe:
+    """Original type: universe = { ... }
+    """
+
+    tickers: List[UniverseEntry]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Universe':
+        if isinstance(x, dict):
+            return cls(
+                tickers=_atd_read_list(UniverseEntry.from_json)(x['tickers']) if 'tickers' in x else _atd_missing_json_field('Universe', 'tickers'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('Universe', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['tickers'] = _atd_write_list((lambda x: x.to_json()))(self.tickers)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Universe':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Scalar:
     """Original type: scalar = { ... }
     """
@@ -476,6 +547,7 @@ class Params:
     projection_years: IntScalar
     growth_rate: Scalar
     debt_spread: Scalar
+    bank_nii_ratio_threshold: Scalar
     terminal_growth_rate: CountryTable
     unwired: Any
 
@@ -486,6 +558,7 @@ class Params:
                 projection_years=IntScalar.from_json(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('Params', 'projection_years'),
                 growth_rate=Scalar.from_json(x['growth_rate']) if 'growth_rate' in x else _atd_missing_json_field('Params', 'growth_rate'),
                 debt_spread=Scalar.from_json(x['debt_spread']) if 'debt_spread' in x else _atd_missing_json_field('Params', 'debt_spread'),
+                bank_nii_ratio_threshold=Scalar.from_json(x['bank_nii_ratio_threshold']) if 'bank_nii_ratio_threshold' in x else _atd_missing_json_field('Params', 'bank_nii_ratio_threshold'),
                 terminal_growth_rate=CountryTable.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Params', 'terminal_growth_rate'),
                 unwired=(lambda x: x)(x['unwired']) if 'unwired' in x else _atd_missing_json_field('Params', 'unwired'),
             )
@@ -497,6 +570,7 @@ class Params:
         res['projection_years'] = (lambda x: x.to_json())(self.projection_years)
         res['growth_rate'] = (lambda x: x.to_json())(self.growth_rate)
         res['debt_spread'] = (lambda x: x.to_json())(self.debt_spread)
+        res['bank_nii_ratio_threshold'] = (lambda x: x.to_json())(self.bank_nii_ratio_threshold)
         res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
         res['unwired'] = (lambda x: x)(self.unwired)
         return res

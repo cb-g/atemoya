@@ -13,22 +13,28 @@
    - [periods] are annual fiscal periods, most recent first. A period in which every
      statement field is null is omitted.
    - [country] and [industry] are the vendor's strings, used only as lookup keys into
-     reference/. Null when the vendor supplied nothing; the valuation decides what that
-     means (no country is a failure; no industry takes the documented beta default).
+     reference/ and, for [industry], as a hint that may fail a classification but never
+     make one. Null when the vendor supplied nothing.
 
    Contract for [valuation] (OCaml -> consumers): one record per ticker. [fair_value],
    [margin_of_safety] and [signal] are non-null iff [status] is [Ok]; [failed_reason] is
-   non-null iff [status] is [Failed]; [inputs] is non-null iff the arithmetic ran to
-   completion, which includes a valuation that then failed a sanity check. Every
-   parameter in [inputs] carries its value, lookup key, source, as_of and age in days
-   measured at [valued_on], so "where did this number come from" is answerable from
-   the record alone. *)
+   non-null iff [status] is [Failed]; [model] is null iff the classification could not
+   be decided; [classification] is null iff the classification threshold parameter could
+   not be resolved; [inputs] is non-null iff the arithmetic ran to completion, which
+   includes a valuation that then failed a sanity check. A [Bank] or [Insurer] never
+   reaches the generic arithmetic. Every parameter carries its value, lookup key, source,
+   as_of and age in days measured at [valued_on], so "where did this number come from"
+   is answerable from the record alone. *)
 
 type fiscal_period = {
   period_end : string;                        (* ISO 8601 date, fiscal year end *)
   ebit : float nullable;                      (* operating income; any sign *)
   pretax_income : float nullable;             (* any sign *)
   tax_provision : float nullable;             (* income tax expense; negative = benefit *)
+  total_revenue : float nullable;             (* >= 0 *)
+  net_interest_income : float nullable;       (* any sign; the vendor reports it for every company *)
+  premiums_earned : float nullable;           (* >= 0; insurers only, when the vendor exposes a premium row *)
+  premiums_earned_row : string nullable;      (* the vendor's row label that supplied premiums_earned *)
   depreciation_amortization : float nullable; (* >= 0; non-cash add-back *)
   capex : float nullable;                     (* capital expenditure; >= 0 = cash spent *)
   delta_nwc : float nullable;                 (* increase in net working capital; > 0 = cash absorbed *)
@@ -49,7 +55,7 @@ type financials = {
 }
 
 (* Closed variants: consumers must match every constructor. *)
-type model = [ Generic ]
+type model = [ Generic | Bank | Insurer ]
 type status = [ Ok | Failed ]
 type signal = [ Buy | Hold | Sell ]
 type tax_rate_source = [ Effective | Statutory ]
@@ -74,6 +80,19 @@ type int_parameter = {
   source : string;
   as_of : string;
   age_days : int;
+}
+
+(* The evidence the classification was decided on. Statements decide; [info_hint] is
+   consulted only when they give no signature, and can only make the record Failed. *)
+type classification = {
+  fiscal_period_end : string nullable;    (* the period read; null when there are no periods *)
+  total_revenue : float nullable;
+  net_interest_income : float nullable;
+  nii_ratio : float nullable;             (* net_interest_income / total_revenue; null unless both present and revenue > 0 *)
+  bank_nii_ratio_threshold : parameter;   (* Bank iff nii_ratio >= this *)
+  premiums_earned : float nullable;       (* Insurer iff > 0, unless Bank *)
+  premiums_earned_row : string nullable;
+  info_hint : model nullable;             (* Bank or Insurer if the vendor's industry string suggested one; null if not consulted or no match *)
 }
 
 (* Every value the valuation used, plus the intermediates, for audit. Money in
@@ -120,7 +139,8 @@ type valuation = {
   fair_value : float nullable;        (* per share *)
   margin_of_safety : float nullable;  (* (fair_value - price) / price *)
   signal : signal nullable;
-  model : model;
+  model : model nullable;             (* the model that applies; null iff classification unresolved *)
+  classification : classification nullable;
   status : status;
   failed_reason : string nullable;
   inputs : inputs nullable;
