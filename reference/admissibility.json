@@ -1,0 +1,99 @@
+{
+  "source": "two field reports from a project that ran the previous implementation daily for about 14 months on about 215 names (a DCF on a bank, a DCF on a regulated utility mid capex cycle, an AISC screen on a royalty company, an insurer pinned at +571.9% upside), plus that implementation's own findings",
+  "as_of": "2026-09-18",
+  "notes": [
+    "Only dcf exists as a model today, so admissible_models is [\"dcf\"] or [].",
+    "Inadmissible is Failed with the lens named: the reader learns what the right measurement is.",
+    "Anything that fits no class gets a class added to the boundary variant and a row here, never a place in OperatingCompany."
+  ],
+  "classes": {
+    "OperatingCompany": {
+      "lens": "FCFF-based DCF: positive, stable free cash flow with no structural break",
+      "admissible_models": [
+        "dcf"
+      ],
+      "never": "a DCF through a structural break, an acquisition inside the growth window or a live impairment",
+      "floor_basis_default": "a completed FCFF DCF: the discounted free cash flow per share"
+    },
+    "Bank": {
+      "lens": "price/book against ROE, with loan-loss provisioning coverage as the check",
+      "admissible_models": [],
+      "never": "an FCFF DCF: capex, working capital and debt have no operating meaning for a bank",
+      "floor_basis_default": "tangible book value per share, read with provisioning coverage"
+    },
+    "Insurer": {
+      "lens": "operating-profit multiple read with the solvency ratio",
+      "admissible_models": [],
+      "never": "an FCFF DCF or headline EPS: reserves and float distort both",
+      "floor_basis_default": "book value per share adjusted for reserve adequacy, with the solvency ratio"
+    },
+    "RegulatedUtility": {
+      "lens": "rate-base growth and authorised ROE against the company's own operating EPS guidance; never revenue, since fuel passes through",
+      "admissible_models": [],
+      "never": "an FCFF DCF mid capex cycle: rate-base construction reads as value destruction",
+      "floor_basis_default": "the regulated rate base at the authorised ROE"
+    },
+    "MerchantPower": {
+      "lens": "EV/EBITDA and pre-growth FCF against the multi-year earnings build, by regional clearing price",
+      "admissible_models": [],
+      "never": "a single-year FCF or a P/E: earnings are policy- and price-dependent",
+      "floor_basis_default": "contracted capacity revenue at the regional clearing price"
+    },
+    "Reit": {
+      "lens": "price/AFFO and dividend coverage by AFFO; never accounting EPS",
+      "admissible_models": [],
+      "never": "accounting EPS or an FCFF DCF: depreciation dominates both",
+      "floor_basis_default": "AFFO per share and the dividend it covers"
+    },
+    "Miner": {
+      "lens": "NAV and reserve life; never spot FCF",
+      "admissible_models": [],
+      "never": "spot FCF or an FCFF DCF: commodity price and reserve depletion dominate",
+      "floor_basis_default": "NAV of proven and probable reserves at a long-run price deck"
+    },
+    "Royalty": {
+      "lens": "NAV of the royalty book; AISC is inverted for this class, rising costs are a tailwind",
+      "admissible_models": [],
+      "never": "an AISC screen (sign inversion) or an operator's cost lens",
+      "floor_basis_default": "NAV of the royalty book at a long-run price deck"
+    },
+    "HighGrowthSoftware": {
+      "lens": "recurring revenue growth, retention and the margin path; never P/E or FCF yield",
+      "admissible_models": [],
+      "never": "P/E, FCF yield, or a DCF whose growth reverts inside the explicit horizon",
+      "floor_basis_default": "none from this tool: the value is the growth path, which a floor cannot carry"
+    },
+    "PreProfit": {
+      "lens": "cash runway against the catalyst calendar; no multiple applies",
+      "admissible_models": [],
+      "never": "any multiple or DCF",
+      "floor_basis_default": "no floor: nothing under the price until the catalyst; runway is a clock, not a floor",
+      "floor_present_default": false
+    },
+    "Wrapper": {
+      "lens": "NAV premium or discount plus the distribution decomposed by source; never headline yield",
+      "admissible_models": [],
+      "never": "headline yield or a DCF: the wrapper holds other securities",
+      "floor_basis_default": "NAV per unit of the holdings"
+    },
+    "ConstructionStage": {
+      "lens": "percent complete, distance to first production, debt paydown against the deadline",
+      "admissible_models": [],
+      "never": "any earnings or cash-flow multiple before first production",
+      "floor_basis_default": "none until first production; the build is the exposure"
+    },
+    "UnderBid": {
+      "lens": "the announced offer price; all other valuation suspended",
+      "admissible_models": [],
+      "never": "any model other than the offer terms",
+      "floor_basis_default": "the announced offer price, subject to completion"
+    },
+    "Ballast": {
+      "lens": "nothing; held as a hedge, no directional thesis",
+      "admissible_models": [],
+      "never": "any directional valuation",
+      "floor_basis_default": "no floor by construction: held as a hedge without a directional thesis",
+      "floor_present_default": false
+    }
+  }
+}

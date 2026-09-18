@@ -17,9 +17,9 @@
    (with-stdout-to
     determinism-run1.jsonl
     (run %{exe:../bin/main.exe} --reference ../../reference --today 2026-09-18
-      fixtures/financials))
+      --entity-class OperatingCompany fixtures/financials))
    (with-stdout-to
     determinism-run2.jsonl
     (run %{exe:../bin/main.exe} --reference ../../reference --today 2026-09-18
-      fixtures/financials))
+      --entity-class OperatingCompany fixtures/financials))
    (diff determinism-run1.jsonl determinism-run2.jsonl))))

@@ -1,26 +1,19 @@
 open Boundary_t
 
-type outcome = Classified of model | Unresolved of string
+type signature = {
+  indicated : entity_class option;
+  fiscal_period_end : string option;
+  total_revenue : float option;
+  net_interest_income : float option;
+  nii_ratio : float option;
+  threshold : parameter;
+  premiums_earned : float option;
+  premiums_earned_row : string option;
+}
 
-let model_name = function
-  | `Generic -> "Generic"
-  | `Bank -> "Bank"
-  | `Insurer -> "Insurer"
+type verdict = Proceed of class_check | Refuse of string * class_check
 
-let contains haystack needle =
-  let n = String.length needle and h = String.length haystack in
-  let rec go i = i + n <= h && (String.sub haystack i n = needle || go (i + 1)) in
-  go 0
-
-let hint_of_industry = function
-  | None -> None
-  | Some industry ->
-      let s = String.lowercase_ascii industry in
-      if contains s "bank" then Some `Bank
-      else if contains s "insurance" then Some `Insurer
-      else None
-
-let classify ~(threshold : parameter) (fin : financials) =
+let signature ~(threshold : parameter) (fin : financials) =
   let period = Period.latest fin in
   let field f = Option.bind period f in
   let total_revenue = field (fun p -> p.total_revenue) in
@@ -32,36 +25,59 @@ let classify ~(threshold : parameter) (fin : financials) =
     | Some nii, Some revenue when revenue > 0. -> Some (nii /. revenue)
     | _ -> None
   in
-  let bank =
-    match nii_ratio with Some r -> r >= threshold.value | None -> false
+  let bank = match nii_ratio with Some r -> r >= threshold.value | None -> false in
+  let insurer = match premiums_earned with Some p -> p > 0. | None -> false in
+  let indicated =
+    if bank then Some `Bank else if insurer then Some `Insurer else None
   in
-  let insurer =
-    match premiums_earned with Some p -> p > 0. | None -> false
-  in
-  let info_hint =
-    if bank || insurer then None else hint_of_industry fin.industry
-  in
-  let outcome =
-    if bank then Classified `Bank
-    else if insurer then Classified `Insurer
-    else
-      match info_hint with
-      | Some hinted ->
-          Unresolved
-            (Printf.sprintf
-               "classification unresolved: .info suggests %s, no statement \
-                signature"
-               (model_name hinted))
-      | None -> Classified `Generic
-  in
-  ( outcome,
-    {
-      fiscal_period_end = Option.map (fun (p : fiscal_period) -> p.period_end) period;
-      total_revenue;
-      net_interest_income;
-      nii_ratio;
-      bank_nii_ratio_threshold = threshold;
-      premiums_earned;
-      premiums_earned_row;
-      info_hint;
-    } )
+  {
+    indicated;
+    fiscal_period_end = Option.map (fun (p : fiscal_period) -> p.period_end) period;
+    total_revenue;
+    net_interest_income;
+    nii_ratio;
+    threshold;
+    premiums_earned;
+    premiums_earned_row;
+  }
+
+(* How the statements made their case, for the reason text. *)
+let describe s =
+  match (s.indicated, s.nii_ratio, s.premiums_earned, s.premiums_earned_row) with
+  | Some `Bank, Some r, _, _ -> Printf.sprintf "NII/revenue %.2f" r
+  | Some `Insurer, _, Some p, Some row -> Printf.sprintf "%s %g" row p
+  | _ -> "signature"
+
+let evidence ~declared s outcome : class_check =
+  {
+    declared;
+    indicated = s.indicated;
+    outcome;
+    fiscal_period_end = s.fiscal_period_end;
+    total_revenue = s.total_revenue;
+    net_interest_income = s.net_interest_income;
+    nii_ratio = s.nii_ratio;
+    bank_nii_ratio_threshold = s.threshold;
+    premiums_earned = s.premiums_earned;
+    premiums_earned_row = s.premiums_earned_row;
+  }
+
+let check ~declared s =
+  let name = Admissibility.class_name in
+  match (declared, s.indicated) with
+  | None, None -> Refuse ("entity_class not declared", evidence ~declared s `Undeclared)
+  | None, Some c ->
+      Refuse
+        ( Printf.sprintf "entity_class not declared; statements indicate %s (%s)"
+            (name c) (describe s),
+          evidence ~declared s `Undeclared )
+  | Some `OperatingCompany, Some c ->
+      Refuse
+        ( Printf.sprintf
+            "class disagreement: declared OperatingCompany, statements indicate %s (%s)"
+            (name c) (describe s),
+          evidence ~declared s `Disagreement )
+  | Some d, Some c when c = d -> Proceed (evidence ~declared s `Consistent)
+  | Some _, Some _ -> Proceed (evidence ~declared s `Signature_differs)
+  | Some (`Bank | `Insurer), None -> Proceed (evidence ~declared s `Signature_absent)
+  | Some _, None -> Proceed (evidence ~declared s `Consistent)

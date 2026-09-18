@@ -1,15 +1,15 @@
-(** Assembles the per-ticker output contract: classification, parameter
-    resolution, model dispatch, sanity checks, signal, and the
+(** Assembles the per-ticker output contract: the declared entity class checked
+    against the statement signatures, the admissibility decision, parameter
+    resolution, the model, sanity checks, signal, floor, and the
     [`Failed]-with-nulls shape.
 
-    Order: classify -> country -> resolve parameters -> value. A [`Bank] or
-    [`Insurer] is [`Failed] with "model not implemented" before any parameter is
-    resolved, so it never reaches the generic arithmetic and its reason is not
-    masked by a stale rate. An unresolved classification, a fetch without a
-    country, a country missing from the reference tables, a stale parameter, a
-    non-positive fair value, or a margin of safety beyond [sanity_bound] is
-    [`Failed] with the reason. When the arithmetic completed first, [inputs] is
-    kept for audit. *)
+    Order: declaration and class check -> admissibility -> country -> resolve
+    parameters -> value. No declaration, or a signature contradicting a declared
+    [`OperatingCompany], is [`Failed] before anything else. A class the table
+    does not admit the dcf for is [`Failed] with the lens named, so the reader
+    learns what the right measurement is. Nothing here moves a number: the
+    arithmetic is [Dcf.value], unchanged. [floor] is always populated and gates
+    nothing. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)
@@ -21,10 +21,19 @@ val default_thresholds : thresholds
 
 val signal : thresholds -> float -> Boundary_t.signal
 
+(** A human's declaration of what the company is, from the universe file or the
+    command line. *)
+type declaration = {
+  entity_class : Boundary_t.entity_class;
+  lens_note : string;
+  scope_limits : string list;
+}
+
 val run :
   ?thresholds:thresholds ->
   Params.t ->
   today:string ->
+  declaration:declaration option ->
   Boundary_t.financials ->
   Boundary_t.valuation
 (** [today] is the ISO 8601 date parameter ages are measured at; it is echoed

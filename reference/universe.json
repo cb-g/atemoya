@@ -1,150 +1,263 @@
 {
   "notes": [
-    "The previous implementation's verification set plus plain U.S. names. expected_status and expected_reason (a prefix of failed_reason) describe the outcome after the classification-and-batch layer; the batch summary marks every deviation.",
+    "The previous implementation's verification set plus plain U.S. names and one name per new entity class. entity_class is declared here, never inferred; expected_status and expected_reason (a prefix of failed_reason) describe the outcome today, and the batch summary marks every deviation.",
     "Do not tune thresholds or this list to make the expectations come true; a deviation is a finding."
   ],
   "tickers": [
     {
       "ticker": "AAPL",
+      "entity_class": "OperatingCompany",
       "note": "baseline",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Ok"
     },
     {
       "ticker": "MSFT",
+      "entity_class": "OperatingCompany",
       "note": "plain U.S. non-financial; the net-interest-income false-positive test (tiny positive NII every year)",
+      "lens_note": "DCF at lambda 0.25 assumes a ~3-year growth half-life; the market assumes longer. Reclassify to HighGrowthSoftware if that is the judgment.",
+      "scope_limits": [],
       "expected_status": "Ok"
     },
     {
       "ticker": "GOOGL",
+      "entity_class": "OperatingCompany",
       "note": "plain U.S. non-financial",
+      "lens_note": "DCF at lambda 0.25 assumes a ~3-year growth half-life; the market assumes longer. Reclassify to HighGrowthSoftware if that is the judgment.",
+      "scope_limits": [],
       "expected_status": "Ok"
     },
     {
       "ticker": "JNJ",
+      "entity_class": "OperatingCompany",
       "note": "plain U.S. non-financial",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Ok"
     },
     {
       "ticker": "KO",
+      "entity_class": "OperatingCompany",
       "note": "plain U.S. non-financial with negative net interest income",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Ok"
     },
     {
       "ticker": "COST",
+      "entity_class": "OperatingCompany",
       "note": "plain U.S. non-financial",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Ok"
     },
     {
       "ticker": "XOM",
+      "entity_class": "OperatingCompany",
       "note": "oil & gas: no statement signature, stays Generic; vendor files its charge only as Depreciation Amortization Depletion and its latest Total Debt as Long Term Debt + Current Debt",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Ok"
     },
     {
       "ticker": "CVX",
+      "entity_class": "OperatingCompany",
       "note": "oil & gas: no statement signature, stays Generic",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Ok"
     },
     {
       "ticker": "JPM",
+      "entity_class": "Bank",
       "note": "U.S. bank",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Bank"
+      "expected_reason": "dcf not admissible for Bank"
     },
     {
       "ticker": "BAC",
+      "entity_class": "Bank",
       "note": "U.S. bank",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Bank"
+      "expected_reason": "dcf not admissible for Bank"
     },
     {
       "ticker": "NU",
+      "entity_class": "Bank",
       "note": "foreign bank ADR, reports in USD",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Bank"
+      "expected_reason": "dcf not admissible for Bank"
     },
     {
       "ticker": "IBN",
+      "entity_class": "Bank",
       "note": "foreign bank ADR, INR statements",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Bank"
+      "expected_reason": "dcf not admissible for Bank"
     },
     {
       "ticker": "ITUB",
+      "entity_class": "Bank",
       "note": "foreign bank ADR, BRL statements; net-interest-income ratio 0.215 on 2026-09-18, a bank under the 0.15 threshold",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Bank"
+      "expected_reason": "dcf not admissible for Bank"
     },
     {
       "ticker": "ALL",
+      "entity_class": "Insurer",
       "note": "U.S. insurer",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Insurer"
+      "expected_reason": "dcf not admissible for Insurer"
     },
     {
       "ticker": "MET",
+      "entity_class": "Insurer",
       "note": "U.S. insurer",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Insurer"
+      "expected_reason": "dcf not admissible for Insurer"
     },
     {
       "ticker": "PGR",
+      "entity_class": "Insurer",
       "note": "U.S. insurer",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Insurer"
+      "expected_reason": "dcf not admissible for Insurer"
     },
     {
       "ticker": "ALV.DE",
+      "entity_class": "Insurer",
       "note": "European insurer with no premium row on the vendor's statements",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "classification unresolved"
+      "expected_reason": "dcf not admissible for Insurer"
     },
     {
       "ticker": "HDB",
+      "entity_class": "Bank",
       "note": "Indian bank ADR; was a +5316% currency bug in the previous implementation",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Bank"
+      "expected_reason": "dcf not admissible for Bank"
     },
     {
       "ticker": "GS",
+      "entity_class": "Bank",
       "note": "fee-heavy investment bank; .info says Capital Markets, so only the statement ratio (0.233 on 2026-09-18) keeps it out of the generic dcf",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Bank"
+      "expected_reason": "dcf not admissible for Bank"
     },
     {
       "ticker": "MS",
+      "entity_class": "Bank",
       "note": "fee-heavy investment bank; .info says Capital Markets; ratio 0.152 on 2026-09-18 sits a knife edge above the 0.15 threshold",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "model not implemented: Bank"
+      "expected_reason": "dcf not admissible for Bank"
     },
     {
       "ticker": "KSPI",
+      "entity_class": "Bank",
       "note": "Kazakh ADR; Generic until the Kazakh curve is refreshed",
+      "lens_note": "fintech; .info says Software, no NII row on the vendor's statements. The human declaration wins.",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "risk_free_rate for"
+      "expected_reason": "dcf not admissible for Bank"
     },
     {
       "ticker": "TSM",
+      "entity_class": "OperatingCompany",
       "note": "Taiwanese ADR; Generic until the Taiwanese curve is refreshed",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
       "expected_reason": "risk_free_rate for"
     },
     {
       "ticker": "005930.KS",
+      "entity_class": "OperatingCompany",
       "note": "Korean listing; Generic until the Korean curve is refreshed",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
       "expected_reason": "risk_free_rate for"
     },
     {
       "ticker": "000660.KS",
+      "entity_class": "OperatingCompany",
       "note": "Korean listing; Generic until the Korean curve is refreshed",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
       "expected_reason": "risk_free_rate for"
     },
     {
       "ticker": "SPY",
+      "entity_class": "Wrapper",
       "note": "ETF: no country",
+      "lens_note": "",
+      "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "country not determinable"
+      "expected_reason": "dcf not admissible for Wrapper"
+    },
+    {
+      "ticker": "DUK",
+      "entity_class": "RegulatedUtility",
+      "note": "regulated electric utility mid capex cycle; a DCF reads rate-base construction as value destruction",
+      "lens_note": "",
+      "scope_limits": [
+        "fuel cost passes through revenue"
+      ],
+      "expected_status": "Failed",
+      "expected_reason": "dcf not admissible for RegulatedUtility"
+    },
+    {
+      "ticker": "O",
+      "entity_class": "Reit",
+      "note": "net-lease REIT; accounting EPS is dominated by depreciation",
+      "lens_note": "",
+      "scope_limits": [],
+      "expected_status": "Failed",
+      "expected_reason": "dcf not admissible for Reit"
+    },
+    {
+      "ticker": "FNV",
+      "entity_class": "Royalty",
+      "note": "precious-metals royalty company; an AISC screen has the sign inverted for this class",
+      "lens_note": "",
+      "scope_limits": [],
+      "expected_status": "Failed",
+      "expected_reason": "dcf not admissible for Royalty"
+    },
+    {
+      "ticker": "CRWD",
+      "entity_class": "HighGrowthSoftware",
+      "note": "security software compounding revenue; a DCF whose growth reverts inside the horizon cannot see it",
+      "lens_note": "",
+      "scope_limits": [],
+      "expected_status": "Failed",
+      "expected_reason": "dcf not admissible for HighGrowthSoftware"
     }
   ]
 }

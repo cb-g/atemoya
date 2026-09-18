@@ -8,6 +8,7 @@ type t = {
   tax_rates : country_table;
   industry_betas : industry_table;
   params : params;
+  admissibility : admissibility;
 }
 
 let read reader path =
@@ -33,7 +34,10 @@ let load ~dir =
     read Reference_j.read_industry_table (file "industry_betas.json")
   in
   let* params = read Reference_j.read_params (file "params.json") in
-  Ok { risk_free; equity_risk_premiums; tax_rates; industry_betas; params }
+  let* admissibility =
+    read Reference_j.read_admissibility (file "admissibility.json")
+  in
+  Ok { risk_free; equity_risk_premiums; tax_rates; industry_betas; params; admissibility }
 
 let days_between = Date.days_between
 

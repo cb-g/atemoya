@@ -532,54 +532,18 @@ class Parameter:
 
 
 @dataclass
-class Generic:
-    """Original type: model = [ ... | Generic | ... ]
+class Dcf:
+    """Original type: model = [ ... | Dcf | ... ]
     """
 
     @property
     def kind(self) -> str:
         """Name of the class representing this variant."""
-        return 'Generic'
+        return 'Dcf'
 
     @staticmethod
     def to_json() -> Any:
-        return 'Generic'
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class Bank:
-    """Original type: model = [ ... | Bank | ... ]
-    """
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'Bank'
-
-    @staticmethod
-    def to_json() -> Any:
-        return 'Bank'
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class Insurer:
-    """Original type: model = [ ... | Insurer | ... ]
-    """
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'Insurer'
-
-    @staticmethod
-    def to_json() -> Any:
-        return 'Insurer'
+        return 'dcf'
 
     def to_json_string(self, **kw: Any) -> str:
         return json.dumps(self.to_json(), **kw)
@@ -590,7 +554,7 @@ class Model:
     """Original type: model = [ ... ]
     """
 
-    value: Union[Generic, Bank, Insurer]
+    value: Union[Dcf]
 
     @property
     def kind(self) -> str:
@@ -600,12 +564,8 @@ class Model:
     @classmethod
     def from_json(cls, x: Any) -> 'Model':
         if isinstance(x, str):
-            if x == 'Generic':
-                return cls(Generic())
-            if x == 'Bank':
-                return cls(Bank())
-            if x == 'Insurer':
-                return cls(Insurer())
+            if x == 'dcf':
+                return cls(Dcf())
             _atd_bad_json('Model', x)
         _atd_bad_json('Model', x)
 
@@ -990,10 +950,483 @@ class Inputs:
 
 
 @dataclass
-class Classification:
-    """Original type: classification = { ... }
+class Floor:
+    """Original type: floor = { ... }
     """
 
+    present: Optional[bool]
+    basis: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Floor':
+        if isinstance(x, dict):
+            return cls(
+                present=_atd_read_nullable(_atd_read_bool)(x['present']) if 'present' in x else _atd_missing_json_field('Floor', 'present'),
+                basis=_atd_read_string(x['basis']) if 'basis' in x else _atd_missing_json_field('Floor', 'basis'),
+            )
+        else:
+            _atd_bad_json('Floor', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['present'] = _atd_write_nullable(_atd_write_bool)(self.present)
+        res['basis'] = _atd_write_string(self.basis)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Floor':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class OperatingCompany:
+    """Original type: entity_class = [ ... | OperatingCompany | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'OperatingCompany'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'OperatingCompany'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Bank:
+    """Original type: entity_class = [ ... | Bank | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Bank'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Bank'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Insurer:
+    """Original type: entity_class = [ ... | Insurer | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Insurer'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Insurer'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class RegulatedUtility:
+    """Original type: entity_class = [ ... | RegulatedUtility | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'RegulatedUtility'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'RegulatedUtility'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class MerchantPower:
+    """Original type: entity_class = [ ... | MerchantPower | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'MerchantPower'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'MerchantPower'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Reit:
+    """Original type: entity_class = [ ... | Reit | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Reit'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Reit'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Miner:
+    """Original type: entity_class = [ ... | Miner | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Miner'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Miner'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Royalty:
+    """Original type: entity_class = [ ... | Royalty | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Royalty'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Royalty'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class HighGrowthSoftware:
+    """Original type: entity_class = [ ... | HighGrowthSoftware | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'HighGrowthSoftware'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'HighGrowthSoftware'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class PreProfit:
+    """Original type: entity_class = [ ... | PreProfit | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'PreProfit'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'PreProfit'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Wrapper:
+    """Original type: entity_class = [ ... | Wrapper | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Wrapper'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Wrapper'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ConstructionStage:
+    """Original type: entity_class = [ ... | ConstructionStage | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'ConstructionStage'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'ConstructionStage'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class UnderBid:
+    """Original type: entity_class = [ ... | UnderBid | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'UnderBid'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'UnderBid'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Ballast:
+    """Original type: entity_class = [ ... | Ballast | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Ballast'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Ballast'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class EntityClass:
+    """Original type: entity_class = [ ... ]
+    """
+
+    value: Union[OperatingCompany, Bank, Insurer, RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, PreProfit, Wrapper, ConstructionStage, UnderBid, Ballast]
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return self.value.kind
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'EntityClass':
+        if isinstance(x, str):
+            if x == 'OperatingCompany':
+                return cls(OperatingCompany())
+            if x == 'Bank':
+                return cls(Bank())
+            if x == 'Insurer':
+                return cls(Insurer())
+            if x == 'RegulatedUtility':
+                return cls(RegulatedUtility())
+            if x == 'MerchantPower':
+                return cls(MerchantPower())
+            if x == 'Reit':
+                return cls(Reit())
+            if x == 'Miner':
+                return cls(Miner())
+            if x == 'Royalty':
+                return cls(Royalty())
+            if x == 'HighGrowthSoftware':
+                return cls(HighGrowthSoftware())
+            if x == 'PreProfit':
+                return cls(PreProfit())
+            if x == 'Wrapper':
+                return cls(Wrapper())
+            if x == 'ConstructionStage':
+                return cls(ConstructionStage())
+            if x == 'UnderBid':
+                return cls(UnderBid())
+            if x == 'Ballast':
+                return cls(Ballast())
+            _atd_bad_json('EntityClass', x)
+        _atd_bad_json('EntityClass', x)
+
+    def to_json(self) -> Any:
+        return self.value.to_json()
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'EntityClass':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Consistent:
+    """Original type: class_check_outcome = [ ... | Consistent | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Consistent'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Consistent'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class SignatureAbsent:
+    """Original type: class_check_outcome = [ ... | Signature_absent | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'SignatureAbsent'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Signature_absent'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class SignatureDiffers:
+    """Original type: class_check_outcome = [ ... | Signature_differs | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'SignatureDiffers'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Signature_differs'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Disagreement:
+    """Original type: class_check_outcome = [ ... | Disagreement | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Disagreement'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Disagreement'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Undeclared:
+    """Original type: class_check_outcome = [ ... | Undeclared | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Undeclared'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Undeclared'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ClassCheckOutcome:
+    """Original type: class_check_outcome = [ ... ]
+    """
+
+    value: Union[Consistent, SignatureAbsent, SignatureDiffers, Disagreement, Undeclared]
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return self.value.kind
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ClassCheckOutcome':
+        if isinstance(x, str):
+            if x == 'Consistent':
+                return cls(Consistent())
+            if x == 'Signature_absent':
+                return cls(SignatureAbsent())
+            if x == 'Signature_differs':
+                return cls(SignatureDiffers())
+            if x == 'Disagreement':
+                return cls(Disagreement())
+            if x == 'Undeclared':
+                return cls(Undeclared())
+            _atd_bad_json('ClassCheckOutcome', x)
+        _atd_bad_json('ClassCheckOutcome', x)
+
+    def to_json(self) -> Any:
+        return self.value.to_json()
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ClassCheckOutcome':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ClassCheck:
+    """Original type: class_check = { ... }
+    """
+
+    declared: Optional[EntityClass]
+    indicated: Optional[EntityClass]
+    outcome: ClassCheckOutcome
     fiscal_period_end: Optional[str]
     total_revenue: Optional[float]
     net_interest_income: Optional[float]
@@ -1001,26 +1434,30 @@ class Classification:
     bank_nii_ratio_threshold: Parameter
     premiums_earned: Optional[float]
     premiums_earned_row: Optional[str]
-    info_hint: Optional[Model]
 
     @classmethod
-    def from_json(cls, x: Any) -> 'Classification':
+    def from_json(cls, x: Any) -> 'ClassCheck':
         if isinstance(x, dict):
             return cls(
-                fiscal_period_end=_atd_read_nullable(_atd_read_string)(x['fiscal_period_end']) if 'fiscal_period_end' in x else _atd_missing_json_field('Classification', 'fiscal_period_end'),
-                total_revenue=_atd_read_nullable(_atd_read_float)(x['total_revenue']) if 'total_revenue' in x else _atd_missing_json_field('Classification', 'total_revenue'),
-                net_interest_income=_atd_read_nullable(_atd_read_float)(x['net_interest_income']) if 'net_interest_income' in x else _atd_missing_json_field('Classification', 'net_interest_income'),
-                nii_ratio=_atd_read_nullable(_atd_read_float)(x['nii_ratio']) if 'nii_ratio' in x else _atd_missing_json_field('Classification', 'nii_ratio'),
-                bank_nii_ratio_threshold=Parameter.from_json(x['bank_nii_ratio_threshold']) if 'bank_nii_ratio_threshold' in x else _atd_missing_json_field('Classification', 'bank_nii_ratio_threshold'),
-                premiums_earned=_atd_read_nullable(_atd_read_float)(x['premiums_earned']) if 'premiums_earned' in x else _atd_missing_json_field('Classification', 'premiums_earned'),
-                premiums_earned_row=_atd_read_nullable(_atd_read_string)(x['premiums_earned_row']) if 'premiums_earned_row' in x else _atd_missing_json_field('Classification', 'premiums_earned_row'),
-                info_hint=_atd_read_nullable(Model.from_json)(x['info_hint']) if 'info_hint' in x else _atd_missing_json_field('Classification', 'info_hint'),
+                declared=_atd_read_nullable(EntityClass.from_json)(x['declared']) if 'declared' in x else _atd_missing_json_field('ClassCheck', 'declared'),
+                indicated=_atd_read_nullable(EntityClass.from_json)(x['indicated']) if 'indicated' in x else _atd_missing_json_field('ClassCheck', 'indicated'),
+                outcome=ClassCheckOutcome.from_json(x['outcome']) if 'outcome' in x else _atd_missing_json_field('ClassCheck', 'outcome'),
+                fiscal_period_end=_atd_read_nullable(_atd_read_string)(x['fiscal_period_end']) if 'fiscal_period_end' in x else _atd_missing_json_field('ClassCheck', 'fiscal_period_end'),
+                total_revenue=_atd_read_nullable(_atd_read_float)(x['total_revenue']) if 'total_revenue' in x else _atd_missing_json_field('ClassCheck', 'total_revenue'),
+                net_interest_income=_atd_read_nullable(_atd_read_float)(x['net_interest_income']) if 'net_interest_income' in x else _atd_missing_json_field('ClassCheck', 'net_interest_income'),
+                nii_ratio=_atd_read_nullable(_atd_read_float)(x['nii_ratio']) if 'nii_ratio' in x else _atd_missing_json_field('ClassCheck', 'nii_ratio'),
+                bank_nii_ratio_threshold=Parameter.from_json(x['bank_nii_ratio_threshold']) if 'bank_nii_ratio_threshold' in x else _atd_missing_json_field('ClassCheck', 'bank_nii_ratio_threshold'),
+                premiums_earned=_atd_read_nullable(_atd_read_float)(x['premiums_earned']) if 'premiums_earned' in x else _atd_missing_json_field('ClassCheck', 'premiums_earned'),
+                premiums_earned_row=_atd_read_nullable(_atd_read_string)(x['premiums_earned_row']) if 'premiums_earned_row' in x else _atd_missing_json_field('ClassCheck', 'premiums_earned_row'),
             )
         else:
-            _atd_bad_json('Classification', x)
+            _atd_bad_json('ClassCheck', x)
 
     def to_json(self) -> Any:
         res: Dict[str, Any] = {}
+        res['declared'] = _atd_write_nullable((lambda x: x.to_json()))(self.declared)
+        res['indicated'] = _atd_write_nullable((lambda x: x.to_json()))(self.indicated)
+        res['outcome'] = (lambda x: x.to_json())(self.outcome)
         res['fiscal_period_end'] = _atd_write_nullable(_atd_write_string)(self.fiscal_period_end)
         res['total_revenue'] = _atd_write_nullable(_atd_write_float)(self.total_revenue)
         res['net_interest_income'] = _atd_write_nullable(_atd_write_float)(self.net_interest_income)
@@ -1028,11 +1465,10 @@ class Classification:
         res['bank_nii_ratio_threshold'] = (lambda x: x.to_json())(self.bank_nii_ratio_threshold)
         res['premiums_earned'] = _atd_write_nullable(_atd_write_float)(self.premiums_earned)
         res['premiums_earned_row'] = _atd_write_nullable(_atd_write_string)(self.premiums_earned_row)
-        res['info_hint'] = _atd_write_nullable((lambda x: x.to_json()))(self.info_hint)
         return res
 
     @classmethod
-    def from_json_string(cls, x: str) -> 'Classification':
+    def from_json_string(cls, x: str) -> 'ClassCheck':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -1052,8 +1488,12 @@ class Valuation:
     fair_value: Optional[float]
     margin_of_safety: Optional[float]
     signal: Optional[Signal]
+    entity_class: Optional[EntityClass]
     model: Optional[Model]
-    classification: Optional[Classification]
+    class_check: Optional[ClassCheck]
+    floor: Floor
+    lens_note: str
+    scope_limits: List[str]
     status: Status
     failed_reason: Optional[str]
     inputs: Optional[Inputs]
@@ -1070,8 +1510,12 @@ class Valuation:
                 fair_value=_atd_read_nullable(_atd_read_float)(x['fair_value']) if 'fair_value' in x else _atd_missing_json_field('Valuation', 'fair_value'),
                 margin_of_safety=_atd_read_nullable(_atd_read_float)(x['margin_of_safety']) if 'margin_of_safety' in x else _atd_missing_json_field('Valuation', 'margin_of_safety'),
                 signal=_atd_read_nullable(Signal.from_json)(x['signal']) if 'signal' in x else _atd_missing_json_field('Valuation', 'signal'),
+                entity_class=_atd_read_nullable(EntityClass.from_json)(x['entity_class']) if 'entity_class' in x else _atd_missing_json_field('Valuation', 'entity_class'),
                 model=_atd_read_nullable(Model.from_json)(x['model']) if 'model' in x else _atd_missing_json_field('Valuation', 'model'),
-                classification=_atd_read_nullable(Classification.from_json)(x['classification']) if 'classification' in x else _atd_missing_json_field('Valuation', 'classification'),
+                class_check=_atd_read_nullable(ClassCheck.from_json)(x['class_check']) if 'class_check' in x else _atd_missing_json_field('Valuation', 'class_check'),
+                floor=Floor.from_json(x['floor']) if 'floor' in x else _atd_missing_json_field('Valuation', 'floor'),
+                lens_note=_atd_read_string(x['lens_note']) if 'lens_note' in x else _atd_missing_json_field('Valuation', 'lens_note'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('Valuation', 'scope_limits'),
                 status=Status.from_json(x['status']) if 'status' in x else _atd_missing_json_field('Valuation', 'status'),
                 failed_reason=_atd_read_nullable(_atd_read_string)(x['failed_reason']) if 'failed_reason' in x else _atd_missing_json_field('Valuation', 'failed_reason'),
                 inputs=_atd_read_nullable(Inputs.from_json)(x['inputs']) if 'inputs' in x else _atd_missing_json_field('Valuation', 'inputs'),
@@ -1089,8 +1533,12 @@ class Valuation:
         res['fair_value'] = _atd_write_nullable(_atd_write_float)(self.fair_value)
         res['margin_of_safety'] = _atd_write_nullable(_atd_write_float)(self.margin_of_safety)
         res['signal'] = _atd_write_nullable((lambda x: x.to_json()))(self.signal)
+        res['entity_class'] = _atd_write_nullable((lambda x: x.to_json()))(self.entity_class)
         res['model'] = _atd_write_nullable((lambda x: x.to_json()))(self.model)
-        res['classification'] = _atd_write_nullable((lambda x: x.to_json()))(self.classification)
+        res['class_check'] = _atd_write_nullable((lambda x: x.to_json()))(self.class_check)
+        res['floor'] = (lambda x: x.to_json())(self.floor)
+        res['lens_note'] = _atd_write_string(self.lens_note)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
         res['status'] = (lambda x: x.to_json())(self.status)
         res['failed_reason'] = _atd_write_nullable(_atd_write_string)(self.failed_reason)
         res['inputs'] = _atd_write_nullable((lambda x: x.to_json()))(self.inputs)

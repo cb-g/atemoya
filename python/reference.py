@@ -266,8 +266,11 @@ class UniverseEntry:
     """
 
     ticker: str
+    entity_class: str
     note: str
     expected_status: str
+    lens_note: str = field(default_factory=lambda: "")
+    scope_limits: List[str] = field(default_factory=lambda: [])
     expected_reason: Optional[str] = None
 
     @classmethod
@@ -275,8 +278,11 @@ class UniverseEntry:
         if isinstance(x, dict):
             return cls(
                 ticker=_atd_read_string(x['ticker']) if 'ticker' in x else _atd_missing_json_field('UniverseEntry', 'ticker'),
+                entity_class=_atd_read_string(x['entity_class']) if 'entity_class' in x else _atd_missing_json_field('UniverseEntry', 'entity_class'),
                 note=_atd_read_string(x['note']) if 'note' in x else _atd_missing_json_field('UniverseEntry', 'note'),
                 expected_status=_atd_read_string(x['expected_status']) if 'expected_status' in x else _atd_missing_json_field('UniverseEntry', 'expected_status'),
+                lens_note=_atd_read_string(x['lens_note']) if 'lens_note' in x else "",
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
                 expected_reason=_atd_read_string(x['expected_reason']) if 'expected_reason' in x else None,
             )
         else:
@@ -285,8 +291,11 @@ class UniverseEntry:
     def to_json(self) -> Any:
         res: Dict[str, Any] = {}
         res['ticker'] = _atd_write_string(self.ticker)
+        res['entity_class'] = _atd_write_string(self.entity_class)
         res['note'] = _atd_write_string(self.note)
         res['expected_status'] = _atd_write_string(self.expected_status)
+        res['lens_note'] = _atd_write_string(self.lens_note)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
         if self.expected_reason is not None:
             res['expected_reason'] = _atd_write_string(self.expected_reason)
         return res
@@ -624,6 +633,85 @@ class IndustryTable:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'IndustryTable':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ClassRule:
+    """Original type: class_rule = { ... }
+    """
+
+    lens: str
+    admissible_models: List[str]
+    never: str
+    floor_basis_default: str
+    floor_present_default: Optional[bool] = field(default_factory=lambda: None)
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ClassRule':
+        if isinstance(x, dict):
+            return cls(
+                lens=_atd_read_string(x['lens']) if 'lens' in x else _atd_missing_json_field('ClassRule', 'lens'),
+                admissible_models=_atd_read_list(_atd_read_string)(x['admissible_models']) if 'admissible_models' in x else _atd_missing_json_field('ClassRule', 'admissible_models'),
+                never=_atd_read_string(x['never']) if 'never' in x else _atd_missing_json_field('ClassRule', 'never'),
+                floor_basis_default=_atd_read_string(x['floor_basis_default']) if 'floor_basis_default' in x else _atd_missing_json_field('ClassRule', 'floor_basis_default'),
+                floor_present_default=_atd_read_nullable(_atd_read_bool)(x['floor_present_default']) if 'floor_present_default' in x else None,
+            )
+        else:
+            _atd_bad_json('ClassRule', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['lens'] = _atd_write_string(self.lens)
+        res['admissible_models'] = _atd_write_list(_atd_write_string)(self.admissible_models)
+        res['never'] = _atd_write_string(self.never)
+        res['floor_basis_default'] = _atd_write_string(self.floor_basis_default)
+        res['floor_present_default'] = _atd_write_nullable(_atd_write_bool)(self.floor_present_default)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ClassRule':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Admissibility:
+    """Original type: admissibility = { ... }
+    """
+
+    source: str
+    as_of: str
+    classes: List[Tuple[str, ClassRule]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Admissibility':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('Admissibility', 'source'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Admissibility', 'as_of'),
+                classes=_atd_read_assoc_object_into_list(ClassRule.from_json)(x['classes']) if 'classes' in x else _atd_missing_json_field('Admissibility', 'classes'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('Admissibility', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['classes'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.classes)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Admissibility':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:

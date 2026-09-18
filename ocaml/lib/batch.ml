@@ -3,21 +3,24 @@ open Boundary_t
 let status_name = function `Ok -> "Ok" | `Failed -> "Failed"
 let signal_name = function `Buy -> "Buy" | `Hold -> "Hold" | `Sell -> "Sell"
 
-let model_label = function
-  | Some m -> Classify.model_name m
-  | None -> "unresolved"
+let class_label = function
+  | Some c -> Admissibility.class_name c
+  | None -> "undeclared"
 
 let starts_with ~prefix s =
   String.length s >= String.length prefix
   && String.sub s 0 (String.length prefix) = prefix
 
-let reason_key reason =
+let cut_at reason marker =
+  let n = String.length marker in
   let rec find i =
-    if i + 1 >= String.length reason then None
-    else if reason.[i] = ' ' && reason.[i + 1] = '(' then Some i
+    if i + n > String.length reason then None
+    else if String.sub reason i n = marker then Some i
     else find (i + 1)
   in
   match find 0 with Some i -> String.sub reason 0 i | None -> reason
+
+let reason_key reason = cut_at (cut_at reason " (") "; lens:"
 
 let meets_expectation (e : Reference_t.universe_entry) (v : valuation) =
   status_name v.status = e.expected_status
@@ -49,11 +52,11 @@ let summary ?universe (vs : valuation list) =
   let valued_on = match vs with v :: _ -> v.valued_on | [] -> "-" in
   Printf.bprintf b "valued_on %s: %d records, %d Ok, %d Failed\n\n" valued_on n
     ok (n - ok);
-  Printf.bprintf b "by model: %s\n\n"
+  Printf.bprintf b "by class: %s\n\n"
     (String.concat ", "
        (List.map
           (fun (k, c) -> Printf.sprintf "%s %d" k c)
-          (count_by (fun v -> model_label v.model) vs)));
+          (count_by (fun v -> class_label v.entity_class) vs)));
   let reasons =
     List.filter_map
       (fun v ->
@@ -96,8 +99,8 @@ let summary ?universe (vs : valuation list) =
                     | Some r -> " " ^ r
                     | None -> ""))
       in
-      Printf.bprintf b "  %-10s %-7s %-10s %s%s\n" v.ticker
-        (status_name v.status) (model_label v.model) detail verdict)
+      Printf.bprintf b "  %-10s %-7s %-18s %s%s\n" v.ticker
+        (status_name v.status) (class_label v.entity_class) detail verdict)
     vs;
   (match universe with
   | Some (u : Reference_t.universe) ->

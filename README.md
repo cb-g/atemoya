@@ -50,10 +50,16 @@ dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl
 
 `dune exec atemoya` reads parameters from `reference/` (`--reference DIR` to override) and
 measures their age against today's UTC date (`--today YYYY-MM-DD` to override). Inputs may
-be files or directories. A record is either `Ok` with a fair value, or `Failed` with a
-reason; it never carries a guessed number, and a bank or insurer is never valued by the
-generic model. With `--out`, the summary checks each ticker against the expected outcome
-in `reference/universe.json`; a deviation there is a finding, not something to tune away.
+be files or directories. Every ticker needs a declared `entity_class`, from its entry in
+`reference/universe.json` or from `--entity-class CLASS` for an ad-hoc run; without one the
+record fails as undeclared. `reference/admissibility.json` says which models may run on
+which class (today only the DCF, only on `OperatingCompany`) and what each other class is
+judged on instead; an inadmissible class fails with that lens named. A record is either
+`Ok` with a fair value, or `Failed` with a reason; it never carries a guessed number.
+Every record carries a `floor` (present, absent by definition, or not assessable here,
+with its basis) that gates nothing. With `--out`, the summary checks each ticker against
+the expected outcome in the universe file; a deviation there is a finding, not something
+to tune away.
 Valuation never fetches, so running it twice on the same inputs with `--today` pinned gives
 byte-identical output. `data/` and `output/` are generated and gitignored; versioned inputs
 live in `reference/`.

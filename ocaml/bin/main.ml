@@ -1,22 +1,24 @@
 (* Values boundary financials JSON files. Parameters come from reference/ (or --reference
    DIR); ages are measured at today's UTC date unless --today YYYY-MM-DD is given.
-   Inputs may be files or directories (every *.json inside, sorted). Without --out, one
-   valuation record per line goes to stdout. With --out DIR, DIR/valuations.jsonl and
-   DIR/summary.txt are written and the summary is printed; the summary checks each ticker
-   against --universe FILE, defaulting to <reference>/universe.json when it exists.
-   Valuation never fetches. *)
+   Inputs may be files or directories (every *.json inside, sorted). The entity class of
+   each ticker comes from the universe file (--universe FILE, default
+   <reference>/universe.json); a ticker not in it takes --entity-class CLASS if given,
+   otherwise it fails as undeclared. Without --out, one valuation record per line goes to
+   stdout. With --out DIR, DIR/valuations.jsonl and DIR/summary.txt are written and the
+   summary is printed. Valuation never fetches. *)
 
 open Atemoya
 
 let usage =
   "usage: atemoya [--reference DIR] [--today YYYY-MM-DD] [--out DIR] [--universe FILE] \
-   <financials.json | directory>...\n"
+   [--entity-class CLASS] <financials.json | directory>...\n"
 
 type options = {
   reference : string;
   today : string;
   out : string option;
   universe : string option;
+  entity_class : string option;
 }
 
 let usage_exit () =
@@ -33,7 +35,9 @@ let rec parse o paths = function
   | "--today" :: v :: rest -> parse { o with today = v } paths rest
   | "--out" :: v :: rest -> parse { o with out = Some v } paths rest
   | "--universe" :: v :: rest -> parse { o with universe = Some v } paths rest
-  | [ ("--reference" | "--today" | "--out" | "--universe") ] -> usage_exit ()
+  | "--entity-class" :: v :: rest -> parse { o with entity_class = Some v } paths rest
+  | [ ("--reference" | "--today" | "--out" | "--universe" | "--entity-class") ] ->
+      usage_exit ()
   | p :: rest -> parse o (p :: paths) rest
 
 let expand path =
@@ -67,10 +71,49 @@ let write_file path contents =
   output_string oc contents;
   close_out oc
 
+let class_or_exit s =
+  match Admissibility.class_of_string s with
+  | Some c -> c
+  | None ->
+      Printf.eprintf "%S is not an entity class; one of: %s\n%!" s
+        (String.concat ", " (List.map Admissibility.class_name Admissibility.all_classes));
+      exit 2
+
+(* The declaration for a ticker: its universe entry, else the command-line class. Every
+   universe entry's class is validated up front so a typo fails the run, not one record. *)
+let declarations (universe : Reference_t.universe option) cli_class =
+  let entries =
+    match universe with
+    | None -> []
+    | Some u ->
+        List.map
+          (fun (e : Reference_t.universe_entry) ->
+            ( e.ticker,
+              {
+                Valuation.entity_class = class_or_exit e.entity_class;
+                lens_note = e.lens_note;
+                scope_limits = e.scope_limits;
+              } ))
+          u.tickers
+  in
+  let fallback =
+    Option.map
+      (fun s -> { Valuation.entity_class = class_or_exit s; lens_note = ""; scope_limits = [] })
+      cli_class
+  in
+  fun ticker ->
+    match List.assoc_opt ticker entries with Some d -> Some d | None -> fallback
+
 let () =
   let o, paths =
     parse
-      { reference = "reference"; today = today_utc (); out = None; universe = None }
+      {
+        reference = "reference";
+        today = today_utc ();
+        out = None;
+        universe = None;
+        entity_class = None;
+      }
       []
       (List.tl (Array.to_list Sys.argv))
   in
@@ -102,12 +145,14 @@ let () =
         | Some u -> Some u
         | None -> exit 2)
   in
+  let declaration = declarations universe o.entity_class in
   let files = List.concat_map expand paths in
   let results =
     List.filter_map
       (fun path ->
         Option.map
-          (fun fin -> Valuation.run params ~today:o.today fin)
+          (fun (fin : Boundary_t.financials) ->
+            Valuation.run params ~today:o.today ~declaration:(declaration fin.ticker) fin)
           (read "financials" Boundary_j.read_financials path))
       files
   in

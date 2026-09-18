@@ -17,10 +17,11 @@ type t = {
   tax_rates : Reference_t.country_table;
   industry_betas : Reference_t.industry_table;
   params : Reference_t.params;
+  admissibility : Reference_t.admissibility;
 }
 
 val load : dir:string -> (t, string) result
-(** Reads the five files under [dir]; the error names the file and the parse
+(** Reads the six files under [dir]; the error names the file and the parse
     problem. *)
 
 val days_between : from:string -> until:string -> (int, string) result

@@ -141,7 +141,22 @@ let params : Params.t =
         {|{"source": "sector betas 2026", "as_of": "2026-01-01", "max_age_days": 400,
            "values": {"Consumer Electronics": 0.9, "Software - Application": 1.3}}|};
     params = Reference_j.params_of_string params_json;
+    admissibility =
+      Reference_j.admissibility_of_string
+        {|{"source": "test", "as_of": "2026-09-18", "classes": {
+            "OperatingCompany": {"lens": "FCFF-based DCF", "admissible_models": ["dcf"], "never": "a DCF through a break", "floor_basis_default": "a completed FCFF DCF"},
+            "Bank": {"lens": "price/book against ROE", "admissible_models": [], "never": "an FCFF DCF", "floor_basis_default": "tangible book value per share"},
+            "Insurer": {"lens": "operating-profit multiple with the solvency ratio", "admissible_models": [], "never": "an FCFF DCF", "floor_basis_default": "adjusted book value per share"},
+            "PreProfit": {"lens": "cash runway vs the catalyst calendar", "admissible_models": [], "never": "any multiple", "floor_basis_default": "no floor until the catalyst", "floor_present_default": false},
+            "Wrapper": {"lens": "NAV premium or discount", "admissible_models": [], "never": "headline yield", "floor_basis_default": "NAV per unit"}}}|};
   }
+
+let declaration ?(lens_note = "") ?(scope_limits = []) entity_class =
+  { Valuation.entity_class; lens_note; scope_limits }
+
+(* Most valuation tests declare an operating company; the class tests declare otherwise. *)
+let run ?(declared = Some (declaration `OperatingCompany)) fin =
+  Valuation.run params ~today ~declaration:declared fin
 
 (* --- testables --- *)
 
@@ -155,6 +170,8 @@ let signal = via_json Boundary_j.string_of_signal
 let tax_rate_source = via_json Boundary_j.string_of_tax_rate_source
 let beta_source = via_json Boundary_j.string_of_beta_source
 let model = via_json Boundary_j.string_of_model
+let entity_class = via_json Boundary_j.string_of_entity_class
+let class_check_outcome = via_json Boundary_j.string_of_class_check_outcome
 let growth_source = via_json Boundary_j.string_of_growth_source
 let valuation = via_json Boundary_j.string_of_valuation
 let approx = Alcotest.float 1e-9
@@ -542,151 +559,221 @@ let test_reference_files_load () =
   Alcotest.(check bool) "no U.S. alias key duplicated in the tables" false
     (List.mem_assoc "USA" t.equity_risk_premiums.values)
 
-(* --- classification --- *)
+(* --- entity class: signatures as a consistency check, admissibility, floor --- *)
 
 let threshold = param ~key:"global" ~source:"assumption" 0.25
 
-let classify_of ?(industry = Some "Consumer Electronics") periods =
-  Classify.classify ~threshold (financials ~industry periods)
-
-let check_outcome name expected (outcome, _) =
-  match (expected, outcome) with
-  | `Model m, Classify.Classified m' -> Alcotest.check model name m m'
-  | `Unresolved needles, Classify.Unresolved reason ->
-      check_mentions name reason needles
-  | `Model m, Classify.Unresolved reason ->
-      Alcotest.failf "%s: expected %s, got unresolved %S" name
-        (Classify.model_name m) reason
-  | `Unresolved _, Classify.Classified m ->
-      Alcotest.failf "%s: expected unresolved, got %s" name (Classify.model_name m)
+let signature_of ?(industry = Some "Consumer Electronics") periods =
+  Classify.signature ~threshold (financials ~industry periods)
 
 let bank_period ?(nii = 5000.) ?(revenue = 10000.) ?premiums_earned
     ?premiums_earned_row () =
   period ~total_revenue:revenue ~net_interest_income:nii ?premiums_earned
     ?premiums_earned_row ()
 
-let test_bank_ratio () =
-  check_outcome "52% is a bank" (`Model `Bank) (classify_of [ bank_period () ]);
-  check_outcome "exactly at threshold is a bank" (`Model `Bank)
-    (classify_of [ bank_period ~nii:2500. () ]);
-  check_outcome "24% is not" (`Model `Generic)
-    (classify_of [ bank_period ~nii:2400. () ]);
-  check_outcome "MSFT-like tiny positive NII is not" (`Model `Generic)
-    (classify_of [ bank_period ~nii:250. ~revenue:331840. () ]);
-  check_outcome "negative NII is not" (`Model `Generic)
-    (classify_of [ bank_period ~nii:(-180.) () ]);
-  check_outcome "no revenue means no ratio" (`Model `Generic)
-    (classify_of [ period ~net_interest_income:5000. () ]);
-  let _, e = classify_of [ bank_period () ] in
-  Alcotest.(check (option approx)) "ratio recorded" (Some 0.5) e.nii_ratio;
-  check_float "threshold recorded" 0.25 e.bank_nii_ratio_threshold.value;
-  Alcotest.(check (option string)) "period recorded" (Some "2025-09-30") e.fiscal_period_end;
-  Alcotest.(check (option model)) "info not consulted" None e.info_hint
+let check_indicated name expected periods =
+  Alcotest.(check (option entity_class)) name expected (signature_of periods).indicated
 
-let test_insurer_row () =
-  let with_row =
-    classify_of ~industry:(Some "Insurance - Life")
+let test_signature_bank_ratio () =
+  check_indicated "52% indicates a bank" (Some `Bank) [ bank_period () ];
+  check_indicated "exactly at threshold indicates a bank" (Some `Bank)
+    [ bank_period ~nii:2500. () ];
+  check_indicated "24% does not" None [ bank_period ~nii:2400. () ];
+  check_indicated "MSFT-like tiny positive NII does not" None
+    [ bank_period ~nii:250. ~revenue:331840. () ];
+  check_indicated "negative NII does not" None [ bank_period ~nii:(-180.) () ];
+  check_indicated "no revenue means no ratio" None [ period ~net_interest_income:5000. () ];
+  let e = signature_of [ bank_period () ] in
+  Alcotest.(check (option approx)) "ratio recorded" (Some 0.5) e.nii_ratio;
+  check_float "threshold recorded" 0.25 e.threshold.value;
+  Alcotest.(check (option string)) "period recorded" (Some "2025-09-30") e.fiscal_period_end
+
+let test_signature_insurer_row () =
+  let e =
+    signature_of
       [ bank_period ~nii:(-100.) ~premiums_earned:5000.
           ~premiums_earned_row:"Net Premiums Earned" () ]
   in
-  check_outcome "premium row present and positive" (`Model `Insurer) with_row;
-  let _, e = with_row in
+  Alcotest.(check (option entity_class)) "premium row present and positive" (Some `Insurer) e.indicated;
   Alcotest.(check (option string)) "row recorded" (Some "Net Premiums Earned") e.premiums_earned_row;
-  check_outcome "premium row zero is no signature" (`Unresolved [ "Insurer" ])
-    (classify_of ~industry:(Some "Insurance - Life")
-       [ bank_period ~nii:(-100.) ~premiums_earned:0. ~premiums_earned_row:"Premiums Earned" () ]);
-  check_outcome "no premium row, no hint: generic" (`Model `Generic)
-    (classify_of [ bank_period ~nii:(-100.) () ])
+  check_indicated "premium row zero is no signature" None
+    [ bank_period ~nii:(-100.) ~premiums_earned:0. ~premiums_earned_row:"Premiums Earned" () ];
+  check_indicated "bank beats insurer" (Some `Bank)
+    [ bank_period ~premiums_earned:5000. ~premiums_earned_row:"Premiums Earned" () ];
+  check_indicated "no periods, nothing indicated" None [];
+  check_indicated ".info is never consulted" None
+    (let _ = Some "Banks - Diversified" in [ period () ])
 
-let test_bank_precedence () =
-  check_outcome "bank beats insurer" (`Model `Bank)
-    (classify_of
-       [ bank_period ~premiums_earned:5000. ~premiums_earned_row:"Premiums Earned" () ])
+let outcome_of ~declared periods =
+  match Classify.check ~declared (signature_of periods) with
+  | Classify.Proceed e -> (`Proceed, e)
+  | Classify.Refuse (reason, e) -> (`Refuse reason, e)
 
-let test_info_only_is_unresolved () =
-  let outcome, e =
-    classify_of ~industry:(Some "Insurance - Diversified") [ bank_period ~nii:(-60.) () ]
-  in
-  check_outcome "insurance in .info, no signature"
-    (`Unresolved [ "classification unresolved"; "Insurer"; "no statement signature" ])
-    (outcome, e);
-  Alcotest.(check (option model)) "hint recorded" (Some `Insurer) e.info_hint;
-  check_outcome "bank in .info, ratio below threshold"
-    (`Unresolved [ "Bank" ])
-    (classify_of ~industry:(Some "Banks - Regional") [ bank_period ~nii:2150. () ]);
-  check_outcome "case-insensitive" (`Unresolved [ "Bank" ])
-    (classify_of ~industry:(Some "BANKS") [ period () ])
+let test_check_undeclared () =
+  (match outcome_of ~declared:None [ period () ] with
+  | `Refuse reason, e ->
+      check_mentions "reason" reason [ "entity_class not declared" ];
+      Alcotest.check class_check_outcome "outcome" `Undeclared e.outcome;
+      Alcotest.(check (option entity_class)) "nothing declared" None e.declared
+  | `Proceed, _ -> Alcotest.fail "undeclared must refuse");
+  match outcome_of ~declared:None [ bank_period () ] with
+  | `Refuse reason, _ ->
+      check_mentions "hint appended" reason
+        [ "entity_class not declared"; "statements indicate Bank"; "NII/revenue 0.50" ]
+  | `Proceed, _ -> Alcotest.fail "undeclared must refuse"
 
-let test_oil_gas_is_generic () =
-  let outcome, e =
-    classify_of ~industry:(Some "Oil & Gas Integrated") [ bank_period ~nii:(-20.) () ]
-  in
-  check_outcome "no signature, no hint" (`Model `Generic) (outcome, e);
-  Alcotest.(check (option model)) "no hint" None e.info_hint
+let test_check_disagreement_is_fatal () =
+  (* JPM declared as an operating company: the signature would have let the dcf run. *)
+  match outcome_of ~declared:(Some `OperatingCompany) [ bank_period ~nii:5200. () ] with
+  | `Refuse reason, e ->
+      check_mentions "reason" reason
+        [ "class disagreement"; "declared OperatingCompany"; "statements indicate Bank";
+          "NII/revenue 0.52" ];
+      Alcotest.check class_check_outcome "outcome" `Disagreement e.outcome;
+      Alcotest.(check (option entity_class)) "indicated" (Some `Bank) e.indicated
+  | `Proceed, _ -> Alcotest.fail "must refuse"
 
-let test_no_periods_classifies_generic () =
-  let outcome, e = classify_of ~industry:None [] in
-  check_outcome "nothing to read" (`Model `Generic) (outcome, e);
-  Alcotest.(check (option string)) "no period" None e.fiscal_period_end;
-  Alcotest.(check (option approx)) "no ratio" None e.nii_ratio
+let test_check_harmless_directions () =
+  (* MSFT declared a bank: nothing fires; recorded, not fatal. *)
+  (match outcome_of ~declared:(Some `Bank) [ bank_period ~nii:250. ~revenue:331840. () ] with
+  | `Proceed, e -> Alcotest.check class_check_outcome "signature absent" `Signature_absent e.outcome
+  | `Refuse r, _ -> Alcotest.failf "must proceed, got %s" r);
+  (match outcome_of ~declared:(Some `Bank) [ bank_period () ] with
+  | `Proceed, e -> Alcotest.check class_check_outcome "consistent" `Consistent e.outcome
+  | `Refuse r, _ -> Alcotest.failf "must proceed, got %s" r);
+  (match outcome_of ~declared:(Some `Reit) [ bank_period () ] with
+  | `Proceed, e -> Alcotest.check class_check_outcome "differs, harmless" `Signature_differs e.outcome
+  | `Refuse r, _ -> Alcotest.failf "must proceed, got %s" r);
+  (match outcome_of ~declared:(Some `Reit) [ period () ] with
+  | `Proceed, e -> Alcotest.check class_check_outcome "nothing contradicts" `Consistent e.outcome
+  | `Refuse r, _ -> Alcotest.failf "must proceed, got %s" r);
+  match outcome_of ~declared:(Some `OperatingCompany) [ period ~net_interest_income:(-20.) ~total_revenue:1000. () ] with
+  | `Proceed, e -> Alcotest.check class_check_outcome "oil & gas style, consistent" `Consistent e.outcome
+  | `Refuse r, _ -> Alcotest.failf "must proceed, got %s" r
 
-let test_bank_never_valued () =
-  (* Full generic statement fields present: the generic DCF could run, and must not. *)
+let check_floor name (v : Boundary_t.valuation) present =
+  Alcotest.(check (option bool)) (name ^ " floor.present") present v.floor.present;
+  if v.floor.basis = "" then Alcotest.failf "%s: empty floor basis" name
+
+let test_inadmissible_refuses_with_lens () =
+  (* Full generic statement fields present: the dcf could run, and must not. *)
   let full_bank =
-    period ~ebit:1200. ~pretax_income:1000. ~tax_provision:500. ~total_revenue:10000.
-      ~net_interest_income:5000. ~depreciation_amortization:200. ~capex:50.
-      ~delta_nwc:50. ~cash:1000. ~total_debt:5000. ()
+    List.map
+      (fun (p : Boundary_t.fiscal_period) -> { p with net_interest_income = Some 5000. })
+      (history ())
   in
-  let v = Valuation.run params ~today (financials [ full_bank ]) in
-  check_reason v [ "model not implemented: Bank" ];
+  let v =
+    run ~declared:(Some (declaration ~lens_note:"note" ~scope_limits:[ "a"; "b" ] `Bank))
+      (financials full_bank)
+  in
+  check_reason v [ "dcf not admissible for Bank"; "lens: price/book against ROE" ];
   check_nulls v;
-  Alcotest.(check (option model)) "model" (Some `Bank) v.model;
+  Alcotest.(check (option entity_class)) "class" (Some `Bank) v.entity_class;
+  Alcotest.(check (option model)) "no model ran" None v.model;
   Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs);
-  match v.classification with
-  | None -> Alcotest.fail "no classification evidence"
-  | Some e -> Alcotest.(check (option approx)) "ratio" (Some 0.5) e.nii_ratio
-
-let test_insurer_never_valued () =
-  let v =
-    Valuation.run params ~today
-      (financials
-         [ period ~ebit:1200. ~pretax_income:1000. ~tax_provision:500.
-             ~premiums_earned:5000. ~premiums_earned_row:"Premiums Earned"
-             ~depreciation_amortization:200. ~capex:50. ~delta_nwc:50. ~cash:1000.
-             ~total_debt:5000. () ])
-  in
-  check_reason v [ "model not implemented: Insurer" ];
-  Alcotest.(check (option model)) "model" (Some `Insurer) v.model;
-  Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs)
-
-let test_classification_beats_stale_rates () =
-  (* Germany's curve is stale in the fixture; a German bank still reports as a bank. *)
-  let v =
-    Valuation.run params ~today
-      (financials ~country:(Some "Germany") [ bank_period () ])
-  in
-  check_reason v [ "model not implemented: Bank" ]
-
-let test_unresolved_record () =
-  let v =
-    Valuation.run params ~today
-      (financials ~industry:(Some "Insurance - Diversified") [ full_period () ])
-  in
-  check_reason v [ "classification unresolved"; "Insurer" ];
-  Alcotest.(check (option model)) "no model" None v.model;
-  Alcotest.(check bool) "evidence present" true (Option.is_some v.classification);
-  Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs)
-
-let test_generic_record_carries_evidence () =
-  let v = Valuation.run params ~today (financials (history ())) in
-  Alcotest.check status "status" `Ok v.status;
-  Alcotest.(check (option model)) "model" (Some `Generic) v.model;
-  match v.classification with
-  | None -> Alcotest.fail "no classification evidence"
+  check_floor "bank" v None;
+  check_mentions "floor basis" v.floor.basis [ "tangible book value" ];
+  Alcotest.(check string) "lens_note carried" "note" v.lens_note;
+  Alcotest.(check (list string)) "scope_limits carried" [ "a"; "b" ] v.scope_limits;
+  match v.class_check with
+  | None -> Alcotest.fail "no class_check evidence"
   | Some e ->
+      Alcotest.check class_check_outcome "consistent" `Consistent e.outcome;
+      Alcotest.(check (option approx)) "ratio" (Some 0.5) e.nii_ratio
+
+let test_insurer_declared_without_signature () =
+  (* What yfinance cannot signal, the declaration carries: not "unresolved", refused. *)
+  let v = run ~declared:(Some (declaration `Insurer)) (financials (history ())) in
+  check_reason v [ "dcf not admissible for Insurer"; "solvency ratio" ];
+  match v.class_check with
+  | None -> Alcotest.fail "no evidence"
+  | Some e -> Alcotest.check class_check_outcome "signature absent" `Signature_absent e.outcome
+
+let test_undeclared_record () =
+  let v = run ~declared:None (financials (history ())) in
+  check_reason v [ "entity_class not declared" ];
+  Alcotest.(check (option entity_class)) "no class" None v.entity_class;
+  Alcotest.(check (option model)) "no model" None v.model;
+  check_floor "undeclared" v None;
+  Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs)
+
+let test_disagreement_record () =
+  let jpm_like =
+    List.map
+      (fun (p : Boundary_t.fiscal_period) -> { p with net_interest_income = Some 5200. })
+      (history ())
+  in
+  let v = run (financials jpm_like) in
+  check_reason v [ "class disagreement"; "declared OperatingCompany"; "Bank" ];
+  Alcotest.(check (option model)) "no model" None v.model;
+  Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs)
+
+let test_floor_three_valued () =
+  let ok = run (financials (history ())) in
+  Alcotest.check status "ok" `Ok ok.status;
+  check_floor "verified" ok (Some true);
+  check_mentions "verified basis" ok.floor.basis [ "dcf"; "fcff"; "fair value" ];
+  let none_by_definition = run ~declared:(Some (declaration `PreProfit)) (financials (history ())) in
+  check_reason none_by_definition [ "dcf not admissible for PreProfit" ];
+  check_floor "pre-profit" none_by_definition (Some false);
+  let not_assessed = run (financials ~country:(Some "Atlantis") (history ())) in
+  check_reason not_assessed [ "Atlantis" ];
+  check_floor "operating company that failed before the dcf" not_assessed None;
+  Alcotest.(check (option model)) "routed to the dcf" (Some `Dcf) not_assessed.model
+
+let test_operating_company_record_carries_evidence () =
+  let v = run (financials (history ())) in
+  Alcotest.check status "status" `Ok v.status;
+  Alcotest.(check (option model)) "model" (Some `Dcf) v.model;
+  Alcotest.(check (option entity_class)) "class" (Some `OperatingCompany) v.entity_class;
+  match v.class_check with
+  | None -> Alcotest.fail "no class_check evidence"
+  | Some e ->
+      Alcotest.check class_check_outcome "consistent" `Consistent e.outcome;
       Alcotest.(check string) "threshold provenance" "assumption"
         e.bank_nii_ratio_threshold.source;
       Alcotest.(check int) "threshold age" 9 e.bank_nii_ratio_threshold.age_days
+
+let test_no_admissibility_row () =
+  let v = run ~declared:(Some (declaration `Reit)) (financials (history ())) in
+  check_reason v [ "no admissibility row"; "Reit" ];
+  check_floor "no row" v None
+
+let test_sanity_bound_names_structural_break () =
+  let v = run (financials ~market_cap:(Some 100.) (history ())) in
+  check_reason v [ "sanity bound"; "structural break"; "entity_class" ]
+
+let test_table_and_variant_agree () =
+  let t = get (Params.load ~dir:"../../reference") in
+  List.iter
+    (fun c ->
+      match Admissibility.rule t.admissibility c with
+      | Ok r ->
+          if r.lens = "" || r.floor_basis_default = "" || r.never = "" then
+            Alcotest.failf "%s: incomplete row" (Admissibility.class_name c);
+          Alcotest.(check bool)
+            (Admissibility.class_name c ^ " admits the dcf iff it is the operating company")
+            (c = `OperatingCompany) (Admissibility.admits r `Dcf)
+      | Error e -> Alcotest.fail e)
+    Admissibility.all_classes;
+  List.iter
+    (fun (name, _) ->
+      match Admissibility.class_of_string name with
+      | Some c -> Alcotest.(check string) "round trip" name (Admissibility.class_name c)
+      | None -> Alcotest.failf "table row %s is not a variant constructor" name)
+    t.admissibility.classes;
+  Alcotest.(check int) "one row per constructor" (List.length Admissibility.all_classes)
+    (List.length t.admissibility.classes);
+  Alcotest.(check (option entity_class)) "parser rejects unknown" None
+    (Admissibility.class_of_string "Conglomerate");
+  let u =
+    Atdgen_runtime.Util.Json.from_file Reference_j.read_universe "../../reference/universe.json"
+  in
+  List.iter
+    (fun (e : Reference_t.universe_entry) ->
+      if Option.is_none (Admissibility.class_of_string e.entity_class) then
+        Alcotest.failf "universe entry %s declares unknown class %s" e.ticker e.entity_class)
+    u.tickers
 
 (* --- batch summary --- *)
 
@@ -694,34 +781,36 @@ let test_batch_summary () =
   let universe =
     Reference_j.universe_of_string
       {|{"tickers": [
-          {"ticker": "TEST", "note": "ok", "expected_status": "Ok"},
-          {"ticker": "BNK", "note": "bank", "expected_status": "Failed", "expected_reason": "model not implemented: Bank"},
-          {"ticker": "WRONG", "note": "expects ok", "expected_status": "Ok"},
-          {"ticker": "ABSENT", "note": "never run", "expected_status": "Ok"}]}|}
+          {"ticker": "TEST", "entity_class": "OperatingCompany", "note": "ok", "expected_status": "Ok"},
+          {"ticker": "BNK", "entity_class": "Bank", "note": "bank", "expected_status": "Failed", "expected_reason": "dcf not admissible for Bank"},
+          {"ticker": "WRONG", "entity_class": "OperatingCompany", "note": "expects ok", "expected_status": "Ok"},
+          {"ticker": "ABSENT", "entity_class": "Wrapper", "note": "never run", "expected_status": "Ok"}]}|}
   in
   let rename t (v : Boundary_t.valuation) = { v with ticker = t } in
   let vs =
     [
-      Valuation.run params ~today (financials (history ()));
-      rename "BNK" (Valuation.run params ~today (financials [ bank_period () ]));
-      rename "WRONG" (Valuation.run params ~today (financials []));
+      run (financials (history ()));
+      rename "BNK" (run ~declared:(Some (declaration `Bank)) (financials [ bank_period () ]));
+      rename "WRONG" (run (financials []));
     ]
   in
   let s = Batch.summary ~universe vs in
   check_mentions "summary" s
-    [ "3 records, 1 Ok, 2 Failed"; "by model: Generic 2, Bank 1";
-      "1  model not implemented: Bank"; "1  no fiscal periods in statements";
-      "TEST       Ok      Generic    fair_value"; "as expected";
-      "WRONG      Failed  Generic    no fiscal periods in statements  EXPECTED Ok";
+    [ "3 records, 1 Ok, 2 Failed"; "by class: OperatingCompany 2, Bank 1";
+      "1  dcf not admissible for Bank"; "1  no fiscal periods in statements";
+      "TEST       Ok      OperatingCompany   fair_value"; "as expected";
+      "WRONG      Failed  OperatingCompany   no fiscal periods in statements  EXPECTED Ok";
       "in the universe but not run: ABSENT" ];
   Alcotest.(check string) "reason key drops specifics" "risk_free_rate for Germany/7y"
     (Batch.reason_key "risk_free_rate for Germany/7y (as_of 2026-06-05) is 97 days old");
+  Alcotest.(check string) "reason key groups refusals by class" "dcf not admissible for Bank"
+    (Batch.reason_key "dcf not admissible for Bank; lens: price/book against ROE");
   Alcotest.(check string) "summary is deterministic" s (Batch.summary ~universe vs)
 
 (* --- valuation end to end --- *)
 
 let test_ok () =
-  let v = Valuation.run params ~today (financials (history ())) in
+  let v = run (financials (history ())) in
   Alcotest.check status "status" `Ok v.status;
   Alcotest.(check string) "valued_on" today v.valued_on;
   Alcotest.(check (option string)) "failed_reason" None v.failed_reason;
@@ -761,28 +850,28 @@ let test_ok () =
         ]
 
 let test_no_country () =
-  let v = Valuation.run params ~today (financials ~country:None [ full_period () ]) in
+  let v = run (financials ~country:None [ full_period () ]) in
   check_reason v [ "country" ];
   check_nulls v;
   Alcotest.(check bool) "inputs" true (Option.is_none v.inputs)
 
 let test_unknown_country () =
   let v =
-    Valuation.run params ~today (financials ~country:(Some "Atlantis") [ full_period () ])
+    run (financials ~country:(Some "Atlantis") [ full_period () ])
   in
   check_reason v [ "Atlantis" ];
   check_nulls v
 
 let test_stale_parameter () =
   let v =
-    Valuation.run params ~today (financials ~country:(Some "Germany") [ full_period () ])
+    run (financials ~country:(Some "Germany") [ full_period () ])
   in
   check_reason v [ "risk_free_rate"; "97 days"; "max_age_days 45" ];
   check_nulls v;
   Alcotest.(check bool) "inputs" true (Option.is_none v.inputs)
 
 let test_no_industry () =
-  let v = Valuation.run params ~today (financials ~industry:None (history ())) in
+  let v = run (financials ~industry:None (history ())) in
   Alcotest.check status "status" `Ok v.status;
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
@@ -793,7 +882,7 @@ let test_no_industry () =
 
 let test_latest_period_wins () =
   let v =
-    Valuation.run params ~today
+    run
       (financials
          [
            full_period ~period_end:"2024-09-30" ();
@@ -804,7 +893,7 @@ let test_latest_period_wins () =
   Alcotest.(check bool) "inputs" true (Option.is_none v.inputs)
 
 let test_no_periods () =
-  let v = Valuation.run params ~today (financials []) in
+  let v = run (financials []) in
   check_reason v [ "no fiscal periods" ];
   check_nulls v;
   Alcotest.(check bool) "inputs" true (Option.is_none v.inputs);
@@ -812,7 +901,7 @@ let test_no_periods () =
 
 let test_missing_statement_fields () =
   let v =
-    Valuation.run params ~today
+    run
       (financials
          [
            period ~ebit:1200. ~pretax_income:1000. ~tax_provision:500.
@@ -824,7 +913,7 @@ let test_missing_statement_fields () =
 
 let test_missing_market_data () =
   let v =
-    Valuation.run params ~today
+    run
       (financials ~currency:None ~market_cap:None [ full_period () ])
   in
   check_reason v [ "currency"; "market_cap" ];
@@ -832,7 +921,7 @@ let test_missing_market_data () =
 
 let test_wacc_below_terminal_growth () =
   let v =
-    Valuation.run
+    Valuation.run ~declaration:(Some (declaration `OperatingCompany))
       { params with
         params =
           Reference_j.params_of_string
@@ -856,7 +945,7 @@ let test_non_positive_fair_value () =
      gives zero historical growth, roic is negative so the cap pulls g0 down to it, and
      the clamp holds it at -0.2. The cash flows shrink from a negative base. *)
   let v =
-    Valuation.run params ~today
+    run
       (financials (history ~ebit:(-5000.) ~pretax_income:(-5000.) ()))
   in
   check_reason v [ "non-positive fair value" ];
@@ -867,15 +956,15 @@ let test_sanity_bound () =
   (* Tiny market cap: wacc collapses towards the cost of debt and the DCF says
      the equity is worth hundreds of times its price. Not a Buy -- a failure. *)
   let v =
-    Valuation.run params ~today (financials ~market_cap:(Some 100.) (history ()))
+    run (financials ~market_cap:(Some 100.) (history ()))
   in
   check_reason v [ "sanity bound" ];
   check_nulls v;
   Alcotest.(check bool) "inputs kept for audit" true (Option.is_some v.inputs)
 
 let test_json_round_trip () =
-  let ok = Valuation.run params ~today (financials (history ())) in
-  let failed = Valuation.run params ~today (financials []) in
+  let ok = run (financials (history ())) in
+  let failed = run (financials []) in
   List.iter
     (fun v ->
       Alcotest.check valuation "round trip" v
@@ -883,11 +972,13 @@ let test_json_round_trip () =
     [ ok; failed ];
   check_mentions "failed json" (Boundary_j.string_of_valuation failed)
     [ {|"status":"Failed"|}; {|"fair_value":null|}; {|"signal":null|};
-      {|"inputs":null|}; {|"model":"Generic"|}; {|"valued_on":"2026-09-10"|} ];
+      {|"inputs":null|}; {|"model":"dcf"|}; {|"valued_on":"2026-09-10"|};
+      {|"floor":{"present":null,|} ];
   check_mentions "ok json" (Boundary_j.string_of_valuation ok)
     [ {|"beta_source":"industry_table"|}; {|"source":"FRED"|}; {|"age_days":2|};
-      {|"model":"Generic"|}; {|"classification":{|}; {|"nii_ratio":null|};
-      {|"growth_source":"historical"|}; {|"growth_clamped":false|} ]
+      {|"model":"dcf"|}; {|"entity_class":"OperatingCompany"|}; {|"class_check":{|};
+      {|"outcome":"Consistent"|}; {|"nii_ratio":null|}; {|"floor":{"present":true,|};
+      {|"scope_limits":[]|}; {|"growth_source":"historical"|}; {|"growth_clamped":false|} ]
 
 let () =
   let case name f = Alcotest.test_case name `Quick f in
@@ -929,19 +1020,22 @@ let () =
           case "beta defaults only without a listed industry" test_beta_default;
           case "tracked reference files load" test_reference_files_load;
         ] );
-      ( "classification",
+      ( "entity class",
         [
-          case "bank is a materiality ratio, not a sign test" test_bank_ratio;
-          case "insurer is a named premium row" test_insurer_row;
-          case "bank takes precedence" test_bank_precedence;
-          case ".info alone is unresolved, never a class" test_info_only_is_unresolved;
-          case "oil & gas stays generic" test_oil_gas_is_generic;
-          case "no periods classifies generic" test_no_periods_classifies_generic;
-          case "bank never reaches the generic dcf" test_bank_never_valued;
-          case "insurer never reaches the generic dcf" test_insurer_never_valued;
-          case "classification beats stale rates" test_classification_beats_stale_rates;
-          case "unresolved record shape" test_unresolved_record;
-          case "generic record carries the evidence" test_generic_record_carries_evidence;
+          case "bank signature is a materiality ratio" test_signature_bank_ratio;
+          case "insurer signature is a named premium row" test_signature_insurer_row;
+          case "undeclared is refused, hint appended" test_check_undeclared;
+          case "signature against a declared operating company is fatal" test_check_disagreement_is_fatal;
+          case "other mismatches are recorded, not fatal" test_check_harmless_directions;
+          case "inadmissible refuses with the lens named" test_inadmissible_refuses_with_lens;
+          case "declared insurer with no signature is refused, not unresolved" test_insurer_declared_without_signature;
+          case "undeclared record shape" test_undeclared_record;
+          case "disagreement record shape" test_disagreement_record;
+          case "floor is three-valued with a basis" test_floor_three_valued;
+          case "operating company record carries the evidence" test_operating_company_record_carries_evidence;
+          case "class without a table row fails" test_no_admissibility_row;
+          case "sanity bound names a structural break" test_sanity_bound_names_structural_break;
+          case "table and variant agree, universe declares known classes" test_table_and_variant_agree;
           case "batch summary" test_batch_summary;
         ] );
       ( "valuation",

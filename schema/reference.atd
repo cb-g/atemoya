@@ -73,7 +73,10 @@ type params = {
    produce today. A deviation in the batch summary is a finding, never something to tune. *)
 type universe_entry = {
   ticker : string;
+  entity_class : string;                (* a constructor of the boundary's entity_class; validated at load *)
   note : string;                        (* why it is in the set *)
+  ~lens_note : string;                  (* free text beside the class; carried into the output *)
+  ~scope_limits : string list;          (* what the models cannot see for this name; carried verbatim *)
   expected_status : string;             (* "Ok" or "Failed" *)
   ?expected_reason : string option;     (* prefix the failed_reason must start with *)
 }
@@ -81,4 +84,22 @@ type universe_entry = {
 type universe = {
   ~notes : string list;
   tickers : universe_entry list;
+}
+
+(* Which models may run on which entity class, and what the class is judged on instead.
+   The only place lens text and admissibility live; the boundary's entity_class variant and
+   this table are checked against each other in a test. *)
+type class_rule = {
+  lens : string;                        (* what the class is judged on *)
+  admissible_models : string list;      (* JSON names of boundary model constructors, e.g. "dcf" *)
+  never : string;                       (* what must not be used on this class *)
+  floor_basis_default : string;         (* what establishes a floor for this class when no model here has *)
+  ~floor_present_default : bool nullable;   (* false when the class has no floor by definition; null (absent) when not assessable here *)
+}
+
+type admissibility = {
+  source : string;
+  as_of : string;
+  ~notes : string list;
+  classes : (string * class_rule) list <json repr="object">;
 }
