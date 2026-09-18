@@ -1,4 +1,4 @@
 (executable
  (name main)
  (public_name atemoya)
- (libraries atemoya atdgen-runtime yojson))
+ (libraries atemoya atdgen-runtime yojson unix))

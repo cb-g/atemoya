@@ -1,8 +1,16 @@
-; boundary.py is generated from schema/boundary.atd and promoted into the source tree
-; so `uv run` needs no build step. `dune build` regenerates it; never edit it by hand.
+; boundary.py and reference.py are generated from schema/*.atd and promoted into the
+; source tree so `uv run` needs no build step. `dune build` regenerates them; never edit
+; them by hand.
 (rule
  (targets boundary.py)
  (deps %{project_root}/schema/boundary.atd)
+ (mode promote)
+ (action
+  (run atdpy %{deps})))
+
+(rule
+ (targets reference.py)
+ (deps %{project_root}/schema/reference.atd)
  (mode promote)
  (action
   (run atdpy %{deps})))

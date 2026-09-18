@@ -1,0 +1,81 @@
+{
+  "projection_years": {
+    "value": 7,
+    "source": "model convention: 7-year explicit projection",
+    "as_of": "2026-06-01",
+    "max_age_days": 400,
+    "notes": [
+      "Also selects the risk-free tenor: the 7y point for a 7-year projection."
+    ]
+  },
+  "growth_rate": {
+    "value": 0.05,
+    "source": "assumption carried over from the first DCF version, where it was hardcoded; flat explicit growth until growth mean-reversion is modelled",
+    "as_of": "2026-09-10",
+    "max_age_days": 400
+  },
+  "debt_spread": {
+    "value": 0.01,
+    "source": "assumption carried over from the first DCF version, where it was hardcoded; pre-tax spread over the risk-free rate, no rating-based source wired yet",
+    "as_of": "2026-09-10",
+    "max_age_days": 400
+  },
+  "terminal_growth_rate": {
+    "source": "per-country long-run nominal growth estimates, June 2026 vintage",
+    "as_of": "2026-06-01",
+    "max_age_days": 400,
+    "aliases": {
+      "USA": "United States"
+    },
+    "notes": [
+      "The 'default' entry is kept from the original table and is never used as a fallback: a country absent from this table fails the valuation."
+    ],
+    "values": {
+      "default": 0.02,
+      "United States": 0.02,
+      "Canada": 0.018,
+      "United Kingdom": 0.017,
+      "Germany": 0.015,
+      "France": 0.015,
+      "Italy": 0.012,
+      "Japan": 0.01,
+      "China": 0.03,
+      "India": 0.04,
+      "Brazil": 0.035,
+      "Australia": 0.022,
+      "Singapore": 0.025,
+      "Netherlands": 0.015,
+      "Switzerland": 0.013,
+      "Taiwan": 0.028,
+      "South Korea": 0.03,
+      "Spain": 0.018,
+      "Hong Kong": 0.025,
+      "British Virgin Islands": 0.02,
+      "Finland": 0.015,
+      "Ireland": 0.018,
+      "Israel": 0.025,
+      "Sweden": 0.018,
+      "Kazakhstan": 0.035
+    }
+  },
+  "unwired": {
+    "_note": "Kept verbatim from the original parameter file and not read by the valuation. growth_clamp and mean_reversion belong to a later growth-model change; erp.mode static is the only mode carried forward; rfr_duration is redundant with projection_years, which selects the tenor.",
+    "growth_clamp": {
+      "upper": 0.5,
+      "lower": -0.2
+    },
+    "rfr_duration": 7,
+    "mean_reversion": {
+      "enabled": true,
+      "lambda": 0.25,
+      "_comment": "Mean reversion causes growth rates to decay toward terminal growth. lambda controls speed: 0.1=slow (reaches terminal ~year 10), 0.25=moderate (~year 4), 0.5=fast (~year 2). Set enabled=false for constant growth (legacy behavior)."
+    },
+    "erp": {
+      "mode": "static",
+      "vix_mean": 19.5,
+      "vix_sensitivity": 0.4,
+      "_comment_mode": "Options: 'static' (Damodaran, from equity_risk_premiums.json) or 'dynamic' (VIX-adjusted). Dynamic mode fetches current VIX and adjusts base ERP: ERP_dynamic = ERP_base × (VIX/VIX_mean)^sensitivity.",
+      "_comment_vix": "VIX historical mean ~19.5. Sensitivity 0.3-0.5 typical. Higher sensitivity = more reactive to VIX changes. Example: VIX=30, mean=20, sens=0.4 → adjustment=1.18 (18% higher ERP)."
+    }
+  }
+}

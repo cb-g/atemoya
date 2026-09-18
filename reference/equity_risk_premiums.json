@@ -1,0 +1,39 @@
+{
+  "source": "Damodaran, total equity risk premium by country, January 2026 vintage (mature-market base 4.23%; United States 4.46%; emerging = base + country risk premium)",
+  "as_of": "2026-01-01",
+  "max_age_days": 400,
+  "aliases": {
+    "USA": "United States"
+  },
+  "notes": [
+    "Annual source, published each January; refresh due January 2027.",
+    "as_of is the first day of the vintage month so ages are conservative.",
+    "Stored as the country's TOTAL premium. Layer 2 (international CAPM) splits mature-market base from country risk premium."
+  ],
+  "values": {
+    "United States": 0.0446,
+    "Germany": 0.0423,
+    "Japan": 0.0514,
+    "United Kingdom": 0.0501,
+    "France": 0.0501,
+    "China": 0.0514,
+    "India": 0.0708,
+    "Brazil": 0.0747,
+    "Canada": 0.0423,
+    "Australia": 0.0423,
+    "Singapore": 0.0423,
+    "Netherlands": 0.0423,
+    "Switzerland": 0.0423,
+    "Taiwan": 0.0501,
+    "South Korea": 0.0487,
+    "Italy": 0.0669,
+    "Spain": 0.0578,
+    "Hong Kong": 0.0501,
+    "British Virgin Islands": 0.0446,
+    "Finland": 0.0459,
+    "Israel": 0.063,
+    "Ireland": 0.0501,
+    "Sweden": 0.0423,
+    "Kazakhstan": 0.063
+  }
+}

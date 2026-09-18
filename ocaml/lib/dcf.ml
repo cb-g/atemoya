@@ -1,27 +1,16 @@
 open Boundary_t
 
 type assumptions = {
-  risk_free_rate : float;
-  equity_risk_premium : float;
-  beta : float;
-  debt_spread : float;
-  growth_rate : float;
-  terminal_growth_rate : float;
-  projection_years : int;
-  statutory_tax_rate : float;
+  risk_free_rate : parameter;
+  equity_risk_premium : parameter;
+  beta : parameter;
+  beta_source : beta_source;
+  debt_spread : parameter;
+  growth_rate : parameter;
+  terminal_growth_rate : parameter;
+  projection_years : int_parameter;
+  statutory_tax_rate : parameter;
 }
-
-let us_defaults =
-  {
-    risk_free_rate = 0.0425;
-    equity_risk_premium = 0.05;
-    beta = 1.0;
-    debt_spread = 0.01;
-    growth_rate = 0.05;
-    terminal_growth_rate = 0.025;
-    projection_years = 5;
-    statutory_tax_rate = 0.21;
-  }
 
 let max_effective_tax_rate = 0.5
 
@@ -48,14 +37,14 @@ let enterprise_value ~fcff ~wacc ~growth_rate ~terminal_growth_rate
   in
   explicit 1 0. +. (terminal /. discount projection_years)
 
-let tax_rate a ~pretax_income ~tax_provision =
+let tax_rate ~statutory ~pretax_income ~tax_provision =
   match (pretax_income, tax_provision) with
   | Some pretax, Some tax when pretax > 0. ->
       let effective = tax /. pretax in
       if effective >= 0. && effective <= max_effective_tax_rate then
         (effective, `Effective)
-      else (a.statutory_tax_rate, `Statutory)
-  | _ -> (a.statutory_tax_rate, `Statutory)
+      else (statutory, `Statutory)
+  | _ -> (statutory, `Statutory)
 
 let latest_period (fin : financials) =
   (* ISO dates order lexicographically. *)
@@ -101,7 +90,7 @@ let missing_report (fin : financials) (p : fiscal_period) =
            statement;
        ])
 
-let value a (fin : financials) =
+let value a ~country (fin : financials) =
   let ( let* ) = Result.bind in
   let* p = latest_period fin in
   match
@@ -124,38 +113,39 @@ let value a (fin : financials) =
       Some delta_nwc,
       Some cash,
       Some total_debt ) ->
+      let projection_years = a.projection_years.value in
       if price <= 0. || market_cap <= 0. then
         Error
           (Printf.sprintf "price %g and market cap %g must be positive" price
              market_cap)
-      else if a.projection_years < 0 then
+      else if projection_years < 0 then
         Error
           (Printf.sprintf "projection horizon %d years is negative"
-             a.projection_years)
+             projection_years)
       else
         let tax_rate, tax_rate_source =
-          tax_rate a ~pretax_income:p.pretax_income
-            ~tax_provision:p.tax_provision
+          tax_rate ~statutory:a.statutory_tax_rate.value
+            ~pretax_income:p.pretax_income ~tax_provision:p.tax_provision
         in
         let cost_of_equity =
-          a.risk_free_rate +. (a.beta *. a.equity_risk_premium)
+          a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value)
         in
-        let cost_of_debt = a.risk_free_rate +. a.debt_spread in
+        let cost_of_debt = a.risk_free_rate.value +. a.debt_spread.value in
         let wacc =
           wacc ~cost_of_equity ~cost_of_debt ~tax_rate ~market_cap ~total_debt
         in
-        if wacc <= a.terminal_growth_rate then
+        if wacc <= a.terminal_growth_rate.value then
           Error
             (Printf.sprintf "wacc %.4f does not exceed terminal growth %.4f"
-               wacc a.terminal_growth_rate)
+               wacc a.terminal_growth_rate.value)
         else
           let fcff =
             fcff ~ebit ~tax_rate ~depreciation_amortization ~capex ~delta_nwc
           in
           let enterprise_value =
-            enterprise_value ~fcff ~wacc ~growth_rate:a.growth_rate
-              ~terminal_growth_rate:a.terminal_growth_rate
-              ~projection_years:a.projection_years
+            enterprise_value ~fcff ~wacc ~growth_rate:a.growth_rate.value
+              ~terminal_growth_rate:a.terminal_growth_rate.value
+              ~projection_years
           in
           let shares = market_cap /. price in
           let net_debt = total_debt -. cash in
@@ -170,12 +160,15 @@ let value a (fin : financials) =
             Ok
               ( {
                   fiscal_period_end = p.period_end;
+                  country;
+                  industry = fin.industry;
                   price;
                   market_cap;
                   shares;
                   ebit;
                   tax_rate;
                   tax_rate_source;
+                  statutory_tax_rate = a.statutory_tax_rate;
                   depreciation_amortization;
                   capex;
                   delta_nwc;
@@ -186,6 +179,7 @@ let value a (fin : financials) =
                   risk_free_rate = a.risk_free_rate;
                   equity_risk_premium = a.equity_risk_premium;
                   beta = a.beta;
+                  beta_source = a.beta_source;
                   cost_of_equity;
                   debt_spread = a.debt_spread;
                   cost_of_debt;

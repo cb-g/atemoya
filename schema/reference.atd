@@ -1,0 +1,67 @@
+(* Versioned parameter tables under reference/. Read by OCaml (Params). The risk-free
+   file is also written by python/refresh_rates.py, so both sides use generated code:
+   atdgen produces Reference_t/Reference_j, atdpy produces python/reference.py.
+
+   Every section carries provenance: [source], [as_of] and [max_age_days]. [as_of] is an
+   ISO 8601 date; a monthly or annual vintage is recorded as the first day of its period
+   so that ages are conservative. A section older than [max_age_days] at valuation time
+   fails the valuation; it is never a warning. Rates are decimal fractions per year. *)
+
+type curve = {
+  source : string;
+  as_of : string;                                       (* observation or copy date *)
+  rates : (string * float) list <json repr="object">;   (* tenor, e.g. "7y" -> rate *)
+  ~estimated : string list;                             (* tenors interpolated, not sourced *)
+  ~notes : string list;
+}
+
+type risk_free_rates = {
+  max_age_days : int;
+  tenors : string list;                                 (* every curve carries all of these *)
+  ~aliases : (string * string) list <json repr="object">;   (* alternate key -> canonical *)
+  countries : (string * curve) list <json repr="object">;
+  ~notes : string list;
+}
+
+(* One value per country: equity risk premium, statutory tax rate, terminal growth. *)
+type country_table = {
+  source : string;
+  as_of : string;
+  max_age_days : int;
+  ~aliases : (string * string) list <json repr="object">;
+  values : (string * float) list <json repr="object">;
+  ~notes : string list;
+}
+
+type industry_table = {
+  source : string;
+  as_of : string;
+  max_age_days : int;
+  values : (string * float) list <json repr="object">;  (* industry string -> beta *)
+  ~notes : string list;
+}
+
+(* A single global parameter with provenance. *)
+type scalar = {
+  value : float;
+  source : string;
+  as_of : string;
+  max_age_days : int;
+  ~notes : string list;
+}
+
+type int_scalar = {
+  value : int;
+  source : string;
+  as_of : string;
+  max_age_days : int;
+  ~notes : string list;
+}
+
+type params = {
+  projection_years : int_scalar;      (* also selects the risk-free tenor: N years -> "Ny" *)
+  growth_rate : scalar;               (* explicit projection, per year *)
+  debt_spread : scalar;               (* pre-tax cost of debt = risk-free + spread *)
+  terminal_growth_rate : country_table;
+  unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
+}

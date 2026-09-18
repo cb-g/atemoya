@@ -1,0 +1,37 @@
+{
+  "source": "PwC Worldwide Tax Summaries, 2026 statutory corporate income tax rates, combined including local where applicable",
+  "as_of": "2026-01-01",
+  "max_age_days": 400,
+  "aliases": {
+    "USA": "United States"
+  },
+  "notes": [
+    "Annual source; refresh due January 2027 alongside the ERP table."
+  ],
+  "values": {
+    "United States": 0.21,
+    "Germany": 0.3,
+    "Japan": 0.3152,
+    "United Kingdom": 0.25,
+    "France": 0.25,
+    "China": 0.25,
+    "India": 0.2517,
+    "Brazil": 0.34,
+    "Canada": 0.265,
+    "Australia": 0.3,
+    "Ireland": 0.125,
+    "Switzerland": 0.15,
+    "Netherlands": 0.258,
+    "Sweden": 0.206,
+    "Singapore": 0.17,
+    "Taiwan": 0.2,
+    "South Korea": 0.275,
+    "Italy": 0.24,
+    "Spain": 0.25,
+    "Hong Kong": 0.165,
+    "British Virgin Islands": 0.0,
+    "Finland": 0.2,
+    "Israel": 0.23,
+    "Kazakhstan": 0.2
+  }
+}

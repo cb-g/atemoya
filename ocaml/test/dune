@@ -1,3 +1,5 @@
 (test
  (name test_atemoya)
- (libraries atemoya alcotest))
+ (libraries atemoya alcotest)
+ (deps
+  (source_tree ../../reference)))

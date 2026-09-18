@@ -63,6 +63,23 @@ class Quote(BaseModel):
         return v
 
 
+class Profile(BaseModel):
+    """Domicile and industry from `.info`, used only as lookup keys into reference/.
+    Both come back empty under load, so both are nullable; blank strings are absent."""
+
+    model_config = ConfigDict(frozen=True, strict=True)
+
+    country: str | None
+    industry: str | None
+
+    @field_validator("country", "industry", mode="before")
+    @classmethod
+    def _blank_is_absent(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip() or None
+        return v
+
+
 NON_NEGATIVE = frozenset({"depreciation_amortization", "capex", "cash", "total_debt"})
 
 
@@ -155,14 +172,18 @@ def _canonical_values(rows: Mapping[str, object], spec: RowSpec) -> dict[str, ob
     return out
 
 
-def _quote(ticker: yf.Ticker, notes: list[str]) -> Quote | None:
+def _info(ticker: yf.Ticker, notes: list[str]) -> tuple[Quote | None, Profile | None]:
+    """One `.info` call, validated as two independent models so a bad price does not
+    lose the country, or vice versa."""
     try:
         info = ticker.info
     except Exception as e:  # the vendor call is the untrusted edge; any failure is a note
-        notes.append(f"quote: vendor failed: {type(e).__name__}: {e}")
-        return None
+        notes.append(f"info: vendor failed: {type(e).__name__}: {e}")
+        return None, None
+    quote: Quote | None = None
+    profile: Profile | None = None
     try:
-        return Quote.model_validate(
+        quote = Quote.model_validate(
             {
                 "currency": info.get("currency"),
                 "financial_currency": info.get("financialCurrency"),
@@ -172,7 +193,11 @@ def _quote(ticker: yf.Ticker, notes: list[str]) -> Quote | None:
         )
     except ValidationError as e:
         notes.append(f"quote: rejected: {e}")
-        return None
+    try:
+        profile = Profile.model_validate({"country": info.get("country"), "industry": info.get("industry")})
+    except ValidationError as e:
+        notes.append(f"profile: rejected: {e}")
+    return quote, profile
 
 
 def _statement[S: Statement](
@@ -241,7 +266,7 @@ def _is_empty(period: boundary.FiscalPeriod) -> bool:
 def fetch(symbol: str, as_of: datetime) -> boundary.Financials:
     notes: list[str] = []
     ticker = yf.Ticker(symbol)
-    quote = _quote(ticker, notes)
+    quote, profile = _info(ticker, notes)
     income = _statement(ticker, lambda t: t.income_stmt, "income statement", IncomeStatement, INCOME_ROWS, notes)
     cashflow = _statement(ticker, lambda t: t.cashflow, "cash flow statement", CashFlowStatement, CASHFLOW_ROWS, notes)
     balance = _statement(ticker, lambda t: t.balance_sheet, "balance sheet", BalanceSheet, BALANCE_ROWS, notes)
@@ -260,6 +285,8 @@ def fetch(symbol: str, as_of: datetime) -> boundary.Financials:
         currency=_single_currency(quote, notes) if quote else None,
         price=quote.price if quote else None,
         market_cap=quote.market_cap if quote else None,
+        country=profile.country if profile else None,
+        industry=profile.industry if profile else None,
         periods=periods,
         notes=notes,
     )
@@ -285,7 +312,10 @@ def main(argv: list[str]) -> int:
         boundary.Financials.from_json_string(text)  # parse-time type check of what we wrote
         path = out / f"{symbol}.json"
         path.write_text(text + "\n")
-        summary = f"{symbol}: {len(financials.periods)} period(s), currency={financials.currency}, price={financials.price}"
+        summary = (
+            f"{symbol}: {len(financials.periods)} period(s), currency={financials.currency}, "
+            f"price={financials.price}, country={financials.country}, industry={financials.industry}"
+        )
         if financials.notes:
             summary += f", {len(financials.notes)} note(s)"
         print(f"{summary} -> {path}")

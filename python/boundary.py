@@ -488,6 +488,50 @@ class Signal:
 
 
 @dataclass
+class Parameter:
+    """Original type: parameter = { ... }
+    """
+
+    value: float
+    key: str
+    source: str
+    as_of: str
+    age_days: int
+    estimated: bool = field(default_factory=lambda: False)
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Parameter':
+        if isinstance(x, dict):
+            return cls(
+                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('Parameter', 'value'),
+                key=_atd_read_string(x['key']) if 'key' in x else _atd_missing_json_field('Parameter', 'key'),
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('Parameter', 'source'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Parameter', 'as_of'),
+                age_days=_atd_read_int(x['age_days']) if 'age_days' in x else _atd_missing_json_field('Parameter', 'age_days'),
+                estimated=_atd_read_bool(x['estimated']) if 'estimated' in x else False,
+            )
+        else:
+            _atd_bad_json('Parameter', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['value'] = _atd_write_float(self.value)
+        res['key'] = _atd_write_string(self.key)
+        res['source'] = _atd_write_string(self.source)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['age_days'] = _atd_write_int(self.age_days)
+        res['estimated'] = _atd_write_bool(self.estimated)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Parameter':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Generic:
     """Original type: model = [ ... | Generic | ... ]
     """
@@ -537,17 +581,130 @@ class Model:
 
 
 @dataclass
+class IntParameter:
+    """Original type: int_parameter = { ... }
+    """
+
+    value: int
+    key: str
+    source: str
+    as_of: str
+    age_days: int
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'IntParameter':
+        if isinstance(x, dict):
+            return cls(
+                value=_atd_read_int(x['value']) if 'value' in x else _atd_missing_json_field('IntParameter', 'value'),
+                key=_atd_read_string(x['key']) if 'key' in x else _atd_missing_json_field('IntParameter', 'key'),
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('IntParameter', 'source'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('IntParameter', 'as_of'),
+                age_days=_atd_read_int(x['age_days']) if 'age_days' in x else _atd_missing_json_field('IntParameter', 'age_days'),
+            )
+        else:
+            _atd_bad_json('IntParameter', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['value'] = _atd_write_int(self.value)
+        res['key'] = _atd_write_string(self.key)
+        res['source'] = _atd_write_string(self.source)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['age_days'] = _atd_write_int(self.age_days)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'IntParameter':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class IndustryTable:
+    """Original type: beta_source = [ ... | Industry_table | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'IndustryTable'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'industry_table'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class DefaultNoIndustry:
+    """Original type: beta_source = [ ... | Default_no_industry | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'DefaultNoIndustry'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'default_no_industry'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BetaSource:
+    """Original type: beta_source = [ ... ]
+    """
+
+    value: Union[IndustryTable, DefaultNoIndustry]
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return self.value.kind
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BetaSource':
+        if isinstance(x, str):
+            if x == 'industry_table':
+                return cls(IndustryTable())
+            if x == 'default_no_industry':
+                return cls(DefaultNoIndustry())
+            _atd_bad_json('BetaSource', x)
+        _atd_bad_json('BetaSource', x)
+
+    def to_json(self) -> Any:
+        return self.value.to_json()
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BetaSource':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Inputs:
     """Original type: inputs = { ... }
     """
 
     fiscal_period_end: str
+    country: str
+    industry: Optional[str]
     price: float
     market_cap: float
     shares: float
     ebit: float
     tax_rate: float
     tax_rate_source: TaxRateSource
+    statutory_tax_rate: Parameter
     depreciation_amortization: float
     capex: float
     delta_nwc: float
@@ -555,16 +712,17 @@ class Inputs:
     cash: float
     total_debt: float
     net_debt: float
-    risk_free_rate: float
-    equity_risk_premium: float
-    beta: float
+    risk_free_rate: Parameter
+    equity_risk_premium: Parameter
+    beta: Parameter
+    beta_source: BetaSource
     cost_of_equity: float
-    debt_spread: float
+    debt_spread: Parameter
     cost_of_debt: float
     wacc: float
-    growth_rate: float
-    terminal_growth_rate: float
-    projection_years: int
+    growth_rate: Parameter
+    terminal_growth_rate: Parameter
+    projection_years: IntParameter
     enterprise_value: float
     equity_value: float
 
@@ -573,12 +731,15 @@ class Inputs:
         if isinstance(x, dict):
             return cls(
                 fiscal_period_end=_atd_read_string(x['fiscal_period_end']) if 'fiscal_period_end' in x else _atd_missing_json_field('Inputs', 'fiscal_period_end'),
+                country=_atd_read_string(x['country']) if 'country' in x else _atd_missing_json_field('Inputs', 'country'),
+                industry=_atd_read_nullable(_atd_read_string)(x['industry']) if 'industry' in x else _atd_missing_json_field('Inputs', 'industry'),
                 price=_atd_read_float(x['price']) if 'price' in x else _atd_missing_json_field('Inputs', 'price'),
                 market_cap=_atd_read_float(x['market_cap']) if 'market_cap' in x else _atd_missing_json_field('Inputs', 'market_cap'),
                 shares=_atd_read_float(x['shares']) if 'shares' in x else _atd_missing_json_field('Inputs', 'shares'),
                 ebit=_atd_read_float(x['ebit']) if 'ebit' in x else _atd_missing_json_field('Inputs', 'ebit'),
                 tax_rate=_atd_read_float(x['tax_rate']) if 'tax_rate' in x else _atd_missing_json_field('Inputs', 'tax_rate'),
                 tax_rate_source=TaxRateSource.from_json(x['tax_rate_source']) if 'tax_rate_source' in x else _atd_missing_json_field('Inputs', 'tax_rate_source'),
+                statutory_tax_rate=Parameter.from_json(x['statutory_tax_rate']) if 'statutory_tax_rate' in x else _atd_missing_json_field('Inputs', 'statutory_tax_rate'),
                 depreciation_amortization=_atd_read_float(x['depreciation_amortization']) if 'depreciation_amortization' in x else _atd_missing_json_field('Inputs', 'depreciation_amortization'),
                 capex=_atd_read_float(x['capex']) if 'capex' in x else _atd_missing_json_field('Inputs', 'capex'),
                 delta_nwc=_atd_read_float(x['delta_nwc']) if 'delta_nwc' in x else _atd_missing_json_field('Inputs', 'delta_nwc'),
@@ -586,16 +747,17 @@ class Inputs:
                 cash=_atd_read_float(x['cash']) if 'cash' in x else _atd_missing_json_field('Inputs', 'cash'),
                 total_debt=_atd_read_float(x['total_debt']) if 'total_debt' in x else _atd_missing_json_field('Inputs', 'total_debt'),
                 net_debt=_atd_read_float(x['net_debt']) if 'net_debt' in x else _atd_missing_json_field('Inputs', 'net_debt'),
-                risk_free_rate=_atd_read_float(x['risk_free_rate']) if 'risk_free_rate' in x else _atd_missing_json_field('Inputs', 'risk_free_rate'),
-                equity_risk_premium=_atd_read_float(x['equity_risk_premium']) if 'equity_risk_premium' in x else _atd_missing_json_field('Inputs', 'equity_risk_premium'),
-                beta=_atd_read_float(x['beta']) if 'beta' in x else _atd_missing_json_field('Inputs', 'beta'),
+                risk_free_rate=Parameter.from_json(x['risk_free_rate']) if 'risk_free_rate' in x else _atd_missing_json_field('Inputs', 'risk_free_rate'),
+                equity_risk_premium=Parameter.from_json(x['equity_risk_premium']) if 'equity_risk_premium' in x else _atd_missing_json_field('Inputs', 'equity_risk_premium'),
+                beta=Parameter.from_json(x['beta']) if 'beta' in x else _atd_missing_json_field('Inputs', 'beta'),
+                beta_source=BetaSource.from_json(x['beta_source']) if 'beta_source' in x else _atd_missing_json_field('Inputs', 'beta_source'),
                 cost_of_equity=_atd_read_float(x['cost_of_equity']) if 'cost_of_equity' in x else _atd_missing_json_field('Inputs', 'cost_of_equity'),
-                debt_spread=_atd_read_float(x['debt_spread']) if 'debt_spread' in x else _atd_missing_json_field('Inputs', 'debt_spread'),
+                debt_spread=Parameter.from_json(x['debt_spread']) if 'debt_spread' in x else _atd_missing_json_field('Inputs', 'debt_spread'),
                 cost_of_debt=_atd_read_float(x['cost_of_debt']) if 'cost_of_debt' in x else _atd_missing_json_field('Inputs', 'cost_of_debt'),
                 wacc=_atd_read_float(x['wacc']) if 'wacc' in x else _atd_missing_json_field('Inputs', 'wacc'),
-                growth_rate=_atd_read_float(x['growth_rate']) if 'growth_rate' in x else _atd_missing_json_field('Inputs', 'growth_rate'),
-                terminal_growth_rate=_atd_read_float(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Inputs', 'terminal_growth_rate'),
-                projection_years=_atd_read_int(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('Inputs', 'projection_years'),
+                growth_rate=Parameter.from_json(x['growth_rate']) if 'growth_rate' in x else _atd_missing_json_field('Inputs', 'growth_rate'),
+                terminal_growth_rate=Parameter.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Inputs', 'terminal_growth_rate'),
+                projection_years=IntParameter.from_json(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('Inputs', 'projection_years'),
                 enterprise_value=_atd_read_float(x['enterprise_value']) if 'enterprise_value' in x else _atd_missing_json_field('Inputs', 'enterprise_value'),
                 equity_value=_atd_read_float(x['equity_value']) if 'equity_value' in x else _atd_missing_json_field('Inputs', 'equity_value'),
             )
@@ -605,12 +767,15 @@ class Inputs:
     def to_json(self) -> Any:
         res: Dict[str, Any] = {}
         res['fiscal_period_end'] = _atd_write_string(self.fiscal_period_end)
+        res['country'] = _atd_write_string(self.country)
+        res['industry'] = _atd_write_nullable(_atd_write_string)(self.industry)
         res['price'] = _atd_write_float(self.price)
         res['market_cap'] = _atd_write_float(self.market_cap)
         res['shares'] = _atd_write_float(self.shares)
         res['ebit'] = _atd_write_float(self.ebit)
         res['tax_rate'] = _atd_write_float(self.tax_rate)
         res['tax_rate_source'] = (lambda x: x.to_json())(self.tax_rate_source)
+        res['statutory_tax_rate'] = (lambda x: x.to_json())(self.statutory_tax_rate)
         res['depreciation_amortization'] = _atd_write_float(self.depreciation_amortization)
         res['capex'] = _atd_write_float(self.capex)
         res['delta_nwc'] = _atd_write_float(self.delta_nwc)
@@ -618,16 +783,17 @@ class Inputs:
         res['cash'] = _atd_write_float(self.cash)
         res['total_debt'] = _atd_write_float(self.total_debt)
         res['net_debt'] = _atd_write_float(self.net_debt)
-        res['risk_free_rate'] = _atd_write_float(self.risk_free_rate)
-        res['equity_risk_premium'] = _atd_write_float(self.equity_risk_premium)
-        res['beta'] = _atd_write_float(self.beta)
+        res['risk_free_rate'] = (lambda x: x.to_json())(self.risk_free_rate)
+        res['equity_risk_premium'] = (lambda x: x.to_json())(self.equity_risk_premium)
+        res['beta'] = (lambda x: x.to_json())(self.beta)
+        res['beta_source'] = (lambda x: x.to_json())(self.beta_source)
         res['cost_of_equity'] = _atd_write_float(self.cost_of_equity)
-        res['debt_spread'] = _atd_write_float(self.debt_spread)
+        res['debt_spread'] = (lambda x: x.to_json())(self.debt_spread)
         res['cost_of_debt'] = _atd_write_float(self.cost_of_debt)
         res['wacc'] = _atd_write_float(self.wacc)
-        res['growth_rate'] = _atd_write_float(self.growth_rate)
-        res['terminal_growth_rate'] = _atd_write_float(self.terminal_growth_rate)
-        res['projection_years'] = _atd_write_int(self.projection_years)
+        res['growth_rate'] = (lambda x: x.to_json())(self.growth_rate)
+        res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
+        res['projection_years'] = (lambda x: x.to_json())(self.projection_years)
         res['enterprise_value'] = _atd_write_float(self.enterprise_value)
         res['equity_value'] = _atd_write_float(self.equity_value)
         return res
@@ -647,6 +813,7 @@ class Valuation:
 
     ticker: str
     as_of: str
+    valued_on: str
     currency: Optional[str]
     price: Optional[float]
     fair_value: Optional[float]
@@ -663,6 +830,7 @@ class Valuation:
             return cls(
                 ticker=_atd_read_string(x['ticker']) if 'ticker' in x else _atd_missing_json_field('Valuation', 'ticker'),
                 as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Valuation', 'as_of'),
+                valued_on=_atd_read_string(x['valued_on']) if 'valued_on' in x else _atd_missing_json_field('Valuation', 'valued_on'),
                 currency=_atd_read_nullable(_atd_read_string)(x['currency']) if 'currency' in x else _atd_missing_json_field('Valuation', 'currency'),
                 price=_atd_read_nullable(_atd_read_float)(x['price']) if 'price' in x else _atd_missing_json_field('Valuation', 'price'),
                 fair_value=_atd_read_nullable(_atd_read_float)(x['fair_value']) if 'fair_value' in x else _atd_missing_json_field('Valuation', 'fair_value'),
@@ -680,6 +848,7 @@ class Valuation:
         res: Dict[str, Any] = {}
         res['ticker'] = _atd_write_string(self.ticker)
         res['as_of'] = _atd_write_string(self.as_of)
+        res['valued_on'] = _atd_write_string(self.valued_on)
         res['currency'] = _atd_write_nullable(_atd_write_string)(self.currency)
         res['price'] = _atd_write_nullable(_atd_write_float)(self.price)
         res['fair_value'] = _atd_write_nullable(_atd_write_float)(self.fair_value)
@@ -762,6 +931,8 @@ class Financials:
     currency: Optional[str]
     price: Optional[float]
     market_cap: Optional[float]
+    country: Optional[str]
+    industry: Optional[str]
     periods: List[FiscalPeriod]
     notes: List[str]
 
@@ -774,6 +945,8 @@ class Financials:
                 currency=_atd_read_nullable(_atd_read_string)(x['currency']) if 'currency' in x else _atd_missing_json_field('Financials', 'currency'),
                 price=_atd_read_nullable(_atd_read_float)(x['price']) if 'price' in x else _atd_missing_json_field('Financials', 'price'),
                 market_cap=_atd_read_nullable(_atd_read_float)(x['market_cap']) if 'market_cap' in x else _atd_missing_json_field('Financials', 'market_cap'),
+                country=_atd_read_nullable(_atd_read_string)(x['country']) if 'country' in x else _atd_missing_json_field('Financials', 'country'),
+                industry=_atd_read_nullable(_atd_read_string)(x['industry']) if 'industry' in x else _atd_missing_json_field('Financials', 'industry'),
                 periods=_atd_read_list(FiscalPeriod.from_json)(x['periods']) if 'periods' in x else _atd_missing_json_field('Financials', 'periods'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else _atd_missing_json_field('Financials', 'notes'),
             )
@@ -787,6 +960,8 @@ class Financials:
         res['currency'] = _atd_write_nullable(_atd_write_string)(self.currency)
         res['price'] = _atd_write_nullable(_atd_write_float)(self.price)
         res['market_cap'] = _atd_write_nullable(_atd_write_float)(self.market_cap)
+        res['country'] = _atd_write_nullable(_atd_write_string)(self.country)
+        res['industry'] = _atd_write_nullable(_atd_write_string)(self.industry)
         res['periods'] = _atd_write_list((lambda x: x.to_json()))(self.periods)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res

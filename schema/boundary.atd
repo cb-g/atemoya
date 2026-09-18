@@ -12,11 +12,17 @@
    - No NaN or infinity crosses the boundary in either direction.
    - [periods] are annual fiscal periods, most recent first. A period in which every
      statement field is null is omitted.
+   - [country] and [industry] are the vendor's strings, used only as lookup keys into
+     reference/. Null when the vendor supplied nothing; the valuation decides what that
+     means (no country is a failure; no industry takes the documented beta default).
 
    Contract for [valuation] (OCaml -> consumers): one record per ticker. [fair_value],
    [margin_of_safety] and [signal] are non-null iff [status] is [Ok]; [failed_reason] is
    non-null iff [status] is [Failed]; [inputs] is non-null iff the arithmetic ran to
-   completion, which includes a valuation that then failed a sanity check. *)
+   completion, which includes a valuation that then failed a sanity check. Every
+   parameter in [inputs] carries its value, lookup key, source, as_of and age in days
+   measured at [valued_on], so "where did this number come from" is answerable from
+   the record alone. *)
 
 type fiscal_period = {
   period_end : string;                        (* ISO 8601 date, fiscal year end *)
@@ -36,6 +42,8 @@ type financials = {
   currency : string nullable;    (* ISO 4217; basis of every money field; null = no single basis *)
   price : float nullable;        (* last price per share; > 0 *)
   market_cap : float nullable;   (* > 0 *)
+  country : string nullable;     (* domicile as the vendor spells it, e.g. "United States" *)
+  industry : string nullable;    (* industry as the vendor spells it, e.g. "Consumer Electronics" *)
   periods : fiscal_period list;
   notes : string list;           (* free-text provenance and data-quality notes; never branched on *)
 }
@@ -45,17 +53,42 @@ type model = [ Generic ]
 type status = [ Ok | Failed ]
 type signal = [ Buy | Hold | Sell ]
 type tax_rate_source = [ Effective | Statutory ]
+type beta_source = [
+  | Industry_table <json name="industry_table">
+  | Default_no_industry <json name="default_no_industry">
+]
+
+(* A parameter as used, with its provenance. *)
+type parameter = {
+  value : float;
+  key : string;          (* lookup key: "United States", "United States/7y", "Consumer Electronics", "global" *)
+  source : string;
+  as_of : string;        (* ISO 8601 date of the source value *)
+  age_days : int;        (* valued_on - as_of *)
+  ~estimated : bool;     (* the source marks this cell as an interpolation, not a quote *)
+}
+
+type int_parameter = {
+  value : int;
+  key : string;
+  source : string;
+  as_of : string;
+  age_days : int;
+}
 
 (* Every value the valuation used, plus the intermediates, for audit. Money in
    [valuation.currency]; rates are decimal fractions per year. *)
 type inputs = {
   fiscal_period_end : string;
+  country : string;                   (* as fetched; each parameter's key is the canonical form *)
+  industry : string nullable;
   price : float;
   market_cap : float;
   shares : float;                     (* effective shares = market_cap / price *)
   ebit : float;
-  tax_rate : float;
+  tax_rate : float;                   (* the rate applied *)
   tax_rate_source : tax_rate_source;
+  statutory_tax_rate : parameter;     (* the country's rate, applied iff tax_rate_source = Statutory *)
   depreciation_amortization : float;
   capex : float;
   delta_nwc : float;
@@ -63,23 +96,25 @@ type inputs = {
   cash : float;
   total_debt : float;
   net_debt : float;                   (* total_debt - cash *)
-  risk_free_rate : float;
-  equity_risk_premium : float;
-  beta : float;
+  risk_free_rate : parameter;         (* tenor matches projection_years *)
+  equity_risk_premium : parameter;    (* the country's total ERP *)
+  beta : parameter;
+  beta_source : beta_source;
   cost_of_equity : float;             (* risk_free_rate + beta * equity_risk_premium *)
-  debt_spread : float;
+  debt_spread : parameter;
   cost_of_debt : float;               (* pre-tax; risk_free_rate + debt_spread *)
   wacc : float;
-  growth_rate : float;                (* explicit projection, per year *)
-  terminal_growth_rate : float;
-  projection_years : int;
+  growth_rate : parameter;            (* explicit projection, per year *)
+  terminal_growth_rate : parameter;
+  projection_years : int_parameter;
   enterprise_value : float;
   equity_value : float;               (* enterprise_value - net_debt *)
 }
 
 type valuation = {
   ticker : string;
-  as_of : string;
+  as_of : string;                     (* the fetch timestamp, from financials *)
+  valued_on : string;                 (* ISO 8601 date parameter ages are measured at *)
   currency : string nullable;         (* basis of price and fair_value *)
   price : float nullable;
   fair_value : float nullable;        (* per share *)
