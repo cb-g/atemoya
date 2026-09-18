@@ -64,4 +64,5 @@ Build, test, type-check:
 dune build        # also regenerates python/boundary.py and python/reference.py from schema/*.atd
 dune test
 uv run pyright
+uv run pytest
 ```

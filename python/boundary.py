@@ -662,6 +662,95 @@ class IntParameter:
 
 
 @dataclass
+class Fundamental:
+    """Original type: growth_source = [ ... | Fundamental | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Fundamental'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'fundamental'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class HistoricalCappedAtRoic:
+    """Original type: growth_source = [ ... | Historical_capped_at_roic | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'HistoricalCappedAtRoic'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'historical_capped_at_roic'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Historical:
+    """Original type: growth_source = [ ... | Historical | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Historical'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'historical'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class GrowthSource:
+    """Original type: growth_source = [ ... ]
+    """
+
+    value: Union[Fundamental, HistoricalCappedAtRoic, Historical]
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return self.value.kind
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'GrowthSource':
+        if isinstance(x, str):
+            if x == 'fundamental':
+                return cls(Fundamental())
+            if x == 'historical_capped_at_roic':
+                return cls(HistoricalCappedAtRoic())
+            if x == 'historical':
+                return cls(Historical())
+            _atd_bad_json('GrowthSource', x)
+        _atd_bad_json('GrowthSource', x)
+
+    def to_json(self) -> Any:
+        return self.value.to_json()
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'GrowthSource':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class IndustryTable:
     """Original type: beta_source = [ ... | Industry_table | ... ]
     """
@@ -745,13 +834,32 @@ class Inputs:
     tax_rate: float
     tax_rate_source: TaxRateSource
     statutory_tax_rate: Parameter
+    nopat: float
     depreciation_amortization: float
+    depreciation_amortization_row: Optional[str]
     capex: float
     delta_nwc: float
+    delta_nwc_periods: List[str]
     fcff: float
     cash: float
     total_debt: float
+    total_debt_source: Optional[str]
     net_debt: float
+    book_equity: float
+    invested_capital: float
+    roic: Optional[float]
+    reinvestment: float
+    reinvestment_rate: Optional[float]
+    g_fundamental: Optional[float]
+    g_historical: Optional[float]
+    revenue_periods: List[str]
+    growth_source: GrowthSource
+    g0: float
+    growth_clamped: bool
+    growth_clamp_lower: Parameter
+    growth_clamp_upper: Parameter
+    mean_reversion_lambda: Parameter
+    growth_path: List[float]
     risk_free_rate: Parameter
     equity_risk_premium: Parameter
     beta: Parameter
@@ -760,7 +868,6 @@ class Inputs:
     debt_spread: Parameter
     cost_of_debt: float
     wacc: float
-    growth_rate: Parameter
     terminal_growth_rate: Parameter
     projection_years: IntParameter
     enterprise_value: float
@@ -780,13 +887,32 @@ class Inputs:
                 tax_rate=_atd_read_float(x['tax_rate']) if 'tax_rate' in x else _atd_missing_json_field('Inputs', 'tax_rate'),
                 tax_rate_source=TaxRateSource.from_json(x['tax_rate_source']) if 'tax_rate_source' in x else _atd_missing_json_field('Inputs', 'tax_rate_source'),
                 statutory_tax_rate=Parameter.from_json(x['statutory_tax_rate']) if 'statutory_tax_rate' in x else _atd_missing_json_field('Inputs', 'statutory_tax_rate'),
+                nopat=_atd_read_float(x['nopat']) if 'nopat' in x else _atd_missing_json_field('Inputs', 'nopat'),
                 depreciation_amortization=_atd_read_float(x['depreciation_amortization']) if 'depreciation_amortization' in x else _atd_missing_json_field('Inputs', 'depreciation_amortization'),
+                depreciation_amortization_row=_atd_read_nullable(_atd_read_string)(x['depreciation_amortization_row']) if 'depreciation_amortization_row' in x else _atd_missing_json_field('Inputs', 'depreciation_amortization_row'),
                 capex=_atd_read_float(x['capex']) if 'capex' in x else _atd_missing_json_field('Inputs', 'capex'),
                 delta_nwc=_atd_read_float(x['delta_nwc']) if 'delta_nwc' in x else _atd_missing_json_field('Inputs', 'delta_nwc'),
+                delta_nwc_periods=_atd_read_list(_atd_read_string)(x['delta_nwc_periods']) if 'delta_nwc_periods' in x else _atd_missing_json_field('Inputs', 'delta_nwc_periods'),
                 fcff=_atd_read_float(x['fcff']) if 'fcff' in x else _atd_missing_json_field('Inputs', 'fcff'),
                 cash=_atd_read_float(x['cash']) if 'cash' in x else _atd_missing_json_field('Inputs', 'cash'),
                 total_debt=_atd_read_float(x['total_debt']) if 'total_debt' in x else _atd_missing_json_field('Inputs', 'total_debt'),
+                total_debt_source=_atd_read_nullable(_atd_read_string)(x['total_debt_source']) if 'total_debt_source' in x else _atd_missing_json_field('Inputs', 'total_debt_source'),
                 net_debt=_atd_read_float(x['net_debt']) if 'net_debt' in x else _atd_missing_json_field('Inputs', 'net_debt'),
+                book_equity=_atd_read_float(x['book_equity']) if 'book_equity' in x else _atd_missing_json_field('Inputs', 'book_equity'),
+                invested_capital=_atd_read_float(x['invested_capital']) if 'invested_capital' in x else _atd_missing_json_field('Inputs', 'invested_capital'),
+                roic=_atd_read_nullable(_atd_read_float)(x['roic']) if 'roic' in x else _atd_missing_json_field('Inputs', 'roic'),
+                reinvestment=_atd_read_float(x['reinvestment']) if 'reinvestment' in x else _atd_missing_json_field('Inputs', 'reinvestment'),
+                reinvestment_rate=_atd_read_nullable(_atd_read_float)(x['reinvestment_rate']) if 'reinvestment_rate' in x else _atd_missing_json_field('Inputs', 'reinvestment_rate'),
+                g_fundamental=_atd_read_nullable(_atd_read_float)(x['g_fundamental']) if 'g_fundamental' in x else _atd_missing_json_field('Inputs', 'g_fundamental'),
+                g_historical=_atd_read_nullable(_atd_read_float)(x['g_historical']) if 'g_historical' in x else _atd_missing_json_field('Inputs', 'g_historical'),
+                revenue_periods=_atd_read_list(_atd_read_string)(x['revenue_periods']) if 'revenue_periods' in x else _atd_missing_json_field('Inputs', 'revenue_periods'),
+                growth_source=GrowthSource.from_json(x['growth_source']) if 'growth_source' in x else _atd_missing_json_field('Inputs', 'growth_source'),
+                g0=_atd_read_float(x['g0']) if 'g0' in x else _atd_missing_json_field('Inputs', 'g0'),
+                growth_clamped=_atd_read_bool(x['growth_clamped']) if 'growth_clamped' in x else _atd_missing_json_field('Inputs', 'growth_clamped'),
+                growth_clamp_lower=Parameter.from_json(x['growth_clamp_lower']) if 'growth_clamp_lower' in x else _atd_missing_json_field('Inputs', 'growth_clamp_lower'),
+                growth_clamp_upper=Parameter.from_json(x['growth_clamp_upper']) if 'growth_clamp_upper' in x else _atd_missing_json_field('Inputs', 'growth_clamp_upper'),
+                mean_reversion_lambda=Parameter.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('Inputs', 'mean_reversion_lambda'),
+                growth_path=_atd_read_list(_atd_read_float)(x['growth_path']) if 'growth_path' in x else _atd_missing_json_field('Inputs', 'growth_path'),
                 risk_free_rate=Parameter.from_json(x['risk_free_rate']) if 'risk_free_rate' in x else _atd_missing_json_field('Inputs', 'risk_free_rate'),
                 equity_risk_premium=Parameter.from_json(x['equity_risk_premium']) if 'equity_risk_premium' in x else _atd_missing_json_field('Inputs', 'equity_risk_premium'),
                 beta=Parameter.from_json(x['beta']) if 'beta' in x else _atd_missing_json_field('Inputs', 'beta'),
@@ -795,7 +921,6 @@ class Inputs:
                 debt_spread=Parameter.from_json(x['debt_spread']) if 'debt_spread' in x else _atd_missing_json_field('Inputs', 'debt_spread'),
                 cost_of_debt=_atd_read_float(x['cost_of_debt']) if 'cost_of_debt' in x else _atd_missing_json_field('Inputs', 'cost_of_debt'),
                 wacc=_atd_read_float(x['wacc']) if 'wacc' in x else _atd_missing_json_field('Inputs', 'wacc'),
-                growth_rate=Parameter.from_json(x['growth_rate']) if 'growth_rate' in x else _atd_missing_json_field('Inputs', 'growth_rate'),
                 terminal_growth_rate=Parameter.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Inputs', 'terminal_growth_rate'),
                 projection_years=IntParameter.from_json(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('Inputs', 'projection_years'),
                 enterprise_value=_atd_read_float(x['enterprise_value']) if 'enterprise_value' in x else _atd_missing_json_field('Inputs', 'enterprise_value'),
@@ -816,13 +941,32 @@ class Inputs:
         res['tax_rate'] = _atd_write_float(self.tax_rate)
         res['tax_rate_source'] = (lambda x: x.to_json())(self.tax_rate_source)
         res['statutory_tax_rate'] = (lambda x: x.to_json())(self.statutory_tax_rate)
+        res['nopat'] = _atd_write_float(self.nopat)
         res['depreciation_amortization'] = _atd_write_float(self.depreciation_amortization)
+        res['depreciation_amortization_row'] = _atd_write_nullable(_atd_write_string)(self.depreciation_amortization_row)
         res['capex'] = _atd_write_float(self.capex)
         res['delta_nwc'] = _atd_write_float(self.delta_nwc)
+        res['delta_nwc_periods'] = _atd_write_list(_atd_write_string)(self.delta_nwc_periods)
         res['fcff'] = _atd_write_float(self.fcff)
         res['cash'] = _atd_write_float(self.cash)
         res['total_debt'] = _atd_write_float(self.total_debt)
+        res['total_debt_source'] = _atd_write_nullable(_atd_write_string)(self.total_debt_source)
         res['net_debt'] = _atd_write_float(self.net_debt)
+        res['book_equity'] = _atd_write_float(self.book_equity)
+        res['invested_capital'] = _atd_write_float(self.invested_capital)
+        res['roic'] = _atd_write_nullable(_atd_write_float)(self.roic)
+        res['reinvestment'] = _atd_write_float(self.reinvestment)
+        res['reinvestment_rate'] = _atd_write_nullable(_atd_write_float)(self.reinvestment_rate)
+        res['g_fundamental'] = _atd_write_nullable(_atd_write_float)(self.g_fundamental)
+        res['g_historical'] = _atd_write_nullable(_atd_write_float)(self.g_historical)
+        res['revenue_periods'] = _atd_write_list(_atd_write_string)(self.revenue_periods)
+        res['growth_source'] = (lambda x: x.to_json())(self.growth_source)
+        res['g0'] = _atd_write_float(self.g0)
+        res['growth_clamped'] = _atd_write_bool(self.growth_clamped)
+        res['growth_clamp_lower'] = (lambda x: x.to_json())(self.growth_clamp_lower)
+        res['growth_clamp_upper'] = (lambda x: x.to_json())(self.growth_clamp_upper)
+        res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
+        res['growth_path'] = _atd_write_list(_atd_write_float)(self.growth_path)
         res['risk_free_rate'] = (lambda x: x.to_json())(self.risk_free_rate)
         res['equity_risk_premium'] = (lambda x: x.to_json())(self.equity_risk_premium)
         res['beta'] = (lambda x: x.to_json())(self.beta)
@@ -831,7 +975,6 @@ class Inputs:
         res['debt_spread'] = (lambda x: x.to_json())(self.debt_spread)
         res['cost_of_debt'] = _atd_write_float(self.cost_of_debt)
         res['wacc'] = _atd_write_float(self.wacc)
-        res['growth_rate'] = (lambda x: x.to_json())(self.growth_rate)
         res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
         res['projection_years'] = (lambda x: x.to_json())(self.projection_years)
         res['enterprise_value'] = _atd_write_float(self.enterprise_value)
@@ -975,10 +1118,13 @@ class FiscalPeriod:
     premiums_earned: Optional[float]
     premiums_earned_row: Optional[str]
     depreciation_amortization: Optional[float]
+    depreciation_amortization_row: Optional[str]
     capex: Optional[float]
     delta_nwc: Optional[float]
     cash: Optional[float]
     total_debt: Optional[float]
+    total_debt_source: Optional[str]
+    book_equity: Optional[float]
 
     @classmethod
     def from_json(cls, x: Any) -> 'FiscalPeriod':
@@ -993,10 +1139,13 @@ class FiscalPeriod:
                 premiums_earned=_atd_read_nullable(_atd_read_float)(x['premiums_earned']) if 'premiums_earned' in x else _atd_missing_json_field('FiscalPeriod', 'premiums_earned'),
                 premiums_earned_row=_atd_read_nullable(_atd_read_string)(x['premiums_earned_row']) if 'premiums_earned_row' in x else _atd_missing_json_field('FiscalPeriod', 'premiums_earned_row'),
                 depreciation_amortization=_atd_read_nullable(_atd_read_float)(x['depreciation_amortization']) if 'depreciation_amortization' in x else _atd_missing_json_field('FiscalPeriod', 'depreciation_amortization'),
+                depreciation_amortization_row=_atd_read_nullable(_atd_read_string)(x['depreciation_amortization_row']) if 'depreciation_amortization_row' in x else _atd_missing_json_field('FiscalPeriod', 'depreciation_amortization_row'),
                 capex=_atd_read_nullable(_atd_read_float)(x['capex']) if 'capex' in x else _atd_missing_json_field('FiscalPeriod', 'capex'),
                 delta_nwc=_atd_read_nullable(_atd_read_float)(x['delta_nwc']) if 'delta_nwc' in x else _atd_missing_json_field('FiscalPeriod', 'delta_nwc'),
                 cash=_atd_read_nullable(_atd_read_float)(x['cash']) if 'cash' in x else _atd_missing_json_field('FiscalPeriod', 'cash'),
                 total_debt=_atd_read_nullable(_atd_read_float)(x['total_debt']) if 'total_debt' in x else _atd_missing_json_field('FiscalPeriod', 'total_debt'),
+                total_debt_source=_atd_read_nullable(_atd_read_string)(x['total_debt_source']) if 'total_debt_source' in x else _atd_missing_json_field('FiscalPeriod', 'total_debt_source'),
+                book_equity=_atd_read_nullable(_atd_read_float)(x['book_equity']) if 'book_equity' in x else _atd_missing_json_field('FiscalPeriod', 'book_equity'),
             )
         else:
             _atd_bad_json('FiscalPeriod', x)
@@ -1012,10 +1161,13 @@ class FiscalPeriod:
         res['premiums_earned'] = _atd_write_nullable(_atd_write_float)(self.premiums_earned)
         res['premiums_earned_row'] = _atd_write_nullable(_atd_write_string)(self.premiums_earned_row)
         res['depreciation_amortization'] = _atd_write_nullable(_atd_write_float)(self.depreciation_amortization)
+        res['depreciation_amortization_row'] = _atd_write_nullable(_atd_write_string)(self.depreciation_amortization_row)
         res['capex'] = _atd_write_nullable(_atd_write_float)(self.capex)
         res['delta_nwc'] = _atd_write_nullable(_atd_write_float)(self.delta_nwc)
         res['cash'] = _atd_write_nullable(_atd_write_float)(self.cash)
         res['total_debt'] = _atd_write_nullable(_atd_write_float)(self.total_debt)
+        res['total_debt_source'] = _atd_write_nullable(_atd_write_string)(self.total_debt_source)
+        res['book_equity'] = _atd_write_nullable(_atd_write_float)(self.book_equity)
         return res
 
     @classmethod

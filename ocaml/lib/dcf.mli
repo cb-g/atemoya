@@ -6,9 +6,12 @@
     [Error]. The only fallback is the country's statutory tax rate when no sane
     effective rate is derivable, and then [inputs.tax_rate_source] says so.
 
-    Every rate and horizon arrives as a [Boundary_t.parameter] carrying its
-    provenance, which [value] copies into [inputs] untouched. Nothing here is
-    hardcoded; [Params.resolve] builds [assumptions] from [reference/]. *)
+    Growth comes from the statements through [Growth] and is never a constant:
+    the base FCFF uses the mean change in working capital over at least two
+    fiscal periods, the starting growth is selected and clamped, and the
+    explicit years mean-revert toward the country's terminal growth. Every
+    rate, horizon and knob arrives as a [Boundary_t.parameter] carrying its
+    provenance, which [value] copies into [inputs] untouched. *)
 
 type assumptions = {
   risk_free_rate : Boundary_t.parameter;
@@ -17,7 +20,9 @@ type assumptions = {
   beta_source : Boundary_t.beta_source;
   debt_spread : Boundary_t.parameter;
       (** pre-tax cost of debt = risk_free_rate + debt_spread *)
-  growth_rate : Boundary_t.parameter;  (** explicit projection, per year *)
+  growth_clamp_lower : Boundary_t.parameter;
+  growth_clamp_upper : Boundary_t.parameter;
+  mean_reversion_lambda : Boundary_t.parameter;
   terminal_growth_rate : Boundary_t.parameter;
   projection_years : Boundary_t.int_parameter;
   statutory_tax_rate : Boundary_t.parameter;
@@ -47,14 +52,12 @@ val wacc :
 val enterprise_value :
   fcff:float ->
   wacc:float ->
-  growth_rate:float ->
+  growth_path:float list ->
   terminal_growth_rate:float ->
-  projection_years:int ->
   float
-(** Present value of [projection_years] of [fcff] growing at [growth_rate], plus a
-    Gordon terminal value at [terminal_growth_rate]. Requires
-    [wacc > terminal_growth_rate] and [projection_years >= 0]; [value] checks
-    both before calling. *)
+(** Present value of [fcff] compounded year by year along [growth_path], plus
+    a Gordon terminal value at [terminal_growth_rate] on the last year's cash
+    flow. Requires [wacc > terminal_growth_rate]; [value] checks it first. *)
 
 val tax_rate :
   statutory:float ->

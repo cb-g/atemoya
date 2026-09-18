@@ -6,7 +6,8 @@ let today = "2026-09-10"
 
 let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?total_revenue ?net_interest_income ?premiums_earned ?premiums_earned_row
-    ?depreciation_amortization ?capex ?delta_nwc ?cash ?total_debt () :
+    ?depreciation_amortization ?depreciation_amortization_row ?capex ?delta_nwc
+    ?cash ?total_debt ?total_debt_source ?book_equity () :
     Boundary_t.fiscal_period =
   {
     period_end;
@@ -18,10 +19,13 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     premiums_earned;
     premiums_earned_row;
     depreciation_amortization;
+    depreciation_amortization_row;
     capex;
     delta_nwc;
     cash;
     total_debt;
+    total_debt_source;
+    book_equity;
   }
 
 let financials ?(currency = Some "USD") ?(price = Some 10.)
@@ -39,10 +43,20 @@ let financials ?(currency = Some "USD") ?(price = Some 10.)
     notes = [];
   }
 
-let full_period ?period_end () =
-  period ?period_end ~ebit:1200. ~pretax_income:1000. ~tax_provision:500.
-    ~depreciation_amortization:200. ~capex:50. ~delta_nwc:50. ~cash:1000.
-    ~total_debt:5000. ()
+let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
+    ?(total_revenue = 10000.) ?(capex = 50.) ?(delta_nwc = 50.) () =
+  period ?period_end ~ebit ~pretax_income ~tax_provision:500. ~total_revenue
+    ~depreciation_amortization:200. ~capex ~delta_nwc ~cash:1000. ~total_debt:5000.
+    ~book_equity:5000. ()
+
+(* Three identical years: flat revenue, so historical growth is exactly zero, and
+   net reinvestment 50 + 50 - 200 < 0, so the fundamental estimate is unusable.
+   Selected growth is therefore 0 (historical, uncapped since roic = 0.06 > 0),
+   the path is flat, and the arithmetic reduces to the zero-growth perpetuity. *)
+let history ?ebit ?pretax_income ?capex ?delta_nwc () =
+  List.map
+    (fun period_end -> full_period ~period_end ?ebit ?pretax_income ?capex ?delta_nwc ())
+    [ "2025-09-30"; "2024-09-30"; "2023-09-30" ]
 
 (* --- parameter fixtures --- *)
 
@@ -64,7 +78,9 @@ let assumptions : Dcf.assumptions =
     beta = param 1.0;
     beta_source = `Industry_table;
     debt_spread = param 0.02;
-    growth_rate = param 0.0;
+    growth_clamp_lower = param (-0.20);
+    growth_clamp_upper = param 0.50;
+    mean_reversion_lambda = param 0.25;
     terminal_growth_rate = param 0.0;
     projection_years =
       { value = 5; key = "global"; source = "test"; as_of = today; age_days = 0 };
@@ -98,9 +114,11 @@ let country_table_json ~source values =
 let params_json =
   {|{
   "projection_years": {"value": 7, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
-  "growth_rate": {"value": 0.05, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
   "debt_spread": {"value": 0.01, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
   "bank_nii_ratio_threshold": {"value": 0.25, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
+  "growth_clamp_lower": {"value": -0.2, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
+  "growth_clamp_upper": {"value": 0.5, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
+  "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
     "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015}},
@@ -137,6 +155,7 @@ let signal = via_json Boundary_j.string_of_signal
 let tax_rate_source = via_json Boundary_j.string_of_tax_rate_source
 let beta_source = via_json Boundary_j.string_of_beta_source
 let model = via_json Boundary_j.string_of_model
+let growth_source = via_json Boundary_j.string_of_growth_source
 let valuation = via_json Boundary_j.string_of_valuation
 let approx = Alcotest.float 1e-9
 let check_float = Alcotest.check approx
@@ -189,8 +208,9 @@ let test_ev_perpetuity () =
       check_float
         (Printf.sprintf "zero growth, %d years, is fcff / wacc" projection_years)
         10000.
-        (Dcf.enterprise_value ~fcff:700. ~wacc:0.07 ~growth_rate:0.
-           ~terminal_growth_rate:0. ~projection_years))
+        (Dcf.enterprise_value ~fcff:700. ~wacc:0.07
+           ~growth_path:(List.init projection_years (fun _ -> 0.))
+           ~terminal_growth_rate:0.))
     [ 0; 1; 5; 7 ]
 
 let test_ev_growth () =
@@ -199,8 +219,85 @@ let test_ev_growth () =
     (110. /. 1.07) +. (121. /. 1.1449) +. (121. *. 1.02 /. 0.05 /. 1.1449)
   in
   check_float "two explicit years then Gordon" expected
-    (Dcf.enterprise_value ~fcff:100. ~wacc:0.07 ~growth_rate:0.10
-       ~terminal_growth_rate:0.02 ~projection_years:2)
+    (Dcf.enterprise_value ~fcff:100. ~wacc:0.07 ~growth_path:[ 0.10; 0.10 ]
+       ~terminal_growth_rate:0.02);
+  (* 110 / 1.07 + 110 * 1.05 / 1.07^2 + (115.5 * 1.02 / 0.05) / 1.07^2 *)
+  let expected =
+    (110. /. 1.07) +. (115.5 /. 1.1449) +. (115.5 *. 1.02 /. 0.05 /. 1.1449)
+  in
+  check_float "a path compounds year by year" expected
+    (Dcf.enterprise_value ~fcff:100. ~wacc:0.07 ~growth_path:[ 0.10; 0.05 ]
+       ~terminal_growth_rate:0.02)
+
+(* --- growth --- *)
+
+let revenues = [ ("2025-09-30", 10000.); ("2024-09-30", 9000.); ("2023-09-30", 8000.) ]
+
+let estimate ?(ebit = 1200.) ?(book_equity = 5000.) ?(capex = 400.) ?(delta_nwc = 50.)
+    ?(revenues = revenues) () =
+  Growth.estimate ~ebit ~tax_rate:0.5 ~book_equity ~total_debt:5000. ~capex ~delta_nwc
+    ~depreciation_amortization:200. ~revenues
+
+let test_growth_fundamental () =
+  (* nopat 600; invested 10000 -> roic 0.06; reinvestment 400 + 50 - 200 = 250 ->
+     rate 250 / 600; g = 0.06 * 250 / 600 = 0.025 *)
+  let e = estimate () in
+  check_float "nopat" 600. e.nopat;
+  Alcotest.(check (option approx)) "roic" (Some 0.06) e.roic;
+  check_float "reinvestment" 250. e.reinvestment;
+  Alcotest.(check (option approx)) "reinvestment_rate" (Some (250. /. 600.)) e.reinvestment_rate;
+  Alcotest.(check (option approx)) "g_fundamental" (Some 0.025) e.g_fundamental;
+  let g, source = get (Growth.select e) in
+  check_float "selected" 0.025 g;
+  Alcotest.check growth_source "source" `Fundamental source
+
+let test_growth_historical_capped () =
+  (* capex 50: reinvestment 50 + 50 - 200 < 0, so the fundamental estimate collapses;
+     revenue 8000 -> 10000 over 731 days is 11.79%, above roic 0.06, so it is capped. *)
+  let e = estimate ~capex:50. () in
+  Alcotest.(check (option approx)) "g_historical" (Some 0.11794866981848795) e.g_historical;
+  Alcotest.(check (list string)) "revenue periods, most recent first"
+    [ "2025-09-30"; "2024-09-30"; "2023-09-30" ] e.revenue_periods;
+  let g, source = get (Growth.select e) in
+  check_float "capped at roic" 0.06 g;
+  Alcotest.check growth_source "source" `Historical_capped_at_roic source
+
+let test_growth_historical_uncapped () =
+  (* ebit 12000 -> nopat 6000, roic 0.6 > 0.118 -> the cap does not bind. *)
+  let e = estimate ~ebit:12000. ~capex:50. () in
+  let g, source = get (Growth.select e) in
+  check_float "uncapped historical" 0.11794866981848795 g;
+  Alcotest.check growth_source "source" `Historical source;
+  (* roic unknown (invested capital <= 0): historical, uncapped *)
+  let e = estimate ~book_equity:(-6000.) ~capex:50. () in
+  Alcotest.(check (option approx)) "no roic" None e.roic;
+  let _, source = get (Growth.select e) in
+  Alcotest.check growth_source "no cap without roic" `Historical source
+
+let test_growth_not_derivable () =
+  check_error "single period, negative reinvestment"
+    (Growth.select (estimate ~capex:50. ~revenues:[ ("2025-09-30", 10000.) ] ()))
+    [ "growth not derivable"; "have 1" ];
+  check_error "nopat <= 0 and two periods"
+    (Growth.select
+       (estimate ~ebit:(-100.) ~revenues:[ ("2025-09-30", 10000.); ("2024-09-30", 9000.) ] ()))
+    [ "growth not derivable" ];
+  Alcotest.(check (option approx)) "non-positive revenue is skipped" None
+    (fst (Growth.cagr [ ("2025-09-30", 10000.); ("2024-09-30", 0.); ("2023-09-30", 8000.) ]))
+
+let test_growth_clamp () =
+  Alcotest.(check (pair approx bool)) "above" (0.5, true) (Growth.clamp ~lower:(-0.2) ~upper:0.5 0.7);
+  Alcotest.(check (pair approx bool)) "below" (-0.2, true) (Growth.clamp ~lower:(-0.2) ~upper:0.5 (-0.3));
+  Alcotest.(check (pair approx bool)) "inside" (0.1, false) (Growth.clamp ~lower:(-0.2) ~upper:0.5 0.1)
+
+let test_growth_path () =
+  Alcotest.(check (list (float 1e-12))) "mean reversion toward terminal"
+    [ 0.0823040626457124; 0.06852245277701068; 0.05778932421928118 ]
+    (Growth.path ~g0:0.10 ~terminal_growth_rate:0.02 ~lambda:0.25 ~projection_years:3);
+  Alcotest.(check (list approx)) "g0 at terminal stays there" [ 0.02; 0.02 ]
+    (Growth.path ~g0:0.02 ~terminal_growth_rate:0.02 ~lambda:0.25 ~projection_years:2);
+  Alcotest.(check (list approx)) "no years, no path" []
+    (Growth.path ~g0:0.10 ~terminal_growth_rate:0.02 ~lambda:0.25 ~projection_years:0)
 
 let test_tax_rate () =
   let check name expected (rate, source) =
@@ -226,9 +323,10 @@ let test_signal () =
   Alcotest.check signal "sell" `Sell (Valuation.signal t (-0.25))
 
 let test_arithmetic_unchanged () =
-  (* The same numbers as the unparameterised version, through the parameterised path. *)
+  (* The same numbers as the unparameterised version, through the derived-growth path:
+     flat history selects zero growth, so the result is the zero-growth perpetuity. *)
   let inputs, fair_value =
-    get (Dcf.value assumptions ~country:"Testland" (financials [ full_period () ]))
+    get (Dcf.value assumptions ~country:"Testland" (financials (history ())))
   in
   check_float "fair value" 12. fair_value;
   check_float "fcff" 700. inputs.fcff;
@@ -236,7 +334,79 @@ let test_arithmetic_unchanged () =
   check_float "enterprise_value" 10000. inputs.enterprise_value;
   check_float "shares" 500. inputs.shares;
   Alcotest.check tax_rate_source "tax_rate_source" `Effective inputs.tax_rate_source;
-  Alcotest.(check string) "country recorded as fetched" "Testland" inputs.country
+  Alcotest.(check string) "country recorded as fetched" "Testland" inputs.country;
+  Alcotest.check growth_source "growth_source" `Historical inputs.growth_source;
+  check_float "g0" 0. inputs.g0;
+  Alcotest.(check bool) "not clamped" false inputs.growth_clamped;
+  Alcotest.(check (list approx)) "flat path" [ 0.; 0.; 0.; 0.; 0. ] inputs.growth_path;
+  Alcotest.(check (list string)) "delta_nwc averaged over all three"
+    [ "2025-09-30"; "2024-09-30"; "2023-09-30" ] inputs.delta_nwc_periods
+
+let test_delta_nwc_is_averaged () =
+  let periods =
+    [ full_period ~period_end:"2025-09-30" ~delta_nwc:100. ();
+      full_period ~period_end:"2024-09-30" ~delta_nwc:(-50.) ();
+      full_period ~period_end:"2023-09-30" ~delta_nwc:100. () ]
+  in
+  let inputs, _ = get (Dcf.value assumptions ~country:"T" (financials periods)) in
+  check_float "mean of 100, -50, 100" 50. inputs.delta_nwc;
+  check_float "fcff on the mean" 700. inputs.fcff;
+  check_error "one period only"
+    (Dcf.value assumptions ~country:"T" (financials [ full_period () ]))
+    [ "delta_nwc"; "have 1" ]
+
+let test_growth_selected_end_to_end () =
+  (* capex 400 makes reinvestment positive: fundamental growth 0.025, mean-reverting
+     toward the fixture's zero terminal growth over five years. *)
+  let inputs, fair_value =
+    get (Dcf.value assumptions ~country:"T" (financials (history ~capex:400. ())))
+  in
+  Alcotest.check growth_source "source" `Fundamental inputs.growth_source;
+  check_float "g0" 0.025 inputs.g0;
+  Alcotest.(check int) "path length is the horizon" 5 (List.length inputs.growth_path);
+  check_float "first year" (0.025 *. exp (-0.25)) (List.hd inputs.growth_path);
+  check_float "fcff base uses capex 400" 350. inputs.fcff;
+  Alcotest.(check bool) "worth more than the flat perpetuity on the same base" true
+    (fair_value > (350. /. 0.07 -. 4000.) /. 500.)
+
+let test_growth_clamped_end_to_end () =
+  (* revenue 1000 -> 10000 in two years is a 216% CAGR: clamped to 0.5 and flagged.
+     ebit 120000 keeps roic (60000 / 10000 = 6) above it so the roic cap does not bind. *)
+  let periods =
+    [ full_period ~period_end:"2025-09-30" ~ebit:120000. ~total_revenue:10000. ();
+      full_period ~period_end:"2024-09-30" ~ebit:120000. ~total_revenue:3000. ();
+      full_period ~period_end:"2023-09-30" ~ebit:120000. ~total_revenue:1000. () ]
+  in
+  let inputs, _ = get (Dcf.value assumptions ~country:"T" (financials periods)) in
+  Alcotest.(check bool) "clamped" true inputs.growth_clamped;
+  check_float "g0 at the upper bound" 0.5 inputs.g0;
+  Alcotest.check growth_source "source" `Historical inputs.growth_source
+
+let test_debt_absent_fails () =
+  let periods =
+    List.map
+      (fun (p : Boundary_t.fiscal_period) -> { p with total_debt = None; total_debt_source = None })
+      (history ())
+  in
+  check_error "no total debt" (Dcf.value assumptions ~country:"T" (financials periods)) [ "total_debt" ];
+  let periods =
+    List.map (fun (p : Boundary_t.fiscal_period) -> { p with book_equity = None }) (history ())
+  in
+  check_error "no book equity" (Dcf.value assumptions ~country:"T" (financials periods)) [ "book_equity" ]
+
+let test_provenance_of_mappings () =
+  let periods =
+    List.map
+      (fun (p : Boundary_t.fiscal_period) ->
+        { p with depreciation_amortization_row = Some "Depreciation Amortization Depletion";
+                 total_debt_source = Some "Long Term Debt + Current Debt" })
+      (history ())
+  in
+  let inputs, _ = get (Dcf.value assumptions ~country:"T" (financials periods)) in
+  Alcotest.(check (option string)) "d&a row" (Some "Depreciation Amortization Depletion")
+    inputs.depreciation_amortization_row;
+  Alcotest.(check (option string)) "debt path" (Some "Long Term Debt + Current Debt")
+    inputs.total_debt_source
 
 (* --- dates --- *)
 
@@ -286,8 +456,12 @@ let test_resolve_provenance () =
     ~source:"PwC 2026" ~as_of:"2026-01-01" ~age_days:252;
   check_param "terminal_growth_rate" a.terminal_growth_rate ~value:0.02
     ~key:"United States" ~source:"seed" ~as_of:"2026-06-01" ~age_days:101;
-  check_param "growth_rate" a.growth_rate ~value:0.05 ~key:"global" ~source:"assumption"
-    ~as_of:"2026-09-01" ~age_days:9;
+  check_param "growth_clamp_lower" a.growth_clamp_lower ~value:(-0.2) ~key:"global"
+    ~source:"seed" ~as_of:"2026-06-01" ~age_days:101;
+  check_param "growth_clamp_upper" a.growth_clamp_upper ~value:0.5 ~key:"global"
+    ~source:"seed" ~as_of:"2026-06-01" ~age_days:101;
+  check_param "mean_reversion_lambda" a.mean_reversion_lambda ~value:0.25 ~key:"global"
+    ~source:"seed" ~as_of:"2026-06-01" ~age_days:101;
   check_param "debt_spread" a.debt_spread ~value:0.01 ~key:"global" ~source:"assumption"
     ~as_of:"2026-09-01" ~age_days:9;
   check_param "beta" a.beta ~value:0.9 ~key:"Consumer Electronics"
@@ -504,7 +678,7 @@ let test_unresolved_record () =
   Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs)
 
 let test_generic_record_carries_evidence () =
-  let v = Valuation.run params ~today (financials [ full_period () ]) in
+  let v = Valuation.run params ~today (financials (history ())) in
   Alcotest.check status "status" `Ok v.status;
   Alcotest.(check (option model)) "model" (Some `Generic) v.model;
   match v.classification with
@@ -528,7 +702,7 @@ let test_batch_summary () =
   let rename t (v : Boundary_t.valuation) = { v with ticker = t } in
   let vs =
     [
-      Valuation.run params ~today (financials [ full_period () ]);
+      Valuation.run params ~today (financials (history ()));
       rename "BNK" (Valuation.run params ~today (financials [ bank_period () ]));
       rename "WRONG" (Valuation.run params ~today (financials []));
     ]
@@ -547,7 +721,7 @@ let test_batch_summary () =
 (* --- valuation end to end --- *)
 
 let test_ok () =
-  let v = Valuation.run params ~today (financials [ full_period () ]) in
+  let v = Valuation.run params ~today (financials (history ())) in
   Alcotest.check status "status" `Ok v.status;
   Alcotest.(check string) "valued_on" today v.valued_on;
   Alcotest.(check (option string)) "failed_reason" None v.failed_reason;
@@ -568,6 +742,8 @@ let test_ok () =
         (0.0468 +. (0.9 *. 0.0446)) i.cost_of_equity;
       check_float "cost of debt = rf + spread" (0.0468 +. 0.01) i.cost_of_debt;
       Alcotest.(check int) "projection_years" 7 i.projection_years.value;
+      Alcotest.(check int) "growth path spans the horizon" 7 (List.length i.growth_path);
+      Alcotest.(check string) "lambda provenance" "seed" i.mean_reversion_lambda.source;
       List.iter
         (fun (name, (p : Boundary_t.parameter)) ->
           if p.age_days < 0 || p.source = "" || p.as_of = "" then
@@ -577,7 +753,9 @@ let test_ok () =
           ("equity_risk_premium", i.equity_risk_premium);
           ("statutory_tax_rate", i.statutory_tax_rate);
           ("terminal_growth_rate", i.terminal_growth_rate);
-          ("growth_rate", i.growth_rate);
+          ("growth_clamp_lower", i.growth_clamp_lower);
+          ("growth_clamp_upper", i.growth_clamp_upper);
+          ("mean_reversion_lambda", i.mean_reversion_lambda);
           ("debt_spread", i.debt_spread);
           ("beta", i.beta);
         ]
@@ -604,7 +782,7 @@ let test_stale_parameter () =
   Alcotest.(check bool) "inputs" true (Option.is_none v.inputs)
 
 let test_no_industry () =
-  let v = Valuation.run params ~today (financials ~industry:None [ full_period () ]) in
+  let v = Valuation.run params ~today (financials ~industry:None (history ())) in
   Alcotest.check status "status" `Ok v.status;
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
@@ -659,24 +837,27 @@ let test_wacc_below_terminal_growth () =
         params =
           Reference_j.params_of_string
             {|{"projection_years": {"value": 7, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
-               "growth_rate": {"value": 0.05, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
                "debt_spread": {"value": 0.01, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
                "bank_nii_ratio_threshold": {"value": 0.25, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
+               "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
+               "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
+               "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
                "unwired": {}}|} }
-      ~today (financials [ full_period () ])
+      ~today (financials (history ()))
   in
   check_reason v [ "terminal growth" ];
   check_nulls v;
   Alcotest.(check bool) "inputs" true (Option.is_none v.inputs)
 
 let test_non_positive_fair_value () =
+  (* Loss-making every year: nopat < 0 so fundamental growth is unusable, flat revenue
+     gives zero historical growth, roic is negative so the cap pulls g0 down to it, and
+     the clamp holds it at -0.2. The cash flows shrink from a negative base. *)
   let v =
     Valuation.run params ~today
-      (financials [ period ~ebit:(-5000.) ~pretax_income:(-5000.) ~tax_provision:0.
-           ~depreciation_amortization:200. ~capex:50. ~delta_nwc:50. ~cash:1000.
-           ~total_debt:5000. () ])
+      (financials (history ~ebit:(-5000.) ~pretax_income:(-5000.) ()))
   in
   check_reason v [ "non-positive fair value" ];
   check_nulls v;
@@ -686,14 +867,14 @@ let test_sanity_bound () =
   (* Tiny market cap: wacc collapses towards the cost of debt and the DCF says
      the equity is worth hundreds of times its price. Not a Buy -- a failure. *)
   let v =
-    Valuation.run params ~today (financials ~market_cap:(Some 100.) [ full_period () ])
+    Valuation.run params ~today (financials ~market_cap:(Some 100.) (history ()))
   in
   check_reason v [ "sanity bound" ];
   check_nulls v;
   Alcotest.(check bool) "inputs kept for audit" true (Option.is_some v.inputs)
 
 let test_json_round_trip () =
-  let ok = Valuation.run params ~today (financials [ full_period () ]) in
+  let ok = Valuation.run params ~today (financials (history ())) in
   let failed = Valuation.run params ~today (financials []) in
   List.iter
     (fun v ->
@@ -705,7 +886,8 @@ let test_json_round_trip () =
       {|"inputs":null|}; {|"model":"Generic"|}; {|"valued_on":"2026-09-10"|} ];
   check_mentions "ok json" (Boundary_j.string_of_valuation ok)
     [ {|"beta_source":"industry_table"|}; {|"source":"FRED"|}; {|"age_days":2|};
-      {|"model":"Generic"|}; {|"classification":{|}; {|"nii_ratio":null|} ]
+      {|"model":"Generic"|}; {|"classification":{|}; {|"nii_ratio":null|};
+      {|"growth_source":"historical"|}; {|"growth_clamped":false|} ]
 
 let () =
   let case name f = Alcotest.test_case name `Quick f in
@@ -720,6 +902,20 @@ let () =
           case "tax rate" test_tax_rate;
           case "signal thresholds" test_signal;
           case "unchanged for given parameters" test_arithmetic_unchanged;
+          case "delta_nwc is averaged" test_delta_nwc_is_averaged;
+          case "derived growth end to end" test_growth_selected_end_to_end;
+          case "clamp binds and is recorded" test_growth_clamped_end_to_end;
+          case "debt or equity absent fails" test_debt_absent_fails;
+          case "mapping provenance carried" test_provenance_of_mappings;
+        ] );
+      ( "growth",
+        [
+          case "fundamental when reinvesting" test_growth_fundamental;
+          case "historical capped at roic" test_growth_historical_capped;
+          case "historical uncapped" test_growth_historical_uncapped;
+          case "not derivable" test_growth_not_derivable;
+          case "clamp" test_growth_clamp;
+          case "mean-reversion path" test_growth_path;
         ] );
       ( "parameters",
         [

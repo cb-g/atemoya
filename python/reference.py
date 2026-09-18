@@ -545,9 +545,11 @@ class Params:
     """
 
     projection_years: IntScalar
-    growth_rate: Scalar
     debt_spread: Scalar
     bank_nii_ratio_threshold: Scalar
+    growth_clamp_lower: Scalar
+    growth_clamp_upper: Scalar
+    mean_reversion_lambda: Scalar
     terminal_growth_rate: CountryTable
     unwired: Any
 
@@ -556,9 +558,11 @@ class Params:
         if isinstance(x, dict):
             return cls(
                 projection_years=IntScalar.from_json(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('Params', 'projection_years'),
-                growth_rate=Scalar.from_json(x['growth_rate']) if 'growth_rate' in x else _atd_missing_json_field('Params', 'growth_rate'),
                 debt_spread=Scalar.from_json(x['debt_spread']) if 'debt_spread' in x else _atd_missing_json_field('Params', 'debt_spread'),
                 bank_nii_ratio_threshold=Scalar.from_json(x['bank_nii_ratio_threshold']) if 'bank_nii_ratio_threshold' in x else _atd_missing_json_field('Params', 'bank_nii_ratio_threshold'),
+                growth_clamp_lower=Scalar.from_json(x['growth_clamp_lower']) if 'growth_clamp_lower' in x else _atd_missing_json_field('Params', 'growth_clamp_lower'),
+                growth_clamp_upper=Scalar.from_json(x['growth_clamp_upper']) if 'growth_clamp_upper' in x else _atd_missing_json_field('Params', 'growth_clamp_upper'),
+                mean_reversion_lambda=Scalar.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('Params', 'mean_reversion_lambda'),
                 terminal_growth_rate=CountryTable.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Params', 'terminal_growth_rate'),
                 unwired=(lambda x: x)(x['unwired']) if 'unwired' in x else _atd_missing_json_field('Params', 'unwired'),
             )
@@ -568,9 +572,11 @@ class Params:
     def to_json(self) -> Any:
         res: Dict[str, Any] = {}
         res['projection_years'] = (lambda x: x.to_json())(self.projection_years)
-        res['growth_rate'] = (lambda x: x.to_json())(self.growth_rate)
         res['debt_spread'] = (lambda x: x.to_json())(self.debt_spread)
         res['bank_nii_ratio_threshold'] = (lambda x: x.to_json())(self.bank_nii_ratio_threshold)
+        res['growth_clamp_lower'] = (lambda x: x.to_json())(self.growth_clamp_lower)
+        res['growth_clamp_upper'] = (lambda x: x.to_json())(self.growth_clamp_upper)
+        res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
         res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
         res['unwired'] = (lambda x: x)(self.unwired)
         return res

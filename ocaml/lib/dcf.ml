@@ -6,7 +6,9 @@ type assumptions = {
   beta : parameter;
   beta_source : beta_source;
   debt_spread : parameter;
-  growth_rate : parameter;
+  growth_clamp_lower : parameter;
+  growth_clamp_upper : parameter;
+  mean_reversion_lambda : parameter;
   terminal_growth_rate : parameter;
   projection_years : int_parameter;
   statutory_tax_rate : parameter;
@@ -22,20 +24,21 @@ let wacc ~cost_of_equity ~cost_of_debt ~tax_rate ~market_cap ~total_debt =
   (market_cap /. capital *. cost_of_equity)
   +. (total_debt /. capital *. cost_of_debt *. (1. -. tax_rate))
 
-let enterprise_value ~fcff ~wacc ~growth_rate ~terminal_growth_rate
-    ~projection_years =
+let enterprise_value ~fcff ~wacc ~growth_path ~terminal_growth_rate =
   let discount i = (1. +. wacc) ** float_of_int i in
-  let cash_flow i = fcff *. ((1. +. growth_rate) ** float_of_int i) in
-  let rec explicit i acc =
-    if i > projection_years then acc
-    else explicit (i + 1) (acc +. (cash_flow i /. discount i))
+  let rec explicit i cash_flow acc = function
+    | [] -> (acc, cash_flow, i - 1)
+    | g :: rest ->
+        let cash_flow = cash_flow *. (1. +. g) in
+        explicit (i + 1) cash_flow (acc +. (cash_flow /. discount i)) rest
   in
+  let pv_explicit, last_cash_flow, years = explicit 1 fcff 0. growth_path in
   let terminal =
-    cash_flow projection_years
+    last_cash_flow
     *. (1. +. terminal_growth_rate)
     /. (wacc -. terminal_growth_rate)
   in
-  explicit 1 0. +. (terminal /. discount projection_years)
+  pv_explicit +. (terminal /. discount years)
 
 let tax_rate ~statutory ~pretax_income ~tax_provision =
   match (pretax_income, tax_provision) with
@@ -53,7 +56,14 @@ let latest_period fin =
 
 let absent name opt = if Option.is_none opt then Some name else None
 
-let missing_report (fin : financials) (p : fiscal_period) =
+(* Fields carried by every period that has them, most recent first. *)
+let series fin field =
+  List.filter_map
+    (fun (q : fiscal_period) -> Option.map (fun v -> (q.period_end, v)) (field q))
+    fin.periods
+  |> List.sort (fun (a, _) (b, _) -> compare b a)
+
+let missing_report (fin : financials) (p : fiscal_period) ~nwc_periods =
   let market =
     List.filter_map Fun.id
       [
@@ -68,9 +78,14 @@ let missing_report (fin : financials) (p : fiscal_period) =
         absent "ebit" p.ebit;
         absent "depreciation_amortization" p.depreciation_amortization;
         absent "capex" p.capex;
-        absent "delta_nwc" p.delta_nwc;
         absent "cash" p.cash;
         absent "total_debt" p.total_debt;
+        absent "book_equity" p.book_equity;
+        (if nwc_periods < 2 then
+           Some
+             (Printf.sprintf "delta_nwc (need 2 fiscal periods carrying it, have %d)"
+                nwc_periods)
+         else None);
       ]
   in
   let part label = function
@@ -87,9 +102,13 @@ let missing_report (fin : financials) (p : fiscal_period) =
            statement;
        ])
 
+let mean xs = List.fold_left ( +. ) 0. xs /. float_of_int (List.length xs)
+
 let value a ~country (fin : financials) =
   let ( let* ) = Result.bind in
   let* p = latest_period fin in
+  let nwc = series fin (fun q -> q.delta_nwc) in
+  let revenues = series fin (fun q -> q.total_revenue) in
   match
     ( fin.currency,
       fin.price,
@@ -97,9 +116,9 @@ let value a ~country (fin : financials) =
       p.ebit,
       p.depreciation_amortization,
       p.capex,
-      p.delta_nwc,
       p.cash,
-      p.total_debt )
+      p.total_debt,
+      p.book_equity )
   with
   | ( Some _currency,
       Some price,
@@ -107,9 +126,10 @@ let value a ~country (fin : financials) =
       Some ebit,
       Some depreciation_amortization,
       Some capex,
-      Some delta_nwc,
       Some cash,
-      Some total_debt ) ->
+      Some total_debt,
+      Some book_equity )
+    when List.length nwc >= 2 ->
       let projection_years = a.projection_years.value in
       if price <= 0. || market_cap <= 0. then
         Error
@@ -120,6 +140,7 @@ let value a ~country (fin : financials) =
           (Printf.sprintf "projection horizon %d years is negative"
              projection_years)
       else
+        let delta_nwc = mean (List.map snd nwc) in
         let tax_rate, tax_rate_source =
           tax_rate ~statutory:a.statutory_tax_rate.value
             ~pretax_income:p.pretax_income ~tax_provision:p.tax_provision
@@ -136,13 +157,25 @@ let value a ~country (fin : financials) =
             (Printf.sprintf "wacc %.4f does not exceed terminal growth %.4f"
                wacc a.terminal_growth_rate.value)
         else
+          let estimate =
+            Growth.estimate ~ebit ~tax_rate ~book_equity ~total_debt ~capex
+              ~delta_nwc ~depreciation_amortization ~revenues
+          in
+          let* selected, growth_source = Growth.select estimate in
+          let g0, growth_clamped =
+            Growth.clamp ~lower:a.growth_clamp_lower.value
+              ~upper:a.growth_clamp_upper.value selected
+          in
+          let growth_path =
+            Growth.path ~g0 ~terminal_growth_rate:a.terminal_growth_rate.value
+              ~lambda:a.mean_reversion_lambda.value ~projection_years
+          in
           let fcff =
             fcff ~ebit ~tax_rate ~depreciation_amortization ~capex ~delta_nwc
           in
           let enterprise_value =
-            enterprise_value ~fcff ~wacc ~growth_rate:a.growth_rate.value
+            enterprise_value ~fcff ~wacc ~growth_path
               ~terminal_growth_rate:a.terminal_growth_rate.value
-              ~projection_years
           in
           let shares = market_cap /. price in
           let net_debt = total_debt -. cash in
@@ -166,13 +199,32 @@ let value a ~country (fin : financials) =
                   tax_rate;
                   tax_rate_source;
                   statutory_tax_rate = a.statutory_tax_rate;
+                  nopat = estimate.nopat;
                   depreciation_amortization;
+                  depreciation_amortization_row = p.depreciation_amortization_row;
                   capex;
                   delta_nwc;
+                  delta_nwc_periods = List.map fst nwc;
                   fcff;
                   cash;
                   total_debt;
+                  total_debt_source = p.total_debt_source;
                   net_debt;
+                  book_equity;
+                  invested_capital = estimate.invested_capital;
+                  roic = estimate.roic;
+                  reinvestment = estimate.reinvestment;
+                  reinvestment_rate = estimate.reinvestment_rate;
+                  g_fundamental = estimate.g_fundamental;
+                  g_historical = estimate.g_historical;
+                  revenue_periods = estimate.revenue_periods;
+                  growth_source;
+                  g0;
+                  growth_clamped;
+                  growth_clamp_lower = a.growth_clamp_lower;
+                  growth_clamp_upper = a.growth_clamp_upper;
+                  mean_reversion_lambda = a.mean_reversion_lambda;
+                  growth_path;
                   risk_free_rate = a.risk_free_rate;
                   equity_risk_premium = a.equity_risk_premium;
                   beta = a.beta;
@@ -181,11 +233,10 @@ let value a ~country (fin : financials) =
                   debt_spread = a.debt_spread;
                   cost_of_debt;
                   wacc;
-                  growth_rate = a.growth_rate;
                   terminal_growth_rate = a.terminal_growth_rate;
                   projection_years = a.projection_years;
                   enterprise_value;
                   equity_value;
                 },
                 fair_value )
-  | _ -> Error (missing_report fin p)
+  | _ -> Error (missing_report fin p ~nwc_periods:(List.length nwc))

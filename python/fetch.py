@@ -81,7 +81,15 @@ class Profile(BaseModel):
 
 
 NON_NEGATIVE = frozenset(
-    {"total_revenue", "premiums_earned", "depreciation_amortization", "capex", "cash", "total_debt"}
+    {
+        "total_revenue",
+        "premiums_earned",
+        "reconciled_depreciation",
+        "depreciation_amortization",
+        "capex",
+        "cash",
+        "total_debt",
+    }
 )
 
 
@@ -120,10 +128,12 @@ class IncomeStatement(Statement):
     net_interest_income: float | None
     premiums_earned: float | None
     premiums_earned_row: str | None  # the vendor row label that supplied premiums_earned
+    reconciled_depreciation: float | None  # the income statement's depreciation line, a D&A fallback
 
 
 class CashFlowStatement(Statement):
     depreciation_amortization: float | None
+    depreciation_amortization_row: str | None
     capex: float | None
     delta_nwc: float | None
 
@@ -131,6 +141,8 @@ class CashFlowStatement(Statement):
 class BalanceSheet(Statement):
     cash: float | None
     total_debt: float | None
+    total_debt_source: str | None  # the row, or row sum, that supplied total_debt
+    book_equity: float | None
 
 
 # --- yfinance specifics -------------------------------------------------------------
@@ -148,6 +160,7 @@ INCOME_ROWS: RowSpec = {
     "tax_provision": ("Tax Provision", 1.0),
     "total_revenue": ("Total Revenue", 1.0),
     "net_interest_income": ("Net Interest Income", 1.0),
+    "reconciled_depreciation": ("Reconciled Depreciation", 1.0),
 }
 # Insurer signature: the first of these rows that carries a value. Verified absent for
 # ALL, MET, PGR and ALV.DE on yfinance 1.7.0 (2026-09-18); kept so a vendor that does
@@ -160,14 +173,23 @@ PREMIUM_ROWS = (
     "Net Premium Earned",
 )
 CASHFLOW_ROWS: RowSpec = {
-    "depreciation_amortization": ("Depreciation And Amortization", 1.0),
     "capex": ("Capital Expenditure", -1.0),
     "delta_nwc": ("Change In Working Capital", -1.0),
 }
+# D&A: the first of these cash-flow rows that carries a value, then the income statement's
+# "Reconciled Depreciation". XOM files only "Depreciation Amortization Depletion"; the
+# matched label is recorded so the audit trail says where the add-back came from.
+DNA_ROWS = ("Depreciation And Amortization", "Depreciation Amortization Depletion", "Depreciation")
+RECONCILED_DEPRECIATION_ROW = "Reconciled Depreciation"
 BALANCE_ROWS: RowSpec = {
     "cash": ("Cash Cash Equivalents And Short Term Investments", 1.0),
-    "total_debt": ("Total Debt", 1.0),
+    "book_equity": ("Stockholders Equity", 1.0),
 }
+# Total debt: "Total Debt", else "Long Term Debt" + "Current Debt" when both rows carry a
+# value (zero counts as a value), else absent. Never a substituted zero: the previous
+# implementation defaulted a missing Total Debt to 0.0 and overstated equity value.
+TOTAL_DEBT_ROW = "Total Debt"
+DEBT_COMPONENT_ROWS = ("Long Term Debt", "Current Debt")
 
 
 def _columns(frame: pd.DataFrame) -> dict[date, dict[str, object]]:
@@ -205,11 +227,25 @@ def _income_values(rows: Mapping[str, object]) -> dict[str, object]:
 
 
 def _cashflow_values(rows: Mapping[str, object]) -> dict[str, object]:
-    return _canonical_values(rows, CASHFLOW_ROWS)
+    out = _canonical_values(rows, CASHFLOW_ROWS)
+    out["depreciation_amortization"], out["depreciation_amortization_row"] = _first_present(rows, DNA_ROWS)
+    return out
+
+
+def _total_debt(rows: Mapping[str, object]) -> tuple[float | None, str | None]:
+    total, _ = _first_present(rows, (TOTAL_DEBT_ROW,))
+    if total is not None:
+        return total, TOTAL_DEBT_ROW
+    parts = [_first_present(rows, (row,))[0] for row in DEBT_COMPONENT_ROWS]
+    if all(part is not None for part in parts):
+        return sum(part for part in parts if part is not None), " + ".join(DEBT_COMPONENT_ROWS)
+    return None, None
 
 
 def _balance_values(rows: Mapping[str, object]) -> dict[str, object]:
-    return _canonical_values(rows, BALANCE_ROWS)
+    out = _canonical_values(rows, BALANCE_ROWS)
+    out["total_debt"], out["total_debt_source"] = _total_debt(rows)
+    return out
 
 
 def _info(ticker: yf.Ticker, notes: list[str]) -> tuple[Quote | None, Profile | None]:
@@ -280,12 +316,23 @@ def _single_currency(quote: Quote, notes: list[str]) -> str | None:
     return None
 
 
+def _depreciation(
+    income: IncomeStatement | None, cashflow: CashFlowStatement | None
+) -> tuple[float | None, str | None]:
+    if cashflow is not None and cashflow.depreciation_amortization is not None:
+        return cashflow.depreciation_amortization, cashflow.depreciation_amortization_row
+    if income is not None and income.reconciled_depreciation is not None:
+        return income.reconciled_depreciation, RECONCILED_DEPRECIATION_ROW
+    return None, None
+
+
 def _period(
     end: date,
     income: IncomeStatement | None,
     cashflow: CashFlowStatement | None,
     balance: BalanceSheet | None,
 ) -> boundary.FiscalPeriod:
+    depreciation_amortization, depreciation_amortization_row = _depreciation(income, cashflow)
     return boundary.FiscalPeriod(
         period_end=end.isoformat(),
         ebit=income.ebit if income else None,
@@ -295,16 +342,20 @@ def _period(
         net_interest_income=income.net_interest_income if income else None,
         premiums_earned=income.premiums_earned if income else None,
         premiums_earned_row=income.premiums_earned_row if income else None,
-        depreciation_amortization=cashflow.depreciation_amortization if cashflow else None,
+        depreciation_amortization=depreciation_amortization,
+        depreciation_amortization_row=depreciation_amortization_row,
         capex=cashflow.capex if cashflow else None,
         delta_nwc=cashflow.delta_nwc if cashflow else None,
         cash=balance.cash if balance else None,
         total_debt=balance.total_debt if balance else None,
+        total_debt_source=balance.total_debt_source if balance else None,
+        book_equity=balance.book_equity if balance else None,
     )
 
 
 def _is_empty(period: boundary.FiscalPeriod) -> bool:
-    return all(getattr(period, f.name) is None for f in fields(period) if f.name != "period_end")
+    labels = {"period_end", "premiums_earned_row", "depreciation_amortization_row", "total_debt_source"}
+    return all(getattr(period, f.name) is None for f in fields(period) if f.name not in labels)
 
 
 def fetch(symbol: str, as_of: datetime) -> boundary.Financials:

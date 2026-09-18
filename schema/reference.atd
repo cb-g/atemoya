@@ -60,9 +60,11 @@ type int_scalar = {
 
 type params = {
   projection_years : int_scalar;      (* also selects the risk-free tenor: N years -> "Ny" *)
-  growth_rate : scalar;               (* explicit projection, per year *)
   debt_spread : scalar;               (* pre-tax cost of debt = risk-free + spread *)
   bank_nii_ratio_threshold : scalar;  (* Bank iff net interest income / total revenue >= this *)
+  growth_clamp_lower : scalar;        (* the derived starting growth is held to [lower, upper] *)
+  growth_clamp_upper : scalar;
+  mean_reversion_lambda : scalar;     (* growth decays toward terminal at exp(-lambda * t) *)
   terminal_growth_rate : country_table;
   unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
 }

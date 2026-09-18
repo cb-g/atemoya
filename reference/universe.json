@@ -36,7 +36,7 @@
     },
     {
       "ticker": "XOM",
-      "note": "oil & gas: no statement signature, stays Generic",
+      "note": "oil & gas: no statement signature, stays Generic; vendor files its charge only as Depreciation Amortization Depletion and its latest Total Debt as Long Term Debt + Current Debt",
       "expected_status": "Ok"
     },
     {
@@ -70,7 +70,7 @@
     },
     {
       "ticker": "ITUB",
-      "note": "foreign bank ADR, BRL statements",
+      "note": "foreign bank ADR, BRL statements; net-interest-income ratio 0.215 on 2026-09-18, a bank under the 0.15 threshold",
       "expected_status": "Failed",
       "expected_reason": "model not implemented: Bank"
     },
@@ -101,6 +101,18 @@
     {
       "ticker": "HDB",
       "note": "Indian bank ADR; was a +5316% currency bug in the previous implementation",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Bank"
+    },
+    {
+      "ticker": "GS",
+      "note": "fee-heavy investment bank; .info says Capital Markets, so only the statement ratio (0.233 on 2026-09-18) keeps it out of the generic dcf",
+      "expected_status": "Failed",
+      "expected_reason": "model not implemented: Bank"
+    },
+    {
+      "ticker": "MS",
+      "note": "fee-heavy investment bank; .info says Capital Markets; ratio 0.152 on 2026-09-18 sits a knife edge above the 0.15 threshold",
       "expected_status": "Failed",
       "expected_reason": "model not implemented: Bank"
     },

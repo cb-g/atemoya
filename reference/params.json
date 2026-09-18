@@ -8,12 +8,6 @@
       "Also selects the risk-free tenor: the 7y point for a 7-year projection."
     ]
   },
-  "growth_rate": {
-    "value": 0.05,
-    "source": "assumption carried over from the first DCF version, where it was hardcoded; flat explicit growth until growth mean-reversion is modelled",
-    "as_of": "2026-09-10",
-    "max_age_days": 400
-  },
   "debt_spread": {
     "value": 0.01,
     "source": "assumption carried over from the first DCF version, where it was hardcoded; pre-tax spread over the risk-free rate, no rating-based source wired yet",
@@ -21,10 +15,31 @@
     "max_age_days": 400
   },
   "bank_nii_ratio_threshold": {
-    "value": 0.25,
-    "source": "assumption: net interest income as a share of total revenue at or above which a company is a bank; a sign test is not usable because the vendor reports a net interest income row for every company (MSFT 0.1%, JPM 52% on yfinance 1.7.0)",
+    "value": 0.15,
+    "source": "assumption: net interest income as a share of total revenue at or above which a company is a bank. A sign test is not usable because the vendor reports a net interest income row for every company. 0.25 missed ITUB (0.215), whose fee and insurance income dilutes the ratio; 0.15 still sits about 150x above MSFT (0.001). Ratios on yfinance 1.7.0, 2026-09-18: JPM 0.525, GS 0.233, ITUB 0.215, MS 0.152, MSFT 0.001",
     "as_of": "2026-09-18",
     "max_age_days": 400
+  },
+  "growth_clamp_lower": {
+    "value": -0.2,
+    "source": "growth clamp from the original parameter file (growth_clamp.lower); bounds the derived starting growth, and binding is recorded",
+    "as_of": "2026-06-01",
+    "max_age_days": 400
+  },
+  "growth_clamp_upper": {
+    "value": 0.5,
+    "source": "growth clamp from the original parameter file (growth_clamp.upper); bounds the derived starting growth, and binding is recorded",
+    "as_of": "2026-06-01",
+    "max_age_days": 400
+  },
+  "mean_reversion_lambda": {
+    "value": 0.25,
+    "source": "mean reversion from the original parameter file (mean_reversion.lambda, enabled)",
+    "as_of": "2026-06-01",
+    "max_age_days": 400,
+    "notes": [
+      "Mean reversion causes growth rates to decay toward terminal growth. lambda controls speed: 0.1=slow (reaches terminal ~year 10), 0.25=moderate (~year 4), 0.5=fast (~year 2). Set enabled=false for constant growth (legacy behavior)."
+    ]
   },
   "terminal_growth_rate": {
     "source": "per-country long-run nominal growth estimates, June 2026 vintage",
@@ -65,17 +80,8 @@
     }
   },
   "unwired": {
-    "_note": "Kept verbatim from the original parameter file and not read by the valuation. growth_clamp and mean_reversion belong to a later growth-model change; erp.mode static is the only mode carried forward; rfr_duration is redundant with projection_years, which selects the tenor.",
-    "growth_clamp": {
-      "upper": 0.5,
-      "lower": -0.2
-    },
+    "_note": "Kept verbatim from the original parameter file and not read by the valuation. erp.mode static is the only mode carried forward; rfr_duration is redundant with projection_years, which selects the tenor.",
     "rfr_duration": 7,
-    "mean_reversion": {
-      "enabled": true,
-      "lambda": 0.25,
-      "_comment": "Mean reversion causes growth rates to decay toward terminal growth. lambda controls speed: 0.1=slow (reaches terminal ~year 10), 0.25=moderate (~year 4), 0.5=fast (~year 2). Set enabled=false for constant growth (legacy behavior)."
-    },
     "erp": {
       "mode": "static",
       "vix_mean": 19.5,

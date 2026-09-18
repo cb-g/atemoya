@@ -35,28 +35,7 @@ let load ~dir =
   let* params = read Reference_j.read_params (file "params.json") in
   Ok { risk_free; equity_risk_premiums; tax_rates; industry_betas; params }
 
-(* --- dates: proleptic Gregorian, days since 1970-01-01 (Hinnant's algorithm) --- *)
-
-let days_from_civil y m d =
-  let y = if m <= 2 then y - 1 else y in
-  let era = (if y >= 0 then y else y - 399) / 400 in
-  let yoe = y - (era * 400) in
-  let mp = (m + 9) mod 12 in
-  let doy = ((153 * mp) + 2) / 5 + d - 1 in
-  let doe = (yoe * 365) + (yoe / 4) - (yoe / 100) + doy in
-  (era * 146097) + doe - 719468
-
-let parse_date s =
-  match Scanf.sscanf s "%4d-%2d-%2d%!" (fun y m d -> (y, m, d)) with
-  | (_, m, d) as date when m >= 1 && m <= 12 && d >= 1 && d <= 31 -> Ok date
-  | _ -> Error (Printf.sprintf "%S is not a calendar date" s)
-  | exception (Scanf.Scan_failure _ | End_of_file | Failure _) ->
-      Error (Printf.sprintf "%S is not an ISO 8601 date (YYYY-MM-DD)" s)
-
-let days_between ~from ~until =
-  let* y1, m1, d1 = parse_date from in
-  let* y2, m2, d2 = parse_date until in
-  Ok (days_from_civil y2 m2 d2 - days_from_civil y1 m1 d1)
+let days_between = Date.days_between
 
 (* --- lookup --- *)
 
@@ -165,8 +144,16 @@ let resolve t ~today ~country ~industry =
     country_value t.params.terminal_growth_rate ~today
       ~name:"terminal_growth_rate" ~country
   in
-  let* growth_rate = scalar t.params.growth_rate ~today ~name:"growth_rate" in
   let* debt_spread = scalar t.params.debt_spread ~today ~name:"debt_spread" in
+  let* growth_clamp_lower =
+    scalar t.params.growth_clamp_lower ~today ~name:"growth_clamp_lower"
+  in
+  let* growth_clamp_upper =
+    scalar t.params.growth_clamp_upper ~today ~name:"growth_clamp_upper"
+  in
+  let* mean_reversion_lambda =
+    scalar t.params.mean_reversion_lambda ~today ~name:"mean_reversion_lambda"
+  in
   let* beta, beta_source = beta t.industry_betas ~today ~industry in
   Ok
     {
@@ -175,7 +162,9 @@ let resolve t ~today ~country ~industry =
       beta;
       beta_source;
       debt_spread;
-      growth_rate;
+      growth_clamp_lower;
+      growth_clamp_upper;
+      mean_reversion_lambda;
       terminal_growth_rate;
       projection_years;
       statutory_tax_rate;

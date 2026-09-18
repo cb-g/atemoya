@@ -35,11 +35,14 @@ type fiscal_period = {
   net_interest_income : float nullable;       (* any sign; the vendor reports it for every company *)
   premiums_earned : float nullable;           (* >= 0; insurers only, when the vendor exposes a premium row *)
   premiums_earned_row : string nullable;      (* the vendor's row label that supplied premiums_earned *)
-  depreciation_amortization : float nullable; (* >= 0; non-cash add-back *)
+  depreciation_amortization : float nullable; (* >= 0; non-cash add-back, depletion included where the vendor bundles it *)
+  depreciation_amortization_row : string nullable;  (* the vendor's row label that supplied it *)
   capex : float nullable;                     (* capital expenditure; >= 0 = cash spent *)
   delta_nwc : float nullable;                 (* increase in net working capital; > 0 = cash absorbed *)
   cash : float nullable;                      (* cash, equivalents and short-term investments; >= 0 *)
-  total_debt : float nullable;                (* >= 0 *)
+  total_debt : float nullable;                (* >= 0; never a substituted zero *)
+  total_debt_source : string nullable;        (* the vendor row or row sum that supplied it *)
+  book_equity : float nullable;               (* total stockholders' equity at period end; any sign *)
 }
 
 type financials = {
@@ -62,6 +65,11 @@ type tax_rate_source = [ Effective | Statutory ]
 type beta_source = [
   | Industry_table <json name="industry_table">
   | Default_no_industry <json name="default_no_industry">
+]
+type growth_source = [
+  | Fundamental <json name="fundamental">                            (* roic * reinvestment rate *)
+  | Historical_capped_at_roic <json name="historical_capped_at_roic"> (* revenue CAGR, held to roic *)
+  | Historical <json name="historical">                              (* revenue CAGR *)
 ]
 
 (* A parameter as used, with its provenance. *)
@@ -96,7 +104,9 @@ type classification = {
 }
 
 (* Every value the valuation used, plus the intermediates, for audit. Money in
-   [valuation.currency]; rates are decimal fractions per year. *)
+   [valuation.currency]; rates are decimal fractions per year. Growth is derived from the
+   statements and never a constant: [g0] is the selected starting growth after the clamp,
+   [growth_path] the yearly rates that mean-revert from it toward [terminal_growth_rate]. *)
 type inputs = {
   fiscal_period_end : string;
   country : string;                   (* as fetched; each parameter's key is the canonical form *)
@@ -108,13 +118,32 @@ type inputs = {
   tax_rate : float;                   (* the rate applied *)
   tax_rate_source : tax_rate_source;
   statutory_tax_rate : parameter;     (* the country's rate, applied iff tax_rate_source = Statutory *)
+  nopat : float;                      (* ebit * (1 - tax_rate) *)
   depreciation_amortization : float;
+  depreciation_amortization_row : string nullable;
   capex : float;
-  delta_nwc : float;
-  fcff : float;                       (* ebit * (1 - tax_rate) + d&a - capex - delta_nwc *)
+  delta_nwc : float;                  (* mean over delta_nwc_periods *)
+  delta_nwc_periods : string list;    (* the fiscal periods averaged, at least 2 *)
+  fcff : float;                       (* nopat + d&a - capex - delta_nwc *)
   cash : float;
   total_debt : float;
+  total_debt_source : string nullable;
   net_debt : float;                   (* total_debt - cash *)
+  book_equity : float;
+  invested_capital : float;           (* book_equity + total_debt *)
+  roic : float nullable;              (* nopat / invested_capital; null iff invested_capital <= 0 *)
+  reinvestment : float;               (* capex + delta_nwc - d&a *)
+  reinvestment_rate : float nullable; (* reinvestment / nopat; null iff nopat <= 0 *)
+  g_fundamental : float nullable;     (* roic * reinvestment_rate; null when either is *)
+  g_historical : float nullable;      (* revenue CAGR over revenue_periods; null with fewer than 3 *)
+  revenue_periods : string list;      (* the fiscal periods the CAGR spans *)
+  growth_source : growth_source;
+  g0 : float;                         (* starting growth, after the clamp *)
+  growth_clamped : bool;              (* the clamp changed the selected growth *)
+  growth_clamp_lower : parameter;
+  growth_clamp_upper : parameter;
+  mean_reversion_lambda : parameter;
+  growth_path : float list;           (* g_1 .. g_N: terminal + (g0 - terminal) * exp(-lambda * t) *)
   risk_free_rate : parameter;         (* tenor matches projection_years *)
   equity_risk_premium : parameter;    (* the country's total ERP *)
   beta : parameter;
@@ -123,7 +152,6 @@ type inputs = {
   debt_spread : parameter;
   cost_of_debt : float;               (* pre-tax; risk_free_rate + debt_spread *)
   wacc : float;
-  growth_rate : parameter;            (* explicit projection, per year *)
   terminal_growth_rate : parameter;
   projection_years : int_parameter;
   enterprise_value : float;
