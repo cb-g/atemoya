@@ -997,6 +997,80 @@ class Readout:
 
 
 @dataclass
+class PointInTime:
+    """Original type: point_in_time = { ... }
+    """
+
+    as_of_date: str
+    price_date: Optional[str] = None
+    close_as_served: Optional[float] = None
+    split_factor: Optional[float] = None
+    shares_source: str = field(default_factory=lambda: "")
+    shares_tag: Optional[str] = None
+    shares_as_of: Optional[str] = None
+    shares_filed: Optional[str] = None
+    rate_observations: List[Tuple[str, str]] = field(default_factory=lambda: [])
+    anachronistic_inputs: List[str] = field(default_factory=lambda: [])
+    statements_unavailable: Optional[str] = None
+    shares_unavailable: Optional[str] = None
+    rates_unavailable: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'PointInTime':
+        if isinstance(x, dict):
+            return cls(
+                as_of_date=_atd_read_string(x['as_of_date']) if 'as_of_date' in x else _atd_missing_json_field('PointInTime', 'as_of_date'),
+                price_date=_atd_read_string(x['price_date']) if 'price_date' in x else None,
+                close_as_served=_atd_read_float(x['close_as_served']) if 'close_as_served' in x else None,
+                split_factor=_atd_read_float(x['split_factor']) if 'split_factor' in x else None,
+                shares_source=_atd_read_string(x['shares_source']) if 'shares_source' in x else "",
+                shares_tag=_atd_read_string(x['shares_tag']) if 'shares_tag' in x else None,
+                shares_as_of=_atd_read_string(x['shares_as_of']) if 'shares_as_of' in x else None,
+                shares_filed=_atd_read_string(x['shares_filed']) if 'shares_filed' in x else None,
+                rate_observations=_atd_read_assoc_object_into_list(_atd_read_string)(x['rate_observations']) if 'rate_observations' in x else [],
+                anachronistic_inputs=_atd_read_list(_atd_read_string)(x['anachronistic_inputs']) if 'anachronistic_inputs' in x else [],
+                statements_unavailable=_atd_read_string(x['statements_unavailable']) if 'statements_unavailable' in x else None,
+                shares_unavailable=_atd_read_string(x['shares_unavailable']) if 'shares_unavailable' in x else None,
+                rates_unavailable=_atd_read_string(x['rates_unavailable']) if 'rates_unavailable' in x else None,
+            )
+        else:
+            _atd_bad_json('PointInTime', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['as_of_date'] = _atd_write_string(self.as_of_date)
+        if self.price_date is not None:
+            res['price_date'] = _atd_write_string(self.price_date)
+        if self.close_as_served is not None:
+            res['close_as_served'] = _atd_write_float(self.close_as_served)
+        if self.split_factor is not None:
+            res['split_factor'] = _atd_write_float(self.split_factor)
+        res['shares_source'] = _atd_write_string(self.shares_source)
+        if self.shares_tag is not None:
+            res['shares_tag'] = _atd_write_string(self.shares_tag)
+        if self.shares_as_of is not None:
+            res['shares_as_of'] = _atd_write_string(self.shares_as_of)
+        if self.shares_filed is not None:
+            res['shares_filed'] = _atd_write_string(self.shares_filed)
+        res['rate_observations'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.rate_observations)
+        res['anachronistic_inputs'] = _atd_write_list(_atd_write_string)(self.anachronistic_inputs)
+        if self.statements_unavailable is not None:
+            res['statements_unavailable'] = _atd_write_string(self.statements_unavailable)
+        if self.shares_unavailable is not None:
+            res['shares_unavailable'] = _atd_write_string(self.shares_unavailable)
+        if self.rates_unavailable is not None:
+            res['rates_unavailable'] = _atd_write_string(self.rates_unavailable)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'PointInTime':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class InsurerInputs:
     """Original type: insurer_inputs = { ... }
     """
@@ -2380,6 +2454,7 @@ class Valuation:
     filing_age_days: Optional[int] = None
     cross_check: Optional[CrossCheck] = None
     submissions_latest_annual: Optional[Submission] = None
+    point_in_time: Optional[PointInTime] = None
     implied: Optional[Implied] = None
 
     @classmethod
@@ -2410,6 +2485,7 @@ class Valuation:
                 filing_age_days=_atd_read_int(x['filing_age_days']) if 'filing_age_days' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
                 submissions_latest_annual=Submission.from_json(x['submissions_latest_annual']) if 'submissions_latest_annual' in x else None,
+                point_in_time=PointInTime.from_json(x['point_in_time']) if 'point_in_time' in x else None,
                 implied=Implied.from_json(x['implied']) if 'implied' in x else None,
             )
         else:
@@ -2444,6 +2520,8 @@ class Valuation:
             res['cross_check'] = (lambda x: x.to_json())(self.cross_check)
         if self.submissions_latest_annual is not None:
             res['submissions_latest_annual'] = (lambda x: x.to_json())(self.submissions_latest_annual)
+        if self.point_in_time is not None:
+            res['point_in_time'] = (lambda x: x.to_json())(self.point_in_time)
         if self.implied is not None:
             res['implied'] = (lambda x: x.to_json())(self.implied)
         return res
@@ -2703,6 +2781,7 @@ class Financials:
     cross_check: Optional[CrossCheck] = None
     submissions_latest_annual: Optional[Submission] = None
     submissions_unavailable: Optional[str] = None
+    point_in_time: Optional[PointInTime] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Financials':
@@ -2731,6 +2810,7 @@ class Financials:
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
                 submissions_latest_annual=Submission.from_json(x['submissions_latest_annual']) if 'submissions_latest_annual' in x else None,
                 submissions_unavailable=_atd_read_string(x['submissions_unavailable']) if 'submissions_unavailable' in x else None,
+                point_in_time=PointInTime.from_json(x['point_in_time']) if 'point_in_time' in x else None,
             )
         else:
             _atd_bad_json('Financials', x)
@@ -2765,6 +2845,8 @@ class Financials:
             res['submissions_latest_annual'] = (lambda x: x.to_json())(self.submissions_latest_annual)
         if self.submissions_unavailable is not None:
             res['submissions_unavailable'] = _atd_write_string(self.submissions_unavailable)
+        if self.point_in_time is not None:
+            res['point_in_time'] = (lambda x: x.to_json())(self.point_in_time)
         return res
 
     @classmethod

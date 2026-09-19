@@ -68,9 +68,10 @@ let days_between = Date.days_between
 let canonical aliases key =
   match List.assoc_opt key aliases with Some k -> k | None -> key
 
-let age ~today ~name ~key ~as_of ~max_age_days =
+let age ?(hold_vintage = false) ~today ~name ~key ~as_of ~max_age_days () =
   let* age_days = days_between ~from:as_of ~until:today in
-  if age_days < 0 then
+  if age_days < 0 && hold_vintage then Ok age_days
+  else if age_days < 0 then
     Error
       (Printf.sprintf "%s for %s has as_of %s, later than the valuation date %s"
          name key as_of today)
@@ -85,17 +86,17 @@ let parameter ?(estimated = false) ?(tier = "") ?(tenor_requested = "")
     ?(tenor_used = "") ~value ~key ~source ~as_of ~age_days () : Boundary_t.parameter =
   { value; key; source; as_of; age_days; estimated; tier; tenor_requested; tenor_used }
 
-let country_value (table : country_table) ~today ~name ~country =
+let country_value ?hold_vintage (table : country_table) ~today ~name ~country =
   let key = canonical table.aliases country in
   match List.assoc_opt key table.values with
   | None -> Error (Printf.sprintf "no %s for country %s" name country)
   | Some value ->
       let* age_days =
-        age ~today ~name ~key ~as_of:table.as_of ~max_age_days:table.max_age_days
+        age ?hold_vintage ~today ~name ~key ~as_of:table.as_of ~max_age_days:table.max_age_days ()
       in
       Ok (parameter ~value ~key ~source:table.source ~as_of:table.as_of ~age_days ())
 
-let risk_free (rf : risk_free_rates) ~today ~country ~tenor =
+let risk_free ?hold_vintage (rf : risk_free_rates) ~today ~country ~tenor =
   let key = canonical rf.aliases country in
   match List.assoc_opt key rf.countries with
   | None -> Error (Printf.sprintf "no risk-free curve for country %s" country)
@@ -107,8 +108,8 @@ let risk_free (rf : risk_free_rates) ~today ~country ~tenor =
       | Some value ->
           let key = key ^ "/" ^ tenor in
           let* age_days =
-            age ~today ~name:"risk_free_rate" ~key ~as_of:curve.as_of
-              ~max_age_days:rf.max_age_days
+            age ?hold_vintage ~today ~name:"risk_free_rate" ~key ~as_of:curve.as_of
+              ~max_age_days:rf.max_age_days ()
           in
           let tenor_used =
             Option.value (List.assoc_opt tenor curve.tenor_used) ~default:tenor
@@ -119,7 +120,7 @@ let risk_free (rf : risk_free_rates) ~today ~country ~tenor =
                ~tier:curve.tier ~tenor_requested:tenor ~tenor_used ~value ~key
                ~source:curve.source ~as_of:curve.as_of ~age_days ()))
 
-let beta (table : industry_table) ~today ~industry =
+let beta ?hold_vintage (table : industry_table) ~today ~industry =
   let default key =
     Ok
       ( parameter ~value:1.0 ~key ~source:"default_no_industry" ~as_of:today
@@ -133,59 +134,59 @@ let beta (table : industry_table) ~today ~industry =
       | None -> default industry
       | Some value ->
           let* age_days =
-            age ~today ~name:"beta" ~key:industry ~as_of:table.as_of
-              ~max_age_days:table.max_age_days
+            age ?hold_vintage ~today ~name:"beta" ~key:industry ~as_of:table.as_of
+              ~max_age_days:table.max_age_days ()
           in
           Ok
             ( parameter ~value ~key:industry ~source:table.source
                 ~as_of:table.as_of ~age_days (),
               `Industry_table ))
 
-let scalar (s : scalar) ~today ~name =
+let scalar ?hold_vintage (s : scalar) ~today ~name =
   let* age_days =
-    age ~today ~name ~key:"global" ~as_of:s.as_of ~max_age_days:s.max_age_days
+    age ?hold_vintage ~today ~name ~key:"global" ~as_of:s.as_of ~max_age_days:s.max_age_days ()
   in
   Ok (parameter ~value:s.value ~key:"global" ~source:s.source ~as_of:s.as_of ~age_days ())
 
-let classification_threshold t ~today =
-  scalar t.params.bank_nii_ratio_threshold ~today ~name:"bank_nii_ratio_threshold"
+let classification_threshold ?hold_vintage t ~today =
+  scalar ?hold_vintage t.params.bank_nii_ratio_threshold ~today ~name:"bank_nii_ratio_threshold"
 
 
-let resolve t ~today ~country ~industry =
+let resolve ?hold_vintage t ~today ~country ~industry =
   let* projection_years =
     let p = t.params.projection_years in
     let* age_days =
-      age ~today ~name:"projection_years" ~key:"global" ~as_of:p.as_of
-        ~max_age_days:p.max_age_days
+      age ?hold_vintage ~today ~name:"projection_years" ~key:"global" ~as_of:p.as_of
+        ~max_age_days:p.max_age_days ()
     in
     Ok
       ({ value = p.value; key = "global"; source = p.source; as_of = p.as_of; age_days }
         : Boundary_t.int_parameter)
   in
   let tenor = Printf.sprintf "%dy" projection_years.value in
-  let* risk_free_rate = risk_free t.risk_free ~today ~country ~tenor in
+  let* risk_free_rate = risk_free ?hold_vintage t.risk_free ~today ~country ~tenor in
   let* equity_risk_premium =
-    country_value t.equity_risk_premiums ~today ~name:"equity_risk_premium"
+    country_value ?hold_vintage t.equity_risk_premiums ~today ~name:"equity_risk_premium"
       ~country
   in
   let* statutory_tax_rate =
-    country_value t.tax_rates ~today ~name:"statutory_tax_rate" ~country
+    country_value ?hold_vintage t.tax_rates ~today ~name:"statutory_tax_rate" ~country
   in
   let* terminal_growth_rate =
-    country_value t.params.terminal_growth_rate ~today
+    country_value ?hold_vintage t.params.terminal_growth_rate ~today
       ~name:"terminal_growth_rate" ~country
   in
-  let* debt_spread = scalar t.params.debt_spread ~today ~name:"debt_spread" in
+  let* debt_spread = scalar ?hold_vintage t.params.debt_spread ~today ~name:"debt_spread" in
   let* growth_clamp_lower =
-    scalar t.params.growth_clamp_lower ~today ~name:"growth_clamp_lower"
+    scalar ?hold_vintage t.params.growth_clamp_lower ~today ~name:"growth_clamp_lower"
   in
   let* growth_clamp_upper =
-    scalar t.params.growth_clamp_upper ~today ~name:"growth_clamp_upper"
+    scalar ?hold_vintage t.params.growth_clamp_upper ~today ~name:"growth_clamp_upper"
   in
   let* mean_reversion_lambda =
-    scalar t.params.mean_reversion_lambda ~today ~name:"mean_reversion_lambda"
+    scalar ?hold_vintage t.params.mean_reversion_lambda ~today ~name:"mean_reversion_lambda"
   in
-  let* beta, beta_source = beta t.industry_betas ~today ~industry in
+  let* beta, beta_source = beta ?hold_vintage t.industry_betas ~today ~industry in
   Ok
     {
       Dcf.risk_free_rate;
@@ -202,31 +203,31 @@ let resolve t ~today ~country ~industry =
       statutory_tax_rate;
     }
 
-let resolve_cross t ~today ~domicile ~rate_country ~industry =
+let resolve_cross ?hold_vintage t ~today ~domicile ~rate_country ~industry =
   let* projection_years =
     let p = t.params.projection_years in
     let* age_days =
-      age ~today ~name:"projection_years" ~key:"global" ~as_of:p.as_of
-        ~max_age_days:p.max_age_days
+      age ?hold_vintage ~today ~name:"projection_years" ~key:"global" ~as_of:p.as_of
+        ~max_age_days:p.max_age_days ()
     in
     Ok
       ({ value = p.value; key = "global"; source = p.source; as_of = p.as_of; age_days }
         : Boundary_t.int_parameter)
   in
   let tenor = Printf.sprintf "%dy" projection_years.value in
-  let* risk_free_rate = risk_free t.risk_free ~today ~country:rate_country ~tenor in
+  let* risk_free_rate = risk_free ?hold_vintage t.risk_free ~today ~country:rate_country ~tenor in
   let* terminal_growth_rate =
-    country_value t.params.terminal_growth_rate ~today ~name:"terminal_growth_rate"
+    country_value ?hold_vintage t.params.terminal_growth_rate ~today ~name:"terminal_growth_rate"
       ~country:rate_country
   in
   let* statutory_tax_rate =
-    country_value t.tax_rates ~today ~name:"statutory_tax_rate" ~country:domicile
+    country_value ?hold_vintage t.tax_rates ~today ~name:"statutory_tax_rate" ~country:domicile
   in
   let* mature =
-    scalar t.params.mature_market_erp ~today ~name:"mature_market_erp"
+    scalar ?hold_vintage t.params.mature_market_erp ~today ~name:"mature_market_erp"
   in
   let* total_erp =
-    country_value t.equity_risk_premiums ~today ~name:"equity_risk_premium" ~country:domicile
+    country_value ?hold_vintage t.equity_risk_premiums ~today ~name:"equity_risk_premium" ~country:domicile
   in
   let country_risk_premium =
     parameter
@@ -236,16 +237,16 @@ let resolve_cross t ~today ~domicile ~rate_country ~industry =
       ~as_of:total_erp.as_of ~age_days:total_erp.age_days ()
   in
   let* growth_clamp_lower =
-    scalar t.params.growth_clamp_lower ~today ~name:"growth_clamp_lower"
+    scalar ?hold_vintage t.params.growth_clamp_lower ~today ~name:"growth_clamp_lower"
   in
   let* growth_clamp_upper =
-    scalar t.params.growth_clamp_upper ~today ~name:"growth_clamp_upper"
+    scalar ?hold_vintage t.params.growth_clamp_upper ~today ~name:"growth_clamp_upper"
   in
   let* mean_reversion_lambda =
-    scalar t.params.mean_reversion_lambda ~today ~name:"mean_reversion_lambda"
+    scalar ?hold_vintage t.params.mean_reversion_lambda ~today ~name:"mean_reversion_lambda"
   in
-  let* debt_spread = scalar t.params.debt_spread ~today ~name:"debt_spread" in
-  let* beta, beta_source = beta t.industry_betas ~today ~industry in
+  let* debt_spread = scalar ?hold_vintage t.params.debt_spread ~today ~name:"debt_spread" in
+  let* beta, beta_source = beta ?hold_vintage t.industry_betas ~today ~industry in
   Ok
     {
       Dcf.risk_free_rate;

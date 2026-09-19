@@ -9,7 +9,9 @@
     warning; an [as_of] in the future of [today] is an error. Nothing falls back
     to another country's values. The one default is beta: a missing or unlisted
     industry yields 1.0 with [beta_source = `Default_no_industry] and
-    [source = "default_no_industry"]. *)
+    [source = "default_no_industry"]. With [hold_vintage] (point-in-time, 17) a
+    parameter whose as_of postdates [today] is not an error: it comes back with a
+    negative age, for the valuation to declare as anachronistic. *)
 
 type t = {
   risk_free : Reference_t.risk_free_rates;
@@ -34,11 +36,12 @@ val days_between : from:string -> until:string -> (int, string) result
     negative when [until] is earlier. *)
 
 val classification_threshold :
-  t -> today:string -> (Boundary_t.parameter, string) result
+  ?hold_vintage:bool -> t -> today:string -> (Boundary_t.parameter, string) result
 (** The bank net-interest-income ratio threshold, with provenance and the same
     freshness rule as every other parameter. *)
 
 val resolve :
+  ?hold_vintage:bool ->
   t ->
   today:string ->
   country:string ->
@@ -50,6 +53,7 @@ val resolve :
     ["<projection_years>y"]. *)
 
 val resolve_cross :
+  ?hold_vintage:bool ->
   t ->
   today:string ->
   domicile:string ->

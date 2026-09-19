@@ -6,7 +6,7 @@ are the exact `failed_reason` strings, with variable parts in parentheses, so th
 checkable against `output/summary.txt`; a test asserts every reason string in the code
 appears here. **Every change that adds a branch updates this file in the same commit.**
 
-Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field, *(12)* by the implied readouts and the bounded EBIT, *(13)* by the IFRS filers, *(14)* by the companyfacts-lag decision and the implied horizon, *(15)* by the residual-income model losing its terminal, *(16)* by the stability pass.
+Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field, *(12)* by the implied readouts and the bounded EBIT, *(13)* by the IFRS filers, *(14)* by the companyfacts-lag decision and the implied horizon, *(15)* by the residual-income model losing its terminal, *(16)* by the stability pass, *(17)* by point-in-time.
 
 ```mermaid
 flowchart TD
@@ -36,7 +36,12 @@ flowchart TD
     ADM -- "residual_income_insurer (Insurer) (08)" --> COUNTRY
 
     COUNTRY{"country in the fetch?"} -- no --> F_COUNTRY["country not determinable from the fetch"]:::failed
-    COUNTRY -- yes --> CURAGREE{"filed statements: the filing's currency (the facts' unit) agrees with the vendor's statement currency? (13)"}:::new
+    COUNTRY -- yes --> PIT{"point-in-time record (17)? then it needs filed statements, cover-page shares and rate history on its date"}:::new
+    PIT -- "vendor path, or a filing listed but not yet in facts on the date" --> F_PITSTMT["no point-in-time statements: (vendor provider carries no filing dates | filed statements lag on the date: ...) (17)"]:::failed
+    PIT -- "no dei cover page filed by the date" --> F_PITSHARES["no point-in-time shares: dei cover page count not filed (17)"]:::failed
+    PIT -- "the trading currency's rate source offers no history" --> F_PITRATE["rate source has no history for (currency) (17)"]:::failed
+    PIT -- "complete, or a live record" --> CURAGREE{"filed statements: the filing's currency (the facts' unit) agrees with the vendor's statement currency? (13)"}:::new
+    PITNOTE["point-in-time (17): python/fetch_all.py --as-of D writes data/pit/D/ from facts filed on or before D (the same per-period selection, the lag clause evaluated on D), the close on the last trading day on or before D times every split ratio dated after D (the vendor's closes are split-adjusted whatever auto_adjust says), shares from the newest dei cover page filed by D (market cap = shares x price), and data/pit/D/reference/ with FRED rates and FX observed on or before D; the batch runs with --reference data/pit/D/reference --today D, so every staleness gate measures against D; ERP, tax, betas and the assumptions are held at the current vintage and every one whose as_of postdates D is named in point_in_time.anachronistic_inputs on the record; python/build_panel.py runs every quarter-end from 2022-03-31 to 2026-06-30 into output/pit/ and a panel with the forward 12-month return, with one descriptive table and no statistic"]:::new -.-> PIT
     CURAGREE -- "differ" --> F_CURAGREE["financial currency disagreement: filing (X), vendor (Y) (13)"]:::failed
     CURAGREE -- "agree, or vendor statements" --> DEFS{"every period's compositions name the definitions in reference/field_definitions.json, and its ebit_recipe one the file lists? (11)"}:::new
     DEFS -- "another definition or recipe" --> F_DEFS["field definition mismatch: (field) follows (recorded), reference/field_definitions.json defines (name); refetch the statements (11)"]:::failed
@@ -112,6 +117,9 @@ flowchart TD
     F_DEFS --> FLOOR
     F_EBIT --> FLOOR
     F_CURAGREE --> FLOOR
+    F_PITSTMT --> FLOOR
+    F_PITSHARES --> FLOOR
+    F_PITRATE --> FLOOR
     F_NONPOS --> FLOOR
     F_BOUND --> FLOOR
     IMPLIED --> RECORD
@@ -154,3 +162,5 @@ into it.
   terminal-growth `Failed` string leaves with it.
 - stability pass (16): dated snapshots, the stability classification of every moved input between two
   snapshots, and the two commands for snapshot three. No new `Failed` string.
+- point-in-time (17): point-in-time records and the panel; three `Failed` strings for a date without
+  filed statements, cover-page shares or rate history; held vintages declared on the record.

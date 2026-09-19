@@ -137,6 +137,30 @@ type submission = {
   report_date : string;          (* the fiscal period end the filing reports *)
 }
 
+(* Point-in-time (17): the record was assembled as of a past date [as_of_date] with only
+   what was known then: facts filed on or before it, the close on the last trading day on
+   or before it (the vendor's split-adjusted close multiplied by every split after that
+   day), shares from the newest cover page filed by then, rates and FX observed on or
+   before it. The valuation fills [anachronistic_inputs] with every parameter whose vintage
+   postdates the date (ERP, tax, betas and the assumptions are held at the current vintage,
+   declared, never hidden) and refuses the record when no filed statements, shares or rate
+   history were available on the date. *)
+type point_in_time = {
+  as_of_date : string;
+  ?price_date : string option;               (* the last trading day on or before as_of_date *)
+  ?close_as_served : float option;           (* the vendor's close for that day, split-adjusted as served *)
+  ?split_factor : float option;              (* product of the split ratios dated after as_of_date; price = close x factor *)
+  ~shares_source : string;                   (* "dei cover page" *)
+  ?shares_tag : string option;
+  ?shares_as_of : string option;             (* the cover page's own date *)
+  ?shares_filed : string option;
+  ~rate_observations : (string * string) list <json repr="object">;   (* series -> observation date used *)
+  ~anachronistic_inputs : string list;       (* filled by the valuation: "name (vintage as_of)" *)
+  ?statements_unavailable : string option;   (* why no filed statements were available on the date *)
+  ?shares_unavailable : string option;
+  ?rates_unavailable : string option;        (* the currency whose rate source offers no history *)
+}
+
 type financials = {
   ticker : string;
   as_of : string;                (* ISO 8601 UTC timestamp of the fetch *)
@@ -161,6 +185,7 @@ type financials = {
   ?cross_check : cross_check option;  (* the vendor's statements compared with the filed ones *)
   ?submissions_latest_annual : submission option;   (* every CIK-resolved record (14); absent with the reason below *)
   ?submissions_unavailable : string option;         (* why submissions_latest_annual is absent (14) *)
+  ?point_in_time : point_in_time option;            (* present iff the record is a point-in-time one (17) *)
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -484,6 +509,7 @@ type valuation = {
   ?filing_age_days : int option;          (* valued_on - latest_filing, when the statements are filed ones *)
   ?cross_check : cross_check option;      (* carried verbatim from the record *)
   ?submissions_latest_annual : submission option;   (* carried verbatim from the record (14) *)
+  ?point_in_time : point_in_time option;            (* from the record, anachronistic_inputs filled (17) *)
   status : status;
   failed_reason : string nullable;
   inputs : model_inputs nullable;

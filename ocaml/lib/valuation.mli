@@ -47,6 +47,16 @@ val definitions_check :
   Reference_t.field_definitions -> Boundary_t.financials -> (unit, string) result
 (** The field-definitions gate on every period of the record. *)
 
+val point_in_time_gates : Boundary_t.financials -> (unit, string) result
+(** A point-in-time record (17) with no filed statements, cover-page shares or
+    rate history on its date is [`Failed] naming which. *)
+
+val anachronistic :
+  class_check:Boundary_t.class_check option -> Boundary_t.model_inputs option -> string list
+(** The parameters a record used whose vintage postdates its valuation date, as
+    "name (vintage as_of)"; non-empty only on point-in-time records, whose held
+    vintages are declared rather than refused. *)
+
 val run :
   ?thresholds:thresholds ->
   Params.t ->

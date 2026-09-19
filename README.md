@@ -51,6 +51,9 @@ uv run python/fetch_all.py                  # every ticker in reference/universe
 dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt
 dune exec atemoya -- data/financials --out output --baseline previous/valuations.jsonl   # plus this run against that one
 dune exec atemoya -- data/snapshots/<new> --out output --baseline previous/valuations.jsonl --baseline-snapshot data/snapshots/<old>   # plus stability_<old>_<new>.txt
+uv run python/fetch_all.py --as-of 2025-06-30   # point-in-time: data/pit/2025-06-30/ from what was known on that date, with its reference/
+dune exec atemoya -- data/pit/2025-06-30 --reference data/pit/2025-06-30/reference --today 2025-06-30 --out output/pit/2025-06-30
+uv run python/build_panel.py                    # every quarter-end 2022-03-31 .. 2026-06-30 -> output/pit/panel.jsonl, panel_summary.txt
 ```
 
 `dune exec atemoya` reads parameters from `reference/` (`--reference DIR` to override) and
@@ -95,6 +98,13 @@ every record against the previous run and lists the inputs behind every moved fa
 with `--baseline-snapshot` as well, every moved input of every record is classified (price,
 new filing, restatement, vendor row, rate or FX, unexplained) in a stability report, so two
 fetches with nothing having happened can be shown to agree.
+A point-in-time record values a name as of a past date from what was known then: facts
+filed by the date, the close on the last trading day on or before it (split-corrected),
+shares from the newest cover page filed by then, rates and FX observed by then; ERP, tax
+rates, betas and the assumptions are held at the current vintage and every one whose
+vintage postdates the date is named on the record. Vendor-path names have no filing dates
+and fail, named. The panel builder writes one row per name and quarter-end with the forward
+12-month return and one descriptive table, and no statistic.
 Valuation never fetches, so running it twice on the same inputs with `--today` pinned gives
 byte-identical output. `data/` and `output/` are generated and gitignored; versioned inputs
 live in `reference/`.

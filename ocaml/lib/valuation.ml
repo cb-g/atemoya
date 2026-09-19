@@ -98,9 +98,50 @@ let currency_agreement (fin : financials) =
       Error (Printf.sprintf "financial currency disagreement: filing %s, vendor %s" filing vendor)
   | _ -> Ok ()
 
+(* Every named parameter a model's inputs carry, for the anachronism declaration. *)
+let parameters_of (inputs : model_inputs) : (string * parameter) list =
+  let core (i : residual_income_inputs) =
+    [ ("risk_free_rate", i.risk_free_rate); ("equity_risk_premium", i.equity_risk_premium); ("beta", i.beta);
+      ("mean_reversion_lambda", i.mean_reversion_lambda) ]
+    @ (match i.country_risk_premium with Some c -> [ ("country_risk_premium", c) ] | None -> [])
+  in
+  match inputs with
+  | `Dcf i ->
+      [ ("statutory_tax_rate", i.statutory_tax_rate); ("risk_free_rate", i.risk_free_rate);
+        ("equity_risk_premium", i.equity_risk_premium); ("beta", i.beta); ("debt_spread", i.debt_spread);
+        ("growth_clamp_lower", i.growth_clamp_lower); ("growth_clamp_upper", i.growth_clamp_upper);
+        ("mean_reversion_lambda", i.mean_reversion_lambda); ("terminal_growth_rate", i.terminal_growth_rate) ]
+      @ (match i.country_risk_premium with Some c -> [ ("country_risk_premium", c) ] | None -> [])
+  | `Residual_income i -> core i
+  | `Residual_income_insurer i -> core i.core
+
+(* The parameters whose vintage postdates the point-in-time date: held, declared. *)
+let anachronistic ~(class_check : class_check option) (inputs : model_inputs option) =
+  let named =
+    (match class_check with Some c -> [ ("bank_nii_ratio_threshold", c.bank_nii_ratio_threshold) ] | None -> [])
+    @ (match inputs with Some i -> parameters_of i | None -> [])
+  in
+  List.filter_map
+    (fun (name, (p : parameter)) -> if p.age_days < 0 then Some (Printf.sprintf "%s (vintage %s)" name p.as_of) else None)
+    named
+  |> List.sort_uniq compare
+
+(* A point-in-time record (17) is refused when the date offered no filed statements, no
+   cover-page shares or no rate history; the reason from the fetch is named. *)
+let point_in_time_gates (fin : financials) =
+  match fin.point_in_time with
+  | None -> Ok ()
+  | Some pit -> (
+      match (pit.statements_unavailable, pit.shares_unavailable, pit.rates_unavailable) with
+      | Some why, _, _ -> Error ("no point-in-time statements: " ^ why)
+      | None, Some why, _ -> Error ("no point-in-time shares: " ^ why)
+      | None, None, Some currency -> Error ("rate source has no history for " ^ currency)
+      | None, None, None -> Ok ())
+
 let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declaration
     (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
+  let hold_vintage = Option.is_some original.point_in_time in
   (* Age of the newest filing the statements come from, when they are filed ones. *)
   let filing_age =
     Option.map
@@ -140,6 +181,10 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
       filing_age_days;
       cross_check = original.cross_check;
       submissions_latest_annual = original.submissions_latest_annual;
+      point_in_time =
+        Option.map
+          (fun (pit : point_in_time) -> { pit with anachronistic_inputs = anachronistic ~class_check inputs })
+          original.point_in_time;
       status;
       failed_reason;
       inputs;
@@ -240,8 +285,9 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
     let failed = failed ~model ~class_check ~floor:(floor_of_rule rule) in
     let max_age = params.xbrl_tags.max_filing_age_days in
     let gates =
-      Result.bind (currency_agreement original) (fun () ->
-          definitions_check params.field_definitions original)
+      Result.bind (point_in_time_gates original) (fun () ->
+          Result.bind (currency_agreement original) (fun () ->
+              definitions_check params.field_definitions original))
     in
     match (gates, filing_age, original.financial_currency, original.trading_currency) with
     | Error reason, _, _, _ -> failed reason
@@ -254,7 +300,7 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
     | Ok (), _, None, _ -> failed "missing market data: financial_currency"
     | Ok (), _, _, None -> failed "missing market data: trading_currency"
     | Ok (), _, Some financial, Some trading when financial = trading -> (
-        match Params.resolve params ~today ~country ~industry:original.industry with
+        match Params.resolve ~hold_vintage params ~today ~country ~industry:original.industry with
         | Error reason -> failed reason
         | Ok assumptions ->
             run_model ~fin:original ~model ~class_check ~rule ~country assumptions)
@@ -266,7 +312,7 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
             | Error reason -> failed reason
             | Ok rate_country -> (
                 match
-                  Params.resolve_cross params ~today ~domicile:country ~rate_country
+                  Params.resolve_cross ~hold_vintage params ~today ~domicile:country ~rate_country
                     ~industry:original.industry
                 with
                 | Error reason -> failed reason
@@ -292,7 +338,7 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
                     run_model ~fin:converted ~conversion ~model ~class_check ~rule ~country
                       assumptions)))
   in
-  match Params.classification_threshold params ~today with
+  match Params.classification_threshold ~hold_vintage params ~today with
   | Error reason -> failed ~floor:(floor_default ()) reason
   | Ok threshold -> (
       let s = Classify.signature ~threshold original in

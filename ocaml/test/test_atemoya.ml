@@ -104,6 +104,7 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     cross_check;
     submissions_latest_annual = None;
     submissions_unavailable = None;
+    point_in_time = None;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -1083,7 +1084,8 @@ let test_flow_chart_names_every_reason () =
       "latest annual filing is";
       "missing market data: financial_currency"; "missing market data: trading_currency";
       "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
-      "financial currency disagreement" ]
+      "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";
+      "rate source has no history for" ]
 
 (* --- the insurer model --- *)
 
@@ -1891,6 +1893,39 @@ let test_stability_report () =
   Alcotest.(check string) "summary line" "stability against snapshot 2026-09-19: price 2, new_filing 0, restated 0, vendor_row 0, rate_or_fx 0, unexplained 0" line;
   check_mentions "summary carries the line" (Batch.summary ~stability_line:line [ run base ]) [ line ]
 
+(* --- point-in-time (17) --- *)
+
+let pit ?statements_unavailable ?shares_unavailable ?rates_unavailable as_of_date : Boundary_t.point_in_time =
+  { as_of_date; price_date = Some as_of_date; close_as_served = Some 10.; split_factor = Some 1.; shares_source = "dei cover page";
+    shares_tag = Some "EntityCommonStockSharesOutstanding"; shares_as_of = Some as_of_date; shares_filed = Some as_of_date;
+    rate_observations = [ ("DGS7", as_of_date) ]; anachronistic_inputs = []; statements_unavailable; shares_unavailable; rates_unavailable }
+
+let test_point_in_time_gates_and_vintages () =
+  let vendor = { (financials (history ())) with point_in_time = Some (pit ~statements_unavailable:"vendor provider carries no filing dates" "2025-06-30") } in
+  check_reason (run vendor) [ "no point-in-time statements: vendor provider carries no filing dates" ];
+  let no_shares = { (filed (history ())) with point_in_time = Some (pit ~shares_unavailable:"dei cover page count not filed" "2025-06-30") } in
+  check_reason (run no_shares) [ "no point-in-time shares: dei cover page count not filed" ];
+  let no_rates = { (filed (history ())) with point_in_time = Some (pit ~rates_unavailable:"EUR" "2025-06-30") } in
+  check_reason (run no_rates) [ "rate source has no history for EUR" ];
+  (* a past date: the ERP, tax and assumption vintages postdate it; held and declared, never refused *)
+  let past = { (filed ~latest_filing:"2025-02-20" (history ())) with point_in_time = Some (pit "2025-06-30") } in
+  let v = Valuation.run params ~today:"2025-06-30" ~declaration:(Some (declaration `OperatingCompany)) past in
+  Alcotest.check status "valued on the past date" `Ok v.status;
+  (match v.point_in_time with
+  | Some p ->
+      check_mentions "anachronistic inputs named with their vintage" (String.concat "; " p.anachronistic_inputs)
+        [ "equity_risk_premium (vintage 2026-01-01)"; "statutory_tax_rate (vintage 2026-01-01)"; "beta (vintage 2026-01-01)"; "bank_nii_ratio_threshold (vintage 2026-09-01)" ];
+      (* the fixture's curve is dated 2026-09-08, so on this date it is anachronistic too and says so *)
+      check_mentions "a curve dated after the date is declared" (String.concat "; " p.anachronistic_inputs) [ "risk_free_rate (vintage 2026-09-08)" ]
+  | None -> Alcotest.fail "point-in-time block dropped");
+  (match v.inputs with
+  | Some (`Dcf i) -> Alcotest.(check bool) "held vintage carries a negative age" true (i.equity_risk_premium.age_days < 0)
+  | _ -> Alcotest.fail "no inputs");
+  (* the live path is untouched: a future vintage is still refused *)
+  let live = Valuation.run params ~today:"2025-06-30" ~declaration:(Some (declaration `OperatingCompany)) (filed ~latest_filing:"2025-02-20" (history ())) in
+  check_reason live [ "later than the valuation date" ];
+  if contains (Boundary_j.string_of_valuation live) "point_in_time" then Alcotest.fail "point_in_time leaked into a live record"
+
 (* --- batch summary --- *)
 
 let test_batch_summary () =
@@ -2195,6 +2230,8 @@ let () =
           case "derived ebit runs only within the cross-check, else the policy's failed" test_ebit_policy_gate;
           case "summary carries the universe-level implied line" test_summary_implied_line;
         ] );
+      ( "point-in-time",
+        [ case "gates name the missing history; held vintages declared" test_point_in_time_gates_and_vintages ] );
       ( "stability",
         [
           case "classifier: price, vendor row, restated, new filing, rate, unexplained" test_stability_classifier;

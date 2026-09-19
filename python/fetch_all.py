@@ -1,6 +1,7 @@
 """Fetch every ticker in reference/universe.json into a dated snapshot.
 
     uv run python/fetch_all.py [--universe FILE] [--out DIR]
+    uv run python/fetch_all.py --as-of 2025-06-30          # point-in-time (17) -> data/pit/2025-06-30/
 
 Without --out the fetch lands in data/snapshots/<YYYY-MM-DD>/ (the fetch date, UTC; a
 second fetch on the same date gets a -2, -3 suffix, a snapshot is never overwritten) and
@@ -19,10 +20,11 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import fetch
+import pit
 import reference
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -58,12 +60,18 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument("--universe", type=Path, default=DEFAULT_UNIVERSE)
     parser.add_argument("--out", type=Path, default=None, help="a directory instead of a dated snapshot")
+    parser.add_argument("--as-of", type=date.fromisoformat, default=None, help="point-in-time: value as of this past date from what was known then")
     args = parser.parse_args(argv)
     universe_path: Path = args.universe
     out: Path | None = args.out
+    as_of: date | None = args.as_of
     universe = reference.Universe.from_json_string(universe_path.read_text())
     tickers = [e.ticker for e in universe.tickers]
     print(f"{len(tickers)} tickers from {universe_path}")
+    if as_of is not None:
+        written = pit.run_date(as_of, tickers, histories={}, quotes={}, sec=fetch.SecContext())
+        print(f"point-in-time {as_of}: {written} (batch: dune exec atemoya -- {written} --reference {written}/reference --today {as_of} --out output/pit/{as_of})")
+        return 0
     if out is None:
         out = snapshot_dir(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
         code = fetch.main([*tickers, "--out", str(out)])
