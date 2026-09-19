@@ -180,6 +180,8 @@ class IncomeStatement(Statement):
     premiums_earned: float | None
     premiums_earned_row: str | None  # the vendor row label that supplied premiums_earned
     reconciled_depreciation: float | None  # the income statement's depreciation line, a D&A fallback
+    interest_expense: float | None  # the ebit definition's interest rows, first present (25)
+    interest_expense_row: str | None
     net_income: float | None
     provision_for_credit_losses: float | None
     provision_for_credit_losses_row: str | None
@@ -358,6 +360,7 @@ def _ebit(rows: Mapping[str, object], defs: reference.FieldDefinitions) -> tuple
 def _income_values(rows: Mapping[str, object], defs: reference.FieldDefinitions = DEFINITIONS) -> dict[str, object]:
     out = _canonical_values(rows, INCOME_ROWS)
     out["ebit"], out["ebit_row"], out["ebit_recipe"], out["ebit_composition"] = _ebit(rows, defs)
+    out["interest_expense"], out["interest_expense_row"] = _first_present(rows, tuple(defs.ebit.vendor.interest_expense))
     out["premiums_earned"], out["premiums_earned_row"] = _first_present(rows, PREMIUM_ROWS)
     out["provision_for_credit_losses"], out["provision_for_credit_losses_row"] = _first_present(rows, PROVISION_ROWS)
     return out
@@ -494,6 +497,8 @@ def _period(
         ebit_row=income.ebit_row if income else None,
         ebit_recipe=income.ebit_recipe if income else None,
         ebit_composition=_composition(defs.ebit.name, income.ebit_composition) if income else None,
+        interest_expense=income.interest_expense if income else None,
+        interest_expense_row=income.interest_expense_row if income else None,
         pretax_income=income.pretax_income if income else None,
         tax_provision=income.tax_provision if income else None,
         total_revenue=income.total_revenue if income else None,

@@ -72,7 +72,8 @@
       "kind": "duration",
       "tags": [
         "PaymentsToAcquirePropertyPlantAndEquipment",
-        "PaymentsToAcquireProductiveAssets"
+        "PaymentsToAcquireProductiveAssets",
+        "PaymentsToAcquireOtherProductiveAssets"
       ]
     },
     "book_equity": {

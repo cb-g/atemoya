@@ -245,12 +245,15 @@ type cash_definition = {
 }
 
 type debt_xbrl = {
+  ~aggregate : string list;                 (* the filer's own long-and-short-term debt aggregate; first choice when filed (25) *)
+  ~convertible : string list;               (* convertible notes a filer carries beside the aggregate, summed with it (25) *)
   noncurrent : string list;
   current_total : string list;              (* all debt due within a year as one tag; recipe 1 with noncurrent *)
   current_long_term : string list;          (* the current portion of long-term debt; recipe 2 with noncurrent *)
   short_term_borrowings : string list;      (* optional in recipes 2 and 3 *)
   total_including_current : string list;    (* long-term debt filed with its current portion; recipe 3 *)
   excluded : string list;                   (* operating lease liabilities: never summed *)
+  ~interest_evidence : string list;         (* interest tags whose presence says the filer owes something; with no debt tag and none of these, debt is 0 (25) *)
   ~notes : string list;
 }
 
@@ -291,6 +294,7 @@ type nwc_xbrl = {
   aggregate : string list;                  (* the filed change in operating working capital, positive = cash absorbed *)
   asset_components : string list;           (* positive = the asset grew = cash absorbed: added *)
   liability_components : string list;       (* positive = the liability grew = cash released: subtracted *)
+  ~net_components : string list;            (* a balance of assets less liabilities; positive = the net asset grew = cash absorbed: added, asset-signed (25) *)
   excluded : string list;                   (* recognised as outside working capital, never summed *)
   ~notes : string list;
 }

@@ -56,7 +56,7 @@ let model_reads (m : model option) =
   | Some `Dcf ->
       [ "total_revenue"; "ebit"; "pretax_income"; "tax_provision"; "depreciation_amortization"; "capex";
         "delta_nwc"; "cash"; "total_debt"; "book_equity" ]
-  | Some `Dcf_midcycle -> [ "ebit"; "depreciation_amortization"; "capex"; "delta_nwc"; "cash"; "total_debt"; "book_equity" ]
+  | Some `Dcf_midcycle -> [ "net_income"; "depreciation_amortization"; "capex"; "delta_nwc"; "cash"; "total_debt"; "book_equity" ]
   | Some `Residual_income | Some `Residual_income_insurer -> [ "book_equity"; "net_income"; "dividends_paid" ]
   | Some `Reit_ffo_dividend -> [ "net_income"; "depreciation_amortization"; "dividends_paid" ]
   | None -> []

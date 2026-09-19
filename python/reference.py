@@ -1029,6 +1029,7 @@ class NwcXbrl:
     asset_components: List[str]
     liability_components: List[str]
     excluded: List[str]
+    net_components: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -1039,6 +1040,7 @@ class NwcXbrl:
                 asset_components=_atd_read_list(_atd_read_string)(x['asset_components']) if 'asset_components' in x else _atd_missing_json_field('NwcXbrl', 'asset_components'),
                 liability_components=_atd_read_list(_atd_read_string)(x['liability_components']) if 'liability_components' in x else _atd_missing_json_field('NwcXbrl', 'liability_components'),
                 excluded=_atd_read_list(_atd_read_string)(x['excluded']) if 'excluded' in x else _atd_missing_json_field('NwcXbrl', 'excluded'),
+                net_components=_atd_read_list(_atd_read_string)(x['net_components']) if 'net_components' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -1050,6 +1052,7 @@ class NwcXbrl:
         res['asset_components'] = _atd_write_list(_atd_write_string)(self.asset_components)
         res['liability_components'] = _atd_write_list(_atd_write_string)(self.liability_components)
         res['excluded'] = _atd_write_list(_atd_write_string)(self.excluded)
+        res['net_components'] = _atd_write_list(_atd_write_string)(self.net_components)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 
@@ -1625,6 +1628,9 @@ class DebtXbrl:
     short_term_borrowings: List[str]
     total_including_current: List[str]
     excluded: List[str]
+    aggregate: List[str] = field(default_factory=lambda: [])
+    convertible: List[str] = field(default_factory=lambda: [])
+    interest_evidence: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -1637,6 +1643,9 @@ class DebtXbrl:
                 short_term_borrowings=_atd_read_list(_atd_read_string)(x['short_term_borrowings']) if 'short_term_borrowings' in x else _atd_missing_json_field('DebtXbrl', 'short_term_borrowings'),
                 total_including_current=_atd_read_list(_atd_read_string)(x['total_including_current']) if 'total_including_current' in x else _atd_missing_json_field('DebtXbrl', 'total_including_current'),
                 excluded=_atd_read_list(_atd_read_string)(x['excluded']) if 'excluded' in x else _atd_missing_json_field('DebtXbrl', 'excluded'),
+                aggregate=_atd_read_list(_atd_read_string)(x['aggregate']) if 'aggregate' in x else [],
+                convertible=_atd_read_list(_atd_read_string)(x['convertible']) if 'convertible' in x else [],
+                interest_evidence=_atd_read_list(_atd_read_string)(x['interest_evidence']) if 'interest_evidence' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -1650,6 +1659,9 @@ class DebtXbrl:
         res['short_term_borrowings'] = _atd_write_list(_atd_write_string)(self.short_term_borrowings)
         res['total_including_current'] = _atd_write_list(_atd_write_string)(self.total_including_current)
         res['excluded'] = _atd_write_list(_atd_write_string)(self.excluded)
+        res['aggregate'] = _atd_write_list(_atd_write_string)(self.aggregate)
+        res['convertible'] = _atd_write_list(_atd_write_string)(self.convertible)
+        res['interest_evidence'] = _atd_write_list(_atd_write_string)(self.interest_evidence)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 

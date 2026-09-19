@@ -394,6 +394,9 @@ def net_interest_income_recipe(facts: Facts, recipe: reference.NiiRecipe, end: d
     return revenue[0] - expense[0], f"{revenue[1]} - {expense[1]}"
 
 
+DEBT_FREE = "no debt line filed and no interest expense filed; taken as 0"
+
+
 def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
     """Financial debt, first complete recipe: noncurrent + all current debt as one tag;
     noncurrent + the current portion of long-term debt (+ short-term borrowings when
@@ -401,6 +404,8 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Der
     noncurrent alone when the filer tags nothing current at all. Operating lease tags are
     never read."""
     d = defs.total_debt.xbrl
+    aggregate = facts.first(d.aggregate, end, instant=True)
+    convertible = facts.first(d.convertible, end, instant=True)
     noncurrent = facts.first(d.noncurrent, end, instant=True)
     current_total = facts.first(d.current_total, end, instant=True)
     current_long_term = facts.first(d.current_long_term, end, instant=True)
@@ -411,7 +416,12 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Der
         return boundary.Component(name=name, value=hit[0], row=hit[1])
 
     parts: list[boundary.Component]
-    if noncurrent is not None and current_total is not None:
+    if aggregate is not None:
+        # (0) the filer's own aggregate, plus convertible notes carried beside it (25)
+        parts = [part("aggregate", aggregate)]
+        if convertible is not None:
+            parts.append(part("convertible", convertible))
+    elif noncurrent is not None and current_total is not None:
         parts = [part("noncurrent", noncurrent), part("current_total", current_total)]
     elif noncurrent is not None and current_long_term is not None:
         parts = [part("noncurrent", noncurrent), part("current_long_term", current_long_term)]
@@ -423,6 +433,10 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Der
             parts.append(part("short_term_borrowings", short_term))
     elif noncurrent is not None and short_term is None:
         parts = [part("noncurrent", noncurrent)]
+    elif all(x is None for x in (convertible, noncurrent, current_total, current_long_term, short_term, total_including_current)) \
+            and facts.first(d.interest_evidence, end, instant=False) is None:
+        # absent is zero only when the filing says so twice (25): no debt line and no interest
+        return 0.0, DEBT_FREE, _composition(defs.total_debt.name, [])
     else:
         return None, None, None
     return sum(p.value for p in parts), _label(parts), _composition(defs.total_debt.name, parts)
@@ -430,15 +444,15 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Der
 
 def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: list[str]) -> Derived:
     """The filed change in operating working capital: the aggregate tag, else the sum of
-    the components (assets added, liabilities subtracted), attempted only when every
-    IncreaseDecreaseIn tag the filer carries for the period is classified."""
+    the components (assets and net balances added, liabilities subtracted), attempted only
+    when every IncreaseDecreaseIn tag the filer carries for the period is classified."""
     d = defs.delta_nwc.xbrl
     aggregate = facts.first(d.aggregate, end, instant=False)
     if aggregate is not None:
         parts = [boundary.Component(name="aggregate", value=aggregate[0], row=aggregate[1])]
         return aggregate[0], aggregate[1], _composition(defs.delta_nwc.name, parts)
     present = facts.duration_tags_with_prefix("IncreaseDecreaseIn", end)
-    classified = set(d.aggregate) | set(d.asset_components) | set(d.liability_components) | set(d.excluded)
+    classified = set(d.aggregate) | set(d.asset_components) | set(d.liability_components) | set(d.net_components) | set(d.excluded)
     unclassified = [t for t in present if t not in classified]
     if unclassified:
         notes.append(f"delta_nwc {end}: left null, unclassified working-capital tags: {', '.join(unclassified)}")
@@ -452,6 +466,10 @@ def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: 
         value = facts.at(tag, end, instant=False)
         if value is not None:
             parts.append(boundary.Component(name="liability_components", value=-value, row=tag))
+    for tag in d.net_components:  # a net asset: asset-signed (25)
+        value = facts.at(tag, end, instant=False)
+        if value is not None:
+            parts.append(boundary.Component(name="net_components", value=value, row=tag))
     if not parts:
         return None, None, None
     return sum(p.value for p in parts), _label(parts), _composition(defs.delta_nwc.name, parts)
@@ -530,6 +548,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
         ffo_value, _, ffo_composition = ffo(facts, defs, end, taxonomy=taxonomy)
         shares = weighted_shares(facts, defs, end, taxonomy=taxonomy)
+        interest = facts.first(defs.ebit.ifrs.interest_expense if ifrs else defs.ebit.xbrl.interest_expense, end, instant=False)
         periods.append(
             boundary.FiscalPeriod(
                 period_end=end.isoformat(),
@@ -555,7 +574,9 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 tax_provision_row=r["tax_provision"], capex_row=r["capex"], delta_nwc_row=nwc_row,
                 cash_row=cash_row, book_equity_row=r["book_equity"], net_income_row=r["net_income"],
                 net_interest_income_row=r["net_interest_income"],
-                ebit_recipe=ebit_recipe, ebit_composition=ebit_composition, cash_composition=cash_composition,
+                ebit_recipe=ebit_recipe, ebit_composition=ebit_composition,
+                interest_expense=None if interest is None else interest[0], interest_expense_row=None if interest is None else interest[1],
+                cash_composition=cash_composition,
                 total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,
                 ffo=ffo_value, ffo_composition=ffo_composition,
                 weighted_shares=None if shares is None else shares[0], weighted_shares_tag=None if shares is None else shares[1],

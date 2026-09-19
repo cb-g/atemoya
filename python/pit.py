@@ -286,9 +286,10 @@ class SecLike(Protocol):
     definitions: reference.FieldDefinitions
 
 
-def statements_on(symbol: str, d: date, sec: SecLike, notes: list[str]) -> tuple[list[boundary.FiscalPeriod], fetch_sec.Decision | None, str | None, boundary.Submission | None, Mapping[str, object] | None]:
-    """(periods, decision, why none, submission on d, facts as filed by d)."""
-    cik = fetch_sec.cik_for(symbol, sec.tickers)
+def statements_on(symbol: str, d: date, sec: SecLike, notes: list[str], *, declared_cik: str | None = None) -> tuple[list[boundary.FiscalPeriod], fetch_sec.Decision | None, str | None, boundary.Submission | None, Mapping[str, object] | None]:
+    """(periods, decision, why none, submission on d, facts as filed by d). The universe
+    entry's declared cik (22) is honoured exactly as on the live fetch (25)."""
+    cik, cik_source = fetch.cik_of(symbol, sec.tickers, declared_cik)
     if cik is None:
         return [], None, VENDOR_REASON, None, None
     facts = fetch_sec.companyfacts(cik, sec.user_agent)
@@ -300,7 +301,7 @@ def statements_on(symbol: str, d: date, sec: SecLike, notes: list[str]) -> tuple
     if not decision.xbrl or decision.currency is None:
         return [], decision, VENDOR_REASON, submission, filtered
     periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, notes, taxonomy=decision.taxonomy, unit=decision.currency)
-    notes.append(f"CIK {cik}: {len(decision.facts)} {decision.taxonomy} tags filed by {d}; {len(periods)} annual periods in {decision.currency}")
+    notes.append(f"CIK {cik} ({cik_source}): {len(decision.facts)} {decision.taxonomy} tags filed by {d}; {len(periods)} annual periods in {decision.currency}")
     lag = fetch.lag_of(submission, periods)
     if lag is not None:
         facts_age = (d - date.fromisoformat(lag.facts_filed)).days
@@ -311,9 +312,9 @@ def statements_on(symbol: str, d: date, sec: SecLike, notes: list[str]) -> tuple
 
 
 def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Quote | None, profile: fetch.Profile | None,
-           vendor: list[boundary.FiscalPeriod] | None = None) -> boundary.Financials:
+           vendor: list[boundary.FiscalPeriod] | None = None, *, declared_cik: str | None = None) -> boundary.Financials:
     notes: list[str] = []
-    periods, decision, why, submission, facts = statements_on(symbol, d, sec, notes)
+    periods, decision, why, submission, facts = statements_on(symbol, d, sec, notes, declared_cik=declared_cik)
     priced = price_on(history, d)
     shares = point_count(facts, d, sec.definitions, sec.tags) if facts is not None else None
     check = same_period_check(periods, vendor, sec.tags.cross_check_threshold) if why is None and vendor else None
@@ -366,12 +367,15 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
 
 
 def run_date(d: date, tickers: list[str], *, histories: dict[str, History], quotes: dict[str, tuple[fetch.Quote | None, fetch.Profile | None]],
-             sec: SecLike, out_root: Path = PIT_ROOT, vendors: dict[str, list[boundary.FiscalPeriod]] | None = None) -> Path:
+             sec: SecLike, out_root: Path = PIT_ROOT, vendors: dict[str, list[boundary.FiscalPeriod]] | None = None,
+             ciks: Mapping[str, str] | None = None) -> Path:
     """data/pit/<D>/ with a record per ticker and the reference as of D. The vendor's live
-    statements (fetched once per ticker) supply the same-period cross-check."""
+    statements (fetched once per ticker) supply the same-period cross-check; [ciks] are the
+    universe entries' declared filers (25)."""
     out = out_root / d.isoformat()
     out.mkdir(parents=True, exist_ok=True)
     vendors = {} if vendors is None else vendors
+    ciks = {} if ciks is None else ciks
     records: list[boundary.Financials] = []
     for symbol in tickers:
         if symbol not in histories:
@@ -381,7 +385,7 @@ def run_date(d: date, tickers: list[str], *, histories: dict[str, History], quot
         if symbol not in vendors:
             vendors[symbol] = fetch.vendor_periods(yf.Ticker(symbol), [])
         quote, profile = quotes[symbol]
-        records.append(record(symbol, d, sec, histories[symbol], quote, profile, vendors[symbol]))
+        records.append(record(symbol, d, sec, histories[symbol], quote, profile, vendors[symbol], declared_cik=ciks.get(symbol)))
     countries: set[str] = set()
     currencies: set[str] = set()
     fx_sources = reference.FxSources.from_json_string((REFERENCE / "fx_sources.json").read_text())

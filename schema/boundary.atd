@@ -103,6 +103,8 @@ type fiscal_period = {
   ?weighted_shares_tag : string option;
   ?ebit_recipe : string option;               (* "operating_income" | "pretax_plus_interest" *)
   ?ebit_composition : composition option;
+  ?interest_expense : float option;           (* the filed interest expense line, first present of the ebit definition's tags or vendor rows (25); the mid-cycle model's bottom-up NOPAT reads it *)
+  ?interest_expense_row : string option;
   ?cash_composition : composition option;
   ?total_debt_composition : composition option;
   ?delta_nwc_composition : composition option;
@@ -543,13 +545,16 @@ type reit_inputs = {
 }
 
 (* The inputs of whichever model ran, tagged with it. *)
-(* One through-cycle return observation (22): the period's NOPAT at the statutory rate over
-   the invested capital (book equity + total debt - cash) at the end of the previous period. *)
+(* One through-cycle return observation (22, 25): the period's NOPAT, bottom-up from filed
+   lines (net income + interest expense x (1 - statutory tax rate); no operating-income line
+   is needed, and the through-cycle mean is what dampens one-offs), over the invested capital
+   (book equity + total debt - cash) at the end of the previous period. *)
 type roic_observation = {
   period_end : string;
   prior_period_end : string;
-  ebit : float;
-  nopat : float;                      (* ebit * (1 - statutory tax rate) *)
+  net_income : float;
+  interest_expense : float;
+  nopat : float;                      (* net_income + interest_expense * (1 - statutory tax rate) *)
   invested_capital_prior : float;     (* book_equity + total_debt - cash at prior_period_end *)
   roic : float;                       (* nopat / invested_capital_prior *)
 }
@@ -557,12 +562,14 @@ type roic_observation = {
 (* The mid-cycle DCF (22): the DCF engine run on through-cycle earning power instead of
    the latest year's flow. [dcf] is the engine's own record on the mid-cycle flow: fcff =
    fcff_mid, g0 = roic_mid * reinvestment_rate_mid before the clamp, nopat = nopat_mid,
-   roic and reinvestment_rate the mid-cycle ones, the tax rate statutory; ebit, d&a, capex
-   and delta_nwc on it are the latest period's own (spot) values, recorded for spot_fcff,
-   and its delta_nwc_periods is that one period. Everything else on [dcf] (parameters,
+   roic and reinvestment_rate the mid-cycle ones, the tax rate statutory; ebit on it is the
+   pre-tax equivalent of the latest period's bottom-up nopat (nopat / (1 - tax rate), recipe
+   nopat_bottom_up), d&a, capex and delta_nwc the latest period's own (spot) values, recorded
+   for spot_fcff, and its delta_nwc_periods is that one period. Everything else on [dcf] (parameters,
    wacc, path, terminal, net debt, shares) is exactly the DCF's. *)
 type midcycle_inputs = {
   dcf : inputs;
+  nopat_recipe : string;              (* nopat_bottom_up (25): net income + interest expense x (1 - statutory tax rate), per period *)
   midcycle_window_years : int_parameter;
   window : string list;               (* the fiscal period ends in the window, newest first: every annual period the record carries, up to midcycle_window_years *)
   observations : roic_observation list;   (* one per consecutive pair in the window with ebit and a positive prior invested capital; at least 8 *)

@@ -69,6 +69,7 @@ def apple_like() -> dict[str, object]:
         "Revenues": usd(fact("2024-09-28", 391e9, start="2023-10-01"), fact("2023-09-30", 383e9, start="2022-10-02")),
         "RevenueFromContractWithCustomerExcludingAssessedTax": usd(fact("2025-09-27", 416e9, start="2024-09-29"), fact("2024-09-28", 391e9, start="2023-10-01")),
         "OperatingIncomeLoss": usd(fact("2025-09-27", 133e9, start="2024-09-29")),
+        "InterestExpense": usd(fact("2024-09-28", 3.0e9, start="2023-10-01")),
         "DepreciationDepletionAndAmortization": usd(fact("2025-09-27", 11.7e9, start="2024-09-29")),
         "PaymentsToAcquirePropertyPlantAndEquipment": usd(fact("2025-09-27", 12.7e9, start="2024-09-29")),
         "CashAndCashEquivalentsAtCarryingValue": usd(fact("2025-09-27", 36e9), fact("2024-09-28", 30e9), fact("2023-09-30", 30e9)),
@@ -198,11 +199,89 @@ def test_debt_recipes_exclude_operating_leases_and_keep_folded_finance_leases() 
     # (3) long-term debt filed with its current portion, plus commercial paper (Apple).
     p = period({"LongTermDebt": usd(fact("2025-12-31", 90.678e9)), "CommercialPaper": usd(fact("2025-12-31", 7.979e9)), **lease})
     assert p.total_debt is not None and math.isclose(p.total_debt, 98.657e9) and p.total_debt_source == "LongTermDebt + CommercialPaper"
-    # (4) noncurrent alone when nothing current is tagged at all; a lease alone is nothing.
+    # (4) noncurrent alone when nothing current is tagged at all; a lease alone with interest paid is nothing.
     p = period({"LongTermDebtNoncurrent": usd(fact("2025-12-31", 0.745e9)), **lease})
     assert (p.total_debt, p.total_debt_source) == (0.745e9, "LongTermDebtNoncurrent")
-    p = period(lease)
+    p = period({**lease, "InterestExpense": usd(fact("2025-12-31", 3.5e6, start="2025-01-01"))})
     assert p.total_debt is None and p.total_debt_composition is None
+
+
+def test_debt_absent_is_zero_only_when_the_filing_says_so_twice() -> None:
+    """No debt tag and no interest tag: 0, recorded (Palantir). Either alone: null."""
+    p = period({})
+    assert p.total_debt == 0.0 and p.total_debt_source == fetch_sec.DEBT_FREE
+    assert p.total_debt_composition is not None and p.total_debt_composition.components == []
+    for tag in DEFS.total_debt.xbrl.interest_evidence:
+        assert period({tag: usd(fact("2025-12-31", 1e6, start="2025-01-01"))}).total_debt is None
+    assert period({"InterestPaidNet": usd(fact("2025-12-31", 0.0, start="2025-01-01"))}).total_debt is None  # a tag at zero is still a tag
+    p = period({"LongTermDebtNoncurrent": usd(fact("2025-12-31", 0.745e9))})
+    assert p.total_debt == 0.745e9  # debt without interest is the debt
+    # a debt tag on another year does not make this year zero: the rule is per period
+    p = period({"InterestExpense": usd(fact("2024-12-31", 1e6, start="2024-01-01"))})
+    assert p.total_debt == 0.0
+
+
+def test_debt_aggregate_is_first_choice_with_convertible_notes_beside_it() -> None:
+    """Super Micro FY2026: bank debt as the aggregate, convertible notes beside it; AMD
+    tags the aggregate beside a current portion it also tags as short-term borrowings."""
+    smci = {"DebtLongtermAndShorttermCombinedAmount": usd(fact("2025-12-31", 4056.1e6)), "ConvertibleLongTermNotesPayable": usd(fact("2025-12-31", 4664.1e6)),
+            "OperatingLeaseLiabilityNoncurrent": usd(fact("2025-12-31", 499e6))}
+    p = period(smci)
+    assert p.total_debt is not None and math.isclose(p.total_debt, 8720.2e6)
+    assert p.total_debt_source == "DebtLongtermAndShorttermCombinedAmount + ConvertibleLongTermNotesPayable"
+    assert components(p.total_debt_composition) == [("aggregate", 4056.1e6, "DebtLongtermAndShorttermCombinedAmount"), ("convertible", 4664.1e6, "ConvertibleLongTermNotesPayable")]
+    amd = {"DebtLongtermAndShorttermCombinedAmount": usd(fact("2025-12-31", 3222e6)), "LongTermDebtNoncurrent": usd(fact("2025-12-31", 2348e6)),
+           "LongTermDebtCurrent": usd(fact("2025-12-31", 874e6)), "ShortTermBorrowings": usd(fact("2025-12-31", 874e6))}
+    p = period(amd)
+    assert (p.total_debt, p.total_debt_source) == (3222e6, "DebtLongtermAndShorttermCombinedAmount")
+    # convertible notes without the aggregate are not read on their own
+    assert period({"ConvertibleLongTermNotesPayable": usd(fact("2025-12-31", 4664.1e6)), "InterestExpense": usd(fact("2025-12-31", 1e6, start="2025-01-01"))}).total_debt is None
+
+
+def test_delta_nwc_three_kinds_and_the_excluded_tags() -> None:
+    """Each kind's sign on a fixture: an asset grows (outflow, added), a liability grows
+    (inflow, subtracted), a net balance grows (outflow, added); excluded tags never sum."""
+    three = {
+        "IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", 1815e6, start="2025-01-01")),
+        "IncreaseDecreaseInAccountsPayableTrade": usd(fact("2025-12-31", -14e6, start="2025-01-01")),
+        "IncreaseDecreaseInOtherOperatingCapitalNet": usd(fact("2025-12-31", 1250e6, start="2025-01-01")),
+        "IncreaseDecreaseInOtherNoncurrentAssetsAndLiabilitiesNet": usd(fact("2025-12-31", -195e6, start="2025-01-01")),
+        "IncreaseDecreaseInEquitySecuritiesFvNi": usd(fact("2025-12-31", 514e6, start="2025-01-01")),
+        "IncreaseDecreaseInAssetRetirementObligations": usd(fact("2025-12-31", 12e6, start="2025-01-01")),
+    }
+    p = period(three)
+    assert p.delta_nwc is not None and math.isclose(p.delta_nwc, 1815e6 + 14e6 + 1250e6 - 195e6)
+    assert components(p.delta_nwc_composition) == [
+        ("asset_components", 1815e6, "IncreaseDecreaseInAccountsReceivable"),
+        ("liability_components", 14e6, "IncreaseDecreaseInAccountsPayableTrade"),
+        ("net_components", 1250e6, "IncreaseDecreaseInOtherOperatingCapitalNet"),
+        ("net_components", -195e6, "IncreaseDecreaseInOtherNoncurrentAssetsAndLiabilitiesNet"),
+    ]
+    for tag in ("IncreaseDecreaseInPropertyAndOtherTaxesPayable", "IncreaseDecreaseInDueToRelatedParties", "IncreaseDecreaseInOtherAccountsPayable"):
+        assert tag in DEFS.delta_nwc.xbrl.liability_components
+    # META FY2025 by hand: 1815 + 481 + 89 assets, -14 + 1077 + 437 liabilities -> 885m, the vendor's line
+    meta = {
+        "IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", 1815e6, start="2025-01-01")),
+        "IncreaseDecreaseInOtherOperatingAssets": usd(fact("2025-12-31", 481e6, start="2025-01-01")),
+        "IncreaseDecreaseInPrepaidDeferredExpenseAndOtherAssets": usd(fact("2025-12-31", 89e6, start="2025-01-01")),
+        "IncreaseDecreaseInAccountsPayableTrade": usd(fact("2025-12-31", -14e6, start="2025-01-01")),
+        "IncreaseDecreaseInAccruedLiabilities": usd(fact("2025-12-31", 1077e6, start="2025-01-01")),
+        "IncreaseDecreaseInOtherNoncurrentLiabilities": usd(fact("2025-12-31", 437e6, start="2025-01-01")),
+    }
+    p = period(meta)
+    assert p.delta_nwc is not None and math.isclose(p.delta_nwc, 885e6)
+    # a tag in none of the four kinds still refuses, naming it
+    notes: list[str] = []
+    p = period({**meta, "IncreaseDecreaseInTradingSecurities": usd(fact("2025-12-31", 1e6, start="2025-01-01"))}, notes)
+    assert p.delta_nwc is None and notes == ["delta_nwc 2025-12-31: left null, unclassified working-capital tags: IncreaseDecreaseInTradingSecurities"]
+
+
+def test_interest_expense_is_carried_per_period_on_both_providers() -> None:
+    p = period({"InterestExpenseDebt": usd(fact("2025-12-31", 1217e6, start="2025-01-01"))})
+    assert (p.interest_expense, p.interest_expense_row) == (1217e6, "InterestExpenseDebt")
+    assert period({}).interest_expense is None
+    rows = fetch._income_values({"Pretax Income": 10.0, "Interest Expense Non Operating": 2.5, "Net Income": 8.0})  # pyright: ignore[reportPrivateUsage]
+    assert (rows["interest_expense"], rows["interest_expense_row"]) == (2.5, "Interest Expense Non Operating")
 
 
 def test_ebit_recipe_from_filed_tags_when_operating_income_is_absent() -> None:

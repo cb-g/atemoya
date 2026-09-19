@@ -132,3 +132,37 @@ def test_same_period_vendor_check_matches_the_filed_period_or_none() -> None:
     assert check is not None and check.secondary_period_end == "2025-12-31" and check.source == "live vendor statements, same fiscal period, fetched after D"
     assert pit.same_period_check([fetch._period(date(2021, 1, 2), None, None, None)], vendor, 0.02) is None  # no column for FY2020  # pyright: ignore[reportPrivateUsage]
     assert pit.same_period_check([], vendor, 0.02) is None and pit.same_period_check(filed, [], 0.02) is None
+
+
+def test_statements_on_honours_the_declared_cik(monkeypatch: object) -> None:
+    """The universe entry's cik reaches the point-in-time fetch (25): a symbol absent from
+    the ticker map still resolves through it, exactly as on the live fetch."""
+    import fetch_sec
+    from _pytest.monkeypatch import MonkeyPatch
+
+    assert isinstance(monkeypatch, MonkeyPatch)
+    facts: dict[str, object] = {"cik": 34088, "facts": {"us-gaap": {
+        "NetIncomeLoss": usd(fact("2024-12-31", 1e9, start="2024-01-01", filed="2025-02-20")),
+        "StockholdersEquity": usd(fact("2024-12-31", 9e9, filed="2025-02-20")),
+    }}}
+    asked: list[str] = []
+
+    def companyfacts(cik: str, user_agent: str) -> dict[str, object] | None:
+        asked.append(cik)
+        return facts if cik == "0000034088" else None
+
+    monkeypatch.setattr(fetch_sec, "companyfacts", companyfacts)
+    monkeypatch.setattr(fetch_sec, "submissions", lambda cik, user_agent: None)  # pyright: ignore[reportUnknownLambdaType, reportUnknownArgumentType]
+
+    class Sec:
+        user_agent = "test test@example.com"
+        tickers: dict[str, object] = {"0": {"cik_str": 2115436, "ticker": "XOM", "title": "new holding company"}}
+        tags = TAGS
+        definitions = DEFS
+
+    notes: list[str] = []
+    periods, decision, why, _, _ = pit.statements_on("XOM", date(2025, 6, 30), Sec(), notes, declared_cik="0000034088")
+    assert why is None and decision is not None and decision.xbrl and [p.period_end for p in periods] == ["2024-12-31"]
+    assert asked == ["0000034088"] and any("declared in the universe entry" in n for n in notes)
+    periods, _, why, _, _ = pit.statements_on("XOM", date(2025, 6, 30), Sec(), [])
+    assert periods == [] and why is not None and asked[-1] == "0002115436"  # the ticker map's filer, which has no facts here

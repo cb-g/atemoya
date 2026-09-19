@@ -22,7 +22,7 @@ flowchart TD
     THR -- "stale / future / missing" --> PFAIL
 
     THR -- yes --> SIG["statement signature: Bank iff NII/revenue >= threshold, else Insurer iff premium row > 0, else none"]
-    SIG --> DECL{"entity_class declared? (a universe entry, exactly ticker, entity_class, why and scope_limits, loaded strictly, from reference/universe.json or any file of the same format given as --universe, such as a private one under data/ (21), optionally with cik, the SEC filer to read instead of the ticker map's (22); or --entity-class)"}
+    SIG --> DECL{"entity_class declared? (a universe entry, exactly ticker, entity_class, why and scope_limits, loaded strictly, from reference/universe.json or any file of the same format given as --universe, such as a private one under data/ (21), optionally with cik, the SEC filer to read instead of the ticker map's (22), honoured on the point-in-time fetch too (25); or --entity-class)"}
     DECL -- "no, no signature" --> F_UNDECL["entity_class not declared"]:::failed
     DECL -- "no, signature fired" --> F_UNDECL_HINT["entity_class not declared; statements indicate (Bank|Insurer) (evidence)"]:::failed
     DECL -- "declared OperatingCompany, signature fired" --> F_DISAGREE["class disagreement: declared OperatingCompany, statements indicate (Bank|Insurer) (evidence)"]:::failed
@@ -66,12 +66,12 @@ flowchart TD
     PARAMS -- "future as_of" --> F_FUTURE["(parameter) for (key) has as_of (date), later than the valuation date (today)"]:::failed
     PARAMS -- "resolved" --> WHICH{"routed model"}
 
-    WHICH -- "dcf, dcf_midcycle (22)" --> EBIT{"ebit on the latest period derived (ebit_recipe other than operating_income)? then the record's cross-check must find it within threshold of the vendor's operating income (12)"}:::new
+    WHICH -- dcf --> EBIT{"ebit on the latest period derived (ebit_recipe other than operating_income)? then the record's cross-check must find it within threshold of the vendor's operating income (12)"}:::new
     EBIT -- "derived and the check misses, or no vendor figure to check against" --> F_EBIT["operating income not filed; derived EBIT misses the cross-check ((recipe): derived (x) against the vendor's (y), (d)% beyond the 2% threshold, or: no vendor operating income to check against) (12)"]:::failed
-    EBIT -- "dcf_midcycle (22): filed operating income, or derived and within threshold" --> MID_WINDOW{"window: every annual period the record carries, newest first, up to midcycle_window_years (15, a parameter); per consecutive pair, ROIC_t = EBIT_t x (1 - statutory tax rate) / (book_equity + total_debt - cash at the prior period end), on positive prior capital; at least 8 observations? (the fetch keeps 15 periods for the class; the vendor path's four or five can never serve the model)"}:::new
+    WHICH -- "dcf_midcycle (22; 25: no EBIT policy on this path, an operating-income line is not an input to it)" --> MID_WINDOW{"window: every annual period the record carries, newest first, up to midcycle_window_years (15, a parameter); per consecutive pair, NOPAT_t = net_income_t + interest_expense_t x (1 - statutory tax rate), bottom-up from filed lines (nopat_bottom_up, 25: the through-cycle mean is what dampens one-offs), ROIC_t = NOPAT_t / (book_equity + total_debt - cash at the prior period end), on positive prior capital; at least 8 observations? (the fetch keeps 15 periods for the class; the vendor path's four or five can never serve the model)"}:::new
     MID_WINDOW -- "no periods" --> F_NOPERIOD
     MID_WINDOW -- "fewer than 8" --> F_MIDOBS["mid-cycle normalisation needs at least 8 annual return observations, have (k); the provider carries (n) periods (22)"]:::failed
-    MID_WINDOW -- "latest period fields present? (ebit, d&a, capex, delta_nwc, cash, total_debt, book_equity, price, market cap, currency)" --> MID_GUARDS{"guards (22)"}:::new
+    MID_WINDOW -- "latest period fields present? (net_income, interest_expense, d&a, capex, delta_nwc, cash, total_debt, book_equity, price, market cap, currency)" --> MID_GUARDS{"guards (22)"}:::new
     MID_WINDOW -- missing --> F_MISSING
     MID_GUARDS -- "price or market cap <= 0" --> F_PRICE
     MID_GUARDS -- "horizon < 0" --> F_HORIZON
@@ -174,6 +174,28 @@ records, and the acceptance of any change is the run diff against the previous r
 (`--baseline`), with every moved input classified against the previous snapshot
 (`--baseline-snapshot`).
 
+## Definition rules
+
+Three rules of `reference/field_definitions.json` that decide whether a filed field exists
+at all (25):
+
+1. **Working capital has three kinds and a refusal.** A cash-flow `IncreaseDecreaseIn*`
+   component is an asset (positive when the balance grew, an outflow, added), a liability
+   (positive when the balance grew, an inflow, subtracted), or a net balance of assets
+   less liabilities (added like an asset); an excluded tag sits in the operating section
+   but is not working capital and is never summed. A tag in none of the four leaves the
+   field null with a note naming it, never a partial number. Every tag was checked
+   against its us-gaap definition and the vendor's working-capital line on a real year
+   before it entered the table.
+2. **Debt is zero only when the filing says so twice.** No debt tag for the period and no
+   interest expense or interest paid for the period gives total debt 0, recorded as "no
+   debt line filed and no interest expense filed; taken as 0". Either present without the
+   other leaves the field null: a filer paying interest owes something.
+3. **The mid-cycle model's NOPAT is bottom-up.** Net income plus interest expense times
+   one minus the statutory rate, per period from filed lines, so no operating-income line
+   is needed and the EBIT policy does not apply on that path; the through-cycle mean is
+   what dampens one-offs.
+
 ## Beliefs
 
 The belief parameter is terminal growth, fixed on the merits. This choice may be revisited
@@ -264,3 +286,8 @@ in this order:
   `implied_terminal_growth`, `probability_overpaid` in closed form and `belief_version` on
   every Ok growth-then-terminal record; the six rules of use above. No new `Failed`
   string; no headline moves.
+- definitions coverage (25): the three-kind working-capital table with a net kind, the
+  debt absent-is-zero rule and the aggregate-plus-convertible recipe, capex tags widened,
+  bottom-up NOPAT on the mid-cycle path (no EBIT policy there), the declared CIK honoured
+  point-in-time. No new `Failed` string; the mid-cycle missing-fields list names
+  net_income and interest_expense instead of ebit.

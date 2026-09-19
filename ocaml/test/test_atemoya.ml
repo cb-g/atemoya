@@ -17,7 +17,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?tax_provision_row ?capex_row ?delta_nwc_row ?cash_row ?book_equity_row ?net_income_row
     ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
     ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?weighted_shares
-    ?weighted_shares_tag () : Boundary_t.fiscal_period =
+    ?weighted_shares_tag ?interest_expense ?interest_expense_row () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -74,6 +74,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     weighted_shares_tag;
     ebit_recipe;
     ebit_composition;
+    interest_expense;
+    interest_expense_row;
     cash_composition;
     total_debt_composition;
     delta_nwc_composition;
@@ -1091,9 +1093,15 @@ let test_bank_routes_to_residual_income () =
    50 = -100, so the sums are -1000 over 0.79 * 8700. *)
 let midcycle_ebits = [ 1200.; 900.; -300.; 600.; 1500.; 1800.; 300.; 1000.; 1100.; 600. ]
 
+(* Bottom-up NOPAT (25): each year files net income 0.79 x (ebit - 100) and interest expense
+   100, so net income + 100 x 0.79 = 0.79 x ebit and every expectation below still reads on
+   ebit; no ebit is filed at all, so the model cannot be reading one. *)
 let midcycle_periods ?(ebits = midcycle_ebits) ?(capex = 50.) ?(start_year = 2025) () =
   List.mapi
-    (fun i ebit -> full_period ~period_end:(Printf.sprintf "%d-12-31" (start_year - i)) ~ebit ~capex ())
+    (fun i ebit ->
+      { (full_period ~period_end:(Printf.sprintf "%d-12-31" (start_year - i)) ~ebit ~capex ()) with
+        ebit = None; net_income = Some (0.79 *. (ebit -. 100.)); interest_expense = Some 100.;
+        interest_expense_row = Some "InterestExpense" })
     ebits
 
 let midcycle_ok () =
@@ -1104,6 +1112,13 @@ let midcycle_ok () =
 let test_midcycle_arithmetic () =
   let m, fair_value = midcycle_ok () in
   Alcotest.(check int) "nine observations from ten periods" 9 (List.length m.observations);
+  Alcotest.(check string) "nopat is bottom-up" "nopat_bottom_up" m.nopat_recipe;
+  let first = List.hd m.observations in
+  check_float "net income filed" (0.79 *. 1100.) first.net_income;
+  check_float "interest expense filed" 100. first.interest_expense;
+  check_float "nopat = net income + interest x (1 - t)" (0.79 *. 1200.) first.nopat;
+  check_float "spot nopat's pre-tax equivalent stands in for ebit" 1200. m.dcf.ebit;
+  Alcotest.(check (option string)) "and says so" (Some "nopat_bottom_up") m.dcf.ebit_recipe;
   Alcotest.(check (list string)) "window is every period, newest first"
     (List.map (fun (p : Boundary_t.fiscal_period) -> p.period_end) (midcycle_periods ())) m.window;
   check_float "roic_mid is the arithmetic mean, the loss year included" 0.079 m.roic_mid;
@@ -1158,9 +1173,18 @@ let test_midcycle_guards () =
       Alcotest.(check int) "fourteen observations inside it" 14 (List.length m.observations);
       Alcotest.(check string) "oldest in the window" "2011-12-31" (List.nth m.window 14)
   | Error e -> Alcotest.fail e);
+  (* a period without an interest line yields no observation and is not in the sums *)
+  let no_interest = List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 2 then { p with interest_expense = None } else p) (midcycle_periods ()) in
+  (match Dcf_midcycle.value assumptions ~country:"United States" (financials no_interest) with
+  | Ok (m, _) ->
+      Alcotest.(check int) "eight observations" 8 (List.length m.observations);
+      Alcotest.(check int) "nine periods in the sums" 9 (List.length m.reinvestment_periods)
+  | Error e -> Alcotest.fail e);
+  let latest_silent = List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 0 then { p with interest_expense = None } else p) (midcycle_periods ()) in
+  fail latest_silent [ "missing statement fields for fiscal period ending 2025-12-31: interest_expense" ];
   (* the vendor path: three or five periods can never serve the model, and the record says so *)
   let v = run ~declared:(Some (declaration `Cyclical)) (financials (history ())) in
-  check_reason v [ "mid-cycle normalisation needs at least 8 annual return observations, have 2; the provider carries 3 periods" ];
+  check_reason v [ "mid-cycle normalisation needs at least 8 annual return observations, have 0; the provider carries 3 periods" ];
   Alcotest.(check (option model)) "routed to the mid-cycle dcf" (Some `Dcf_midcycle) v.model;
   (* a valued Cyclical record: the class's default scope limit follows the entry's own *)
   let ok = run ~declared:(Some (declaration ~scope_limits:[ "own limit" ] `Cyclical)) (financials (midcycle_periods ())) in
@@ -2004,6 +2028,11 @@ let test_ebit_policy_gate () =
   let periods = List.map derived_ebit_period [ "2025-09-30"; "2024-09-30"; "2023-09-30" ] in
   let ok = run (filed ~cross_check:(ebit_check ~agree:true) periods) in
   Alcotest.check status "a derived ebit within threshold runs" `Ok ok.status;
+  (* the policy does not reach the mid-cycle path (25): its nopat is bottom-up, so a derived
+     ebit whose cross-check misses still values there *)
+  let derived = List.map (fun (p : Boundary_t.fiscal_period) -> { p with ebit_recipe = Some "pretax_plus_interest_less_nonoperating" }) (midcycle_periods ()) in
+  let v = run ~declared:(Some (declaration `Cyclical)) (financials ~cross_check:(ebit_check ~agree:false) derived) in
+  Alcotest.check status "mid-cycle values past a failing ebit check" `Ok v.status;
   let miss = run (filed ~cross_check:(ebit_check ~agree:false) periods) in
   check_reason miss
     [ "operating income not filed; derived EBIT misses the cross-check (pretax_plus_interest_less_nonoperating: derived 2.529e+04 against the vendor's 2.56e+04, 1.2% beyond the 2% threshold)" ];

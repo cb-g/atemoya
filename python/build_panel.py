@@ -76,7 +76,9 @@ def main(argv: list[str]) -> int:
     if not binary.exists():
         print(f"{binary} not built: run dune build first", file=sys.stderr)
         return 2
-    tickers = [e.ticker for e in universe_file.load(universe_path).tickers]
+    entries = universe_file.load(universe_path).tickers
+    tickers = [e.ticker for e in entries]
+    ciks = {e.ticker: e.cik for e in entries if e.cik}
     sec = fetch.SecContext()
     histories: dict[str, pit.History] = {}
     quotes: dict[str, tuple[fetch.Quote | None, fetch.Profile | None]] = {}
@@ -90,7 +92,7 @@ def main(argv: list[str]) -> int:
     rows: list[dict[str, object]] = []
     summary: list[str] = ["point-in-time panel: one descriptive table per date, no statistic", ""]
     for d in dates:
-        pit_dir = pit.run_date(d, tickers, histories=histories, quotes=quotes, sec=sec, vendors=vendors)
+        pit_dir = pit.run_date(d, tickers, histories=histories, quotes=quotes, sec=sec, vendors=vendors, ciks=ciks)
         valuations = run_batch(pit_dir, d, binary)
         day_rows: list[dict[str, object]] = []
         for line in valuations.read_text().splitlines():

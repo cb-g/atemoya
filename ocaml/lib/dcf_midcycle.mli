@@ -4,8 +4,11 @@
     [Error reason]. On the shared definitions (cash, debt, delta_nwc, ebit recipe), per
     period t in the window (every annual period the record carries, newest first, up
     to [midcycle_window_years]): invested capital [IC_t = book_equity + total_debt -
-    cash], [NOPAT_t = EBIT_t * (1 - statutory tax rate)], [ROIC_t = NOPAT_t / IC_(t-1)]
-    on beginning capital, so N periods give at most N-1 observations. Fewer than 8
+    cash], [NOPAT_t = net_income_t + interest_expense_t * (1 - statutory tax rate)]
+    bottom-up from filed lines (25: no operating-income line is needed and the EBIT
+    policy does not apply on this path; the through-cycle mean is what dampens
+    one-offs), [ROIC_t = NOPAT_t / IC_(t-1)] on beginning capital, so N periods give at
+    most N-1 observations. Fewer than 8
     observations is an [Error] naming the count and the periods the provider carries:
     the vendor path's four or five can never serve this model. [ROIC_mid] is the
     arithmetic mean, the bad years included on purpose (the median is recorded, not

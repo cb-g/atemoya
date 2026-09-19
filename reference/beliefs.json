@@ -4,7 +4,7 @@
     "Never estimated from history by the tool. The why may cite history, GDP or base rates as evidence; the numbers are a declaration, dated, revised by a dated declaration when evidence warrants, never because of what a number looks like.",
     "The belief parameter is terminal growth, fixed on the merits: starting growth is observed from filings, the reversion speed is a structural assumption with its sensitivity shown, and long-run growth is the question every investor can answer. This choice may be revisited only on an argument about the model, never on what it does to a number.",
     "Bank and Insurer carry no belief: the residual-income path has no terminal growth, so the belief parameter is undefined there and the record says so.",
-    "These four are drafts for the user to confirm or change before use."
+    "These four defaults were confirmed by the user as of 2026-09-19."
   ],
   "classes": {
     "OperatingCompany": {

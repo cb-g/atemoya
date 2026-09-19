@@ -357,12 +357,11 @@ let run ?(thresholds = default_thresholds) ?private_beliefs (params : Params.t) 
         | Error reason -> failed reason
         | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Reit_ffo_dividend inputs) fair_value)
     | `Dcf_midcycle -> (
-        match ebit_policy fin with
+        (* No EBIT policy here (25): the model's NOPAT is bottom-up from net income and
+           interest expense, so an operating-income line is not an input to it. *)
+        match Dcf_midcycle.value assumptions ~country fin with
         | Error reason -> failed reason
-        | Ok () -> (
-            match Dcf_midcycle.value assumptions ~country fin with
-            | Error reason -> failed reason
-            | Ok (inputs, fair_value) -> finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value))
+        | Ok (inputs, fair_value) -> finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value)
   in
   (* The filing-age gate, then the currency gate: the same-currency path untouched, else
      convert and re-source. *)

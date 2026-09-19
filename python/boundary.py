@@ -658,7 +658,8 @@ class RoicObservation:
 
     period_end: str
     prior_period_end: str
-    ebit: float
+    net_income: float
+    interest_expense: float
     nopat: float
     invested_capital_prior: float
     roic: float
@@ -669,7 +670,8 @@ class RoicObservation:
             return cls(
                 period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('RoicObservation', 'period_end'),
                 prior_period_end=_atd_read_string(x['prior_period_end']) if 'prior_period_end' in x else _atd_missing_json_field('RoicObservation', 'prior_period_end'),
-                ebit=_atd_read_float(x['ebit']) if 'ebit' in x else _atd_missing_json_field('RoicObservation', 'ebit'),
+                net_income=_atd_read_float(x['net_income']) if 'net_income' in x else _atd_missing_json_field('RoicObservation', 'net_income'),
+                interest_expense=_atd_read_float(x['interest_expense']) if 'interest_expense' in x else _atd_missing_json_field('RoicObservation', 'interest_expense'),
                 nopat=_atd_read_float(x['nopat']) if 'nopat' in x else _atd_missing_json_field('RoicObservation', 'nopat'),
                 invested_capital_prior=_atd_read_float(x['invested_capital_prior']) if 'invested_capital_prior' in x else _atd_missing_json_field('RoicObservation', 'invested_capital_prior'),
                 roic=_atd_read_float(x['roic']) if 'roic' in x else _atd_missing_json_field('RoicObservation', 'roic'),
@@ -681,7 +683,8 @@ class RoicObservation:
         res: Dict[str, Any] = {}
         res['period_end'] = _atd_write_string(self.period_end)
         res['prior_period_end'] = _atd_write_string(self.prior_period_end)
-        res['ebit'] = _atd_write_float(self.ebit)
+        res['net_income'] = _atd_write_float(self.net_income)
+        res['interest_expense'] = _atd_write_float(self.interest_expense)
         res['nopat'] = _atd_write_float(self.nopat)
         res['invested_capital_prior'] = _atd_write_float(self.invested_capital_prior)
         res['roic'] = _atd_write_float(self.roic)
@@ -1715,6 +1718,7 @@ class MidcycleInputs:
     """
 
     dcf: Inputs
+    nopat_recipe: str
     midcycle_window_years: IntParameter
     window: List[str]
     observations: List[RoicObservation]
@@ -1735,6 +1739,7 @@ class MidcycleInputs:
         if isinstance(x, dict):
             return cls(
                 dcf=Inputs.from_json(x['dcf']) if 'dcf' in x else _atd_missing_json_field('MidcycleInputs', 'dcf'),
+                nopat_recipe=_atd_read_string(x['nopat_recipe']) if 'nopat_recipe' in x else _atd_missing_json_field('MidcycleInputs', 'nopat_recipe'),
                 midcycle_window_years=IntParameter.from_json(x['midcycle_window_years']) if 'midcycle_window_years' in x else _atd_missing_json_field('MidcycleInputs', 'midcycle_window_years'),
                 window=_atd_read_list(_atd_read_string)(x['window']) if 'window' in x else _atd_missing_json_field('MidcycleInputs', 'window'),
                 observations=_atd_read_list(RoicObservation.from_json)(x['observations']) if 'observations' in x else _atd_missing_json_field('MidcycleInputs', 'observations'),
@@ -1756,6 +1761,7 @@ class MidcycleInputs:
     def to_json(self) -> Any:
         res: Dict[str, Any] = {}
         res['dcf'] = (lambda x: x.to_json())(self.dcf)
+        res['nopat_recipe'] = _atd_write_string(self.nopat_recipe)
         res['midcycle_window_years'] = (lambda x: x.to_json())(self.midcycle_window_years)
         res['window'] = _atd_write_list(_atd_write_string)(self.window)
         res['observations'] = _atd_write_list((lambda x: x.to_json()))(self.observations)
@@ -3281,6 +3287,8 @@ class FiscalPeriod:
     weighted_shares_tag: Optional[str] = None
     ebit_recipe: Optional[str] = None
     ebit_composition: Optional[Composition] = None
+    interest_expense: Optional[float] = None
+    interest_expense_row: Optional[str] = None
     cash_composition: Optional[Composition] = None
     total_debt_composition: Optional[Composition] = None
     delta_nwc_composition: Optional[Composition] = None
@@ -3344,6 +3352,8 @@ class FiscalPeriod:
                 weighted_shares_tag=_atd_read_string(x['weighted_shares_tag']) if 'weighted_shares_tag' in x else None,
                 ebit_recipe=_atd_read_string(x['ebit_recipe']) if 'ebit_recipe' in x else None,
                 ebit_composition=Composition.from_json(x['ebit_composition']) if 'ebit_composition' in x else None,
+                interest_expense=_atd_read_float(x['interest_expense']) if 'interest_expense' in x else None,
+                interest_expense_row=_atd_read_string(x['interest_expense_row']) if 'interest_expense_row' in x else None,
                 cash_composition=Composition.from_json(x['cash_composition']) if 'cash_composition' in x else None,
                 total_debt_composition=Composition.from_json(x['total_debt_composition']) if 'total_debt_composition' in x else None,
                 delta_nwc_composition=Composition.from_json(x['delta_nwc_composition']) if 'delta_nwc_composition' in x else None,
@@ -3440,6 +3450,10 @@ class FiscalPeriod:
             res['ebit_recipe'] = _atd_write_string(self.ebit_recipe)
         if self.ebit_composition is not None:
             res['ebit_composition'] = (lambda x: x.to_json())(self.ebit_composition)
+        if self.interest_expense is not None:
+            res['interest_expense'] = _atd_write_float(self.interest_expense)
+        if self.interest_expense_row is not None:
+            res['interest_expense_row'] = _atd_write_string(self.interest_expense_row)
         if self.cash_composition is not None:
             res['cash_composition'] = (lambda x: x.to_json())(self.cash_composition)
         if self.total_debt_composition is not None:

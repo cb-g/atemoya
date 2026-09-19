@@ -18,8 +18,8 @@
     field or FX pair is [`Failed] naming it. On the dcf path a derived ebit (any
     recipe but operating income) runs only when the record's cross-check found it
     within threshold of the vendor's operating income; otherwise the
-    [refinement_policy.on_miss] [`Failed]; the mid-cycle DCF (22) runs under the same
-    policy. Each model's arithmetic lives in its own module. A record's [scope_limits]
+    [refinement_policy.on_miss] [`Failed]; the mid-cycle DCF (22) is outside the policy
+    since its NOPAT is bottom-up from net income and interest expense (25). Each model's arithmetic lives in its own module. A record's [scope_limits]
     are the entry's own followed by the class's defaults from the admissibility row. [floor] is always populated and gates nothing. An [`Ok] record carries
     the implied readouts ([Implied]), the sensitivity block ([Sensitivity]) and, on a
     growth-then-terminal path, the belief map's price contour ([Belief_map]) (23) and,
