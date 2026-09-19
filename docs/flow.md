@@ -6,7 +6,7 @@ are the exact `failed_reason` strings, with variable parts in parentheses, so th
 checkable against `output/summary.txt`; a test asserts every reason string in the code
 appears here. **Every change that adds a branch updates this file in the same commit.**
 
-Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field, *(12)* by the implied readouts and the bounded EBIT, *(13)* by the IFRS filers, *(14)* by the companyfacts-lag decision and the implied horizon, *(15)* by the residual-income model losing its terminal, *(16)* by the stability pass, *(17)* by point-in-time.
+Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field, *(12)* by the implied readouts and the bounded EBIT, *(13)* by the IFRS filers, *(14)* by the companyfacts-lag decision and the implied horizon, *(15)* by the residual-income model losing its terminal, *(16)* by the stability pass, *(17)* by point-in-time, *(18)* by the REIT model.
 
 ```mermaid
 flowchart TD
@@ -30,10 +30,11 @@ flowchart TD
 
     ROW -- no --> F_NOROW["no admissibility row for entity class (class) in the reference table"]:::failed
     ROW -- yes --> ADM{"first admissible model in the row"}
-    ADM -- "none (RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, PreProfit, Wrapper, ConstructionStage, UnderBid, Ballast)" --> F_INADM["dcf not admissible for (class); lens: (lens)"]:::failed
+    ADM -- "none (RegulatedUtility, MerchantPower, Miner, Royalty, HighGrowthSoftware, PreProfit, Wrapper, ConstructionStage, UnderBid, Ballast)" --> F_INADM["dcf not admissible for (class); lens: (lens)"]:::failed
     ADM -- "dcf (OperatingCompany)" --> COUNTRY
     ADM -- "residual_income (Bank) (06)" --> COUNTRY
     ADM -- "residual_income_insurer (Insurer) (08)" --> COUNTRY
+    ADM -- "reit_ffo_dividend (Reit) (18)" --> COUNTRY
 
     COUNTRY{"country in the fetch?"} -- no --> F_COUNTRY["country not determinable from the fetch"]:::failed
     COUNTRY -- yes --> PIT{"point-in-time record (17)? then it needs filed statements, cover-page shares and rate history on its date"}:::new
@@ -99,6 +100,19 @@ flowchart TD
     INS_CORE -- "core guard fails" --> F_PAYOUT
     INS_CORE --> CONCLUDE
 
+    WHICH -- "reit_ffo_dividend (18)" --> REIT_PERIOD{"latest fiscal period, fields present? (ffo from the filed NAREIT recipe in field_definitions.json with its components, dividends_paid, price, market cap, currency) (18)"}:::new
+    REIT_PERIOD -- "no periods" --> F_NOPERIOD
+    REIT_PERIOD -- "missing (vendor rows carry no ffo)" --> F_MISSING
+    REIT_PERIOD -- ok --> REIT_GUARDS{"guards (18)"}:::new
+    REIT_GUARDS -- "price or market cap <= 0" --> F_PRICE
+    REIT_GUARDS -- "ffo <= 0" --> F_FFO["ffo (f) is not positive (18)"]:::failed
+    REIT_GUARDS -- "fewer than 2 periods with ffo and cover-page shares" --> F_FFOG["ffo growth needs two periods with ffo and cover-page shares, have (n) (18)"]:::failed
+    REIT_GUARDS -- "cost of equity <= terminal growth" --> F_KE["cost of equity (ke) does not exceed terminal growth (g) (18)"]:::failed
+    REIT_GUARDS -- "horizon < 0" --> F_HORIZON
+    REIT_GUARDS -- ok --> REIT_EV["D0 = min(dividends_paid, ffo) / effective shares (an uncovered dividend is never valued; coverage recorded); g0 = CAGR of ffo per cover-page share over the filed periods, clamped, mean-reverting to terminal at lambda; ke = CAPM with the REIT industry beta; value = sum D_t / (1 + ke)^t + D_N (1 + g_T) / (ke - g_T) / (1 + ke)^N; price/ffo and the caveat (FFO overstates distributable cash by the untagged recurring capex and non-cash rent) on the record (18)"]:::new
+    REIT_EV -- "not finite" --> F_RINAN
+    REIT_EV --> CONCLUDE
+
     CONCLUDE{"fair value > 0?"} -- no --> F_NONPOS["non-positive fair value (v): model not applicable"]:::failed
     CONCLUDE -- yes --> BOUND{"margin of safety <= sanity bound 5.0?"}
     BOUND -- no --> F_BOUND["margin of safety (m) exceeds sanity bound 5.00: likely structural break; check entity_class"]:::failed
@@ -120,6 +134,9 @@ flowchart TD
     F_PITSTMT --> FLOOR
     F_PITSHARES --> FLOOR
     F_PITRATE --> FLOOR
+    F_FFO --> FLOOR
+    F_FFOG --> FLOOR
+    F_KE --> FLOOR
     F_NONPOS --> FLOOR
     F_BOUND --> FLOOR
     IMPLIED --> RECORD
@@ -164,3 +181,6 @@ into it.
   snapshots, and the two commands for snapshot three. No new `Failed` string.
 - point-in-time (17): point-in-time records and the panel; three `Failed` strings for a date without
   filed statements, cover-page shares or rate history; held vintages declared on the record.
+- REIT lens (18): the REIT model on the FFO-covered dividend, FFO per NAREIT from filed tags; the
+  `Failed` strings for a non-positive FFO, too few periods for FFO growth, and the cost of
+  equity against terminal growth on this path.

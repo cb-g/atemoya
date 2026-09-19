@@ -25,7 +25,7 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterable, Mapping
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from dataclasses import dataclass
 from typing import cast
@@ -285,7 +285,7 @@ def _composition(definition: str, parts: list[boundary.Component]) -> boundary.C
     return boundary.Composition(definition=definition, components=parts)
 
 
-SUBTRACTED = frozenset({"restricted_cash", "liability_components", "interest_income", "other_nonoperating", "equity_method", "cash_flow_signed_components"})  # components summed with their sign flipped
+SUBTRACTED = frozenset({"restricted_cash", "liability_components", "interest_income", "other_nonoperating", "equity_method", "cash_flow_signed_components", "gain_on_property_sales"})  # components summed with their sign flipped
 
 
 def _label(parts: list[boundary.Component]) -> str:
@@ -478,7 +478,48 @@ def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: floa
     return sum(p.value for p in parts), _label(parts), "pretax_plus_interest_less_nonoperating", _composition(defs.ebit.name, parts)
 
 
-def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD") -> list[boundary.FiscalPeriod]:
+def ffo(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> Derived:
+    """FFO per NAREIT: net income + real-estate depreciation + impairment - gains on property
+    sales; the first two required, the last two taken as 0 when not filed and recorded so."""
+    d = defs.ffo.ifrs if taxonomy == "ifrs-full" else defs.ffo.xbrl
+    net_income = facts.first(d.net_income, end, instant=False)
+    depreciation = facts.first(d.depreciation, end, instant=False)
+    if net_income is None or depreciation is None:
+        return None, None, None
+    parts = [boundary.Component(name="net_income", value=net_income[0], row=net_income[1]),
+             boundary.Component(name="real_estate_depreciation", value=depreciation[0], row=depreciation[1])]
+    impairment = facts.first(d.impairment, end, instant=False)
+    parts.append(boundary.Component(name="real_estate_impairment", value=impairment[0] if impairment else 0.0, row=impairment[1] if impairment else "not filed, taken as 0"))
+    gains = facts.first(d.gains, end, instant=False)
+    parts.append(boundary.Component(name="gain_on_property_sales", value=-gains[0] if gains else 0.0, row=gains[1] if gains else "not filed, taken as 0"))
+    return sum(p.value for p in parts), _label(parts), _composition(defs.ffo.name, parts)
+
+
+COVER_PAGE_WINDOW_DAYS = 150  # an annual report's cover page is dated within this of its fiscal year end
+
+
+def cover_shares(dei: Mapping[str, object], period_end: date, tags: reference.XbrlTags) -> tuple[float, str] | None:
+    """The dei cover-page share count of the annual report for the fiscal year ending
+    [period_end]: the annual-form entry dated after the year end and within the window,
+    the newest filing among them, several classes summed; None when none is filed."""
+    tag = "EntityCommonStockSharesOutstanding"
+    entries = [_as_dict(e) for e in cast(list[object], _as_dict(_as_dict(dei.get(tag)).get("units")).get("shares", []))]
+    dated: list[tuple[str, str, float]] = []
+    for e in entries:
+        try:
+            end = date.fromisoformat(str(e["end"]))
+            if str(e.get("form")) in tags.annual_forms and period_end < end <= period_end + timedelta(days=COVER_PAGE_WINDOW_DAYS):
+                dated.append((str(e["filed"]), str(e["end"]), float(cast(float, e["val"]))))
+        except (KeyError, ValueError):
+            continue
+    if not dated:
+        return None
+    newest = max((filed, end) for filed, end, _ in dated)
+    values = sorted({v for filed, end, v in dated if (filed, end) == newest})
+    return sum(values), tag
+
+
+def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD", dei: Mapping[str, object] | None = None) -> list[boundary.FiscalPeriod]:
     ifrs = taxonomy == "ifrs-full"
     selected = select(gaap, tags, notes, taxonomy=taxonomy, unit=unit)
     facts = Facts(gaap, tags, notes, unit=unit)
@@ -502,6 +543,8 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
             debt, debt_row, debt_composition = total_debt(facts, defs, end)
             nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
+        ffo_value, _, ffo_composition = ffo(facts, defs, end, taxonomy=taxonomy)
+        shares = cover_shares(dei, end, tags) if dei is not None else None
         periods.append(
             boundary.FiscalPeriod(
                 period_end=end.isoformat(),
@@ -529,6 +572,8 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 net_interest_income_row=r["net_interest_income"],
                 ebit_recipe=ebit_recipe, ebit_composition=ebit_composition, cash_composition=cash_composition,
                 total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,
+                ffo=ffo_value, ffo_composition=ffo_composition,
+                cover_shares=None if shares is None else shares[0], cover_shares_tag=None if shares is None else shares[1],
             )
         )
     return periods
@@ -567,6 +612,7 @@ class Decision:
     facts: Mapping[str, object]   # the chosen taxonomy's facts, or us-gaap's for the reason
     taxonomy: str                 # us-gaap | ifrs-full; "" when the vendor
     currency: str | None          # the unit the filer's annual anchors carry
+    dei: Mapping[str, object] | None = None   # the filer's dei section (cover-page shares)
 
 
 def decide(facts: Mapping[str, object] | None, tags: reference.XbrlTags) -> Decision:
@@ -595,7 +641,7 @@ def decide(facts: Mapping[str, object] | None, tags: reference.XbrlTags) -> Deci
         newest, _, taxonomy, unit = max(candidates)
         others = [f"{t} to {e.isoformat()}" for e, _, t, _ in candidates if t != taxonomy]
         both = f" (also {', '.join(others)}; the newest anchors, {newest.isoformat()}, decide)" if others else ""
-        return Decision(True, f"{taxonomy} annual filer ({', '.join(tags.annual_forms)}), statements in {unit}{both}", by_taxonomy[taxonomy], taxonomy, unit)
+        return Decision(True, f"{taxonomy} annual filer ({', '.join(tags.annual_forms)}), statements in {unit}{both}", by_taxonomy[taxonomy], taxonomy, unit, _as_dict(all_facts.get("dei")))
     gaap = by_taxonomy["us-gaap"]
     forms: set[str] = set()
     for taxonomy in TAXONOMIES:

@@ -16,7 +16,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?claims_liability ?claims_liability_row ?total_revenue_row ?ebit_row ?pretax_income_row
     ?tax_provision_row ?capex_row ?delta_nwc_row ?cash_row ?book_equity_row ?net_income_row
     ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
-    ?total_debt_composition ?delta_nwc_composition () : Boundary_t.fiscal_period =
+    ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?cover_shares
+    ?cover_shares_tag () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -67,6 +68,10 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     book_equity_row;
     net_income_row;
     net_interest_income_row;
+    ffo;
+    ffo_composition;
+    cover_shares;
+    cover_shares_tag;
     ebit_recipe;
     ebit_composition;
     cash_composition;
@@ -215,6 +220,7 @@ let params : Params.t =
             "OperatingCompany": {"lens": "FCFF-based DCF", "admissible_models": ["dcf"], "never": "a DCF through a break", "floor_basis_default": "a completed FCFF DCF"},
             "Bank": {"lens": "price/book against ROE", "admissible_models": ["residual_income"], "never": "an FCFF DCF", "floor_basis_default": "tangible book value per share"},
             "Insurer": {"lens": "operating-profit multiple with the solvency ratio", "admissible_models": ["residual_income_insurer"], "never": "an FCFF DCF", "floor_basis_default": "adjusted book value per share"},
+            "Reit": {"lens": "price/FFO and dividend coverage by FFO; never accounting EPS", "admissible_models": ["reit_ffo_dividend"], "never": "accounting EPS", "floor_basis_default": "FFO per share and the dividend it covers"},
             "PreProfit": {"lens": "cash runway vs the catalyst calendar", "admissible_models": [], "never": "any multiple", "floor_basis_default": "no floor until the catalyst", "floor_present_default": false},
             "Wrapper": {"lens": "NAV premium or discount", "admissible_models": [], "never": "headline yield", "floor_basis_default": "NAV per unit"}}}|};
     fx_sources =
@@ -854,8 +860,8 @@ let test_operating_company_record_carries_evidence () =
       Alcotest.(check int) "threshold age" 9 e.bank_nii_ratio_threshold.age_days
 
 let test_no_admissibility_row () =
-  let v = run ~declared:(Some (declaration `Reit)) (financials (history ())) in
-  check_reason v [ "no admissibility row"; "Reit" ];
+  let v = run ~declared:(Some (declaration `Miner)) (financials (history ())) in
+  check_reason v [ "no admissibility row"; "Miner" ];
   check_floor "no row" v None
 
 let test_sanity_bound_names_structural_break () =
@@ -1058,6 +1064,7 @@ let test_bank_routes_to_residual_income () =
       Alcotest.(check bool) "no terminal on the record" false (contains (Boundary_j.string_of_residual_income_inputs i) "terminal")
   | Some (`Dcf _) -> Alcotest.fail "a bank reached the dcf"
   | Some (`Residual_income_insurer _) -> Alcotest.fail "a bank reached the insurer model"
+  | Some (`Reit_ffo_dividend _) -> Alcotest.fail "a bank reached the reit model"
   | None -> Alcotest.fail "no inputs");
   match v.class_check with
   | Some e -> Alcotest.check class_check_outcome "signature consistent" `Consistent e.outcome
@@ -1085,7 +1092,7 @@ let test_flow_chart_names_every_reason () =
       "missing market data: financial_currency"; "missing market data: trading_currency";
       "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
       "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";
-      "rate source has no history for" ]
+      "rate source has no history for"; "ffo growth needs two periods"; "is not positive" ]
 
 (* --- the insurer model --- *)
 
@@ -1926,6 +1933,83 @@ let test_point_in_time_gates_and_vintages () =
   check_reason live [ "later than the valuation date" ];
   if contains (Boundary_j.string_of_valuation live) "point_in_time" then Alcotest.fail "point_in_time leaked into a live record"
 
+(* --- the REIT model (18) --- *)
+
+(* Two filed years of a REIT: FFO 400 then 440 on 100 cover-page shares (ffo per share
+   4.0 -> 4.4, a 10% CAGR), dividends 300 (covered: coverage 0.75), 100 effective shares
+   at price 40 (market cap 4000). *)
+let reit_history ?(dividends = Some 300.) ?(ffo_now = Some 440.) () =
+  [ period ~period_end:"2025-12-31" ~net_income:200. ~depreciation_amortization:240. ?ffo:ffo_now ~cover_shares:100.
+      ~cover_shares_tag:"EntityCommonStockSharesOutstanding" ?dividends_paid:dividends ~dividends_paid_row:"PaymentsOfDividendsCommonStock" ();
+    period ~period_end:"2024-12-31" ~net_income:180. ~depreciation_amortization:220. ~ffo:400. ~cover_shares:100.
+      ~cover_shares_tag:"EntityCommonStockSharesOutstanding" ~dividends_paid:280. ~dividends_paid_row:"PaymentsOfDividendsCommonStock" () ]
+
+let reit_financials periods =
+  { (filed periods) with price = Some 40.; market_cap = Some 4000.; industry = Some "REIT - Retail" }
+
+(* lambda 0 holds growth at g0 = 0.10 for 2 years; ke = 0.02 + 1.0 x 0.10 = 0.12; g_T 0.02.
+   D0 = 300 / 100 = 3; D1 = 3.3, D2 = 3.63; pv = 3.3/1.12 + 3.63/1.2544; terminal = 3.63 x 1.02 / 0.10 = 37.026 at N = 2 *)
+let reit_assumptions = { bank_assumptions with equity_risk_premium = param 0.10 }
+
+let test_reit_value_by_hand () =
+  let inputs, fair_value = get (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ()))) in
+  (* the CAGR spans 365 days, so g = 1.1 ^ (365.25 / 365) - 1, a hair above 0.10, as the dcf's Growth.cagr *)
+  let g = (1.1 ** (365.25 /. 365.)) -. 1. in
+  let d1 = 3. *. (1. +. g) and d2 = 3. *. (1. +. g) *. (1. +. g) in
+  let pv = (d1 /. 1.12) +. (d2 /. 1.2544) in
+  let terminal = d2 *. 1.02 /. 0.10 in
+  check_float "fair value" (pv +. (terminal /. 1.2544)) fair_value;
+  check_float "ffo per share on effective shares" 4.4 inputs.ffo_per_share;
+  check_float "price to ffo" (40. /. 4.4) inputs.price_to_ffo;
+  check_float "coverage" (300. /. 440.) inputs.coverage;
+  check_float "covered dividend" 300. inputs.covered_dividend;
+  check_float "dividend per share" 3. inputs.dividend_per_share;
+  check_float "ffo per cover share cagr" g inputs.g_historical;
+  Alcotest.(check (list string)) "periods" [ "2025-12-31"; "2024-12-31" ] inputs.ffo_periods;
+  Alcotest.(check (list approx)) "dividend path" [ d1; d2 ] inputs.dividend_path;
+  check_float "terminal" terminal inputs.terminal_value;
+  check_mentions "caveat" inputs.caveat [ "FFO overstates distributable cash" ]
+
+let test_reit_covered_dividend_and_guards () =
+  (* payout above FFO: only the covered part is valued, coverage > 1 recorded *)
+  let inputs, fair_value = get (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ~dividends:(Some 500.) ()))) in
+  check_float "covered at ffo" 440. inputs.covered_dividend;
+  check_float "coverage above 1" (500. /. 440.) inputs.coverage;
+  check_float "D0 is the covered dividend per share" 4.4 inputs.dividend_per_share;
+  let _, covered_only = get (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ~dividends:(Some 440.) ()))) in
+  check_float "the uncovered part adds nothing" covered_only fair_value;
+  check_error "one period of ffo per share"
+    (Reit.value reit_assumptions ~country:"T" (reit_financials [ List.hd (reit_history ()) ]))
+    [ "ffo growth needs two periods"; "have 1" ];
+  check_error "cost of equity vs terminal"
+    (Reit.value { reit_assumptions with terminal_growth_rate = param 0.5 } ~country:"T" (reit_financials (reit_history ())))
+    [ "cost of equity"; "does not exceed terminal growth" ];
+  check_error "no ffo" (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ~ffo_now:None ()))) [ "missing statement fields"; "ffo" ];
+  check_error "no dividends" (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ~dividends:None ()))) [ "missing statement fields"; "dividends_paid" ]
+
+let test_reit_routes_and_implied () =
+  let v = run ~declared:(Some (declaration `Reit)) (reit_financials (reit_history ())) in
+  Alcotest.(check (option string)) "a reit values" None v.failed_reason;
+  Alcotest.check status "a reit values" `Ok v.status;
+  Alcotest.(check (option model)) "routed to the reit model" (Some `Reit_ffo_dividend) v.model;
+  check_mentions "floor" v.floor.basis [ "reit ffo dividend"; "coverage"; "FFO overstates" ];
+  check_mentions "json" (Boundary_j.string_of_valuation v) [ {|"model":"reit_ffo_dividend"|}; {|"inputs":["reit_ffo_dividend",{|}; {|"caveat":"FFO overstates|} ];
+  (match v.inputs with
+  | Some (`Reit_ffo_dividend i) ->
+      let lambda = i.mean_reversion_lambda.value in
+      check_float "the fair-value function reproduces the headline" (Option.get v.fair_value) (Implied.reit_fair_value i ~g0:i.g0 ~lambda);
+      let target = 0.05 in
+      let s = implied_at (`Reit_ffo_dividend i) (Implied.reit_fair_value i ~g0:target ~lambda) in
+      Alcotest.(check string) "level name" "implied_g0" s.level_name;
+      (match s.level.value with
+      | Some g -> Alcotest.(check bool) "recovers g0 = 0.05" true (Float.abs (g -. target) < 1e-5)
+      | None -> Alcotest.failf "null: %s" (Option.value s.level.reason ~default:""));
+      let s = implied_at (`Reit_ffo_dividend i) (Implied.reit_fair_value ~projection_years:12 i ~g0:i.g0 ~lambda) in
+      Alcotest.(check (option approx)) "horizon recovers N = 12" (Some 12.) (horizon_of s).value
+  | _ -> Alcotest.fail "no reit inputs");
+  let vendor = run ~declared:(Some (declaration `Reit)) (financials (reit_history ())) in
+  Alcotest.check status "vendor rows carry no ffo: the model still runs when the fetch left ffo on the period" `Ok vendor.status
+
 (* --- batch summary --- *)
 
 let test_batch_summary () =
@@ -1969,7 +2053,7 @@ let test_ok () =
   Alcotest.(check bool) "signal present" true (Option.is_some v.signal);
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
-  | Some (`Residual_income _ | `Residual_income_insurer _) -> Alcotest.fail "routed to the wrong model"
+  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _) -> Alcotest.fail "routed to the wrong model"
   | Some (`Dcf i) ->
       Alcotest.(check string) "country" "United States" i.country;
       Alcotest.(check (option string)) "industry" (Some "Consumer Electronics") i.industry;
@@ -2027,7 +2111,7 @@ let test_no_industry () =
   Alcotest.check status "status" `Ok v.status;
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
-  | Some (`Residual_income _ | `Residual_income_insurer _) -> Alcotest.fail "routed to the wrong model"
+  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _) -> Alcotest.fail "routed to the wrong model"
   | Some (`Dcf i) ->
       check_float "beta" 1.0 i.beta.value;
       Alcotest.check beta_source "beta_source" `Default_no_industry i.beta_source;
@@ -2229,6 +2313,12 @@ let () =
           case "the headline does not depend on the readouts" test_headline_independent_of_the_readouts;
           case "derived ebit runs only within the cross-check, else the policy's failed" test_ebit_policy_gate;
           case "summary carries the universe-level implied line" test_summary_implied_line;
+        ] );
+      ( "reit",
+        [
+          case "value by hand" test_reit_value_by_hand;
+          case "covered dividend, growth needs two periods, guards" test_reit_covered_dividend_and_guards;
+          case "routes, floors, implied g0 and horizon" test_reit_routes_and_implied;
         ] );
       ( "point-in-time",
         [ case "gates name the missing history; held vintages declared" test_point_in_time_gates_and_vintages ] );

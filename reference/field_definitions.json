@@ -6,7 +6,8 @@
     "Within each list the first present entry wins; 'first complete' means every entry of an alternative must be present. A component absent on both providers is absent, never a substituted zero; only the optional components (short-term investments, short-term borrowings, the current portion of debt on the vendor) may be missing without failing the field.",
     "The cross-check (reference/xbrl_tags.json cross_check_threshold) compares the two providers on the same definitions, so what it still flags is a vendor row that is wrong, lagging or built from a different filed line, never a definitional gap.",
     "refinement_policy: a derived recipe may be refined once per field; a name whose derived value still misses the cross-check threshold, or cannot be checked, is Failed with on_miss. A second refinement requires changing this file on purpose.",
-    "ifrs sections (13): the same four definitions on ifrs-full tags for 20-F filers, verified on SAP, Sony, TSMC, Itau, Nu and Kaspi; the recipes are the same, only the components differ. The vendor sections apply to both taxonomies' shadows."
+    "ifrs sections (13): the same four definitions on ifrs-full tags for 20-F filers, verified on SAP, Sony, TSMC, Itau, Nu and Kaspi; the recipes are the same, only the components differ. The vendor sections apply to both taxonomies' shadows.",
+    "ffo (18): the NAREIT recipe for the Reit class, filed statements only; the vendor has no FFO row, so FFO itself is not cross-checked (its components net income, D&A and dividends are, as before)."
   ],
   "cash": {
     "name": "cash_and_short_term_investments",
@@ -327,5 +328,36 @@
   "refinement_policy": {
     "max_refinements_per_field": 1,
     "on_miss": "operating income not filed; derived EBIT misses the cross-check"
+  },
+  "ffo": {
+    "name": "nareit_ffo",
+    "why": "A REIT's accounting earnings are dominated by real-estate depreciation on assets that do not depreciate economically, so EPS and an FCFF DCF are mechanically wrong; the industry's measure is FFO per NAREIT: net income + real-estate depreciation and amortisation + impairments of real estate - gains on property sales, from filed tags per period with every component recorded. Net income and depreciation are required (an absent one leaves the field null); impairments and gains are events, not lines every filer has, so an absent one is taken as 0 and the composition says so. AFFO is not derivable: straight-line rent, lease-intangible amortisation and recurring capex are not reliably tagged, so the lens is stated on FFO and every REIT record carries the caveat that FFO overstates distributable cash by what the filer does not tag. Verified FY2025: Realty Income 1058.6 + 2524.2 + 471.3 - 177.6 = 3876.5m (all four tagged); Prologis 3322.3 + 2626.0 (DepreciationAndAmortization; no impairment or gain tag filed since 2018, both taken as 0); Simon Property 4624.3 + 1426.4 (no impairment or gain tag, both taken as 0: its FY2025 net income carries gains no standard tag names, so its FFO reads high).",
+    "xbrl": {
+      "net_income": [
+        "NetIncomeLossAvailableToCommonStockholdersBasic",
+        "NetIncomeLoss"
+      ],
+      "depreciation": [
+        "DepreciationDepletionAndAmortization",
+        "DepreciationAndAmortization"
+      ],
+      "impairment": [
+        "ImpairmentOfRealEstate"
+      ],
+      "gains": [
+        "GainLossOnSaleOfProperties",
+        "GainsLossesOnSalesOfInvestmentRealEstate"
+      ]
+    },
+    "ifrs": {
+      "net_income": [],
+      "depreciation": [],
+      "impairment": [],
+      "gains": []
+    },
+    "notes": [
+      "ifrs-full tags are not mapped: no IFRS REIT is in the universe; a filer with none of the net-income tags leaves ffo null and the model fails naming it.",
+      "The distribution rule is recorded, not used: a U.S. REIT must distribute at least 90% of its REIT taxable income excluding net capital gain, jurisdiction-specific; the payout is observed, so the rule is not an input."
+    ]
   }
 }

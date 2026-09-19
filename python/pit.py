@@ -256,7 +256,7 @@ def statements_on(symbol: str, d: date, sec: SecLike, notes: list[str]) -> tuple
     decision = fetch_sec.decide(filtered, sec.tags)
     if not decision.xbrl or decision.currency is None:
         return [], decision, VENDOR_REASON, submission, filtered
-    periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, notes, taxonomy=decision.taxonomy, unit=decision.currency)
+    periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, notes, taxonomy=decision.taxonomy, unit=decision.currency, dei=decision.dei)
     notes.append(f"CIK {cik}: {len(decision.facts)} {decision.taxonomy} tags filed by {d}; {len(periods)} annual periods in {decision.currency}")
     lag = fetch.lag_of(submission, periods)
     if lag is not None:

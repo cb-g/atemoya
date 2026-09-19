@@ -1211,6 +1211,85 @@ class FxRates:
 
 
 @dataclass
+class FfoTags:
+    """Original type: ffo_tags = { ... }
+    """
+
+    net_income: List[str]
+    depreciation: List[str]
+    impairment: List[str]
+    gains: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FfoTags':
+        if isinstance(x, dict):
+            return cls(
+                net_income=_atd_read_list(_atd_read_string)(x['net_income']) if 'net_income' in x else _atd_missing_json_field('FfoTags', 'net_income'),
+                depreciation=_atd_read_list(_atd_read_string)(x['depreciation']) if 'depreciation' in x else _atd_missing_json_field('FfoTags', 'depreciation'),
+                impairment=_atd_read_list(_atd_read_string)(x['impairment']) if 'impairment' in x else _atd_missing_json_field('FfoTags', 'impairment'),
+                gains=_atd_read_list(_atd_read_string)(x['gains']) if 'gains' in x else _atd_missing_json_field('FfoTags', 'gains'),
+            )
+        else:
+            _atd_bad_json('FfoTags', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['net_income'] = _atd_write_list(_atd_write_string)(self.net_income)
+        res['depreciation'] = _atd_write_list(_atd_write_string)(self.depreciation)
+        res['impairment'] = _atd_write_list(_atd_write_string)(self.impairment)
+        res['gains'] = _atd_write_list(_atd_write_string)(self.gains)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FfoTags':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class FfoDefinition:
+    """Original type: ffo_definition = { ... }
+    """
+
+    name: str
+    why: str
+    xbrl: FfoTags
+    ifrs: FfoTags
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FfoDefinition':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('FfoDefinition', 'name'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('FfoDefinition', 'why'),
+                xbrl=FfoTags.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('FfoDefinition', 'xbrl'),
+                ifrs=FfoTags.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('FfoDefinition', 'ifrs'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('FfoDefinition', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['why'] = _atd_write_string(self.why)
+        res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['ifrs'] = (lambda x: x.to_json())(self.ifrs)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FfoDefinition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class EbitRows:
     """Original type: ebit_rows = { ... }
     """
@@ -1640,6 +1719,7 @@ class FieldDefinitions:
     total_debt: DebtDefinition
     delta_nwc: NwcDefinition
     ebit: EbitDefinition
+    ffo: FfoDefinition
     refinement_policy: RefinementPolicy
     notes: List[str] = field(default_factory=lambda: [])
 
@@ -1653,6 +1733,7 @@ class FieldDefinitions:
                 total_debt=DebtDefinition.from_json(x['total_debt']) if 'total_debt' in x else _atd_missing_json_field('FieldDefinitions', 'total_debt'),
                 delta_nwc=NwcDefinition.from_json(x['delta_nwc']) if 'delta_nwc' in x else _atd_missing_json_field('FieldDefinitions', 'delta_nwc'),
                 ebit=EbitDefinition.from_json(x['ebit']) if 'ebit' in x else _atd_missing_json_field('FieldDefinitions', 'ebit'),
+                ffo=FfoDefinition.from_json(x['ffo']) if 'ffo' in x else _atd_missing_json_field('FieldDefinitions', 'ffo'),
                 refinement_policy=RefinementPolicy.from_json(x['refinement_policy']) if 'refinement_policy' in x else _atd_missing_json_field('FieldDefinitions', 'refinement_policy'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
@@ -1667,6 +1748,7 @@ class FieldDefinitions:
         res['total_debt'] = (lambda x: x.to_json())(self.total_debt)
         res['delta_nwc'] = (lambda x: x.to_json())(self.delta_nwc)
         res['ebit'] = (lambda x: x.to_json())(self.ebit)
+        res['ffo'] = (lambda x: x.to_json())(self.ffo)
         res['refinement_policy'] = (lambda x: x.to_json())(self.refinement_policy)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res

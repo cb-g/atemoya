@@ -36,6 +36,9 @@ val residual_income_fair_value : ?projection_years:int -> Boundary_t.residual_in
 (** [projection_years] defaults to the recorded horizon; the risk-free rate stays the
     recorded one whatever the horizon. *)
 
+val reit_fair_value : ?projection_years:int -> Boundary_t.reit_inputs -> g0:float -> lambda:float -> float
+(** The REIT model's fair value per share at any starting growth and lambda. *)
+
 val rf_tenor_note : string
 
 val of_inputs : Boundary_t.model_inputs -> price:float -> Boundary_t.implied

@@ -10,7 +10,9 @@
     "cross_check_threshold 0.02 is an assumption: two providers reading the same filing under the same definitions should agree to within rounding; a larger gap is a vendor row that is wrong, lagging or built from another filed line, and the summary lists it.",
     "ifrs_full_fields, verified on the 20-F filers SAP (EUR), Sony (JPY), TSMC (TWD), Itau (BRL), Nu (USD) and Kaspi (KZT) on 2026-09-19: Revenue, ProfitLossBeforeTax, IncomeTaxExpenseContinuingOperations, ProfitLossFromOperatingActivities (in field_definitions.json), EquityAttributableToOwnersOfParent, ProfitLossAttributableToOwnersOfParent, AccumulatedOtherComprehensiveIncome on all; DepreciationAndAmortisationExpense on Sony, Kaspi and Itau, the cash-flow AdjustmentsForDepreciationAndAmortisationExpense on SAP, DepreciationExpense plus AmortisationExpense on TSMC; capex as PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities (TSMC, Itau) or the combined property-plant-equipment-and-intangibles purchase tag (SAP, Sony, Kaspi; intangibles included, the tag says so); dividends as the equity-holders-of-parent tag (SAP), the financing-activities tag (Sony, TSMC, Kaspi), then DividendsPaid; Itau's DividendsPaid stops at FY2022 and Nu tags no dividends at all, so both leave dividends_paid null. Insurer fields are deliberately empty: no IFRS insurer is in the universe; Sony's FY2025 20-F carries InsuranceRevenue (Sony Financial, deconsolidated October 2025), which would fire the insurer signature on a declared OperatingCompany, and is not mapped until an IFRS insurer joins.",
     "ifrs_full_net_interest_income: the taxonomy has no net interest income tag; where InterestRevenueCalculatedUsingEffectiveInterestMethod (Kaspi) or InterestIncome and InterestExpense are filed the difference is recorded as the row A - B; Itau and Nu file neither revenue tag, so the field stays null and the bank signature reads as absent (a recorded outcome, never a gate on a declared Bank).",
-    "Filing lag, observed 2026-09-19: SEC's companyfacts carries no facts from the 2026 20-Fs of Sony (filed 2026-06-18), TSMC (2026-04-16, two dei facts only), Itau (2026-04-30), HDFC Bank (2026-07-29) and Nu, though the submissions index lists them; their newest annual facts are 430 to 520 days old and fail max_filing_age_days. SAP's 2026 20-F (2026-02-26) is present."
+    "Filing lag, observed 2026-09-19: SEC's companyfacts carries no facts from the 2026 20-Fs of Sony (filed 2026-06-18), TSMC (2026-04-16, two dei facts only), Itau (2026-04-30), HDFC Bank (2026-07-29) and Nu, though the submissions index lists them; their newest annual facts are 430 to 520 days old and fail max_filing_age_days. SAP's 2026 20-F (2026-02-26) is present.",
+    "ffo fields (18), verified on Realty Income, Prologis and Simon Property FY2025: net income available to common (all three), DepreciationDepletionAndAmortization (Realty Income) or DepreciationAndAmortization (Prologis, Simon), ImpairmentOfRealEstate and GainLossOnSaleOfProperties (Realty Income only; Prologis last filed both in 2012 and 2018, Simon never). The recipe lives in field_definitions.json.",
+    "net_income: NetIncomeLoss first; NetIncomeLossAvailableToCommonStockholdersBasic second for a filer that tags only the figure available to common (Simon Property), which is also the anchor the routing needs."
   ],
   "cross_check_threshold": 0.02,
   "max_filing_age_days": 400,
@@ -83,7 +85,8 @@
     "net_income": {
       "kind": "duration",
       "tags": [
-        "NetIncomeLoss"
+        "NetIncomeLoss",
+        "NetIncomeLossAvailableToCommonStockholdersBasic"
       ]
     },
     "dividends_paid": {
@@ -152,6 +155,33 @@
       "kind": "instant",
       "tags": [
         "LiabilityForClaimsAndClaimsAdjustmentExpense"
+      ]
+    },
+    "ffo_net_income": {
+      "kind": "duration",
+      "tags": [
+        "NetIncomeLossAvailableToCommonStockholdersBasic",
+        "NetIncomeLoss"
+      ]
+    },
+    "real_estate_depreciation": {
+      "kind": "duration",
+      "tags": [
+        "DepreciationDepletionAndAmortization",
+        "DepreciationAndAmortization"
+      ]
+    },
+    "real_estate_impairment": {
+      "kind": "duration",
+      "tags": [
+        "ImpairmentOfRealEstate"
+      ]
+    },
+    "gain_on_property_sales": {
+      "kind": "duration",
+      "tags": [
+        "GainLossOnSaleOfProperties",
+        "GainsLossesOnSalesOfInvestmentRealEstate"
       ]
     }
   },
@@ -262,6 +292,22 @@
     },
     "claims_liability": {
       "kind": "instant",
+      "tags": []
+    },
+    "ffo_net_income": {
+      "kind": "duration",
+      "tags": []
+    },
+    "real_estate_depreciation": {
+      "kind": "duration",
+      "tags": []
+    },
+    "real_estate_impairment": {
+      "kind": "duration",
+      "tags": []
+    },
+    "gain_on_property_sales": {
+      "kind": "duration",
       "tags": []
     }
   },

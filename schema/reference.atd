@@ -330,6 +330,25 @@ type ebit_definition = {
   vendor : ebit_rows;
 }
 
+(* FFO per NAREIT (18), filed statements only: net income + real-estate depreciation and
+   amortisation + impairments - gains on property sales. Net income and depreciation are
+   required; impairment and gains are optional (an event, not a line every filer has) and
+   an absent one is taken as 0 and recorded as "not filed, taken as 0". *)
+type ffo_tags = {
+  net_income : string list;
+  depreciation : string list;
+  impairment : string list;
+  gains : string list;
+}
+
+type ffo_definition = {
+  name : string;
+  why : string;
+  xbrl : ffo_tags;
+  ifrs : ffo_tags;
+  ~notes : string list;
+}
+
 type field_definitions = {
   source : string;
   as_of : string;
@@ -338,5 +357,6 @@ type field_definitions = {
   total_debt : debt_definition;
   delta_nwc : nwc_definition;
   ebit : ebit_definition;
+  ffo : ffo_definition;
   refinement_policy : refinement_policy;
 }

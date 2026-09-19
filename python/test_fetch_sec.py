@@ -462,3 +462,45 @@ def test_lag_and_vendor_freshness() -> None:
     assert fetch.vendor_is_fresh([fetch._period(date(2026, 11, 30), None, None, None)], submission("2027-02-25", "2026-12-31"))  # pyright: ignore[reportPrivateUsage]
     assert not fetch.vendor_is_fresh(vendor_2025, submission("2027-02-25", "2026-12-31"))
     assert not fetch.vendor_is_fresh([], submission("2027-02-25", "2026-12-31"))
+
+
+def test_ffo_per_nareit_with_and_without_the_optional_components() -> None:
+    """Realty Income FY2025 by hand: 1058.6 + 2524.2 + 471.3 - 177.6; then each optional
+    component absent (taken as 0, recorded), then a required one absent (null)."""
+    o = {"NetIncomeLossAvailableToCommonStockholdersBasic": usd(fact("2025-12-31", 1058.6e6, start="2025-01-01")),
+         "NetIncomeLoss": usd(fact("2025-12-31", 1060.0e6, start="2025-01-01")),
+         "DepreciationDepletionAndAmortization": usd(fact("2025-12-31", 2524.2e6, start="2025-01-01")),
+         "ImpairmentOfRealEstate": usd(fact("2025-12-31", 471.3e6, start="2025-01-01")),
+         "GainLossOnSaleOfProperties": usd(fact("2025-12-31", 177.6e6, start="2025-01-01"))}
+    p = period(o)
+    assert p.ffo is not None and math.isclose(p.ffo, (1058.6 + 2524.2 + 471.3 - 177.6) * 1e6)
+    assert components(p.ffo_composition) == [("net_income", 1058.6e6, "NetIncomeLossAvailableToCommonStockholdersBasic"), ("real_estate_depreciation", 2524.2e6, "DepreciationDepletionAndAmortization"),
+                                             ("real_estate_impairment", 471.3e6, "ImpairmentOfRealEstate"), ("gain_on_property_sales", -177.6e6, "GainLossOnSaleOfProperties")]
+    assert p.ffo_composition is not None and p.ffo_composition.definition == DEFS.ffo.name
+    no_impairment = period({k: v for k, v in o.items() if k != "ImpairmentOfRealEstate"})
+    assert no_impairment.ffo is not None and math.isclose(no_impairment.ffo, (1058.6 + 2524.2 - 177.6) * 1e6)
+    assert ("real_estate_impairment", 0.0, "not filed, taken as 0") in components(no_impairment.ffo_composition)
+    no_gains = period({k: v for k, v in o.items() if k != "GainLossOnSaleOfProperties"})
+    assert no_gains.ffo is not None and math.isclose(no_gains.ffo, (1058.6 + 2524.2 + 471.3) * 1e6)
+    assert ("gain_on_property_sales", 0.0, "not filed, taken as 0") in components(no_gains.ffo_composition)
+    no_depreciation = period({k: v for k, v in o.items() if k != "DepreciationDepletionAndAmortization"})
+    assert no_depreciation.ffo is None and no_depreciation.ffo_composition is None  # required, never zero
+    # the vendor-style tag order: net income available to common first, NetIncomeLoss second
+    assert period({k: v for k, v in o.items() if k != "NetIncomeLossAvailableToCommonStockholdersBasic"}).ffo_composition.components[0].row == "NetIncomeLoss"  # pyright: ignore[reportOptionalMemberAccess]
+
+
+def test_cover_shares_from_the_periods_own_annual_report() -> None:
+    """The annual report for the year ending 2025-12-31 carries its cover date in early 2026;
+    a quarterly cover page, or the next year's annual, is not this period's."""
+    dei = {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+        {"end": "2026-02-20", "val": 900.0, "filed": "2026-02-25", "form": "10-K", "fp": "FY"},
+        {"end": "2026-02-20", "val": 100.0, "filed": "2026-02-25", "form": "10-K", "fp": "FY"},
+        {"end": "2026-04-30", "val": 990.0, "filed": "2026-05-07", "form": "10-Q", "fp": "Q1"},
+        {"end": "2025-02-18", "val": 950.0, "filed": "2025-02-25", "form": "10-K", "fp": "FY"},
+        {"end": "2027-02-19", "val": 980.0, "filed": "2027-02-24", "form": "10-K", "fp": "FY"}]}}}
+    assert fetch_sec.cover_shares(dei, date(2025, 12, 31), TAGS) == (1000.0, "EntityCommonStockSharesOutstanding")
+    assert fetch_sec.cover_shares(dei, date(2024, 12, 31), TAGS) == (950.0, "EntityCommonStockSharesOutstanding")
+    assert fetch_sec.cover_shares(dei, date(2023, 12, 31), TAGS) is None
+    p = fetch_sec.periods_from_facts(anchors(), TAGS, DEFS, [], dei=dei)[0]
+    assert p.cover_shares == 1000.0 and p.cover_shares_tag == "EntityCommonStockSharesOutstanding"
+    assert fetch_sec.periods_from_facts(anchors(), TAGS, DEFS, [])[0].cover_shares is None

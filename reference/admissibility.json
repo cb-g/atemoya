@@ -1,10 +1,11 @@
 {
   "source": "two field reports from a project that ran the previous implementation daily for about 14 months on about 215 names (a DCF on a bank, a DCF on a regulated utility mid capex cycle, an AISC screen on a royalty company, an insurer pinned at +571.9% upside), plus that implementation's own findings",
-  "as_of": "2026-09-18",
+  "as_of": "2026-09-19",
   "notes": [
     "Models today: dcf (OperatingCompany), residual_income (Bank), residual_income_insurer (Insurer, needs filed statements). A class with [] has no admissible model yet and is refused with its lens named.",
     "Inadmissible is Failed with the lens named: the reader learns what the right measurement is.",
-    "Anything that fits no class gets a class added to the boundary variant and a row here, never a place in OperatingCompany."
+    "Anything that fits no class gets a class added to the boundary variant and a row here, never a place in OperatingCompany.",
+    "Reit (18): the FFO-covered dividend discounted at the CAPM cost of equity with the REIT industry beta, FFO per NAREIT from filed tags; the lens is on FFO, not AFFO, because AFFO's adjustments are not reliably tagged, and every record says so. The distribution rule (a U.S. REIT distributes at least 90% of its REIT taxable income excluding net capital gain; jurisdiction-specific) is recorded here and not used: the payout is observed. A mortgage REIT is not this lens; none is classed Reit today."
   ],
   "classes": {
     "OperatingCompany": {
@@ -44,10 +45,12 @@
       "floor_basis_default": "contracted capacity revenue at the regional clearing price"
     },
     "Reit": {
-      "lens": "price/AFFO and dividend coverage by AFFO; never accounting EPS",
-      "admissible_models": [],
-      "never": "accounting EPS or an FCFF DCF: depreciation dominates both",
-      "floor_basis_default": "AFFO per share and the dividend it covers"
+      "lens": "price/FFO and dividend coverage by FFO; never accounting EPS",
+      "admissible_models": [
+        "reit_ffo_dividend"
+      ],
+      "never": "accounting EPS or an FCFF DCF: depreciation dominates both; a P/FFO, cap rate or NAV premium from a table",
+      "floor_basis_default": "FFO per share and the dividend it covers"
     },
     "Miner": {
       "lens": "NAV and reserve life; never spot FCF",

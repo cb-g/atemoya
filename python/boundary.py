@@ -965,6 +965,218 @@ class ResidualIncomeInputs:
 
 
 @dataclass
+class Component:
+    """Original type: component = { ... }
+    """
+
+    name: str
+    value: float
+    row: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Component':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('Component', 'name'),
+                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('Component', 'value'),
+                row=_atd_read_string(x['row']) if 'row' in x else _atd_missing_json_field('Component', 'row'),
+            )
+        else:
+            _atd_bad_json('Component', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['value'] = _atd_write_float(self.value)
+        res['row'] = _atd_write_string(self.row)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Component':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Composition:
+    """Original type: composition = { ... }
+    """
+
+    definition: str
+    components: List[Component]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Composition':
+        if isinstance(x, dict):
+            return cls(
+                definition=_atd_read_string(x['definition']) if 'definition' in x else _atd_missing_json_field('Composition', 'definition'),
+                components=_atd_read_list(Component.from_json)(x['components']) if 'components' in x else _atd_missing_json_field('Composition', 'components'),
+            )
+        else:
+            _atd_bad_json('Composition', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['definition'] = _atd_write_string(self.definition)
+        res['components'] = _atd_write_list((lambda x: x.to_json()))(self.components)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Composition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ReitInputs:
+    """Original type: reit_inputs = { ... }
+    """
+
+    fiscal_period_end: str
+    country: str
+    industry: Optional[str]
+    price: float
+    market_cap: float
+    shares: float
+    ffo: float
+    ffo_composition: Optional[Composition]
+    ffo_per_share: float
+    price_to_ffo: float
+    dividends_paid: float
+    dividends_paid_row: Optional[str]
+    coverage: float
+    covered_dividend: float
+    dividend_per_share: float
+    ffo_per_cover_share: List[Tuple[str, float]]
+    ffo_periods: List[str]
+    g_historical: float
+    g0: float
+    growth_clamped: bool
+    growth_clamp_lower: Parameter
+    growth_clamp_upper: Parameter
+    mean_reversion_lambda: Parameter
+    growth_path: List[float]
+    risk_free_rate: Parameter
+    equity_risk_premium: Parameter
+    beta: Parameter
+    beta_source: BetaSource
+    cost_of_equity: float
+    terminal_growth_rate: Parameter
+    projection_years: IntParameter
+    dividend_path: List[float]
+    pv_dividends: float
+    terminal_value: float
+    pv_terminal_value: float
+    equity_value: float
+    caveat: str
+    country_risk_premium: Optional[Parameter] = None
+    conversion: Optional[Conversion] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ReitInputs':
+        if isinstance(x, dict):
+            return cls(
+                fiscal_period_end=_atd_read_string(x['fiscal_period_end']) if 'fiscal_period_end' in x else _atd_missing_json_field('ReitInputs', 'fiscal_period_end'),
+                country=_atd_read_string(x['country']) if 'country' in x else _atd_missing_json_field('ReitInputs', 'country'),
+                industry=_atd_read_nullable(_atd_read_string)(x['industry']) if 'industry' in x else _atd_missing_json_field('ReitInputs', 'industry'),
+                price=_atd_read_float(x['price']) if 'price' in x else _atd_missing_json_field('ReitInputs', 'price'),
+                market_cap=_atd_read_float(x['market_cap']) if 'market_cap' in x else _atd_missing_json_field('ReitInputs', 'market_cap'),
+                shares=_atd_read_float(x['shares']) if 'shares' in x else _atd_missing_json_field('ReitInputs', 'shares'),
+                ffo=_atd_read_float(x['ffo']) if 'ffo' in x else _atd_missing_json_field('ReitInputs', 'ffo'),
+                ffo_composition=_atd_read_nullable(Composition.from_json)(x['ffo_composition']) if 'ffo_composition' in x else _atd_missing_json_field('ReitInputs', 'ffo_composition'),
+                ffo_per_share=_atd_read_float(x['ffo_per_share']) if 'ffo_per_share' in x else _atd_missing_json_field('ReitInputs', 'ffo_per_share'),
+                price_to_ffo=_atd_read_float(x['price_to_ffo']) if 'price_to_ffo' in x else _atd_missing_json_field('ReitInputs', 'price_to_ffo'),
+                dividends_paid=_atd_read_float(x['dividends_paid']) if 'dividends_paid' in x else _atd_missing_json_field('ReitInputs', 'dividends_paid'),
+                dividends_paid_row=_atd_read_nullable(_atd_read_string)(x['dividends_paid_row']) if 'dividends_paid_row' in x else _atd_missing_json_field('ReitInputs', 'dividends_paid_row'),
+                coverage=_atd_read_float(x['coverage']) if 'coverage' in x else _atd_missing_json_field('ReitInputs', 'coverage'),
+                covered_dividend=_atd_read_float(x['covered_dividend']) if 'covered_dividend' in x else _atd_missing_json_field('ReitInputs', 'covered_dividend'),
+                dividend_per_share=_atd_read_float(x['dividend_per_share']) if 'dividend_per_share' in x else _atd_missing_json_field('ReitInputs', 'dividend_per_share'),
+                ffo_per_cover_share=_atd_read_assoc_object_into_list(_atd_read_float)(x['ffo_per_cover_share']) if 'ffo_per_cover_share' in x else _atd_missing_json_field('ReitInputs', 'ffo_per_cover_share'),
+                ffo_periods=_atd_read_list(_atd_read_string)(x['ffo_periods']) if 'ffo_periods' in x else _atd_missing_json_field('ReitInputs', 'ffo_periods'),
+                g_historical=_atd_read_float(x['g_historical']) if 'g_historical' in x else _atd_missing_json_field('ReitInputs', 'g_historical'),
+                g0=_atd_read_float(x['g0']) if 'g0' in x else _atd_missing_json_field('ReitInputs', 'g0'),
+                growth_clamped=_atd_read_bool(x['growth_clamped']) if 'growth_clamped' in x else _atd_missing_json_field('ReitInputs', 'growth_clamped'),
+                growth_clamp_lower=Parameter.from_json(x['growth_clamp_lower']) if 'growth_clamp_lower' in x else _atd_missing_json_field('ReitInputs', 'growth_clamp_lower'),
+                growth_clamp_upper=Parameter.from_json(x['growth_clamp_upper']) if 'growth_clamp_upper' in x else _atd_missing_json_field('ReitInputs', 'growth_clamp_upper'),
+                mean_reversion_lambda=Parameter.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('ReitInputs', 'mean_reversion_lambda'),
+                growth_path=_atd_read_list(_atd_read_float)(x['growth_path']) if 'growth_path' in x else _atd_missing_json_field('ReitInputs', 'growth_path'),
+                risk_free_rate=Parameter.from_json(x['risk_free_rate']) if 'risk_free_rate' in x else _atd_missing_json_field('ReitInputs', 'risk_free_rate'),
+                equity_risk_premium=Parameter.from_json(x['equity_risk_premium']) if 'equity_risk_premium' in x else _atd_missing_json_field('ReitInputs', 'equity_risk_premium'),
+                beta=Parameter.from_json(x['beta']) if 'beta' in x else _atd_missing_json_field('ReitInputs', 'beta'),
+                beta_source=BetaSource.from_json(x['beta_source']) if 'beta_source' in x else _atd_missing_json_field('ReitInputs', 'beta_source'),
+                cost_of_equity=_atd_read_float(x['cost_of_equity']) if 'cost_of_equity' in x else _atd_missing_json_field('ReitInputs', 'cost_of_equity'),
+                terminal_growth_rate=Parameter.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('ReitInputs', 'terminal_growth_rate'),
+                projection_years=IntParameter.from_json(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('ReitInputs', 'projection_years'),
+                dividend_path=_atd_read_list(_atd_read_float)(x['dividend_path']) if 'dividend_path' in x else _atd_missing_json_field('ReitInputs', 'dividend_path'),
+                pv_dividends=_atd_read_float(x['pv_dividends']) if 'pv_dividends' in x else _atd_missing_json_field('ReitInputs', 'pv_dividends'),
+                terminal_value=_atd_read_float(x['terminal_value']) if 'terminal_value' in x else _atd_missing_json_field('ReitInputs', 'terminal_value'),
+                pv_terminal_value=_atd_read_float(x['pv_terminal_value']) if 'pv_terminal_value' in x else _atd_missing_json_field('ReitInputs', 'pv_terminal_value'),
+                equity_value=_atd_read_float(x['equity_value']) if 'equity_value' in x else _atd_missing_json_field('ReitInputs', 'equity_value'),
+                caveat=_atd_read_string(x['caveat']) if 'caveat' in x else _atd_missing_json_field('ReitInputs', 'caveat'),
+                country_risk_premium=Parameter.from_json(x['country_risk_premium']) if 'country_risk_premium' in x else None,
+                conversion=Conversion.from_json(x['conversion']) if 'conversion' in x else None,
+            )
+        else:
+            _atd_bad_json('ReitInputs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['fiscal_period_end'] = _atd_write_string(self.fiscal_period_end)
+        res['country'] = _atd_write_string(self.country)
+        res['industry'] = _atd_write_nullable(_atd_write_string)(self.industry)
+        res['price'] = _atd_write_float(self.price)
+        res['market_cap'] = _atd_write_float(self.market_cap)
+        res['shares'] = _atd_write_float(self.shares)
+        res['ffo'] = _atd_write_float(self.ffo)
+        res['ffo_composition'] = _atd_write_nullable((lambda x: x.to_json()))(self.ffo_composition)
+        res['ffo_per_share'] = _atd_write_float(self.ffo_per_share)
+        res['price_to_ffo'] = _atd_write_float(self.price_to_ffo)
+        res['dividends_paid'] = _atd_write_float(self.dividends_paid)
+        res['dividends_paid_row'] = _atd_write_nullable(_atd_write_string)(self.dividends_paid_row)
+        res['coverage'] = _atd_write_float(self.coverage)
+        res['covered_dividend'] = _atd_write_float(self.covered_dividend)
+        res['dividend_per_share'] = _atd_write_float(self.dividend_per_share)
+        res['ffo_per_cover_share'] = _atd_write_assoc_list_to_object(_atd_write_float)(self.ffo_per_cover_share)
+        res['ffo_periods'] = _atd_write_list(_atd_write_string)(self.ffo_periods)
+        res['g_historical'] = _atd_write_float(self.g_historical)
+        res['g0'] = _atd_write_float(self.g0)
+        res['growth_clamped'] = _atd_write_bool(self.growth_clamped)
+        res['growth_clamp_lower'] = (lambda x: x.to_json())(self.growth_clamp_lower)
+        res['growth_clamp_upper'] = (lambda x: x.to_json())(self.growth_clamp_upper)
+        res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
+        res['growth_path'] = _atd_write_list(_atd_write_float)(self.growth_path)
+        res['risk_free_rate'] = (lambda x: x.to_json())(self.risk_free_rate)
+        res['equity_risk_premium'] = (lambda x: x.to_json())(self.equity_risk_premium)
+        res['beta'] = (lambda x: x.to_json())(self.beta)
+        res['beta_source'] = (lambda x: x.to_json())(self.beta_source)
+        res['cost_of_equity'] = _atd_write_float(self.cost_of_equity)
+        res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
+        res['projection_years'] = (lambda x: x.to_json())(self.projection_years)
+        res['dividend_path'] = _atd_write_list(_atd_write_float)(self.dividend_path)
+        res['pv_dividends'] = _atd_write_float(self.pv_dividends)
+        res['terminal_value'] = _atd_write_float(self.terminal_value)
+        res['pv_terminal_value'] = _atd_write_float(self.pv_terminal_value)
+        res['equity_value'] = _atd_write_float(self.equity_value)
+        res['caveat'] = _atd_write_string(self.caveat)
+        if self.country_risk_premium is not None:
+            res['country_risk_premium'] = (lambda x: x.to_json())(self.country_risk_premium)
+        if self.conversion is not None:
+            res['conversion'] = (lambda x: x.to_json())(self.conversion)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ReitInputs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Readout:
     """Original type: readout = { ... }
     """
@@ -1267,73 +1479,6 @@ class GrowthSource:
 
 
 @dataclass
-class Component:
-    """Original type: component = { ... }
-    """
-
-    name: str
-    value: float
-    row: str
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'Component':
-        if isinstance(x, dict):
-            return cls(
-                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('Component', 'name'),
-                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('Component', 'value'),
-                row=_atd_read_string(x['row']) if 'row' in x else _atd_missing_json_field('Component', 'row'),
-            )
-        else:
-            _atd_bad_json('Component', x)
-
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['name'] = _atd_write_string(self.name)
-        res['value'] = _atd_write_float(self.value)
-        res['row'] = _atd_write_string(self.row)
-        return res
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'Component':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class Composition:
-    """Original type: composition = { ... }
-    """
-
-    definition: str
-    components: List[Component]
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'Composition':
-        if isinstance(x, dict):
-            return cls(
-                definition=_atd_read_string(x['definition']) if 'definition' in x else _atd_missing_json_field('Composition', 'definition'),
-                components=_atd_read_list(Component.from_json)(x['components']) if 'components' in x else _atd_missing_json_field('Composition', 'components'),
-            )
-        else:
-            _atd_bad_json('Composition', x)
-
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['definition'] = _atd_write_string(self.definition)
-        res['components'] = _atd_write_list((lambda x: x.to_json()))(self.components)
-        return res
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'Composition':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
 class Inputs:
     """Original type: inputs = { ... }
     """
@@ -1588,11 +1733,30 @@ class ResidualIncomeInsurer:
 
 
 @dataclass
+class ReitFfoDividend:
+    """Original type: model_inputs = [ ... | Reit_ffo_dividend of ... | ... ]
+    """
+
+    value: ReitInputs
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'ReitFfoDividend'
+
+    def to_json(self) -> Any:
+        return ['reit_ffo_dividend', (lambda x: x.to_json())(self.value)]
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class ModelInputs:
     """Original type: model_inputs = [ ... ]
     """
 
-    value: Union[Dcf, ResidualIncome, ResidualIncomeInsurer]
+    value: Union[Dcf, ResidualIncome, ResidualIncomeInsurer, ReitFfoDividend]
 
     @property
     def kind(self) -> str:
@@ -1609,6 +1773,8 @@ class ModelInputs:
                 return cls(ResidualIncome(ResidualIncomeInputs.from_json(x[1])))
             if cons == 'residual_income_insurer':
                 return cls(ResidualIncomeInsurer(InsurerInputs.from_json(x[1])))
+            if cons == 'reit_ffo_dividend':
+                return cls(ReitFfoDividend(ReitInputs.from_json(x[1])))
             _atd_bad_json('ModelInputs', x)
         _atd_bad_json('ModelInputs', x)
 
@@ -1678,11 +1844,29 @@ class ResidualIncomeInsurer_:
 
 
 @dataclass
+class ReitFfoDividend_:
+    """Original type: model = [ ... | Reit_ffo_dividend | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'ReitFfoDividend_'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'reit_ffo_dividend'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Model:
     """Original type: model = [ ... ]
     """
 
-    value: Union[Dcf_, ResidualIncome_, ResidualIncomeInsurer_]
+    value: Union[Dcf_, ResidualIncome_, ResidualIncomeInsurer_, ReitFfoDividend_]
 
     @property
     def kind(self) -> str:
@@ -1698,6 +1882,8 @@ class Model:
                 return cls(ResidualIncome_())
             if x == 'residual_income_insurer':
                 return cls(ResidualIncomeInsurer_())
+            if x == 'reit_ffo_dividend':
+                return cls(ReitFfoDividend_())
             _atd_bad_json('Model', x)
         _atd_bad_json('Model', x)
 
@@ -2588,6 +2774,10 @@ class FiscalPeriod:
     book_equity_row: Optional[str] = None
     net_income_row: Optional[str] = None
     net_interest_income_row: Optional[str] = None
+    ffo: Optional[float] = None
+    ffo_composition: Optional[Composition] = None
+    cover_shares: Optional[float] = None
+    cover_shares_tag: Optional[str] = None
     ebit_recipe: Optional[str] = None
     ebit_composition: Optional[Composition] = None
     cash_composition: Optional[Composition] = None
@@ -2647,6 +2837,10 @@ class FiscalPeriod:
                 book_equity_row=_atd_read_string(x['book_equity_row']) if 'book_equity_row' in x else None,
                 net_income_row=_atd_read_string(x['net_income_row']) if 'net_income_row' in x else None,
                 net_interest_income_row=_atd_read_string(x['net_interest_income_row']) if 'net_interest_income_row' in x else None,
+                ffo=_atd_read_float(x['ffo']) if 'ffo' in x else None,
+                ffo_composition=Composition.from_json(x['ffo_composition']) if 'ffo_composition' in x else None,
+                cover_shares=_atd_read_float(x['cover_shares']) if 'cover_shares' in x else None,
+                cover_shares_tag=_atd_read_string(x['cover_shares_tag']) if 'cover_shares_tag' in x else None,
                 ebit_recipe=_atd_read_string(x['ebit_recipe']) if 'ebit_recipe' in x else None,
                 ebit_composition=Composition.from_json(x['ebit_composition']) if 'ebit_composition' in x else None,
                 cash_composition=Composition.from_json(x['cash_composition']) if 'cash_composition' in x else None,
@@ -2733,6 +2927,14 @@ class FiscalPeriod:
             res['net_income_row'] = _atd_write_string(self.net_income_row)
         if self.net_interest_income_row is not None:
             res['net_interest_income_row'] = _atd_write_string(self.net_interest_income_row)
+        if self.ffo is not None:
+            res['ffo'] = _atd_write_float(self.ffo)
+        if self.ffo_composition is not None:
+            res['ffo_composition'] = (lambda x: x.to_json())(self.ffo_composition)
+        if self.cover_shares is not None:
+            res['cover_shares'] = _atd_write_float(self.cover_shares)
+        if self.cover_shares_tag is not None:
+            res['cover_shares_tag'] = _atd_write_string(self.cover_shares_tag)
         if self.ebit_recipe is not None:
             res['ebit_recipe'] = _atd_write_string(self.ebit_recipe)
         if self.ebit_composition is not None:

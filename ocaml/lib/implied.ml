@@ -52,6 +52,14 @@ let residual_income_fair_value ?projection_years (i : residual_income_inputs) ~r
   in
   (i.book_equity +. s.pv_excess_returns) /. i.shares
 
+let reit_fair_value ?projection_years (i : reit_inputs) ~g0 ~lambda =
+  let projection_years = Option.value projection_years ~default:i.projection_years.value in
+  let terminal_growth_rate = i.terminal_growth_rate.value in
+  let growth_path = Growth.path ~g0 ~terminal_growth_rate ~lambda ~projection_years in
+  let dividend_path = Reit.dividend_path ~d0:i.dividend_per_share ~growth_path in
+  let pv, _, pv_terminal = Reit.present_value ~dividend_path ~cost_of_equity:i.cost_of_equity ~terminal_growth_rate in
+  pv +. pv_terminal
+
 let readout value = { value = Some value; reason = None }
 let null reason = { value = None; reason = Some reason }
 
@@ -160,6 +168,27 @@ let of_inputs (m : model_inputs) ~price =
             ("projection_years", float_of_int i.projection_years.value); ("net_debt", i.net_debt);
             ("shares", i.shares); ("g0", i.g0); ("mean_reversion_lambda", lambda);
             ("risk_free_rate", i.risk_free_rate.value) ]
+  | `Reit_ffo_dividend (i : reit_inputs) ->
+      let terminal = i.terminal_growth_rate.value in
+      let lambda = i.mean_reversion_lambda.value in
+      let level =
+        solve_level ~what:"starting growth" ~price ~domain:level_domain ~f:(fun g0 -> reit_fair_value i ~g0 ~lambda)
+      in
+      let half_life_years =
+        solve_half_life ~driver:"growth" ~target_name:"terminal" ~start:i.g0 ~target:terminal ~price
+          ~f:(fun lambda -> reit_fair_value i ~g0:i.g0 ~lambda)
+      in
+      let above = i.g0 > terminal in
+      let horizon =
+        solve_horizon ~driver:"growth" ~target_name:"terminal" ~start:i.g0 ~target:terminal ~price
+          ~f:(fun n -> reit_fair_value ~projection_years:n i ~g0:i.g0 ~lambda)
+      in
+      block ~level_name:"implied_g0" ~level ~level_domain ~half_life_years ~horizon ~guard:above
+        ~guard_rule:(Printf.sprintf "g0 %.4f %s terminal growth %.4f" i.g0 (if above then ">" else "<=") terminal)
+        ~held:
+          [ ("dividend_per_share", i.dividend_per_share); ("cost_of_equity", i.cost_of_equity);
+            ("terminal_growth_rate", terminal); ("projection_years", float_of_int i.projection_years.value);
+            ("g0", i.g0); ("mean_reversion_lambda", lambda); ("risk_free_rate", i.risk_free_rate.value) ]
   | `Residual_income i | `Residual_income_insurer { core = i; _ } ->
       let lambda = i.mean_reversion_lambda.value in
       let level =

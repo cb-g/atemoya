@@ -44,6 +44,7 @@ let model_name : Boundary_t.model -> string = function
   | `Dcf -> "dcf"
   | `Residual_income -> "residual_income"
   | `Residual_income_insurer -> "residual_income_insurer"
+  | `Reit_ffo_dividend -> "reit_ffo_dividend"
 
 let model_of_string s =
   match Boundary_j.model_of_string (Yojson.Safe.to_string (`String s)) with

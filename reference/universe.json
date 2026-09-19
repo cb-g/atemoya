@@ -265,11 +265,10 @@
     {
       "ticker": "O",
       "entity_class": "Reit",
-      "note": "net-lease REIT; accounting EPS is dominated by depreciation",
+      "note": "net-lease REIT; accounting EPS is dominated by depreciation; valued on the FFO-covered dividend (18): all four FFO components tagged",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Reit"
+      "expected_status": "Ok"
     },
     {
       "ticker": "FNV",
@@ -289,6 +288,25 @@
       "expected_status": "Failed",
       "expected_reason": "dcf not admissible for HighGrowthSoftware",
       "cross_check_note": "not model inputs (HighGrowthSoftware): the vendor's Capital Expenditure adds 68.8m of capitalised software development (PaymentsToDevelopSoftware) to the filed 302.1m PP&E additions; its working-capital line nets the deferred contract acquisition costs the filer reports outside the IncreaseDecreaseIn tags"
+    },
+    {
+      "ticker": "PLD",
+      "entity_class": "Reit",
+      "note": "industrial REIT (18); FFO from NetIncomeLossAvailableToCommonStockholdersBasic and DepreciationAndAmortization, impairment and gains not tagged since 2012 and 2018 (taken as 0, recorded); dividends as PaymentsOfDividends (common and preferred)",
+      "lens_note": "",
+      "scope_limits": [],
+      "expected_status": "Ok",
+      "cross_check_note": "not a model input (the REIT model reads net income, D&A and dividends, which agree): the vendor's Operating Income 3414m is its own construction against the filed OperatingIncomeLoss 4358m"
+    },
+    {
+      "ticker": "SPG",
+      "entity_class": "Reit",
+      "note": "mall REIT (18); files no common-dividend payment tag after 2018 (only PaymentsOfDividendsMinorityInterest), so dividends_paid is null and the covered dividend cannot be formed; its FY2025 net income also carries gains no standard tag names",
+      "lens_note": "",
+      "scope_limits": [],
+      "expected_status": "Failed",
+      "expected_reason": "missing statement fields",
+      "cross_check_note": "not valued (no dividend tag); not model inputs: the vendor's tax row 35.8m against the filed 20.3m and its D&A 1554m against the filed 1426m DepreciationAndAmortization (the vendor adds amortisation the filer reports elsewhere); no filed fact carries either difference"
     }
   ]
 }

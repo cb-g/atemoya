@@ -69,6 +69,7 @@ let model_reads (m : model option) =
       [ "total_revenue"; "ebit"; "pretax_income"; "tax_provision"; "depreciation_amortization"; "capex";
         "delta_nwc"; "cash"; "total_debt"; "book_equity" ]
   | Some `Residual_income | Some `Residual_income_insurer -> [ "book_equity"; "net_income"; "dividends_paid" ]
+  | Some `Reit_ffo_dividend -> [ "net_income"; "depreciation_amortization"; "dividends_paid" ]
   | None -> []
 
 let flagged_fields (v : valuation) =
@@ -360,6 +361,29 @@ let drivers (inputs : model_inputs) =
       residual_income_drivers i.core
       @ [ ("reported_book_equity", i.reported_book_equity, ""); ("aoci", i.aoci, "") ]
       @ conversion_driver i.core.conversion
+  | `Reit_ffo_dividend (i : reit_inputs) ->
+      [
+        ("price", i.price, "");
+        ("market_cap", i.market_cap, "");
+        ("shares", i.shares, "");
+        ("ffo", i.ffo, composition_text i.ffo_composition);
+        ("dividends_paid", i.dividends_paid, match i.dividends_paid_row with Some r -> " (" ^ r ^ ")" | None -> "");
+        ("covered_dividend", i.covered_dividend, Printf.sprintf " (coverage %.3f)" i.coverage);
+        ("g_historical", i.g_historical, Printf.sprintf " (ffo per cover-page share over %s)" (String.concat ", " i.ffo_periods));
+      ]
+      @ parameter_drivers
+          ([
+             ("risk_free_rate", i.risk_free_rate);
+             ("equity_risk_premium", i.equity_risk_premium);
+             ("beta", i.beta);
+             ("growth_clamp_lower", i.growth_clamp_lower);
+             ("growth_clamp_upper", i.growth_clamp_upper);
+             ("mean_reversion_lambda", i.mean_reversion_lambda);
+             ("terminal_growth_rate", i.terminal_growth_rate);
+           ]
+          @ match i.country_risk_premium with Some c -> [ ("country_risk_premium", c) ] | None -> [])
+      @ [ ("projection_years", float_of_int i.projection_years.value, "") ]
+      @ conversion_driver i.conversion
 
 let differs a b =
   let scale = Float.max (Float.abs a) (Float.abs b) in
@@ -462,10 +486,11 @@ let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
                 | Some (`Dcf _) -> "dcf"
                 | Some (`Residual_income _) -> "residual_income"
                 | Some (`Residual_income_insurer _) -> "residual_income_insurer"
+                | Some (`Reit_ffo_dividend _) -> "reit_ffo_dividend"
                 | None -> "-");
               List.iter
                 (fun (name, nv, ntext) ->
-                  if List.mem name [ "ebit"; "delta_nwc"; "cash"; "total_debt"; "dividends_paid"; "book_equity"; "net_income" ] then
+                  if List.mem name [ "ebit"; "delta_nwc"; "cash"; "total_debt"; "dividends_paid"; "book_equity"; "net_income"; "ffo"; "covered_dividend"; "g_historical" ] then
                     Printf.bprintf b "           %-26s %s%s\n" name (money nv) ntext)
                 nd
           | Some _, None -> Printf.bprintf b "           inputs no longer computed\n"
@@ -562,6 +587,7 @@ let identity (v : valuation) (fin : financials option) =
     | Some (`Dcf i) -> Some i.fiscal_period_end
     | Some (`Residual_income i) -> Some i.fiscal_period_end
     | Some (`Residual_income_insurer i) -> Some i.core.fiscal_period_end
+    | Some (`Reit_ffo_dividend i) -> Some i.fiscal_period_end
     | None -> None
   in
   let accession =
@@ -640,6 +666,7 @@ let stability ~snapshot_old ~snapshot_new ~(old : (valuation * financials option
     | Some (`Dcf i) -> Some i.risk_free_rate.as_of
     | Some (`Residual_income i) -> Some i.risk_free_rate.as_of
     | Some (`Residual_income_insurer i) -> Some i.core.risk_free_rate.as_of
+    | Some (`Reit_ffo_dividend i) -> Some i.risk_free_rate.as_of
     | None -> None
   in
   let as_of_pair =
