@@ -648,6 +648,30 @@ type belief_grid = {
   price_contour : contour_point list;
 }
 
+(* The declared belief (24) as resolved for the record: the six fields, in decimal
+   fractions of long-run nominal growth. Carried beside the probability so the number
+   never travels without its basis. *)
+type belief = {
+  mean : float;
+  sd : float;
+  floor : float;
+  ceiling : float;
+  why : string;
+  as_of : string;
+}
+
+type belief_readout = {
+  declared : belief;
+  source : string;                    (* class default (offsets around the country's terminal growth) or a per-name entry *)
+  belief_version : string;            (* the belief's as_of, a short hash of its six fields, and class or name *)
+  implied_terminal_growth : readout;  (* the fourth readout: the long-run growth at which fair value equals price on the headline's decaying path, everything else held; null with reason past either end of implied_domain *)
+  implied_domain : float list;        (* [-0.10; discount rate - 0.0005] *)
+  probability_overpaid : float;       (* P(long-run growth < implied) under the belief: the probability that the value surplus is negative; 1 or 0 with probability_reason when the implied readout is null *)
+  ?probability_reason : string option;
+  value_surplus : float;              (* the margin of safety: (fair value - price) / price, the book's value surplus *)
+  note : string;
+}
+
 type valuation = {
   ticker : string;
   as_of : string;                     (* the fetch timestamp, from financials *)
@@ -678,4 +702,7 @@ type valuation = {
   ?sensitivity : sensitivity option;      (* present iff status is Ok (23) *)
   ?belief_map : belief_map option;        (* present on an Ok record with a growth-then-terminal structure: dcf, dcf_midcycle, reit_ffo_dividend (23) *)
   ?belief_map_reason : string option;     (* present instead on an Ok record without one: the residual-income paths (23) *)
+  ?belief_version : string option;        (* (24) on every Ok record that used a belief; absent (null) on a run without one for the name *)
+  ?belief : belief_readout option;        (* (24) present iff belief_version is *)
+  ?belief_reason : string option;         (* (24) why an Ok record has no belief: the residual-income path, or no declaration for the class or name *)
 }

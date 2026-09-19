@@ -13,6 +13,7 @@ type t = {
   fx_rates : fx_rates;
   xbrl_tags : xbrl_tags;
   field_definitions : field_definitions;
+  beliefs : class_beliefs;
 }
 
 let read reader path =
@@ -47,6 +48,12 @@ let load ~dir =
   let* field_definitions =
     read Reference_j.read_field_definitions (file "field_definitions.json")
   in
+  (* The class beliefs (24), strictly; a reference directory written before them (a
+     point-in-time one) has none, which is recorded, not defaulted. *)
+  let* beliefs =
+    if Sys.file_exists (file "beliefs.json") then Beliefs.load_classes (file "beliefs.json")
+    else Ok ({ notes = [ "no beliefs.json in " ^ dir ]; classes = [] } : Reference_t.class_beliefs)
+  in
   Ok
     {
       risk_free;
@@ -59,6 +66,7 @@ let load ~dir =
       fx_rates;
       xbrl_tags;
       field_definitions;
+      beliefs;
     }
 
 let days_between = Date.days_between

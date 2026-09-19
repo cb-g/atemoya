@@ -158,7 +158,8 @@ flowchart TD
     F_BOUND --> FLOOR
     IMPLIED --> SENS["sensitivity (23), headline untouched: for each held input with a declared step in reference/params.json (sensitivity_steps: starting growth or ROE0 +-2 pp, lambda +-0.10, terminal growth +-0.5 pp, WACC or cost of equity +-1 pp, the cash-flow base fcff / fcff_mid / covered dividend / book equity +-10%; readability steps, not standard deviations, never derived from history), fair value at the input stepped down and up with everything else held, swing = |up - down| / fair value, the inputs ranked by swing and the first named binding_input; a step that crosses a guard (a discount rate reaching terminal growth, a non-positive base or lambda) is null with the reason on that side; the summary counts the binding input across Ok names"]:::new
     SENS --> MAP["belief map (23), on dcf, dcf_midcycle and reit_ffo_dividend only (the residual-income paths carry belief_map_reason instead): the readout model, stated on the record as map_model = undecayed growth for N years, then terminal, is growth held at g for N years with no decay, then the settled terminal growth forever, everything else (discount rate, base, net debt, shares) at its recorded value, distinct from the headline's decaying path; the grid g = 0..50% in 2 pp steps by N = 1..40 goes to output/maps/(ticker).json, never onto the record; the record carries the price contour, for each N the g at which fair value equals price by bisection, null with reason where no g in [0, 50%] reaches it or the price sits below the zero-growth value; python/plot_map.py draws the surface, the contour and the observed starting growth to output/maps/(ticker).png (matplotlib, the first visualisation dependency; nothing in the batch imports it)"]:::new
-    MAP --> RECORD
+    MAP --> BELIEF["declared belief (24), headline untouched, on dcf, dcf_midcycle and reit_ffo_dividend only (the residual-income paths carry belief_reason: no terminal growth, the belief parameter is undefined there; a class with no default and no per-name entry carries the reason too): the belief is six fields (mean, sd, floor, ceiling, why, as_of), a truncated normal, loaded strictly from reference/beliefs.json (one default per class as offsets in percentage points around the country's settled terminal growth) or a per-name private file given as --beliefs (absolute), never estimated from history; the fourth readout implied_terminal_growth is the long-run growth at which fair value equals price on the headline's decaying path by bisection in [-10%, discount rate - 5 bp], null with reason past either end; probability_overpaid = the belief's CDF at the implied value (the probability that the value surplus, the margin of safety, is negative), 1.0 with the reason when the price needs long-run growth at or above the discount rate, 0.0 when the price is below the value at -10%; recorded with the six fields beside it and belief_version (as_of, a hash of the six fields, class or name); the summary carries the distribution and the count at 1.0, the run diff every changed version"]:::new
+    BELIEF --> RECORD
     FLOOR["floor: present = true (verified), false (Unprofitable, Ballast by definition), null (not assessable here), with basis from the admissibility row; scope_limits: the entry's own verbatim, then the class's defaults from the admissibility row (22: Cyclical carries that the through-cycle average is backward-looking and reserve replacement, the energy transition or a declared structural break are not assessed)"] --> RECORD[/"record: one line in output/valuations.jsonl, stamped with model_version (21: git short hash, -dirty when the tree had uncommitted edits, unversioned outside a checkout; the summary's first line and the run diff's header carry it, and a fair value that moved with no moved input is labelled moved under this version against the baseline's); every --out run is also written to output/runs/(valued_on)/ (-2, -3 on the same date, never overwritten; the summary's last line names it), and a private universe's runs to its own --out root; summary groups Failed by reason and inadmissible by class; whether anything changed since the last run, and why, is the baseline diff (--baseline, --baseline-snapshot), the acceptance mechanism of every change, never a stored expectation"/]
 ```
 
@@ -172,6 +173,38 @@ into it. The universe file declares and does not remember: a run's outcomes live
 records, and the acceptance of any change is the run diff against the previous run
 (`--baseline`), with every moved input classified against the previous snapshot
 (`--baseline-snapshot`).
+
+## Beliefs
+
+The belief parameter is terminal growth, fixed on the merits. This choice may be revisited
+only on an argument about the model, never on what it does to a number. The rules of use,
+in this order:
+
+1. **A belief is yours.** It is declared, dated, and carries a why. The tool never
+   estimates it from history; history, GDP and base rates are evidence you cite in the
+   why. The loader accepts exactly six fields (`mean`, `sd`, `floor`, `ceiling`, `why`,
+   `as_of`) and refuses anything else.
+2. **Revise it by a dated declaration when evidence warrants.** A structural event, such
+   as a supply shock that changes a company's long-run demand, a lost moat, or a
+   regulatory change, is exactly the moment. Never revise it because of what a number
+   looks like.
+3. **The belief parameter is terminal growth, fixed on the merits.** Starting growth is
+   observed from filings; the reversion speed is a structural assumption with its
+   sensitivity shown; long-run growth is the question every investor can answer. This
+   choice may be revisited only on an argument about the model, never on what it does to
+   a number.
+4. **`probability_overpaid` is a statement of your belief, not a frequency.** It is the
+   probability, under your truncated normal on long-run growth, that the value surplus
+   (the margin of safety) is negative: that long-run growth falls short of what the price
+   needs. Its calibration can only be checked years later; its revision can happen today.
+5. **Every record stamps `belief_version`.** Two runs with different beliefs are
+   different runs, and the run diff says so on every record whose version changed. A run
+   without a belief for a name records no version and no probability, with the reason.
+6. **Class defaults are tracked and public; per-name beliefs are private.**
+   `reference/beliefs.json` holds one default per entity class as offsets around the
+   country's settled terminal growth. `data/beliefs.private.json`, never tracked and
+   loaded with `--beliefs`, holds per-name absolute beliefs that override the default.
+   Banks and insurers carry no belief: their model has no terminal growth.
 
 ## Changelog
 
@@ -226,3 +259,8 @@ records, and the acceptance of any change is the run diff against the previous r
   readability steps on every Ok record; the belief map's price contour on the
   growth-then-terminal paths, its grid to `output/maps/`, and `plot_map.py` on
   matplotlib. No new `Failed` string; no headline moves.
+- declared belief and probability_overpaid (24): a six-field truncated normal on long-run
+  growth per class (tracked, offsets) or per name (private, `--beliefs`), loaded strictly;
+  `implied_terminal_growth`, `probability_overpaid` in closed form and `belief_version` on
+  every Ok growth-then-terminal record; the six rules of use above. No new `Failed`
+  string; no headline moves.

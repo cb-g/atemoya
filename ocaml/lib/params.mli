@@ -25,11 +25,13 @@ type t = {
   xbrl_tags : Reference_t.xbrl_tags;
   field_definitions : Reference_t.field_definitions;
       (** the one definition per composed statement field, applied by both fetchers *)
+  beliefs : Reference_t.class_beliefs;
+      (** the declared class defaults on long-run growth (24); empty when the directory has no beliefs.json *)
 }
 
 val load : dir:string -> (t, string) result
-(** Reads the ten files under [dir]; the error names the file and the parse
-    problem. *)
+(** Reads the ten files under [dir], and beliefs.json when present; the error names
+    the file and the parse problem. *)
 
 val days_between : from:string -> until:string -> (int, string) result
 (** Calendar days from [from] to [until], both ISO 8601 dates (YYYY-MM-DD);

@@ -2920,6 +2920,104 @@ class ClassCheck:
 
 
 @dataclass
+class Belief:
+    """Original type: belief = { ... }
+    """
+
+    mean: float
+    sd: float
+    floor: float
+    ceiling: float
+    why: str
+    as_of: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Belief':
+        if isinstance(x, dict):
+            return cls(
+                mean=_atd_read_float(x['mean']) if 'mean' in x else _atd_missing_json_field('Belief', 'mean'),
+                sd=_atd_read_float(x['sd']) if 'sd' in x else _atd_missing_json_field('Belief', 'sd'),
+                floor=_atd_read_float(x['floor']) if 'floor' in x else _atd_missing_json_field('Belief', 'floor'),
+                ceiling=_atd_read_float(x['ceiling']) if 'ceiling' in x else _atd_missing_json_field('Belief', 'ceiling'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('Belief', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Belief', 'as_of'),
+            )
+        else:
+            _atd_bad_json('Belief', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['mean'] = _atd_write_float(self.mean)
+        res['sd'] = _atd_write_float(self.sd)
+        res['floor'] = _atd_write_float(self.floor)
+        res['ceiling'] = _atd_write_float(self.ceiling)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Belief':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BeliefReadout:
+    """Original type: belief_readout = { ... }
+    """
+
+    declared: Belief
+    source: str
+    belief_version: str
+    implied_terminal_growth: Readout
+    implied_domain: List[float]
+    probability_overpaid: float
+    value_surplus: float
+    note: str
+    probability_reason: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BeliefReadout':
+        if isinstance(x, dict):
+            return cls(
+                declared=Belief.from_json(x['declared']) if 'declared' in x else _atd_missing_json_field('BeliefReadout', 'declared'),
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('BeliefReadout', 'source'),
+                belief_version=_atd_read_string(x['belief_version']) if 'belief_version' in x else _atd_missing_json_field('BeliefReadout', 'belief_version'),
+                implied_terminal_growth=Readout.from_json(x['implied_terminal_growth']) if 'implied_terminal_growth' in x else _atd_missing_json_field('BeliefReadout', 'implied_terminal_growth'),
+                implied_domain=_atd_read_list(_atd_read_float)(x['implied_domain']) if 'implied_domain' in x else _atd_missing_json_field('BeliefReadout', 'implied_domain'),
+                probability_overpaid=_atd_read_float(x['probability_overpaid']) if 'probability_overpaid' in x else _atd_missing_json_field('BeliefReadout', 'probability_overpaid'),
+                value_surplus=_atd_read_float(x['value_surplus']) if 'value_surplus' in x else _atd_missing_json_field('BeliefReadout', 'value_surplus'),
+                note=_atd_read_string(x['note']) if 'note' in x else _atd_missing_json_field('BeliefReadout', 'note'),
+                probability_reason=_atd_read_string(x['probability_reason']) if 'probability_reason' in x else None,
+            )
+        else:
+            _atd_bad_json('BeliefReadout', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['declared'] = (lambda x: x.to_json())(self.declared)
+        res['source'] = _atd_write_string(self.source)
+        res['belief_version'] = _atd_write_string(self.belief_version)
+        res['implied_terminal_growth'] = (lambda x: x.to_json())(self.implied_terminal_growth)
+        res['implied_domain'] = _atd_write_list(_atd_write_float)(self.implied_domain)
+        res['probability_overpaid'] = _atd_write_float(self.probability_overpaid)
+        res['value_surplus'] = _atd_write_float(self.value_surplus)
+        res['note'] = _atd_write_string(self.note)
+        if self.probability_reason is not None:
+            res['probability_reason'] = _atd_write_string(self.probability_reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BeliefReadout':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class BeliefMap:
     """Original type: belief_map = { ... }
     """
@@ -3024,6 +3122,9 @@ class Valuation:
     sensitivity: Optional[Sensitivity] = None
     belief_map: Optional[BeliefMap] = None
     belief_map_reason: Optional[str] = None
+    belief_version: Optional[str] = None
+    belief: Optional[BeliefReadout] = None
+    belief_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -3058,6 +3159,9 @@ class Valuation:
                 sensitivity=Sensitivity.from_json(x['sensitivity']) if 'sensitivity' in x else None,
                 belief_map=BeliefMap.from_json(x['belief_map']) if 'belief_map' in x else None,
                 belief_map_reason=_atd_read_string(x['belief_map_reason']) if 'belief_map_reason' in x else None,
+                belief_version=_atd_read_string(x['belief_version']) if 'belief_version' in x else None,
+                belief=BeliefReadout.from_json(x['belief']) if 'belief' in x else None,
+                belief_reason=_atd_read_string(x['belief_reason']) if 'belief_reason' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -3101,6 +3205,12 @@ class Valuation:
             res['belief_map'] = (lambda x: x.to_json())(self.belief_map)
         if self.belief_map_reason is not None:
             res['belief_map_reason'] = _atd_write_string(self.belief_map_reason)
+        if self.belief_version is not None:
+            res['belief_version'] = _atd_write_string(self.belief_version)
+        if self.belief is not None:
+            res['belief'] = (lambda x: x.to_json())(self.belief)
+        if self.belief_reason is not None:
+            res['belief_reason'] = _atd_write_string(self.belief_reason)
         return res
 
     @classmethod

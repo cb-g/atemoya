@@ -1179,6 +1179,82 @@ class NwcDefinition:
 
 
 @dataclass
+class Belief:
+    """Original type: belief = { ... }
+    """
+
+    mean: float
+    sd: float
+    floor: float
+    ceiling: float
+    why: str
+    as_of: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Belief':
+        if isinstance(x, dict):
+            return cls(
+                mean=_atd_read_float(x['mean']) if 'mean' in x else _atd_missing_json_field('Belief', 'mean'),
+                sd=_atd_read_float(x['sd']) if 'sd' in x else _atd_missing_json_field('Belief', 'sd'),
+                floor=_atd_read_float(x['floor']) if 'floor' in x else _atd_missing_json_field('Belief', 'floor'),
+                ceiling=_atd_read_float(x['ceiling']) if 'ceiling' in x else _atd_missing_json_field('Belief', 'ceiling'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('Belief', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Belief', 'as_of'),
+            )
+        else:
+            _atd_bad_json('Belief', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['mean'] = _atd_write_float(self.mean)
+        res['sd'] = _atd_write_float(self.sd)
+        res['floor'] = _atd_write_float(self.floor)
+        res['ceiling'] = _atd_write_float(self.ceiling)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Belief':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class NameBeliefs:
+    """Original type: name_beliefs = { ... }
+    """
+
+    tickers: List[Tuple[str, Belief]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'NameBeliefs':
+        if isinstance(x, dict):
+            return cls(
+                tickers=_atd_read_assoc_object_into_list(Belief.from_json)(x['tickers']) if 'tickers' in x else _atd_missing_json_field('NameBeliefs', 'tickers'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('NameBeliefs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['tickers'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.tickers)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'NameBeliefs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class IndustryTable:
     """Original type: industry_table = { ... }
     """
@@ -1969,6 +2045,38 @@ class ClassRule:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'ClassRule':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ClassBeliefs:
+    """Original type: class_beliefs = { ... }
+    """
+
+    classes: List[Tuple[str, Belief]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ClassBeliefs':
+        if isinstance(x, dict):
+            return cls(
+                classes=_atd_read_assoc_object_into_list(Belief.from_json)(x['classes']) if 'classes' in x else _atd_missing_json_field('ClassBeliefs', 'classes'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('ClassBeliefs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['classes'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.classes)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ClassBeliefs':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:

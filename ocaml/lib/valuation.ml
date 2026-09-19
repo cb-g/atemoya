@@ -160,7 +160,7 @@ let point_in_time_gates (fin : financials) =
       | None, None, Some currency -> Error ("rate source has no history for " ^ currency)
       | None, None, None -> Ok ())
 
-let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~model_version ~declaration
+let run ?(thresholds = default_thresholds) ?private_beliefs (params : Params.t) ~today ~model_version ~declaration
     (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
   let hold_vintage = Option.is_some original.point_in_time in
@@ -220,7 +220,44 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~model_ver
       sensitivity = None;
       belief_map = None;
       belief_map_reason = None;
+      belief_version = None;
+      belief = None;
+      belief_reason = None;
     }
+  in
+  (* The declared belief (24) on a growth-then-terminal path: the fourth readout and the
+     probability of overpaying under it; the residual-income paths and an undeclared class
+     carry the reason instead. *)
+  let belief_of ~price ~fair_value (inputs : model_inputs) =
+    let terminal_and_f =
+      match inputs with
+      | `Dcf i ->
+          Some (i.terminal_growth_rate.value, i.wacc,
+                fun terminal_growth_rate -> Implied.dcf_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value)
+      | `Dcf_midcycle m ->
+          let i = m.dcf in
+          Some (i.terminal_growth_rate.value, i.wacc,
+                fun terminal_growth_rate -> Implied.dcf_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value)
+      | `Reit_ffo_dividend i ->
+          Some (i.terminal_growth_rate.value, i.cost_of_equity,
+                fun terminal_growth_rate -> Implied.reit_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value)
+      | `Residual_income _ | `Residual_income_insurer _ -> None
+    in
+    match terminal_and_f with
+    | None -> Error "the residual-income path has no terminal growth; the belief parameter is undefined there"
+    | Some (terminal_growth_rate, rate, f) -> (
+        let entity_class = match declared with Some c -> Admissibility.class_name c | None -> "" in
+        match
+          Beliefs.resolve ~classes:params.beliefs ?names:private_beliefs ~ticker:original.ticker ~entity_class
+            ~terminal_growth_rate ()
+        with
+        | None ->
+            Error
+              (Printf.sprintf "no belief declared for %s: no class default in reference/beliefs.json and no per-name entry"
+                 entity_class)
+        | Some (b, source) ->
+            let source_kind = if String.length source >= 8 && String.sub source 0 8 = "per-name" then "name" else "class" in
+            Ok (Beliefs.readout b ~source ~source_kind ~f ~price ~rate ~fair_value))
   in
   let failed ?(fin = original) ?model ?class_check ?inputs ~floor reason =
     record ~fin ?model ?class_check ?inputs ~price:fin.price ~status:`Failed
@@ -259,6 +296,9 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~model_ver
           sensitivity = Some (Sensitivity.of_inputs params.params.sensitivity_steps inputs ~fair_value);
           belief_map = Result.to_option (Belief_map.of_inputs inputs ~price);
           belief_map_reason = (match Belief_map.of_inputs inputs ~price with Error r -> Some r | Ok _ -> None);
+          belief_version = (match belief_of ~price ~fair_value inputs with Ok r -> Some r.belief_version | Error _ -> None);
+          belief = Result.to_option (belief_of ~price ~fair_value inputs);
+          belief_reason = (match belief_of ~price ~fair_value inputs with Error r -> Some r | Ok _ -> None);
         }
   in
   (* A derived ebit (any recipe but operating income) runs the dcf only when the record's

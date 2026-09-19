@@ -406,3 +406,28 @@ type field_definitions = {
   shares_for_market_cap : shares_for_market_cap;
   refinement_policy : refinement_policy;
 }
+
+(* A declared belief on long-run growth (24): six fields and nothing else, a truncated
+   normal. Never estimated from history by the tool; the why may cite history, GDP or base
+   rates as evidence, the numbers are the user's. Values are in percentage points: in the
+   tracked class table they are offsets around the country's settled terminal growth
+   (params.json), so one default serves every currency; in a per-name file they are the
+   name's absolute long-run nominal growth. *)
+type belief = {
+  mean : float;
+  sd : float;
+  floor : float;
+  ceiling : float;
+  why : string;
+  as_of : string;
+}
+
+type class_beliefs = {
+  ~notes : string list;
+  classes : (string * belief) list <json repr="object">;   (* entity class -> offsets in percentage points *)
+}
+
+type name_beliefs = {
+  ~notes : string list;
+  tickers : (string * belief) list <json repr="object">;   (* ticker -> absolute, in percentage points *)
+}

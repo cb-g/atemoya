@@ -22,8 +22,10 @@
     policy. Each model's arithmetic lives in its own module. A record's [scope_limits]
     are the entry's own followed by the class's defaults from the admissibility row. [floor] is always populated and gates nothing. An [`Ok] record carries
     the implied readouts ([Implied]), the sensitivity block ([Sensitivity]) and, on a
-    growth-then-terminal path, the belief map's price contour ([Belief_map]) (23); the
-    headline never depends on them. *)
+    growth-then-terminal path, the belief map's price contour ([Belief_map]) (23) and,
+    given a declared belief for its class or name, the implied long-run growth and the
+    probability of overpaying under it ([Beliefs]) (24); the headline never depends on
+    them. [private_beliefs] are per-name entries that override the class defaults. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)
@@ -61,6 +63,7 @@ val anachronistic :
 
 val run :
   ?thresholds:thresholds ->
+  ?private_beliefs:Reference_t.name_beliefs ->
   Params.t ->
   today:string ->
   model_version:string ->

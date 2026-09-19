@@ -250,6 +250,12 @@ let params : Params.t =
             "BRL": {"series": "DEXBZUS", "direction": "units_per_usd", "as_of": "2026-09-08", "quoted": 5.0, "usd_per_unit": 0.2},
             "EUR": {"series": "DEXUSEU", "direction": "usd_per_unit", "as_of": "2026-09-09", "quoted": 1.25, "usd_per_unit": 1.25},
             "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit", "as_of": "2026-08-01", "quoted": 1.3, "usd_per_unit": 1.3}}}|};
+    beliefs =
+      Reference_j.class_beliefs_of_string
+        {|{"classes": {
+            "OperatingCompany": {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 2, "why": "near the economy's", "as_of": "2026-09-19"},
+            "Cyclical": {"mean": 0, "sd": 1.0, "floor": -3, "ceiling": 2, "why": "wider below", "as_of": "2026-09-19"},
+            "Reit": {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 1, "why": "rent tracks inflation", "as_of": "2026-09-19"}}}|};
   }
 
 let declaration ?(scope_limits = []) entity_class = { Valuation.entity_class; scope_limits }
@@ -1272,6 +1278,106 @@ let test_belief_map () =
   (* pre-existing fields untouched: the record without the new blocks round-trips as before *)
   let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
   Alcotest.check valuation "json round trip" v again
+
+
+(* --- declared beliefs (24) --- *)
+
+let belief_json ?(mean = "0") ?(sd = "0.5") ?(floor = "-2") ?(ceiling = "2") ?(why = "\"near the economy's\"") ?(as_of = "\"2026-09-19\"") ?(extra = "") () =
+  Printf.sprintf {|{"classes": {"OperatingCompany": {"mean": %s, "sd": %s, "floor": %s, "ceiling": %s, "why": %s, "as_of": %s%s}}}|} mean sd floor ceiling why as_of extra
+
+let test_beliefs_loader_and_resolution () =
+  let reject text needles = match Beliefs.load_classes_string text with Ok _ -> Alcotest.fail "loaded" | Error e -> check_mentions "load error" e needles in
+  reject (belief_json ~extra:{|, "sigma_from_history": true|} ()) [ "belief OperatingCompany carries unknown field(s) sigma_from_history"; "exactly mean, sd, floor, ceiling, why, as_of" ];
+  reject {|{"classes": {"OperatingCompany": {"mean": 0, "sd": 0.5, "floor": -2, "why": "w", "as_of": "2026-09-19"}}}|} [ "belief OperatingCompany lacks ceiling" ];
+  reject (belief_json ~sd:"0" ()) [ "sd 0 is not positive" ];
+  reject (belief_json ~floor:"2" ()) [ "floor 2 is not below ceiling 2" ];
+  reject (belief_json ~why:"\"  \"" ()) [ "why is empty" ];
+  reject (belief_json ~as_of:"\"last year\"" ()) [ "as_of" ];
+  reject {|{"tickers": {}}|} [ "no classes object" ];
+  Alcotest.(check bool) "the tracked file loads strictly" true (Result.is_ok (Beliefs.load_classes "../../reference/beliefs.json"));
+  let classes = get (Beliefs.load_classes_string (belief_json ())) in
+  (* offsets around two countries' settled terminal growth *)
+  let us, source = Option.get (Beliefs.resolve ~classes ~ticker:"TEST" ~entity_class:"OperatingCompany" ~terminal_growth_rate:0.02 ()) in
+  Alcotest.(check (list approx)) "United States: 2% centre" [ 0.02; 0.005; 0.0; 0.04 ] [ us.mean; us.sd; us.floor; us.ceiling ];
+  check_mentions "source" source [ "class default for OperatingCompany"; "0.0200" ];
+  let de, _ = Option.get (Beliefs.resolve ~classes ~ticker:"TEST" ~entity_class:"OperatingCompany" ~terminal_growth_rate:0.015 ()) in
+  Alcotest.(check (list approx)) "Germany: 1.5% centre" [ 0.015; 0.005; -0.005; 0.035 ] [ de.mean; de.sd; de.floor; de.ceiling ];
+  Alcotest.(check bool) "an undeclared class has no belief" true
+    (Option.is_none (Beliefs.resolve ~classes ~ticker:"TEST" ~entity_class:"Wrapper" ~terminal_growth_rate:0.02 ()));
+  (* a per-name entry, absolute, beats the class default *)
+  let names = get (Beliefs.load_names_string {|{"tickers": {"TEST": {"mean": 3, "sd": 1, "floor": 1, "ceiling": 5, "why": "a name I know", "as_of": "2026-09-01"}}}|}) in
+  let own, source = Option.get (Beliefs.resolve ~classes ~names ~ticker:"TEST" ~entity_class:"OperatingCompany" ~terminal_growth_rate:0.02 ()) in
+  Alcotest.(check (list approx)) "per-name, absolute" [ 0.03; 0.01; 0.01; 0.05 ] [ own.mean; own.sd; own.floor; own.ceiling ];
+  check_mentions "per-name source" source [ "per-name entry for TEST" ];
+  let other, _ = Option.get (Beliefs.resolve ~classes ~names ~ticker:"OTHER" ~entity_class:"OperatingCompany" ~terminal_growth_rate:0.02 ()) in
+  check_float "another name keeps the class default" 0.02 other.mean;
+  (* the version stamp changes with any of the six fields *)
+  let base = Beliefs.version us ~source_kind:"class" in
+  check_mentions "version shape" base [ "2026-09-19-"; "-class" ];
+  Alcotest.(check string) "identical fields, identical version" base (Beliefs.version { us with why = us.why } ~source_kind:"class");
+  List.iter
+    (fun (what, (b : Boundary_t.belief)) ->
+      if Beliefs.version b ~source_kind:"class" = base then Alcotest.failf "version unchanged after %s" what)
+    [ ("mean", { us with mean = 0.021 }); ("sd", { us with sd = 0.006 }); ("floor", { us with floor = -0.01 });
+      ("ceiling", { us with ceiling = 0.05 }); ("why", { us with why = "other" }); ("as_of", { us with as_of = "2026-09-20" }) ];
+  if Beliefs.version us ~source_kind:"name" = base then Alcotest.fail "version unchanged after the source kind"
+
+(* Phi(1) = 0.8413447461, Phi(4) = 0.9999683288, Phi(-4) = 0.0000316712: on mean 2%, sd 0.5%,
+   floor 0, ceiling 4%, F(2.5%) = (0.8413447461 - 0.0000316712) / (0.9999683288 - 0.0000316712). *)
+let test_beliefs_cdf_and_probability () =
+  let b : Boundary_t.belief = { mean = 0.02; sd = 0.005; floor = 0.; ceiling = 0.04; why = "w"; as_of = today } in
+  check_float "the centre" 0.5 (Beliefs.cdf b 0.02);
+  Alcotest.(check bool) "one sd above by hand" true (Float.abs (Beliefs.cdf b 0.025 -. (0.8413130749 /. 0.9999366576)) < 1e-6);
+  check_float "at the floor" 0. (Beliefs.cdf b 0.);
+  check_float "below the floor" 0. (Beliefs.cdf b (-1.));
+  check_float "at the ceiling" 1. (Beliefs.cdf b 0.04);
+  check_float "above the ceiling" 1. (Beliefs.cdf b 0.05);
+  let tiny = { b with sd = 1e-9 } in
+  check_float "tiny sd: a step below the mean" 0. (Beliefs.cdf tiny 0.0199);
+  check_float "tiny sd: a step above the mean" 1. (Beliefs.cdf tiny 0.0201);
+  (* fair value is monotone increasing in terminal growth below the discount rate *)
+  let i, fv = get (Dcf.value assumptions ~country:"United States" (financials (history ()))) in
+  let f terminal_growth_rate = Implied.dcf_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:0.25 in
+  let values = List.map f [ -0.10; -0.05; 0.; 0.03; 0.06; 0.069 ] in
+  Alcotest.(check bool) "monotone" true (List.for_all2 (fun a c -> a < c) (List.filteri (fun k _ -> k < 5) values) (List.tl values));
+  check_float "the recorded terminal reproduces the anchor" fv (f 0.);
+  (* the implied solver recovers a known terminal growth *)
+  let r, domain = Beliefs.implied_terminal_growth ~f ~price:(f 0.03) ~rate:i.wacc in
+  (match r.value with Some g -> Alcotest.(check bool) "recovers 3%" true (Float.abs (g -. 0.03) < 1e-5) | None -> Alcotest.fail "no root");
+  Alcotest.(check (list approx)) "domain" [ -0.10; i.wacc -. 0.0005 ] domain;
+  let above = Beliefs.readout b ~source:"s" ~source_kind:"class" ~f ~price:1e9 ~rate:i.wacc ~fair_value:fv in
+  check_float "null above is 1.0" 1. above.probability_overpaid;
+  Alcotest.(check (option string)) "with the reason" (Some "the price needs long-run growth at or above the discount rate") above.probability_reason;
+  Alcotest.(check (option approx)) "no implied" None above.implied_terminal_growth.value;
+  let below = Beliefs.readout b ~source:"s" ~source_kind:"class" ~f ~price:(f (-0.10) -. 1.) ~rate:i.wacc ~fair_value:fv in
+  check_float "null below is 0.0" 0. below.probability_overpaid;
+  Alcotest.(check (option string)) "with the reason" (Some "the price is below the value at -10% long-run growth") below.probability_reason;
+  let mid = Beliefs.readout b ~source:"s" ~source_kind:"class" ~f ~price:(f 0.02) ~rate:i.wacc ~fair_value:fv in
+  Alcotest.(check bool) "implied at the belief's centre: one half (to the solver's tolerance)" true (Float.abs (mid.probability_overpaid -. 0.5) < 1e-4);
+  check_float "the value surplus is the margin of safety" ((fv -. f 0.02) /. f 0.02) mid.value_surplus;
+  (* on the record: the class default on the dcf, the reason on the residual-income path and on an undeclared class *)
+  let v = run (financials (history ())) in
+  (match v.belief with
+  | Some r ->
+      check_mentions "class default resolved on the record" r.source [ "class default for OperatingCompany" ];
+      Alcotest.(check (option string)) "version stamped" (Some r.belief_version) v.belief_version;
+      check_float "belief centre at the country's terminal growth" 0.02 r.declared.mean
+  | None -> Alcotest.failf "no belief on the dcf record: %s" (Option.value v.belief_reason ~default:""));
+  let named = get (Beliefs.load_names_string {|{"tickers": {"TEST": {"mean": 3, "sd": 1, "floor": 1, "ceiling": 5, "why": "a name I know", "as_of": "2026-09-01"}}}|}) in
+  let own = Valuation.run ~private_beliefs:named params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  check_mentions "per-name beats the class default" (Option.get own.belief).source [ "per-name entry for TEST" ];
+  Alcotest.(check bool) "different belief, different version" true (own.belief_version <> v.belief_version);
+  let bank = run ~declared:(Some (declaration `Bank)) (bank_financials (bank_history ())) in
+  Alcotest.check status "bank Ok" `Ok bank.status;
+  Alcotest.(check (option string)) "no version on the residual-income path" None bank.belief_version;
+  check_mentions "with the reason" (Option.value bank.belief_reason ~default:"") [ "the residual-income path has no terminal growth; the belief parameter is undefined there" ];
+  let software = run ~declared:(Some (declaration `HighGrowthSoftware)) (financials (history ())) in
+  check_mentions "an undeclared class" (Option.value software.belief_reason ~default:"") [ "no belief declared for HighGrowthSoftware" ];
+  (* the summary and the run diff say so *)
+  check_mentions "summary line" (Batch.summary [ v; bank ]) [ "probability_overpaid (24), across 1 Ok names with a declared belief: median"; "no belief on 1 Ok names (1 the residual-income path" ];
+  check_mentions "two runs under different beliefs are different runs" (Batch.run_diff ~baseline:[ v ] [ own ]) [ "belief_version 2026-09-19-"; "-class -> 2026-09-01-"; "-name" ];
+  let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation own) in
+  Alcotest.check valuation "json round trip" own again
 
 let test_flow_chart_names_every_reason () =
   let chart =
@@ -2645,5 +2751,7 @@ let () =
           case "mid-cycle dcf guards, window, vendor path, scope limits (22)" test_midcycle_guards;
           case "sensitivity by hand, ranking, guard crossing (23)" test_sensitivity_by_hand;
           case "belief map model, contour, grid, ri null (23)" test_belief_map;
+          case "beliefs: strict loader, offsets, override, version (24)" test_beliefs_loader_and_resolution;
+          case "beliefs: cdf, monotone terminal, implied, probability (24)" test_beliefs_cdf_and_probability;
         ] );
     ]

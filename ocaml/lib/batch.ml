@@ -217,6 +217,27 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
       (match binding with
       | [] -> "none"
       | xs -> String.concat ", " (List.map (fun (name, n) -> Printf.sprintf "%s %d" name n) xs));
+    let probabilities =
+      List.filter_map (fun (v : valuation) -> Option.map (fun (r : belief_readout) -> r.probability_overpaid) v.belief) vs
+      |> List.sort compare
+    in
+    let np = List.length probabilities in
+    let no_belief = List.filter (fun (v : valuation) -> v.status = `Ok && Option.is_none v.belief) vs in
+    let readouts = List.filter_map (fun (v : valuation) -> v.belief) vs in
+    let at_one = List.filter (fun (r : belief_readout) -> r.probability_overpaid >= 1.) readouts in
+    let past_rate = List.filter (fun (r : belief_readout) -> Option.is_some r.probability_reason) at_one in
+    Printf.bprintf b
+      "probability_overpaid (24), across %d Ok names with a declared belief: %s; at 1.0: %d (%d where the price needs long-run growth at or above the discount rate, %d where the implied long-run growth is at or above the belief's ceiling); no belief on %d Ok names (%s)\n"
+      np
+      (if np = 0 then "none"
+       else
+         Printf.sprintf "median %.2f, range %.2f to %.2f" (List.nth probabilities (np / 2)) (List.hd probabilities)
+           (List.nth probabilities (np - 1)))
+      (List.length at_one) (List.length past_rate) (List.length at_one - List.length past_rate)
+      (List.length no_belief)
+      (String.concat "; "
+         (List.map (fun (r, n) -> Printf.sprintf "%d %s" n r)
+            (count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> v.belief_reason) no_belief))));
     Printf.bprintf b "implied half-life, across %d Ok names: %s; beyond range: %d would need growth or roe that never decays, %d priced below the no-growth value; level is the meaningful readout for %d (start at or below its target)\n"
       (List.length implied)
       (match (median, half_lives) with
@@ -457,6 +478,10 @@ let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
           (match (o.status, o.failed_reason) with
           | `Failed, Some r -> Printf.bprintf b "           was: %s\n" r
           | _ -> ());
+          (* Two runs under different beliefs are different runs (24). *)
+          if o.belief_version <> v.belief_version then
+            Printf.bprintf b "           belief_version %s -> %s\n"
+              (Option.value o.belief_version ~default:"null") (Option.value v.belief_version ~default:"null");
           (match (v.status, v.failed_reason) with
           | `Failed, Some r -> Printf.bprintf b "           now: %s\n" r
           | _ -> ());

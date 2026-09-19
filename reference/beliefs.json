@@ -1,0 +1,43 @@
+{
+  "notes": [
+    "Declared beliefs on long-run growth, one default per entity class (24). Six fields per belief and nothing else: mean, sd, floor, ceiling, why, as_of; a truncated normal. Values in percentage points as offsets around the country's settled terminal growth in params.json (mean 0 = the country's terminal growth; floor -2 = two points below it), so one default serves every currency.",
+    "Never estimated from history by the tool. The why may cite history, GDP or base rates as evidence; the numbers are a declaration, dated, revised by a dated declaration when evidence warrants, never because of what a number looks like.",
+    "The belief parameter is terminal growth, fixed on the merits: starting growth is observed from filings, the reversion speed is a structural assumption with its sensitivity shown, and long-run growth is the question every investor can answer. This choice may be revisited only on an argument about the model, never on what it does to a number.",
+    "Bank and Insurer carry no belief: the residual-income path has no terminal growth, so the belief parameter is undefined there and the record says so.",
+    "These four are drafts for the user to confirm or change before use."
+  ],
+  "classes": {
+    "OperatingCompany": {
+      "mean": 0.0,
+      "sd": 0.5,
+      "floor": -2.0,
+      "ceiling": 2.0,
+      "why": "long-run growth near the economy's; a mature business does not outgrow it forever",
+      "as_of": "2026-09-19"
+    },
+    "HighGrowthSoftware": {
+      "mean": 0.0,
+      "sd": 1.0,
+      "floor": -2.0,
+      "ceiling": 3.0,
+      "why": "same centre, wider: the long run is further away and less certain",
+      "as_of": "2026-09-19"
+    },
+    "Cyclical": {
+      "mean": 0.0,
+      "sd": 1.0,
+      "floor": -3.0,
+      "ceiling": 2.0,
+      "why": "wider below: the product's long-run demand is the risk",
+      "as_of": "2026-09-19"
+    },
+    "Reit": {
+      "mean": 0.0,
+      "sd": 0.5,
+      "floor": -2.0,
+      "ceiling": 1.0,
+      "why": "rent growth tracks inflation; a narrow ceiling",
+      "as_of": "2026-09-19"
+    }
+  }
+}
