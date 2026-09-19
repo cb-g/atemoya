@@ -224,6 +224,209 @@
       "scope_limits": [
         "structural break: foundry build-out and the loss of process leadership; the through-cycle return may not recur"
       ]
+    },
+    {
+      "ticker": "PG",
+      "entity_class": "OperatingCompany",
+      "why": "consumer staples: decades of stable free cash flow"
+    },
+    {
+      "ticker": "PEP",
+      "entity_class": "OperatingCompany",
+      "why": "beverages and snacks: a second staples filer with its own tag habits"
+    },
+    {
+      "ticker": "HD",
+      "entity_class": "OperatingCompany",
+      "why": "retail with large leases on both sides of the balance sheet; the leases-excluded debt definition is tested here"
+    },
+    {
+      "ticker": "MCD",
+      "entity_class": "OperatingCompany",
+      "why": "a franchisor: franchise economics with heavy leases on both sides"
+    },
+    {
+      "ticker": "UNP",
+      "entity_class": "OperatingCompany",
+      "why": "a railroad: capital-intensive with regulated pricing power"
+    },
+    {
+      "ticker": "LMT",
+      "entity_class": "OperatingCompany",
+      "why": "a defence contractor: government-set margins, pension-heavy"
+    },
+    {
+      "ticker": "ORCL",
+      "entity_class": "OperatingCompany",
+      "why": "mature software carrying large debt; no longer high growth"
+    },
+    {
+      "ticker": "CSCO",
+      "entity_class": "OperatingCompany",
+      "why": "mature networking, cash-rich: cash plus short-term investments matter here"
+    },
+    {
+      "ticker": "TXN",
+      "entity_class": "OperatingCompany",
+      "why": "analogue semiconductors, the least cyclical of the semiconductors; kept a plain operating company on purpose"
+    },
+    {
+      "ticker": "ABBV",
+      "entity_class": "OperatingCompany",
+      "why": "pharma with a patent cliff inside the growth window",
+      "scope_limits": [
+        "growth window spans a product transition"
+      ]
+    },
+    {
+      "ticker": "TSLA",
+      "entity_class": "OperatingCompany",
+      "why": "autos and energy: profitable and capex-heavy; declared a plain operating company rather than cyclical, a judgment"
+    },
+    {
+      "ticker": "NOW",
+      "entity_class": "HighGrowthSoftware",
+      "why": "subscription software, profitable and compounding"
+    },
+    {
+      "ticker": "ADBE",
+      "entity_class": "HighGrowthSoftware",
+      "why": "subscription software at mature growth; the boundary with a plain operating company"
+    },
+    {
+      "ticker": "UBER",
+      "entity_class": "HighGrowthSoftware",
+      "why": "a platform recently profitable; declared software rather than a plain operating company, a judgment"
+    },
+    {
+      "ticker": "MU",
+      "entity_class": "Cyclical",
+      "why": "memory semiconductors: the textbook cycle"
+    },
+    {
+      "ticker": "CAT",
+      "entity_class": "Cyclical",
+      "why": "heavy equipment: the industrial cycle rather than a commodity price"
+    },
+    {
+      "ticker": "F",
+      "entity_class": "Cyclical",
+      "why": "autos: cyclical with a captive finance arm, so finance debt sits beside industrial debt"
+    },
+    {
+      "ticker": "NUE",
+      "entity_class": "Cyclical",
+      "why": "steel: a commodity cyclical on domestic filings"
+    },
+    {
+      "ticker": "SHEL",
+      "entity_class": "Cyclical",
+      "why": "an integrated oil company filing under IFRS on a 20-F: the mid-cycle model on an IFRS filer"
+    },
+    {
+      "ticker": "BP",
+      "entity_class": "Cyclical",
+      "why": "an integrated oil company filing under IFRS on a 20-F; a second one"
+    },
+    {
+      "ticker": "DAL",
+      "entity_class": "Cyclical",
+      "why": "an airline: cyclical, lease-heavy, with loss years inside the window"
+    },
+    {
+      "ticker": "WFC",
+      "entity_class": "Bank",
+      "why": "a large U.S. bank under an asset cap"
+    },
+    {
+      "ticker": "PNC",
+      "entity_class": "Bank",
+      "why": "a regional U.S. bank"
+    },
+    {
+      "ticker": "HSBC",
+      "entity_class": "Bank",
+      "why": "a bank filing under IFRS on a 20-F: the net interest income signature under IFRS tags"
+    },
+    {
+      "ticker": "SCHW",
+      "entity_class": "Bank",
+      "why": "a broker-bank: whether the net interest income signature fires is the test; declared a bank, a judgment"
+    },
+    {
+      "ticker": "AIG",
+      "entity_class": "Insurer",
+      "why": "a property and casualty and life insurer, AOCI-heavy"
+    },
+    {
+      "ticker": "TRV",
+      "entity_class": "Insurer",
+      "why": "a property and casualty insurer with clean premium rows"
+    },
+    {
+      "ticker": "AFL",
+      "entity_class": "Insurer",
+      "why": "a supplemental health insurer, Japan-heavy: foreign exchange inside an insurer"
+    },
+    {
+      "ticker": "UNH",
+      "entity_class": "Insurer",
+      "why": "managed care: premiums are filed, but whether it is an insurer or a plain operating company is the judgment; the signature decides the consistency check either way"
+    },
+    {
+      "ticker": "AMT",
+      "entity_class": "Reit",
+      "why": "towers: FFO on a REIT that is not property in the usual sense"
+    },
+    {
+      "ticker": "EQIX",
+      "entity_class": "Reit",
+      "why": "data centres: heavy recurring capex, where the FFO caveat bites hardest"
+    },
+    {
+      "ticker": "PSA",
+      "entity_class": "Reit",
+      "why": "self storage: simple FFO"
+    },
+    {
+      "ticker": "WELL",
+      "entity_class": "Reit",
+      "why": "healthcare real estate: acquisitions inside the FFO growth window"
+    },
+    {
+      "ticker": "NEE",
+      "entity_class": "RegulatedUtility",
+      "why": "a regulated utility with its rate base in a build-out"
+    },
+    {
+      "ticker": "SO",
+      "entity_class": "RegulatedUtility",
+      "why": "a regulated utility with a nuclear build history"
+    },
+    {
+      "ticker": "VST",
+      "entity_class": "MerchantPower",
+      "why": "merchant power: no rate base"
+    },
+    {
+      "ticker": "NEM",
+      "entity_class": "Miner",
+      "why": "a gold miner: the NAV lens, which the tool refuses to replace with a DCF"
+    },
+    {
+      "ticker": "FCX",
+      "entity_class": "Miner",
+      "why": "a copper miner: the NAV lens, which the tool refuses to replace with a DCF"
+    },
+    {
+      "ticker": "RIVN",
+      "entity_class": "Unprofitable",
+      "why": "unprofitable: runway against the catalyst calendar, refused by the tool"
+    },
+    {
+      "ticker": "SNOW",
+      "entity_class": "Unprofitable",
+      "why": "GAAP losses with positive free cash flow; declared unprofitable rather than software, exactly the judgment the class text settles"
     }
   ]
 }
