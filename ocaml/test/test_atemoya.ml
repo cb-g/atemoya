@@ -78,7 +78,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     ?(price_unit = `Major) ?(price_unit_divisor = 1.0) ?(price = Some 10.)
     ?(market_cap = Some 5000.) ?(country = Some "United States")
     ?(industry = Some "Consumer Electronics") ?(provider = "yfinance")
-    ?(statements_unavailable = "") ?latest_filing ?cross_check periods : Boundary_t.financials =
+    ?(statements_unavailable = "") ?latest_filing ?cross_check ?(taxonomy = "")
+    ?vendor_financial_currency periods : Boundary_t.financials =
   {
     ticker = "TEST";
     as_of = "2026-09-10T00:00:00+00:00";
@@ -94,6 +95,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     periods;
     notes = [];
     provider;
+    taxonomy;
+    vendor_financial_currency;
     market_provider = "yfinance";
     provider_reason = "";
     statements_unavailable;
@@ -224,6 +227,7 @@ let params : Params.t =
       Reference_j.xbrl_tags_of_string
         {|{"source": "test", "as_of": "2026-09-19", "cross_check_threshold": 0.02, "max_filing_age_days": 400,
            "annual_forms": ["10-K"], "annual_span_days": [350, 380], "fields": {},
+           "ifrs_full_fields": {}, "ifrs_full_net_interest_income": {"interest_revenue": [], "interest_expense": []},
            "depreciation_components": []}|};
     field_definitions =
       Atdgen_runtime.Util.Json.from_file Reference_j.read_field_definitions
@@ -1061,7 +1065,8 @@ let test_flow_chart_names_every_reason () =
       "insurer model requires filed-statement data"; "fx not available for";
       "latest annual filing is";
       "missing market data: financial_currency"; "missing market data: trading_currency";
-      "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check" ]
+      "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
+      "financial currency disagreement" ]
 
 (* --- the insurer model --- *)
 
@@ -1676,6 +1681,40 @@ let test_summary_implied_line () =
   if contains (Batch.summary [ rename "NOPE" (run (financials [])) ]) "implied, across" then
     Alcotest.fail "implied line without Ok records"
 
+(* --- ifrs filers: the currency agreement gate, taxonomy carried, zero dividends --- *)
+
+let test_currency_agreement_gate () =
+  let ifrs ?(latest_filing = "2026-02-26") periods = financials ~provider:"SEC XBRL companyfacts" ~taxonomy:"ifrs-full" ~latest_filing periods in
+  let agree = run { (ifrs (history ())) with vendor_financial_currency = Some "USD" } in
+  Alcotest.check status "agreeing currencies value" `Ok agree.status;
+  Alcotest.(check string) "taxonomy carried onto the valuation" "ifrs-full" agree.taxonomy;
+  check_mentions "json" (Boundary_j.string_of_valuation agree) [ {|"taxonomy":"ifrs-full"|} ];
+  let disagree = run { (ifrs (history ())) with vendor_financial_currency = Some "EUR" } in
+  check_reason disagree [ "financial currency disagreement: filing USD, vendor EUR" ];
+  Alcotest.(check (option model)) "routed before the gate" (Some `Dcf) disagree.model;
+  Alcotest.(check bool) "nothing computed" true (Option.is_none disagree.inputs);
+  (* the gate sits before the definitions and filing-age gates *)
+  let both = run { (ifrs ~latest_filing:"2025-01-01" (history ())) with vendor_financial_currency = Some "EUR" } in
+  check_reason both [ "financial currency disagreement" ];
+  (* a vendor record names no vendor currency: nothing to compare *)
+  Alcotest.(check bool) "vendor record passes" true (Result.is_ok (Valuation.currency_agreement (financials (history ()))));
+  if contains (Boundary_j.string_of_valuation (run (financials (history ())))) "taxonomy" then
+    Alcotest.fail "taxonomy leaked into a vendor record"
+
+let test_zero_dividends_is_a_payout_absent_is_not () =
+  (* a bank that files dividends of zero retains everything: retention 1.0, recorded *)
+  let zero = run ~declared:(Some (declaration `Bank)) (bank_financials (bank_history ~dividends:(Some 0.) ())) in
+  Alcotest.check status "zero dividends values" `Ok zero.status;
+  (match zero.inputs with
+  | Some (`Residual_income i) ->
+      check_float "retention 1.0" 1.0 i.retention;
+      check_float "payout 0" 0. i.payout_ratio;
+      Alcotest.(check (option approx)) "dividends recorded as 0" (Some 0.) i.dividends_paid
+  | _ -> Alcotest.fail "no residual-income inputs");
+  (* an absent dividends tag cannot be told from none: refused *)
+  let absent = run ~declared:(Some (declaration `Bank)) (bank_financials (bank_history ~dividends:None ())) in
+  check_reason absent [ "payout not derivable: need 2 fiscal periods with positive net income and dividends paid, have 0" ]
+
 (* --- batch summary --- *)
 
 let test_batch_summary () =
@@ -1980,6 +2019,11 @@ let () =
           case "the headline does not depend on the readouts" test_headline_independent_of_the_readouts;
           case "derived ebit runs only within the cross-check, else the policy's failed" test_ebit_policy_gate;
           case "summary carries the universe-level implied line" test_summary_implied_line;
+        ] );
+      ( "ifrs filers",
+        [
+          case "filing and vendor currencies must agree; taxonomy carried" test_currency_agreement_gate;
+          case "zero dividends is a payout, an absent tag is not" test_zero_dividends_is_a_payout_absent_is_not;
         ] );
       ( "cross-currency",
         [

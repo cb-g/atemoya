@@ -169,16 +169,25 @@ type xbrl_field = {
   tags : string list;                   (* first present per period wins *)
 }
 
+(* Net interest income as a recipe where the taxonomy has no net tag: first present of
+   [interest_revenue] less first present of [interest_expense], recorded as "A - B". *)
+type nii_recipe = {
+  interest_revenue : string list;
+  interest_expense : string list;
+}
+
 type xbrl_tags = {
   source : string;
   as_of : string;
   ~notes : string list;
   cross_check_threshold : float;        (* relative difference at or below which the two providers agree *)
   max_filing_age_days : int;            (* a newest annual filing older than this fails the valuation *)
-  annual_forms : string list;           (* forms whose facts count as annual *)
+  annual_forms : string list;           (* forms whose facts count as annual: 10-K and 20-F families *)
   annual_span_days : int list;          (* [min; max] days a duration fact must span *)
-  fields : (string * xbrl_field) list <json repr="object">;
-  depreciation_components : string list;    (* canonical fields summed when no aggregate d&a tag: the first required *)
+  fields : (string * xbrl_field) list <json repr="object">;             (* us-gaap *)
+  ifrs_full_fields : (string * xbrl_field) list <json repr="object">;   (* ifrs-full, the same canonical names (13) *)
+  ifrs_full_net_interest_income : nii_recipe;
+  depreciation_components : string list;    (* canonical fields summed when no aggregate d&a tag: the first required; both taxonomies *)
 }
 
 (* One definition per statement field, applied identically to filed statements (us-gaap
@@ -201,10 +210,20 @@ type cash_vendor = {
   ~notes : string list;
 }
 
+(* ifrs-full components (13). The investment alternatives are tried in order and the first
+   with any tag present is summed: IFRS filers split current financial assets by
+   measurement category (TSMC), or carry one "other current financial assets" line (SAP). *)
+type cash_ifrs = {
+  cash_equivalents : string list;
+  short_term_investments : string list list;
+  ~notes : string list;
+}
+
 type cash_definition = {
   name : string;
   why : string;
   xbrl : cash_xbrl;
+  ifrs : cash_ifrs;
   vendor : cash_vendor;
 }
 
@@ -226,10 +245,28 @@ type debt_vendor = {
   ~notes : string list;
 }
 
+(* ifrs-full recipe (13): [total] (Borrowings, the taxonomy's financial-debt aggregate)
+   when tagged; else the sum of the groups present, each first-present, with
+   [current_total] standing in for [short_term_borrowings] + [current_portion_of_long_term]
+   when tagged, and at least one noncurrent group required. Lease liabilities (all leases
+   under IFRS 16) are never summed. *)
+type debt_ifrs = {
+  total : string list;
+  noncurrent_borrowings : string list;
+  noncurrent_bonds : string list;
+  current_bonds : string list;
+  current_total : string list;
+  short_term_borrowings : string list;
+  current_portion_of_long_term : string list;
+  excluded : string list;
+  ~notes : string list;
+}
+
 type debt_definition = {
   name : string;
   why : string;
   xbrl : debt_xbrl;
+  ifrs : debt_ifrs;
   vendor : debt_vendor;
 }
 
@@ -247,10 +284,23 @@ type nwc_vendor = {
   ~notes : string list;
 }
 
+(* ifrs-full (13): the AdjustmentsFor(Decrease)Increase family is cash-flow-signed (positive
+   = cash released) for assets and liabilities alike, so every component enters with
+   [sign]. The family is named by [family_prefixes]; a family tag in neither [components]
+   nor [excluded] leaves the field null with a note. *)
+type nwc_ifrs = {
+  family_prefixes : string list;
+  components : string list;
+  excluded : string list;
+  sign : float;
+  ~notes : string list;
+}
+
 type nwc_definition = {
   name : string;
   why : string;
   xbrl : nwc_xbrl;
+  ifrs : nwc_ifrs;
   vendor : nwc_vendor;
 }
 
@@ -278,6 +328,7 @@ type ebit_definition = {
   recipes : string list;                    (* the recipe names a record may carry as ebit_recipe: operating_income, then the one derived recipe *)
   why : string;
   xbrl : ebit_rows;
+  ifrs : ebit_rows;                         (* ifrs-full tags (13) *)
   vendor : ebit_rows;
 }
 

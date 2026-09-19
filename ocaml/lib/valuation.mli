@@ -3,7 +3,8 @@
     gate, parameter resolution, the routed model, sanity checks, signal, floor,
     and the [`Failed]-with-nulls shape.
 
-    Order: declaration and class check -> admissibility -> country -> field
+    Order: declaration and class check -> admissibility -> country -> currency
+    agreement (a filing's unit against the vendor's statement currency) -> field
     definitions -> filing age -> currency gate -> resolve parameters -> the first
     admissible model -> sanity bound -> record. The field-definitions gate: a
     record whose periods carry a composition naming another definition than
@@ -38,6 +39,9 @@ type declaration = {
   lens_note : string;
   scope_limits : string list;
 }
+
+val currency_agreement : Boundary_t.financials -> (unit, string) result
+(** [`Failed] naming both when the filing's currency and the vendor's disagree. *)
 
 val definitions_check :
   Reference_t.field_definitions -> Boundary_t.financials -> (unit, string) result

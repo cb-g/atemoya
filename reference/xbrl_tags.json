@@ -1,19 +1,24 @@
 {
-  "source": "us-gaap tag candidates per canonical field, verified against the universe's SEC XBRL companyfacts on 2026-09-19; selection is per fiscal period because tags change between years (Apple's Revenues stops at FY2018, Microsoft's at FY2010, Allstate's IncurredClaimsPropertyCasualtyAndLiability at FY2023, Bank of America's PaymentsOfDividends at FY2013)",
+  "source": "us-gaap and ifrs-full tag candidates per canonical field, verified against the universe's SEC XBRL companyfacts on 2026-09-19; selection is per fiscal period because tags change between years (Apple's Revenues stops at FY2018, Microsoft's at FY2010, Allstate's IncurredClaimsPropertyCasualtyAndLiability at FY2023, Bank of America's PaymentsOfDividends at FY2013)",
   "as_of": "2026-09-19",
   "notes": [
-    "Only annual facts: form in annual_forms with fp = FY; a duration fact must span annual_span_days because fp = FY also marks quarters; a balance must carry no start; the latest filing wins per fiscal year end.",
+    "Only annual facts: form in annual_forms (10-K and 20-F families) with fp = FY; a duration fact must span annual_span_days because fp = FY also marks quarters; a balance must carry no start; the latest filing wins per fiscal year end. A filer's taxonomy is us-gaap when its annual net income and equity anchors are filed there, else ifrs-full; its statement currency is the unit its facts carry (the currency with the most facts in the taxonomy: HDFC Bank files INR with USD convenience translations), recorded as financial_currency and required to agree with the vendor's.",
     "A canonical field the map cannot supply for a period stays null and the valuation fails naming it; there is no per-field fallback to the vendor feed.",
     "cash, total_debt, delta_nwc and ebit are not here: they follow reference/field_definitions.json, the one definition applied to both providers.",
     "depreciation_amortization: the aggregate tags first; when none is filed, Depreciation plus AmortizationOfIntangibleAssets where filed (Microsoft and Alphabet file only these), labelled as the sum.",
     "dividends_paid: the common-stock payments tag, then total payments (common and preferred, as JPMorgan, Goldman Sachs and Morgan Stanley file them), then PaymentsOfOrdinaryDividends (Bank of America 9.56bn FY2025: its PaymentsOfDividends stops at FY2013 and it never files PaymentsOfDividendsCommonStock), then the declared-dividend tags; the tag matched is recorded per period.",
-    "cross_check_threshold 0.02 is an assumption: two providers reading the same filing under the same definitions should agree to within rounding; a larger gap is a vendor row that is wrong, lagging or built from another filed line, and the summary lists it."
+    "cross_check_threshold 0.02 is an assumption: two providers reading the same filing under the same definitions should agree to within rounding; a larger gap is a vendor row that is wrong, lagging or built from another filed line, and the summary lists it.",
+    "ifrs_full_fields, verified on the 20-F filers SAP (EUR), Sony (JPY), TSMC (TWD), Itau (BRL), Nu (USD) and Kaspi (KZT) on 2026-09-19: Revenue, ProfitLossBeforeTax, IncomeTaxExpenseContinuingOperations, ProfitLossFromOperatingActivities (in field_definitions.json), EquityAttributableToOwnersOfParent, ProfitLossAttributableToOwnersOfParent, AccumulatedOtherComprehensiveIncome on all; DepreciationAndAmortisationExpense on Sony, Kaspi and Itau, the cash-flow AdjustmentsForDepreciationAndAmortisationExpense on SAP, DepreciationExpense plus AmortisationExpense on TSMC; capex as PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities (TSMC, Itau) or the combined property-plant-equipment-and-intangibles purchase tag (SAP, Sony, Kaspi; intangibles included, the tag says so); dividends as the equity-holders-of-parent tag (SAP), the financing-activities tag (Sony, TSMC, Kaspi), then DividendsPaid; Itau's DividendsPaid stops at FY2022 and Nu tags no dividends at all, so both leave dividends_paid null. Insurer fields are deliberately empty: no IFRS insurer is in the universe; Sony's FY2025 20-F carries InsuranceRevenue (Sony Financial, deconsolidated October 2025), which would fire the insurer signature on a declared OperatingCompany, and is not mapped until an IFRS insurer joins.",
+    "ifrs_full_net_interest_income: the taxonomy has no net interest income tag; where InterestRevenueCalculatedUsingEffectiveInterestMethod (Kaspi) or InterestIncome and InterestExpense are filed the difference is recorded as the row A - B; Itau and Nu file neither revenue tag, so the field stays null and the bank signature reads as absent (a recorded outcome, never a gate on a declared Bank).",
+    "Filing lag, observed 2026-09-19: SEC's companyfacts carries no facts from the 2026 20-Fs of Sony (filed 2026-06-18), TSMC (2026-04-16, two dei facts only), Itau (2026-04-30), HDFC Bank (2026-07-29) and Nu, though the submissions index lists them; their newest annual facts are 430 to 520 days old and fail max_filing_age_days. SAP's 2026 20-F (2026-02-26) is present."
   ],
   "cross_check_threshold": 0.02,
   "max_filing_age_days": 400,
   "annual_forms": [
     "10-K",
-    "10-K/A"
+    "10-K/A",
+    "20-F",
+    "20-F/A"
   ],
   "annual_span_days": [
     350,
@@ -153,5 +158,120 @@
   "depreciation_components": [
     "depreciation",
     "amortization_of_intangibles"
-  ]
+  ],
+  "ifrs_full_fields": {
+    "total_revenue": {
+      "kind": "duration",
+      "tags": [
+        "Revenue"
+      ]
+    },
+    "pretax_income": {
+      "kind": "duration",
+      "tags": [
+        "ProfitLossBeforeTax"
+      ]
+    },
+    "tax_provision": {
+      "kind": "duration",
+      "tags": [
+        "IncomeTaxExpenseContinuingOperations"
+      ]
+    },
+    "depreciation_amortization": {
+      "kind": "duration",
+      "tags": [
+        "DepreciationAndAmortisationExpense",
+        "AdjustmentsForDepreciationAndAmortisationExpense"
+      ]
+    },
+    "depreciation": {
+      "kind": "duration",
+      "tags": [
+        "DepreciationExpense"
+      ]
+    },
+    "amortization_of_intangibles": {
+      "kind": "duration",
+      "tags": [
+        "AmortisationExpense"
+      ]
+    },
+    "capex": {
+      "kind": "duration",
+      "tags": [
+        "PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities",
+        "PurchaseOfPropertyPlantAndEquipmentIntangibleAssetsOtherThanGoodwillInvestmentPropertyAndOtherNoncurrentAssets"
+      ]
+    },
+    "book_equity": {
+      "kind": "instant",
+      "tags": [
+        "EquityAttributableToOwnersOfParent",
+        "Equity"
+      ]
+    },
+    "net_income": {
+      "kind": "duration",
+      "tags": [
+        "ProfitLossAttributableToOwnersOfParent",
+        "ProfitLoss"
+      ]
+    },
+    "dividends_paid": {
+      "kind": "duration",
+      "tags": [
+        "DividendsPaidToEquityHoldersOfParentClassifiedAsFinancingActivities",
+        "DividendsPaidClassifiedAsFinancingActivities",
+        "DividendsPaid"
+      ]
+    },
+    "net_interest_income": {
+      "kind": "duration",
+      "tags": []
+    },
+    "premiums_earned": {
+      "kind": "duration",
+      "tags": []
+    },
+    "claims_incurred": {
+      "kind": "duration",
+      "tags": []
+    },
+    "benefits_losses_and_expenses": {
+      "kind": "duration",
+      "tags": []
+    },
+    "policy_acquisition_expense": {
+      "kind": "duration",
+      "tags": []
+    },
+    "operating_expense": {
+      "kind": "duration",
+      "tags": []
+    },
+    "aoci": {
+      "kind": "instant",
+      "tags": [
+        "AccumulatedOtherComprehensiveIncome"
+      ]
+    },
+    "future_policy_benefits": {
+      "kind": "instant",
+      "tags": []
+    },
+    "claims_liability": {
+      "kind": "instant",
+      "tags": []
+    }
+  },
+  "ifrs_full_net_interest_income": {
+    "interest_revenue": [
+      "InterestRevenueCalculatedUsingEffectiveInterestMethod",
+      "InterestIncome"
+    ],
+    "interest_expense": [
+      "InterestExpense"
+    ]
+  }
 }

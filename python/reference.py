@@ -293,6 +293,38 @@ class XbrlField:
 
 
 @dataclass
+class NiiRecipe:
+    """Original type: nii_recipe = { ... }
+    """
+
+    interest_revenue: List[str]
+    interest_expense: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'NiiRecipe':
+        if isinstance(x, dict):
+            return cls(
+                interest_revenue=_atd_read_list(_atd_read_string)(x['interest_revenue']) if 'interest_revenue' in x else _atd_missing_json_field('NiiRecipe', 'interest_revenue'),
+                interest_expense=_atd_read_list(_atd_read_string)(x['interest_expense']) if 'interest_expense' in x else _atd_missing_json_field('NiiRecipe', 'interest_expense'),
+            )
+        else:
+            _atd_bad_json('NiiRecipe', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['interest_revenue'] = _atd_write_list(_atd_write_string)(self.interest_revenue)
+        res['interest_expense'] = _atd_write_list(_atd_write_string)(self.interest_expense)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'NiiRecipe':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class XbrlTags:
     """Original type: xbrl_tags = { ... }
     """
@@ -304,6 +336,8 @@ class XbrlTags:
     annual_forms: List[str]
     annual_span_days: List[int]
     fields: List[Tuple[str, XbrlField]]
+    ifrs_full_fields: List[Tuple[str, XbrlField]]
+    ifrs_full_net_interest_income: NiiRecipe
     depreciation_components: List[str]
     notes: List[str] = field(default_factory=lambda: [])
 
@@ -318,6 +352,8 @@ class XbrlTags:
                 annual_forms=_atd_read_list(_atd_read_string)(x['annual_forms']) if 'annual_forms' in x else _atd_missing_json_field('XbrlTags', 'annual_forms'),
                 annual_span_days=_atd_read_list(_atd_read_int)(x['annual_span_days']) if 'annual_span_days' in x else _atd_missing_json_field('XbrlTags', 'annual_span_days'),
                 fields=_atd_read_assoc_object_into_list(XbrlField.from_json)(x['fields']) if 'fields' in x else _atd_missing_json_field('XbrlTags', 'fields'),
+                ifrs_full_fields=_atd_read_assoc_object_into_list(XbrlField.from_json)(x['ifrs_full_fields']) if 'ifrs_full_fields' in x else _atd_missing_json_field('XbrlTags', 'ifrs_full_fields'),
+                ifrs_full_net_interest_income=NiiRecipe.from_json(x['ifrs_full_net_interest_income']) if 'ifrs_full_net_interest_income' in x else _atd_missing_json_field('XbrlTags', 'ifrs_full_net_interest_income'),
                 depreciation_components=_atd_read_list(_atd_read_string)(x['depreciation_components']) if 'depreciation_components' in x else _atd_missing_json_field('XbrlTags', 'depreciation_components'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
@@ -333,6 +369,8 @@ class XbrlTags:
         res['annual_forms'] = _atd_write_list(_atd_write_string)(self.annual_forms)
         res['annual_span_days'] = _atd_write_list(_atd_write_int)(self.annual_span_days)
         res['fields'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.fields)
+        res['ifrs_full_fields'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.ifrs_full_fields)
+        res['ifrs_full_net_interest_income'] = (lambda x: x.to_json())(self.ifrs_full_net_interest_income)
         res['depreciation_components'] = _atd_write_list(_atd_write_string)(self.depreciation_components)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
@@ -901,6 +939,47 @@ class NwcVendor:
 
 
 @dataclass
+class NwcIfrs:
+    """Original type: nwc_ifrs = { ... }
+    """
+
+    family_prefixes: List[str]
+    components: List[str]
+    excluded: List[str]
+    sign: float
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'NwcIfrs':
+        if isinstance(x, dict):
+            return cls(
+                family_prefixes=_atd_read_list(_atd_read_string)(x['family_prefixes']) if 'family_prefixes' in x else _atd_missing_json_field('NwcIfrs', 'family_prefixes'),
+                components=_atd_read_list(_atd_read_string)(x['components']) if 'components' in x else _atd_missing_json_field('NwcIfrs', 'components'),
+                excluded=_atd_read_list(_atd_read_string)(x['excluded']) if 'excluded' in x else _atd_missing_json_field('NwcIfrs', 'excluded'),
+                sign=_atd_read_float(x['sign']) if 'sign' in x else _atd_missing_json_field('NwcIfrs', 'sign'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('NwcIfrs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['family_prefixes'] = _atd_write_list(_atd_write_string)(self.family_prefixes)
+        res['components'] = _atd_write_list(_atd_write_string)(self.components)
+        res['excluded'] = _atd_write_list(_atd_write_string)(self.excluded)
+        res['sign'] = _atd_write_float(self.sign)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'NwcIfrs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class NwcDefinition:
     """Original type: nwc_definition = { ... }
     """
@@ -908,6 +987,7 @@ class NwcDefinition:
     name: str
     why: str
     xbrl: NwcXbrl
+    ifrs: NwcIfrs
     vendor: NwcVendor
 
     @classmethod
@@ -917,6 +997,7 @@ class NwcDefinition:
                 name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('NwcDefinition', 'name'),
                 why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('NwcDefinition', 'why'),
                 xbrl=NwcXbrl.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('NwcDefinition', 'xbrl'),
+                ifrs=NwcIfrs.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('NwcDefinition', 'ifrs'),
                 vendor=NwcVendor.from_json(x['vendor']) if 'vendor' in x else _atd_missing_json_field('NwcDefinition', 'vendor'),
             )
         else:
@@ -927,6 +1008,7 @@ class NwcDefinition:
         res['name'] = _atd_write_string(self.name)
         res['why'] = _atd_write_string(self.why)
         res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['ifrs'] = (lambda x: x.to_json())(self.ifrs)
         res['vendor'] = (lambda x: x.to_json())(self.vendor)
         return res
 
@@ -1184,6 +1266,7 @@ class EbitDefinition:
     recipes: List[str]
     why: str
     xbrl: EbitRows
+    ifrs: EbitRows
     vendor: EbitRows
 
     @classmethod
@@ -1194,6 +1277,7 @@ class EbitDefinition:
                 recipes=_atd_read_list(_atd_read_string)(x['recipes']) if 'recipes' in x else _atd_missing_json_field('EbitDefinition', 'recipes'),
                 why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('EbitDefinition', 'why'),
                 xbrl=EbitRows.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('EbitDefinition', 'xbrl'),
+                ifrs=EbitRows.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('EbitDefinition', 'ifrs'),
                 vendor=EbitRows.from_json(x['vendor']) if 'vendor' in x else _atd_missing_json_field('EbitDefinition', 'vendor'),
             )
         else:
@@ -1205,6 +1289,7 @@ class EbitDefinition:
         res['recipes'] = _atd_write_list(_atd_write_string)(self.recipes)
         res['why'] = _atd_write_string(self.why)
         res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['ifrs'] = (lambda x: x.to_json())(self.ifrs)
         res['vendor'] = (lambda x: x.to_json())(self.vendor)
         return res
 
@@ -1305,6 +1390,59 @@ class DebtVendor:
 
 
 @dataclass
+class DebtIfrs:
+    """Original type: debt_ifrs = { ... }
+    """
+
+    total: List[str]
+    noncurrent_borrowings: List[str]
+    noncurrent_bonds: List[str]
+    current_bonds: List[str]
+    current_total: List[str]
+    short_term_borrowings: List[str]
+    current_portion_of_long_term: List[str]
+    excluded: List[str]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DebtIfrs':
+        if isinstance(x, dict):
+            return cls(
+                total=_atd_read_list(_atd_read_string)(x['total']) if 'total' in x else _atd_missing_json_field('DebtIfrs', 'total'),
+                noncurrent_borrowings=_atd_read_list(_atd_read_string)(x['noncurrent_borrowings']) if 'noncurrent_borrowings' in x else _atd_missing_json_field('DebtIfrs', 'noncurrent_borrowings'),
+                noncurrent_bonds=_atd_read_list(_atd_read_string)(x['noncurrent_bonds']) if 'noncurrent_bonds' in x else _atd_missing_json_field('DebtIfrs', 'noncurrent_bonds'),
+                current_bonds=_atd_read_list(_atd_read_string)(x['current_bonds']) if 'current_bonds' in x else _atd_missing_json_field('DebtIfrs', 'current_bonds'),
+                current_total=_atd_read_list(_atd_read_string)(x['current_total']) if 'current_total' in x else _atd_missing_json_field('DebtIfrs', 'current_total'),
+                short_term_borrowings=_atd_read_list(_atd_read_string)(x['short_term_borrowings']) if 'short_term_borrowings' in x else _atd_missing_json_field('DebtIfrs', 'short_term_borrowings'),
+                current_portion_of_long_term=_atd_read_list(_atd_read_string)(x['current_portion_of_long_term']) if 'current_portion_of_long_term' in x else _atd_missing_json_field('DebtIfrs', 'current_portion_of_long_term'),
+                excluded=_atd_read_list(_atd_read_string)(x['excluded']) if 'excluded' in x else _atd_missing_json_field('DebtIfrs', 'excluded'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('DebtIfrs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['total'] = _atd_write_list(_atd_write_string)(self.total)
+        res['noncurrent_borrowings'] = _atd_write_list(_atd_write_string)(self.noncurrent_borrowings)
+        res['noncurrent_bonds'] = _atd_write_list(_atd_write_string)(self.noncurrent_bonds)
+        res['current_bonds'] = _atd_write_list(_atd_write_string)(self.current_bonds)
+        res['current_total'] = _atd_write_list(_atd_write_string)(self.current_total)
+        res['short_term_borrowings'] = _atd_write_list(_atd_write_string)(self.short_term_borrowings)
+        res['current_portion_of_long_term'] = _atd_write_list(_atd_write_string)(self.current_portion_of_long_term)
+        res['excluded'] = _atd_write_list(_atd_write_string)(self.excluded)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DebtIfrs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class DebtDefinition:
     """Original type: debt_definition = { ... }
     """
@@ -1312,6 +1450,7 @@ class DebtDefinition:
     name: str
     why: str
     xbrl: DebtXbrl
+    ifrs: DebtIfrs
     vendor: DebtVendor
 
     @classmethod
@@ -1321,6 +1460,7 @@ class DebtDefinition:
                 name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('DebtDefinition', 'name'),
                 why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('DebtDefinition', 'why'),
                 xbrl=DebtXbrl.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('DebtDefinition', 'xbrl'),
+                ifrs=DebtIfrs.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('DebtDefinition', 'ifrs'),
                 vendor=DebtVendor.from_json(x['vendor']) if 'vendor' in x else _atd_missing_json_field('DebtDefinition', 'vendor'),
             )
         else:
@@ -1331,6 +1471,7 @@ class DebtDefinition:
         res['name'] = _atd_write_string(self.name)
         res['why'] = _atd_write_string(self.why)
         res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['ifrs'] = (lambda x: x.to_json())(self.ifrs)
         res['vendor'] = (lambda x: x.to_json())(self.vendor)
         return res
 
@@ -1419,6 +1560,41 @@ class CashVendor:
 
 
 @dataclass
+class CashIfrs:
+    """Original type: cash_ifrs = { ... }
+    """
+
+    cash_equivalents: List[str]
+    short_term_investments: List[List[str]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'CashIfrs':
+        if isinstance(x, dict):
+            return cls(
+                cash_equivalents=_atd_read_list(_atd_read_string)(x['cash_equivalents']) if 'cash_equivalents' in x else _atd_missing_json_field('CashIfrs', 'cash_equivalents'),
+                short_term_investments=_atd_read_list(_atd_read_list(_atd_read_string))(x['short_term_investments']) if 'short_term_investments' in x else _atd_missing_json_field('CashIfrs', 'short_term_investments'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('CashIfrs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['cash_equivalents'] = _atd_write_list(_atd_write_string)(self.cash_equivalents)
+        res['short_term_investments'] = _atd_write_list(_atd_write_list(_atd_write_string))(self.short_term_investments)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'CashIfrs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class CashDefinition:
     """Original type: cash_definition = { ... }
     """
@@ -1426,6 +1602,7 @@ class CashDefinition:
     name: str
     why: str
     xbrl: CashXbrl
+    ifrs: CashIfrs
     vendor: CashVendor
 
     @classmethod
@@ -1435,6 +1612,7 @@ class CashDefinition:
                 name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('CashDefinition', 'name'),
                 why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('CashDefinition', 'why'),
                 xbrl=CashXbrl.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('CashDefinition', 'xbrl'),
+                ifrs=CashIfrs.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('CashDefinition', 'ifrs'),
                 vendor=CashVendor.from_json(x['vendor']) if 'vendor' in x else _atd_missing_json_field('CashDefinition', 'vendor'),
             )
         else:
@@ -1445,6 +1623,7 @@ class CashDefinition:
         res['name'] = _atd_write_string(self.name)
         res['why'] = _atd_write_string(self.why)
         res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['ifrs'] = (lambda x: x.to_json())(self.ifrs)
         res['vendor'] = (lambda x: x.to_json())(self.vendor)
         return res
 

@@ -141,6 +141,8 @@ type financials = {
   periods : fiscal_period list;
   notes : string list;           (* free-text provenance and data-quality notes; never branched on *)
   ~provider : string;            (* the statements provider, e.g. "yfinance" or "SEC XBRL companyfacts" *)
+  ~taxonomy : string;            (* filed statements only: us-gaap | ifrs-full; empty on vendor statements (13) *)
+  ?vendor_financial_currency : string option;   (* filed statements only: the vendor's statement currency, which must agree with financial_currency (the filing's unit) (13) *)
   ~market_provider : string;     (* where price, market cap and currencies came from; always the vendor feed *)
   ~provider_reason : string;     (* why this statements provider was chosen *)
   ~statements_unavailable : string;   (* why the provider had no statements for this ticker; empty when it had *)
@@ -461,6 +463,7 @@ type valuation = {
   lens_note : string;                     (* free text from the declaration; may be empty *)
   scope_limits : string list;             (* what the models cannot see for this name, verbatim from the declaration *)
   statements_provider : string;           (* the provider decision, on every record *)
+  ~taxonomy : string;                     (* us-gaap | ifrs-full on filed statements; empty otherwise (13) *)
   market_provider : string;
   provider_reason : string;
   ?filing_age_days : int option;          (* valued_on - latest_filing, when the statements are filed ones *)

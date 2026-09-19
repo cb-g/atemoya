@@ -266,17 +266,140 @@ def test_depreciation_composite() -> None:
 
 
 def test_provider_decision() -> None:
-    xbrl, reason, gaap = fetch_sec.decide({"facts": {"us-gaap": apple_like()}}, TAGS)
-    assert xbrl and reason == "us-gaap annual filer (10-K, 10-K/A)" and "NetIncomeLoss" in gaap
-    xbrl, reason, _ = fetch_sec.decide({"facts": {"us-gaap": {}, "ifrs-full": {"ProfitLoss": usd(fact("2025-12-31", 1.0, start="2025-01-01"))}}}, TAGS)
-    assert (xbrl, reason) == (False, "ifrs filer, not in scope")
-    twenty_f = {"facts": {"us-gaap": {"NetIncomeLoss": usd(fact("2026-03-31", 7e9, start="2025-04-01", form="20-F"))}}}
-    xbrl, reason, _ = fetch_sec.decide(twenty_f, TAGS)
-    assert (xbrl, reason) == (False, "us-gaap facts filed on 20-F only; 10-K or 10-K/A required")
-    xbrl, reason, _ = fetch_sec.decide({"facts": {"us-gaap": {"Assets": usd(fact("2025-12-31", 1.0))}}}, TAGS)
-    assert not xbrl and reason.startswith("us-gaap facts carry no annual net income")
-    xbrl, reason, _ = fetch_sec.decide(None, TAGS)
-    assert (xbrl, reason) == (False, "SEC companyfacts: not found (HTTP 404)")
+    d = fetch_sec.decide({"facts": {"us-gaap": apple_like()}}, TAGS)
+    assert d.xbrl and d.reason == "us-gaap annual filer (10-K, 10-K/A, 20-F, 20-F/A), statements in USD" and "NetIncomeLoss" in d.facts
+    assert (d.taxonomy, d.currency) == ("us-gaap", "USD")
+    d = fetch_sec.decide({"facts": {"us-gaap": {}, "ifrs-full": sap_like()}}, TAGS)
+    assert d.xbrl and (d.taxonomy, d.currency) == ("ifrs-full", "EUR") and d.reason == "ifrs-full annual filer (10-K, 10-K/A, 20-F, 20-F/A), statements in EUR"
+    both = fetch_sec.decide({"facts": {"us-gaap": apple_like(), "ifrs-full": sap_like()}}, TAGS)
+    assert both.taxonomy == "ifrs-full" and both.reason.endswith("(also us-gaap to 2025-09-27; the newest anchors, 2025-12-31, decide)")
+    tie = {**sap_like(), "ProfitLoss": in_unit("EUR", twenty_f("2025-09-27", 1e9, start="2024-09-29")), "ProfitLossAttributableToOwnersOfParent": in_unit("EUR", twenty_f("2025-09-27", 1e9, start="2024-09-29")),
+           "Equity": in_unit("EUR", twenty_f("2025-09-27", 1e9)), "EquityAttributableToOwnersOfParent": in_unit("EUR", twenty_f("2025-09-27", 1e9))}
+    assert fetch_sec.decide({"facts": {"us-gaap": apple_like(), "ifrs-full": tie}}, TAGS).taxonomy == "us-gaap"  # a tie goes to us-gaap
+    six_k = {"facts": {"ifrs-full": {"ProfitLoss": {"units": {"EUR": [fact("2025-12-31", 7e9, start="2025-01-01", form="6-K")]}}}}}
+    d = fetch_sec.decide(six_k, TAGS)
+    assert (d.xbrl, d.reason) == (False, "facts filed on 6-K only; 10-K or 10-K/A or 20-F or 20-F/A required")
+    d = fetch_sec.decide({"facts": {"us-gaap": {"Assets": usd(fact("2025-12-31", 1.0))}}}, TAGS)
+    assert not d.xbrl and d.reason == "facts carry no annual net income and equity (us-gaap 1 tags)"
+    d = fetch_sec.decide(None, TAGS)
+    assert (d.xbrl, d.reason, d.taxonomy, d.currency) == (False, "SEC companyfacts: not found (HTTP 404)", "", None)
+
+
+def in_unit(unit: str, *facts: dict[str, object]) -> dict[str, object]:
+    return {"units": {unit: list(facts)}}
+
+
+def twenty_f(end: str, val: float, *, start: str | None = None) -> dict[str, object]:
+    return fact(end, val, start=start, form="20-F", filed="2026-02-26")
+
+
+def sap_like() -> dict[str, object]:
+    """An ifrs-full 20-F filer in EUR with a USD convenience translation of one fact."""
+    return {
+        "ProfitLoss": {"units": {"EUR": [twenty_f("2025-12-31", 7.326e9, start="2025-01-01"), twenty_f("2024-12-31", 3.1e9, start="2024-01-01")],
+                                 "USD": [twenty_f("2025-12-31", 8.0e9, start="2025-01-01")]}},
+        "ProfitLossAttributableToOwnersOfParent": in_unit("EUR", twenty_f("2025-12-31", 7.161e9, start="2025-01-01"), twenty_f("2024-12-31", 3.0e9, start="2024-01-01")),
+        "Equity": in_unit("EUR", twenty_f("2025-12-31", 45.073e9), twenty_f("2024-12-31", 45.0e9)),
+        "EquityAttributableToOwnersOfParent": in_unit("EUR", twenty_f("2025-12-31", 44.586e9), twenty_f("2024-12-31", 44.5e9)),
+        "Revenue": in_unit("EUR", twenty_f("2025-12-31", 36.8e9, start="2025-01-01")),
+        "ProfitLossFromOperatingActivities": in_unit("EUR", twenty_f("2025-12-31", 9.617e9, start="2025-01-01")),
+        "ProfitLossBeforeTax": in_unit("EUR", twenty_f("2025-12-31", 10.27e9, start="2025-01-01")),
+        "AdjustmentsForDepreciationAndAmortisationExpense": in_unit("EUR", twenty_f("2025-12-31", 1.311e9, start="2025-01-01")),
+        "PurchaseOfPropertyPlantAndEquipmentIntangibleAssetsOtherThanGoodwillInvestmentPropertyAndOtherNoncurrentAssets": in_unit("EUR", twenty_f("2025-12-31", 0.739e9, start="2025-01-01")),
+        "CashAndCashEquivalents": in_unit("EUR", twenty_f("2025-12-31", 8.22e9)),
+        "OtherCurrentFinancialAssets": in_unit("EUR", twenty_f("2025-12-31", 1.552e9)),
+        "Borrowings": in_unit("EUR", twenty_f("2025-12-31", 6.15e9)),
+        "LongtermBorrowings": in_unit("EUR", twenty_f("2025-12-31", 4.55e9)),
+        "LeaseLiabilities": in_unit("EUR", twenty_f("2025-12-31", 1.684e9)),
+        "DividendsPaidToEquityHoldersOfParentClassifiedAsFinancingActivities": in_unit("EUR", twenty_f("2025-12-31", 2.743e9, start="2025-01-01")),
+        "DividendsPaid": in_unit("EUR", twenty_f("2025-12-31", 2.746e9, start="2025-01-01")),
+        "AdjustmentsForDecreaseIncreaseInTradeAndOtherReceivables": in_unit("EUR", twenty_f("2025-12-31", -0.388e9, start="2025-01-01")),
+        "AdjustmentsForIncreaseDecreaseInContractLiabilities": in_unit("EUR", twenty_f("2025-12-31", 1.336e9, start="2025-01-01")),
+        "AccumulatedOtherComprehensiveIncome": in_unit("EUR", twenty_f("2025-12-31", -0.5e9)),
+    }
+
+
+def ifrs_period(gaap: Mapping[str, object], unit: str = "EUR", notes: list[str] | None = None) -> fetch.boundary.FiscalPeriod:
+    return fetch_sec.periods_from_facts(gaap, TAGS, DEFS, notes if notes is not None else [], taxonomy="ifrs-full", unit=unit)[0]
+
+
+def test_ifrs_full_per_period_selection_on_a_20f_in_the_filers_unit() -> None:
+    notes: list[str] = []
+    periods = fetch_sec.periods_from_facts(sap_like(), TAGS, DEFS, notes, taxonomy="ifrs-full", unit="EUR")
+    p25, p24 = periods
+    assert (p25.net_income, p25.net_income_row) == (7.161e9, "ProfitLossAttributableToOwnersOfParent")
+    assert (p25.book_equity, p25.book_equity_row) == (44.586e9, "EquityAttributableToOwnersOfParent")
+    assert (p25.total_revenue, p25.pretax_income, p25.tax_provision) == (36.8e9, 10.27e9, None)
+    assert (p25.ebit, p25.ebit_row, p25.ebit_recipe) == (9.617e9, "ProfitLossFromOperatingActivities", "operating_income")
+    assert (p25.depreciation_amortization, p25.depreciation_amortization_row) == (1.311e9, "AdjustmentsForDepreciationAndAmortisationExpense")
+    assert p25.capex == 0.739e9 and p25.capex_row is not None and p25.capex_row.startswith("PurchaseOfPropertyPlantAndEquipmentIntangible")
+    assert (p25.dividends_paid, p25.dividends_paid_row) == (2.743e9, "DividendsPaidToEquityHoldersOfParentClassifiedAsFinancingActivities")
+    assert (p25.aoci, p25.aoci_row) == (-0.5e9, "AccumulatedOtherComprehensiveIncome")
+    assert p25.filed == "2026-02-26" and p24.net_income == 3.0e9
+    # the USD convenience fact is never read: the unit is the filer's
+    assert fetch_sec.currency_units(sap_like())[0][0] == "EUR"
+    hdb_like = {"NetIncomeLoss": {"units": {"INR": [twenty_f("2025-03-31", 673e9, start="2024-04-01")], "USD": [twenty_f("2025-03-31", 7.9e9, start="2024-04-01")]}},
+                "StockholdersEquity": {"units": {"INR": [twenty_f("2025-03-31", 7677e9)], "USD": [twenty_f("2025-03-31", 89.9e9)]}},
+                "InterestIncomeExpenseNet": {"units": {"INR": [twenty_f("2025-03-31", 1404e9, start="2024-04-01"), twenty_f("2024-03-31", 1300e9, start="2023-04-01")], "USD": [twenty_f("2025-03-31", 16.4e9, start="2024-04-01")]}}}
+    d = fetch_sec.decide({"facts": {"us-gaap": hdb_like}}, TAGS)
+    assert (d.taxonomy, d.currency) == ("us-gaap", "INR")  # more INR facts than USD ones
+
+
+def test_ifrs_cash_debt_and_leases() -> None:
+    p = ifrs_period(sap_like())
+    assert p.cash is not None and math.isclose(p.cash, 9.772e9) and p.cash_row == "CashAndCashEquivalents + OtherCurrentFinancialAssets"
+    assert components(p.cash_composition) == [("cash_equivalents", 8.22e9, "CashAndCashEquivalents"), ("short_term_investments", 1.552e9, "OtherCurrentFinancialAssets")]
+    # Borrowings is the aggregate; the lease liability is present and stays out
+    assert (p.total_debt, p.total_debt_source) == (6.15e9, "Borrowings")
+    assert components(p.total_debt_composition) == [("total", 6.15e9, "Borrowings")]
+    assert all(k.row not in DEFS.total_debt.ifrs.excluded for k in (p.total_debt_composition.components if p.total_debt_composition else []))
+    # TSMC-like: no Borrowings, debt as bonds plus borrowings by group; current financial assets by category, summed
+    tsm = {**{k: v for k, v in sap_like().items() if k not in ("Borrowings", "LongtermBorrowings", "OtherCurrentFinancialAssets")},
+           "LongtermBorrowings": in_unit("EUR", twenty_f("2025-12-31", 31.824e9)), "CurrentPortionOfLongtermBorrowings": in_unit("EUR", twenty_f("2025-12-31", 59.858e9)),
+           "NoncurrentPortionOfNoncurrentBondsIssued": in_unit("EUR", twenty_f("2025-12-31", 926.605e9)), "CurrentBondsIssuedAndCurrentPortionOfNoncurrentBondsIssued": in_unit("EUR", twenty_f("2025-12-31", 57.148e9)),
+           "CurrentFinancialAssetsAtFairValueThroughOtherComprehensiveIncome": in_unit("EUR", twenty_f("2025-12-31", 192.203e9)), "CurrentFinancialAssetsAtAmortisedCost": in_unit("EUR", twenty_f("2025-12-31", 101.971e9)),
+           "OtherCurrentFinancialAssets": in_unit("EUR", twenty_f("2025-12-31", 63.138e9))}
+    p = ifrs_period(tsm)
+    assert p.total_debt is not None and math.isclose(p.total_debt, (31.824 + 926.605 + 57.148 + 59.858) * 1e9)
+    assert p.total_debt_source == "LongtermBorrowings + NoncurrentPortionOfNoncurrentBondsIssued + CurrentBondsIssuedAndCurrentPortionOfNoncurrentBondsIssued + CurrentPortionOfLongtermBorrowings"
+    assert p.cash is not None and math.isclose(p.cash, (8.22 + 192.203 + 101.971) * 1e9)  # the category alternative wins over the other-financial-assets line
+    # a current-borrowings total supersedes the short-term plus current-portion pair
+    with_total = {**tsm, "CurrentBorrowingsAndCurrentPortionOfNoncurrentBorrowings": in_unit("EUR", twenty_f("2025-12-31", 70e9)), "ShorttermBorrowings": in_unit("EUR", twenty_f("2025-12-31", 10e9))}
+    p = ifrs_period(with_total)
+    assert p.total_debt is not None and math.isclose(p.total_debt, (31.824 + 926.605 + 57.148 + 70) * 1e9)
+    lease_only = {k: v for k, v in sap_like().items() if k not in ("Borrowings", "LongtermBorrowings")}
+    assert ifrs_period(lease_only).total_debt is None
+
+
+def test_ifrs_delta_nwc_is_cash_flow_signed_for_assets_and_liabilities_alike() -> None:
+    """TSMC FY2024 by hand: inventories -36.872 (a build-up, the statement's sign), trade
+    payables +17.074 (an increase, an inflow); both flip by -1 into cash absorbed."""
+    tsm = {**sap_like(), "AdjustmentsForDecreaseIncreaseInInventories": in_unit("EUR", twenty_f("2025-12-31", -36.872e9, start="2025-01-01")),
+           "AdjustmentsForIncreaseDecreaseInTradeAccountPayable": in_unit("EUR", twenty_f("2025-12-31", 17.074e9, start="2025-01-01"))}
+    p = ifrs_period(tsm)
+    assert p.delta_nwc is not None and math.isclose(p.delta_nwc, -(-0.388 + 1.336 - 36.872 + 17.074) * 1e9)
+    parts = components(p.delta_nwc_composition)
+    assert all(n == "cash_flow_signed_components" for n, _, _ in parts) and ("cash_flow_signed_components", 36.872e9, "AdjustmentsForDecreaseIncreaseInInventories") in parts
+    assert ("cash_flow_signed_components", -17.074e9, "AdjustmentsForIncreaseDecreaseInTradeAccountPayable") in parts
+    assert p.delta_nwc_row is not None and p.delta_nwc_row.startswith("-AdjustmentsForDecreaseIncreaseInInventories - ")
+    sap = ifrs_period(sap_like())
+    assert sap.delta_nwc is not None and math.isclose(sap.delta_nwc, -(-0.388 + 1.336) * 1e9)
+    notes: list[str] = []
+    bank = ifrs_period({**sap_like(), "AdjustmentsForIncreaseDecreaseInDepositsFromCustomers": in_unit("EUR", twenty_f("2025-12-31", 401e9, start="2025-01-01"))}, notes=notes)
+    assert bank.delta_nwc is None and notes == ["delta_nwc 2025-12-31: left null, unclassified working-capital tags: AdjustmentsForIncreaseDecreaseInDepositsFromCustomers"]
+
+
+def test_ifrs_net_interest_income_recipe_and_ebit_rows() -> None:
+    kspi = {**sap_like(), "InterestRevenueCalculatedUsingEffectiveInterestMethod": in_unit("EUR", twenty_f("2025-12-31", 1579.346e9, start="2025-01-01")),
+            "InterestExpense": in_unit("EUR", twenty_f("2025-12-31", 825.849e9, start="2025-01-01"))}
+    p = ifrs_period(kspi)
+    assert p.net_interest_income is not None and math.isclose(p.net_interest_income, (1579.346 - 825.849) * 1e9)
+    assert p.net_interest_income_row == "InterestRevenueCalculatedUsingEffectiveInterestMethod - InterestExpense"
+    assert ifrs_period(sap_like()).net_interest_income is None  # neither leg: null, not zero
+    no_operating = {k: v for k, v in sap_like().items() if k != "ProfitLossFromOperatingActivities"}
+    p = ifrs_period({**no_operating, "FinanceCosts": in_unit("EUR", twenty_f("2025-12-31", 1.377e9, start="2025-01-01")), "FinanceIncome": in_unit("EUR", twenty_f("2025-12-31", 1.911e9, start="2025-01-01"))})
+    assert p.ebit is not None and math.isclose(p.ebit, (10.27 + 1.377 - 1.911) * 1e9) and p.ebit_recipe == "pretax_plus_interest_less_nonoperating"
+    assert p.ebit_row == "ProfitLossBeforeTax + FinanceCosts - FinanceIncome"
 
 
 def test_cross_check_arithmetic_and_period_matching() -> None:

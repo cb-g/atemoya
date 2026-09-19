@@ -42,7 +42,7 @@ requires every request to identify its sender: put `"<name> <email>"` after
 ## Run
 
 ```sh
-uv run python/fetch.py AAPL MSFT            # statements from SEC XBRL (us-gaap 10-K filers) or yfinance -> data/financials/<TICKER>.json
+uv run python/fetch.py AAPL MSFT SAP        # statements from SEC XBRL (10-K or 20-F filers, us-gaap or ifrs-full) or yfinance -> data/financials/<TICKER>.json
 dune exec atemoya -- data/financials/*.json # one valuation record per line on stdout
 uv run python/refresh_rates.py --all        # sovereign curves per reference/rate_sources.json
 uv run python/refresh_fx.py --all           # FX via FRED H.10 -> reference/fx_rates.json
@@ -70,7 +70,10 @@ domicile's country risk premium; prices quoted in pence or cents are converted t
 major unit at the fetch. With `--out`, the summary checks each ticker against
 the expected outcome in the universe file; a deviation there is a finding, not something
 to tune away.
-Both providers assemble cash, total debt, the change in working capital and ebit per
+Filed statements come in the taxonomy the filer uses (us-gaap or ifrs-full, each a
+section of `reference/xbrl_tags.json`) and in the currency the facts carry, which the
+record names as its statement currency and which must agree with the vendor's, else the
+record fails. Both providers assemble cash, total debt, the change in working capital and ebit per
 `reference/field_definitions.json`, the one definition per field with its reasoning; every
 period records the components summed, and a record fetched under another definition fails
 rather than being valued under this one. A derived

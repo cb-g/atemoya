@@ -2,9 +2,9 @@
 
     uv run python/fetch.py AAPL [MSFT ...]     ->   data/financials/<TICKER>.json
 
-Statements come from filed 10-Ks (SEC XBRL companyfacts, via fetch_sec.py) when the ticker
-resolves exactly to a us-gaap annual filer, otherwise from yfinance, and the record says
-which and why. Price, market cap and currencies always come from yfinance. For every
+Statements come from filed 10-Ks or 20-Fs (SEC XBRL companyfacts, via fetch_sec.py) when
+the ticker resolves exactly to an annual filer under us-gaap or ifrs-full, otherwise from
+yfinance, and the record says which, why, in which taxonomy and in which currency. Price, market cap and currencies always come from yfinance. For every
 XBRL-primary name the vendor's statements are fetched too and compared field by field for
 the latest common period (cross_check on the record: recorded, never a gate, never
 resolved), and the vendor's full record is written beside it as
@@ -593,13 +593,18 @@ class SecContext:
 
 def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile | None, periods: list[boundary.FiscalPeriod],
             notes: list[str], *, provider: str, provider_reason: str, latest_filing: str | None = None,
-            check: boundary.CrossCheck | None = None) -> boundary.Financials:
+            check: boundary.CrossCheck | None = None, taxonomy: str = "", filing_currency: str | None = None) -> boundary.Financials:
+    """With [filing_currency] (filed statements) the statement currency is the filing's unit,
+    the vendor's is recorded beside it, and the single currency basis holds iff the filing's
+    unit is the trading currency."""
     q = quote_fields(quote, notes)
+    financial_currency = q["financial_currency"] if filing_currency is None else filing_currency
+    currency = q["currency"] if filing_currency is None else (filing_currency if filing_currency == q["trading_currency"] else None)
     return boundary.Financials(
         ticker=symbol,
         as_of=as_of.isoformat(timespec="seconds"),
-        currency=q["currency"],  # pyright: ignore[reportArgumentType]
-        financial_currency=q["financial_currency"],  # pyright: ignore[reportArgumentType]
+        currency=currency,  # pyright: ignore[reportArgumentType]
+        financial_currency=financial_currency,  # pyright: ignore[reportArgumentType]
         trading_currency=q["trading_currency"],  # pyright: ignore[reportArgumentType]
         price_unit=q["price_unit"],  # pyright: ignore[reportArgumentType]
         price_unit_divisor=q["price_unit_divisor"],  # pyright: ignore[reportArgumentType]
@@ -610,6 +615,8 @@ def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile 
         periods=periods,
         notes=list(notes),
         provider=provider,
+        taxonomy=taxonomy,
+        vendor_financial_currency=None if filing_currency is None else q["financial_currency"],  # pyright: ignore[reportArgumentType]
         market_provider="yfinance",
         provider_reason=provider_reason,
         latest_filing=latest_filing,
@@ -629,23 +636,27 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext) -> tuple[boundary.Finan
         return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
                        provider_reason=f"no SEC filings for {symbol}: not in company_tickers.json"), None
     facts = fetch_sec.companyfacts(cik, sec.user_agent)
-    xbrl, reason, gaap = fetch_sec.decide(facts, sec.tags)
-    if not xbrl:
+    decision = fetch_sec.decide(facts, sec.tags)
+    if not decision.xbrl or decision.currency is None:
         return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
-                       provider_reason=f"CIK {cik}: {reason}"), None
+                       provider_reason=f"CIK {cik}: {decision.reason}"), None
 
     filed_notes = list(notes)
-    periods = fetch_sec.periods_from_facts(gaap, sec.tags, sec.definitions, filed_notes)
-    filed_notes.append(f"CIK {cik}: {len(gaap)} us-gaap tags; {len(periods)} annual periods")
+    periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, filed_notes, taxonomy=decision.taxonomy, unit=decision.currency)
+    filed_notes.append(f"CIK {cik}: {len(decision.facts)} {decision.taxonomy} tags; {len(periods)} annual periods in {decision.currency}")
     check: boundary.CrossCheck | None = None
-    if periods:
+    vendor_currency = quote.financial_currency if quote else None
+    if periods and vendor_currency != decision.currency:
+        filed_notes.append(f"cross-check: not run, the vendor's statements are in {vendor_currency} and the filing's in {decision.currency}")
+    elif periods:
         match = match_period(periods[0], vendor)
         if match is not None:
             check = cross_check(periods[0], match, sec.tags.cross_check_threshold, "yfinance")
         else:
             filed_notes.append(f"cross-check: the vendor has no period within {CROSS_CHECK_MAX_DAYS} days of {periods[0].period_end}")
     primary = _record(symbol, as_of, quote, profile, periods, filed_notes, provider=fetch_sec.PROVIDER,
-                      provider_reason=f"CIK {cik}: {reason}", latest_filing=fetch_sec.latest_filing(periods), check=check)
+                      provider_reason=f"CIK {cik}: {decision.reason}", latest_filing=fetch_sec.latest_filing(periods), check=check,
+                      taxonomy=decision.taxonomy, filing_currency=decision.currency)
     shadow = _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
                      provider_reason="shadow of an XBRL-primary record, for the provider diff")
     return primary, shadow

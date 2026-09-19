@@ -89,6 +89,15 @@ let definitions_check (defs : Reference_t.field_definitions) (fin : financials) 
       | _ -> Ok ())
     (Ok ()) fin.periods
 
+(* Filed statements carry their own currency (the facts' unit); the vendor names the
+   statement currency independently. They must agree, or the record is refused before any
+   money moves: this is where a silent unit error between the two providers would live. *)
+let currency_agreement (fin : financials) =
+  match (fin.vendor_financial_currency, fin.financial_currency) with
+  | Some vendor, Some filing when vendor <> filing ->
+      Error (Printf.sprintf "financial currency disagreement: filing %s, vendor %s" filing vendor)
+  | _ -> Ok ()
+
 let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declaration
     (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
@@ -125,6 +134,7 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
       lens_note;
       scope_limits;
       statements_provider = original.provider;
+      taxonomy = original.taxonomy;
       market_provider = original.market_provider;
       provider_reason = original.provider_reason;
       filing_age_days;
@@ -235,7 +245,11 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
   let value ~model ~class_check ~rule ~country =
     let failed = failed ~model ~class_check ~floor:(floor_of_rule rule) in
     let max_age = params.xbrl_tags.max_filing_age_days in
-    match (definitions_check params.field_definitions original, filing_age, original.financial_currency, original.trading_currency) with
+    let gates =
+      Result.bind (currency_agreement original) (fun () ->
+          definitions_check params.field_definitions original)
+    in
+    match (gates, filing_age, original.financial_currency, original.trading_currency) with
     | Error reason, _, _, _ -> failed reason
     | Ok (), Some (Error msg), _, _ -> failed (Printf.sprintf "latest_filing: %s" msg)
     | Ok (), Some (Ok n), _, _ when n > max_age ->

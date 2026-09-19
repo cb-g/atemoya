@@ -5,7 +5,8 @@
     "This file is the only place cash, total_debt, delta_nwc and ebit are defined. python/fetch.py reads the vendor rows from it, python/fetch_sec.py the us-gaap tags, and every record's fiscal periods carry a composition per field naming the definition and the components summed; the valuation refuses a record whose composition names a definition this file does not.",
     "Within each list the first present entry wins; 'first complete' means every entry of an alternative must be present. A component absent on both providers is absent, never a substituted zero; only the optional components (short-term investments, short-term borrowings, the current portion of debt on the vendor) may be missing without failing the field.",
     "The cross-check (reference/xbrl_tags.json cross_check_threshold) compares the two providers on the same definitions, so what it still flags is a vendor row that is wrong, lagging or built from a different filed line, never a definitional gap.",
-    "refinement_policy: a derived recipe may be refined once per field; a name whose derived value still misses the cross-check threshold, or cannot be checked, is Failed with on_miss. A second refinement requires changing this file on purpose."
+    "refinement_policy: a derived recipe may be refined once per field; a name whose derived value still misses the cross-check threshold, or cannot be checked, is Failed with on_miss. A second refinement requires changing this file on purpose.",
+    "ifrs sections (13): the same four definitions on ifrs-full tags for 20-F filers, verified on SAP, Sony, TSMC, Itau, Nu and Kaspi; the recipes are the same, only the components differ. The vendor sections apply to both taxonomies' shadows."
   ],
   "cash": {
     "name": "cash_and_short_term_investments",
@@ -49,6 +50,27 @@
       ],
       "notes": [
         "The vendor's own subtotal row equals the two components on every name checked (Apple 35.934 + 18.763 = 54.697bn, Coca-Cola 10.270 + 5.536 = 15.806bn) and is not read, so that both providers record the same two components."
+      ]
+    },
+    "ifrs": {
+      "cash_equivalents": [
+        "CashAndCashEquivalents"
+      ],
+      "short_term_investments": [
+        [
+          "CurrentInvestments"
+        ],
+        [
+          "CurrentFinancialAssetsAtFairValueThroughOtherComprehensiveIncome",
+          "CurrentFinancialAssetsAtAmortisedCost",
+          "CurrentFinancialAssetsAtFairValueThroughProfitOrLoss"
+        ],
+        [
+          "OtherCurrentFinancialAssets"
+        ]
+      ],
+      "notes": [
+        "Verified FY2025/FY2024: SAP's OtherCurrentFinancialAssets 1.552bn equals the vendor's short-term investments row; TSMC splits its current financial assets by measurement category (192.2 + 102.0 + 0.2bn TWD), summed as one alternative; Sony's OtherCurrentFinancialAssets 145.2bn JPY carries more than the vendor's 28.2bn marketable-securities row and no separate IFRS tag names that line: a known residual."
       ]
     }
   },
@@ -102,6 +124,40 @@
       ],
       "notes": [
         "Long Term Debt is required; Current Debt is added when the row exists, else the sum of its components when either exists; a name whose vendor statements show no current debt row at all (Alphabet, Costco at FY2025) carries the long-term row alone and the composition says so. The vendor's Long Term Debt excludes finance leases where it shows them separately (Chevron 39.122bn against the filed 39.781bn that folds in 0.659bn of finance leases), a residual the cross-check reports."
+      ]
+    },
+    "ifrs": {
+      "total": [
+        "Borrowings"
+      ],
+      "noncurrent_borrowings": [
+        "LongtermBorrowings",
+        "NoncurrentBorrowings"
+      ],
+      "noncurrent_bonds": [
+        "NoncurrentPortionOfNoncurrentBondsIssued",
+        "NoncurrentBondsIssued"
+      ],
+      "current_bonds": [
+        "CurrentBondsIssuedAndCurrentPortionOfNoncurrentBondsIssued",
+        "CurrentBondsIssued"
+      ],
+      "current_total": [
+        "CurrentBorrowingsAndCurrentPortionOfNoncurrentBorrowings"
+      ],
+      "short_term_borrowings": [
+        "ShorttermBorrowings"
+      ],
+      "current_portion_of_long_term": [
+        "CurrentPortionOfLongtermBorrowings"
+      ],
+      "excluded": [
+        "LeaseLiabilities",
+        "NoncurrentLeaseLiabilities",
+        "CurrentLeaseLiabilities"
+      ],
+      "notes": [
+        "Under IFRS 16 every lease is on the balance sheet as LeaseLiabilities, separate from Borrowings, so the operating-lease exclusion holds by construction (SAP 1.684bn EUR, Sony 599.5bn JPY, TSMC 31.8bn TWD stay out). Borrowings is the taxonomy's financial-debt aggregate (SAP 6.150bn = LongtermBorrowings 4.550 + current 1.600); TSMC tags no Borrowings and carries its debt as bonds (926.6 noncurrent + 57.1 current) plus borrowings (31.8 + 59.9), summed by group."
       ]
     }
   },
@@ -171,6 +227,33 @@
       "notes": [
         "The vendor's line is the same cash-flow statement figure with the statement's sign (a release positive), flipped to the boundary's (an increase positive)."
       ]
+    },
+    "ifrs": {
+      "family_prefixes": [
+        "AdjustmentsForDecreaseIncreaseIn",
+        "AdjustmentsForIncreaseDecreaseIn"
+      ],
+      "components": [
+        "AdjustmentsForDecreaseIncreaseInInventories",
+        "AdjustmentsForDecreaseIncreaseInOtherAssets",
+        "AdjustmentsForDecreaseIncreaseInOtherCurrentAssets",
+        "AdjustmentsForDecreaseIncreaseInOtherFinancialAssets",
+        "AdjustmentsForDecreaseIncreaseInOtherOperatingReceivables",
+        "AdjustmentsForDecreaseIncreaseInTradeAccountReceivable",
+        "AdjustmentsForDecreaseIncreaseInTradeAndOtherReceivables",
+        "AdjustmentsForIncreaseDecreaseInContractLiabilities",
+        "AdjustmentsForIncreaseDecreaseInDeferredIncome",
+        "AdjustmentsForIncreaseDecreaseInEmployeeBenefitLiabilities",
+        "AdjustmentsForIncreaseDecreaseInOtherCurrentLiabilities",
+        "AdjustmentsForIncreaseDecreaseInOtherLiabilities",
+        "AdjustmentsForIncreaseDecreaseInTradeAccountPayable",
+        "AdjustmentsForIncreaseDecreaseInTradeAndOtherPayables"
+      ],
+      "excluded": [],
+      "sign": -1.0,
+      "notes": [
+        "Sign convention verified on TSMC FY2024 and SAP FY2025 against the vendor's component rows: AdjustmentsForDecreaseIncreaseInInventories -36.872bn TWD is the vendor's Change In Inventory -36.872 (the statement's sign, a build-up negative), AdjustmentsForIncreaseDecreaseInTradeAccountPayable 17.074 its Change In Account Payable 17.074, SAP's receivables -0.388 its -0.388; the family is cash-flow-signed for assets and liabilities alike, so every component is flipped by sign into the boundary's (an increase in working capital positive). The taxonomy's IncreaseDecreaseInWorkingCapital aggregate is filed only by Itau, a bank, so its sign could not be verified on an operating company and it is not read. Financial-services balances in the family (deposits from customers or banks, loans and advances, held-for-trading assets and liabilities, insurance contract liabilities) are left unclassified on purpose, as on us-gaap: a filer carrying them gets null with a note (Sony's FY2025 20-F still consolidates Sony Bank's deposits), never a partial working capital."
+      ]
     }
   },
   "ebit": {
@@ -218,6 +301,26 @@
       ],
       "equity_method": [
         "Earnings From Equity Interest"
+      ]
+    },
+    "ifrs": {
+      "operating_income": [
+        "ProfitLossFromOperatingActivities"
+      ],
+      "interest_expense": [
+        "FinanceCosts",
+        "InterestExpense"
+      ],
+      "interest_income": [
+        "FinanceIncome",
+        "RevenueFromInterest",
+        "InterestIncome"
+      ],
+      "other_nonoperating": [
+        "OtherFinanceIncome"
+      ],
+      "equity_method": [
+        "ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod"
       ]
     }
   },

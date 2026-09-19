@@ -1,13 +1,16 @@
-"""SEC XBRL companyfacts as a statements provider: filed 10-K facts, canonical us-gaap tags
-chosen per fiscal period from reference/xbrl_tags.json; cash, total debt, the change in
-working capital and ebit assembled per reference/field_definitions.json, the one
-definition both providers follow, with the components recorded on every period.
+"""SEC XBRL companyfacts as a statements provider: filed 10-K or 20-F facts under us-gaap
+or ifrs-full, canonical tags chosen per fiscal period from that taxonomy's section of
+reference/xbrl_tags.json; cash, total debt, the change in working capital and ebit
+assembled per reference/field_definitions.json, the one definition both providers follow,
+with the components recorded on every period. The statement currency is the unit the
+facts carry (recorded as financial_currency; the vendor's is recorded beside it and the
+valuation refuses a disagreement).
 
     uv run python/fetch_sec.py ALL MET PGR       ->  the same routed fetch as fetch.py
 
 fetch.py decides per ticker whether a name is XBRL-primary (its CIK resolves exactly in
-SEC's ticker map and its facts carry annual 10-K net income and stockholders' equity under
-us-gaap) and calls into here for the statements. companyfacts JSON is cached under
+SEC's ticker map and its facts carry annual net income and equity on an annual form under
+us-gaap, else under ifrs-full) and calls into here for the statements. companyfacts JSON is cached under
 data/sec/ for a day; requests are spaced to stay well under SEC's rate guidance; the whole
 SEC_EDGAR_IDENTITY string is sent verbatim as the User-Agent.
 """
@@ -24,6 +27,7 @@ import urllib.request
 from collections.abc import Iterable, Mapping
 from datetime import date
 from pathlib import Path
+from dataclasses import dataclass
 from typing import cast
 
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -39,6 +43,7 @@ DEFINITIONS_PATH = REPO_ROOT / "reference" / "field_definitions.json"
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 PROVIDER = "SEC XBRL companyfacts"
+TAXONOMIES = ("us-gaap", "ifrs-full")  # in order of preference when a filer carries both
 CACHE_SECONDS = 86400
 MIN_SPACING_SECONDS = 0.25  # 4 requests per second, under SEC's 10/s guidance
 PERIODS = 5
@@ -157,13 +162,18 @@ def annual_facts(entries: Iterable[object], *, instant: bool, tags: reference.Xb
     return out
 
 
-def select(gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str]) -> dict[str, dict[date, tuple[Fact, str]]]:
-    """Per canonical field, per fiscal year end: the first candidate tag with an annual fact."""
+def taxonomy_fields(tags: reference.XbrlTags, taxonomy: str) -> list[tuple[str, reference.XbrlField]]:
+    return tags.ifrs_full_fields if taxonomy == "ifrs-full" else tags.fields
+
+
+def select(gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD") -> dict[str, dict[date, tuple[Fact, str]]]:
+    """Per canonical field, per fiscal year end: the first candidate tag with an annual fact
+    in the filer's unit."""
     out: dict[str, dict[date, tuple[Fact, str]]] = {}
-    for field, spec in tags.fields:
+    for field, spec in taxonomy_fields(tags, taxonomy):
         per_end: dict[date, tuple[Fact, str]] = {}
         for tag in spec.tags:
-            entries = _usd_entries(gaap.get(tag))
+            entries = _entries(gaap.get(tag), unit)
             if not entries:
                 continue
             for end, fact in annual_facts(entries, instant=spec.kind == "instant", tags=tags, notes=notes, tag=tag).items():
@@ -201,16 +211,17 @@ class Facts:
     """A filer's us-gaap facts with annual selection per tag, memoised, for the fields
     reference/field_definitions.json assembles from more than one tag."""
 
-    def __init__(self, gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str]) -> None:
+    def __init__(self, gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str], *, unit: str = "USD") -> None:
         self._gaap = gaap
         self._tags = tags
         self._notes = notes
+        self._unit = unit
         self._memo: dict[tuple[str, bool], dict[date, Fact]] = {}
 
     def annual(self, tag: str, *, instant: bool) -> dict[date, Fact]:
         key = (tag, instant)
         if key not in self._memo:
-            entries = _usd_entries(self._gaap.get(tag))
+            entries = _entries(self._gaap.get(tag), self._unit)
             self._memo[key] = annual_facts(entries, instant=instant, tags=self._tags, notes=self._notes, tag=tag)
         return self._memo[key]
 
@@ -226,15 +237,19 @@ class Facts:
         return None
 
     def duration_tags_with_prefix(self, prefix: str, end: date) -> list[str]:
-        """Every us-gaap tag with the prefix that carries an annual duration fact at [end]."""
+        """Every tag with the prefix that carries an annual duration fact at [end]."""
         return sorted(tag for tag in self._gaap if tag.startswith(prefix) and self.at(tag, end, instant=False) is not None)
+
+    def sum_present(self, name: str, tags: Iterable[str], end: date, *, instant: bool) -> list[boundary.Component]:
+        """Every tag of the alternative that is present, as components."""
+        return [boundary.Component(name=name, value=v, row=t) for t in tags if (v := self.at(t, end, instant=instant)) is not None]
 
 
 def _composition(definition: str, parts: list[boundary.Component]) -> boundary.Composition:
     return boundary.Composition(definition=definition, components=parts)
 
 
-SUBTRACTED = frozenset({"restricted_cash", "liability_components", "interest_income", "other_nonoperating", "equity_method"})  # components summed with their sign flipped
+SUBTRACTED = frozenset({"restricted_cash", "liability_components", "interest_income", "other_nonoperating", "equity_method", "cash_flow_signed_components"})  # components summed with their sign flipped
 
 
 def _label(parts: list[boundary.Component]) -> str:
@@ -271,6 +286,75 @@ def cash(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
     if investments is not None:
         parts.append(boundary.Component(name="short_term_investments", value=investments[0], row=investments[1]))
     return sum(p.value for p in parts), _label(parts), _composition(defs.cash.name, parts)
+
+
+def cash_ifrs(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
+    """Cash and cash equivalents plus the first investment alternative with any tag present,
+    summed (IFRS filers split current financial assets by measurement category)."""
+    d = defs.cash.ifrs
+    equivalents = facts.first(d.cash_equivalents, end, instant=True)
+    if equivalents is None:
+        return None, None, None
+    parts = [boundary.Component(name="cash_equivalents", value=equivalents[0], row=equivalents[1])]
+    for alternative in d.short_term_investments:
+        found = facts.sum_present("short_term_investments", alternative, end, instant=True)
+        if found:
+            parts.extend(found)
+            break
+    return sum(p.value for p in parts), _label(parts), _composition(defs.cash.name, parts)
+
+
+def total_debt_ifrs(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
+    """Borrowings, the taxonomy's financial-debt aggregate, when tagged; else the groups
+    present summed (noncurrent borrowings and bonds, current bonds, and current borrowings
+    as one tag or as short-term borrowings plus the current portion of long-term debt),
+    at least one noncurrent group required. Lease liabilities are never read."""
+    d = defs.total_debt.ifrs
+
+    def part(name: str, hit: tuple[float, str] | None) -> list[boundary.Component]:
+        return [] if hit is None else [boundary.Component(name=name, value=hit[0], row=hit[1])]
+
+    total = facts.first(d.total, end, instant=True)
+    if total is not None:
+        parts = part("total", total)
+        return sum(p.value for p in parts), _label(parts), _composition(defs.total_debt.name, parts)
+    noncurrent = part("noncurrent_borrowings", facts.first(d.noncurrent_borrowings, end, instant=True)) + part("noncurrent_bonds", facts.first(d.noncurrent_bonds, end, instant=True))
+    if not noncurrent:
+        return None, None, None
+    current = part("current_total", facts.first(d.current_total, end, instant=True))
+    if not current:
+        current = part("short_term_borrowings", facts.first(d.short_term_borrowings, end, instant=True)) + part("current_portion_of_long_term", facts.first(d.current_portion_of_long_term, end, instant=True))
+    parts = noncurrent + part("current_bonds", facts.first(d.current_bonds, end, instant=True)) + current
+    return sum(p.value for p in parts), _label(parts), _composition(defs.total_debt.name, parts)
+
+
+def delta_nwc_ifrs(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: list[str]) -> Derived:
+    """The working-capital adjustment family, cash-flow-signed for assets and liabilities
+    alike, every component flipped by the definition's sign into the boundary's; a family
+    tag classified neither as a component nor as excluded leaves the field null."""
+    d = defs.delta_nwc.ifrs
+    present = [tag for prefix in d.family_prefixes for tag in facts.duration_tags_with_prefix(prefix, end)]
+    unclassified = sorted(t for t in present if t not in d.components and t not in d.excluded)
+    if unclassified:
+        notes.append(f"delta_nwc {end}: left null, unclassified working-capital tags: {', '.join(unclassified)}")
+        return None, None, None
+    parts: list[boundary.Component] = []
+    for tag in d.components:
+        value = facts.at(tag, end, instant=False)
+        if value is not None:
+            parts.append(boundary.Component(name="cash_flow_signed_components", value=value * d.sign, row=tag))
+    if not parts:
+        return None, None, None
+    return sum(p.value for p in parts), _label(parts), _composition(defs.delta_nwc.name, parts)
+
+
+def net_interest_income_recipe(facts: Facts, recipe: reference.NiiRecipe, end: date) -> tuple[float | None, str | None]:
+    """First present interest revenue less first present interest expense, as A - B."""
+    revenue = facts.first(recipe.interest_revenue, end, instant=False)
+    expense = facts.first(recipe.interest_expense, end, instant=False)
+    if revenue is None or expense is None:
+        return None, None
+    return revenue[0] - expense[0], f"{revenue[1]} - {expense[1]}"
 
 
 def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
@@ -336,12 +420,12 @@ def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: 
     return sum(p.value for p in parts), _label(parts), _composition(defs.delta_nwc.name, parts)
 
 
-def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: float | None, pretax_row: str | None) -> tuple[float | None, str | None, str | None, boundary.Composition | None]:
+def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: float | None, pretax_row: str | None, *, taxonomy: str = "us-gaap") -> tuple[float | None, str | None, str | None, boundary.Composition | None]:
     """Operating income as filed; else pretax income plus interest expense less the
     non-operating income pretax carries (interest income, other non-operating income,
     equity-method earnings: each first present, subtracted as filed), recorded as the
     recipe pretax_plus_interest_less_nonoperating. (value, row, recipe, composition)."""
-    d = defs.ebit.xbrl
+    d = defs.ebit.ifrs if taxonomy == "ifrs-full" else defs.ebit.xbrl
     operating = facts.first(d.operating_income, end, instant=False)
     if operating is not None:
         parts = [boundary.Component(name="operating_income", value=operating[0], row=operating[1])]
@@ -358,22 +442,30 @@ def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: floa
     return sum(p.value for p in parts), _label(parts), "pretax_plus_interest_less_nonoperating", _composition(defs.ebit.name, parts)
 
 
-def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str]) -> list[boundary.FiscalPeriod]:
-    selected = select(gaap, tags, notes)
-    facts = Facts(gaap, tags, notes)
+def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD") -> list[boundary.FiscalPeriod]:
+    ifrs = taxonomy == "ifrs-full"
+    selected = select(gaap, tags, notes, taxonomy=taxonomy, unit=unit)
+    facts = Facts(gaap, tags, notes, unit=unit)
     ends = sorted(set(selected["net_income"]) & set(selected["book_equity"]), reverse=True)[:PERIODS]
     periods: list[boundary.FiscalPeriod] = []
     for end in ends:
         anchor = selected["net_income"][end][0]
         v: dict[str, float | None] = {}
         r: dict[str, str | None] = {}
-        for field, _ in tags.fields:
+        for field, _ in taxonomy_fields(tags, taxonomy):
             v[field], r[field] = value_of(selected, field, end)
         dna, dna_row = depreciation(selected, tags, end)
-        cash_value, cash_row, cash_composition = cash(facts, defs, end)
-        debt, debt_row, debt_composition = total_debt(facts, defs, end)
-        nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
-        ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"])
+        if ifrs:
+            cash_value, cash_row, cash_composition = cash_ifrs(facts, defs, end)
+            debt, debt_row, debt_composition = total_debt_ifrs(facts, defs, end)
+            nwc, nwc_row, nwc_composition = delta_nwc_ifrs(facts, defs, end, notes)
+            if v["net_interest_income"] is None:
+                v["net_interest_income"], r["net_interest_income"] = net_interest_income_recipe(facts, tags.ifrs_full_net_interest_income, end)
+        else:
+            cash_value, cash_row, cash_composition = cash(facts, defs, end)
+            debt, debt_row, debt_composition = total_debt(facts, defs, end)
+            nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
+        ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
         periods.append(
             boundary.FiscalPeriod(
                 period_end=end.isoformat(),
@@ -416,35 +508,71 @@ def _as_dict(obj: object) -> dict[str, object]:
     return {}
 
 
-def _usd_entries(node: object) -> list[object]:
+def _entries(node: object, unit: str) -> list[object]:
     units = _as_dict(_as_dict(node).get("units"))
-    entries = units.get("USD")
+    entries = units.get(unit)
     return cast(list[object], entries) if isinstance(entries, list) else []
 
 
-def decide(facts: Mapping[str, object] | None, tags: reference.XbrlTags) -> tuple[bool, str, Mapping[str, object]]:
-    """(xbrl_primary, reason, us-gaap facts). XBRL-primary iff annual net income and
-    stockholders' equity exist under us-gaap on the annual forms; otherwise the vendor, with
-    the reason: IFRS filer, facts on other forms only, or no annual anchors at all."""
+def currency_units(taxonomy_facts: Mapping[str, object]) -> list[tuple[str, int]]:
+    """The ISO currency units the taxonomy's facts carry, most facts first."""
+    counts: dict[str, int] = {}
+    for node in taxonomy_facts.values():
+        for unit, entries in _as_dict(_as_dict(node).get("units")).items():
+            if len(unit) == 3 and unit.isalpha() and unit.isupper() and isinstance(entries, list):
+                counts[unit] = counts.get(unit, 0) + len(cast(list[object], entries))
+    return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
+@dataclass(frozen=True)
+class Decision:
+    xbrl: bool
+    reason: str
+    facts: Mapping[str, object]   # the chosen taxonomy's facts, or us-gaap's for the reason
+    taxonomy: str                 # us-gaap | ifrs-full; "" when the vendor
+    currency: str | None          # the unit the filer's annual anchors carry
+
+
+def decide(facts: Mapping[str, object] | None, tags: reference.XbrlTags) -> Decision:
+    """XBRL-primary iff annual net income and equity exist on the annual forms under
+    us-gaap, else under ifrs-full, in some currency unit (the unit with the most facts in
+    the taxonomy is the filer's statement currency; a convenience translation has fewer).
+    Otherwise the vendor, with the reason: facts on other forms only, or no annual anchors."""
     if facts is None:
-        return False, "SEC companyfacts: not found (HTTP 404)", {}
+        return Decision(False, "SEC companyfacts: not found (HTTP 404)", {}, "", None)
     all_facts = _as_dict(facts.get("facts"))
-    gaap = _as_dict(all_facts.get("us-gaap"))
-    ifrs = _as_dict(all_facts.get("ifrs-full"))
-    scratch: list[str] = []
-    selected = select(gaap, tags, scratch) if gaap else {}
-    if selected and selected.get("net_income") and selected.get("book_equity"):
-        return True, f"us-gaap annual filer ({', '.join(tags.annual_forms)})", gaap
-    if ifrs:
-        return False, "ifrs filer, not in scope", gaap
+    by_taxonomy = {name: _as_dict(all_facts.get(name)) for name in TAXONOMIES}
+    # Every taxonomy with annual anchors, with the newest anchor's fiscal year end: a filer
+    # that moved from us-gaap to IFRS keeps its old us-gaap facts (Sony to FY2021, Itau to
+    # FY2010), so the taxonomy with the newest anchors wins, us-gaap on a tie.
+    candidates: list[tuple[date, int, str, str]] = []
+    for order, taxonomy in enumerate(TAXONOMIES):
+        section = by_taxonomy[taxonomy]
+        for unit, _ in currency_units(section):
+            scratch: list[str] = []
+            selected = select(section, tags, scratch, taxonomy=taxonomy, unit=unit)
+            anchors = set(selected.get("net_income", {})) & set(selected.get("book_equity", {}))
+            if anchors:
+                candidates.append((max(anchors), -order, taxonomy, unit))
+                break
+    if candidates:
+        newest, _, taxonomy, unit = max(candidates)
+        others = [f"{t} to {e.isoformat()}" for e, _, t, _ in candidates if t != taxonomy]
+        both = f" (also {', '.join(others)}; the newest anchors, {newest.isoformat()}, decide)" if others else ""
+        return Decision(True, f"{taxonomy} annual filer ({', '.join(tags.annual_forms)}), statements in {unit}{both}", by_taxonomy[taxonomy], taxonomy, unit)
+    gaap = by_taxonomy["us-gaap"]
     forms: set[str] = set()
-    for e in _usd_entries(gaap.get("NetIncomeLoss")):
-        entry = _as_dict(e)
-        if "form" in entry:
-            forms.add(str(entry["form"]))
+    for taxonomy in TAXONOMIES:
+        for tag in dict(taxonomy_fields(tags, taxonomy))["net_income"].tags:
+            for unit, _ in currency_units(by_taxonomy[taxonomy]):
+                for e in _entries(by_taxonomy[taxonomy].get(tag), unit):
+                    entry = _as_dict(e)
+                    if "form" in entry:
+                        forms.add(str(entry["form"]))
     if forms:
-        return False, f"us-gaap facts filed on {', '.join(sorted(forms))} only; {' or '.join(tags.annual_forms)} required", gaap
-    return False, f"us-gaap facts carry no annual net income and stockholders' equity ({len(gaap)} tags)", gaap
+        return Decision(False, f"facts filed on {', '.join(sorted(forms))} only; {' or '.join(tags.annual_forms)} required", gaap, "", None)
+    present = ", ".join(f"{name} {len(section)} tags" for name, section in by_taxonomy.items() if section) or "no us-gaap or ifrs-full facts"
+    return Decision(False, f"facts carry no annual net income and equity ({present})", gaap, "", None)
 
 
 def latest_filing(periods: list[boundary.FiscalPeriod]) -> str | None:

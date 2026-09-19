@@ -94,11 +94,12 @@
     {
       "ticker": "NU",
       "entity_class": "Bank",
-      "note": "foreign bank ADR, reports in USD; Brazil's curve is fetched from Tesouro Nacional, so it now stops at the next gate: the vendor has no dividends row for it",
+      "note": "Brazilian digital bank filing IFRS (ifrs-full, USD) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026), so the newest annual facts are from the FY2024 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age. Even when fresh it would fail payout: it tags no dividends at all, so the model cannot tell none from not filed (an absent tag is never zero), and no interest-revenue tag, so net interest income is null and the bank signature reads as absent.",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "payout not derivable"
+      "expected_reason": "latest annual filing is",
+      "cross_check_note": "not valued (filing age); ebit: the filed ProfitLossFromOperatingActivities 5.63bn against the vendor's -3.99bn operating income, a vendor construction that nets interest expense; revenue, cash and debt are the vendor's bank-row bundles"
     },
     {
       "ticker": "IBN",
@@ -111,10 +112,12 @@
     {
       "ticker": "ITUB",
       "entity_class": "Bank",
-      "note": "foreign bank ADR, BRL statements under a USD line; converted at the FRED rate, discounted at the U.S. curve with Brazil's country risk premium",
+      "note": "Brazilian bank ADR filing IFRS (ifrs-full, BRL) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026-04-30), so the newest annual facts are from the FY2024 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age. Its legacy us-gaap facts stop at FY2010 and are not taken. Even when fresh it would fail payout: its DividendsPaid tag stops at FY2022 and no other dividend amount is tagged, so dividends_paid is null (an absent tag is never zero).",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Failed",
+      "expected_reason": "latest annual filing is",
+      "cross_check_note": "not valued (filing age); tax_provision: the filed IncomeTaxExpenseContinuingOperations is -5.428bn (a benefit, as filed) where the vendor shows +5.428bn: a vendor sign error the definitions expose; cash and capex are the bank's investment and intangible lines the vendor bundles"
     },
     {
       "ticker": "ALL",
@@ -155,10 +158,12 @@
     {
       "ticker": "HDB",
       "entity_class": "Bank",
-      "note": "Indian bank ADR, INR statements under a USD line; converted at the FRED rate and discounted at the U.S. curve with India's country risk premium, so India's manual curve no longer gates it",
+      "note": "Indian bank ADR filing US GAAP (us-gaap, INR with USD convenience translations) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026-07-29), so the newest annual facts are from the FY2025 (March 2025) 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age.",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Failed",
+      "expected_reason": "latest annual filing is",
+      "cross_check_note": "not valued (filing age); not model inputs (bank): the vendor's cash row bundles balances with banks and investments (9196bn INR) against the filed cash and equivalents; revenue: the filed Revenues 2190bn against the vendor's 1839bn total revenue construction"
     },
     {
       "ticker": "GS",
@@ -185,15 +190,18 @@
       "lens_note": "fintech; .info says Software, no NII row on the vendor's statements. The human declaration wins.",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "fx not available for KZT/USD"
+      "expected_reason": "fx not available for KZT/USD",
+      "cross_check_note": "not valued (fx); ebit and cash are the vendor's bank-row constructions against the filed ProfitLossFromOperatingActivities and CashAndCashEquivalents"
     },
     {
       "ticker": "TSM",
       "entity_class": "OperatingCompany",
-      "note": "Taiwanese ADR, TWD statements under a USD line; converted and discounted at the U.S. curve with Taiwan's country risk premium, so Taiwan's manual curve no longer gates it",
+      "note": "Taiwanese foundry filing IFRS (ifrs-full, TWD) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026-04-16, two dei facts only), so the newest annual facts are from the FY2024 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age.",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Failed",
+      "expected_reason": "latest annual filing is",
+      "cross_check_note": "not valued (filing age); working capital: the family carries inventories, receivables and payables (108.6bn absorbed) while the vendor's line adds an accrued-expenses movement of 94.8bn TSMC tags outside the family; debt: bonds plus borrowings by group 1075.4bn against the vendor's 1018.3bn split; cash 2.5% on the category alternative"
     },
     {
       "ticker": "005930.KS",
@@ -214,18 +222,21 @@
     {
       "ticker": "SAP",
       "entity_class": "OperatingCompany",
-      "note": "ADR, EUR statements under a USD line; Germany's curve is official-fresh but the U.S. curve applies (the line trades in USD)",
+      "note": "German software company filing IFRS (ifrs-full, EUR) on a 20-F, the one IFRS filer whose 2026 20-F facts are in companyfacts; valued from filed statements in EUR, converted to USD on the cross-currency path",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Ok",
+      "cross_check_note": "working capital: the IFRS adjustment family carries SAP's receivables, other assets and contract liabilities (0.367bn absorbed) while the vendor's line adds an other-working-capital item of 1.347bn no family tag names; debt: the filed Borrowings 6.150bn (LongtermBorrowings 4.550 + current 1.600) against the vendor's 5.792bn, whose Long Term Debt row of 4.194bn omits 0.356bn of the filed long-term borrowings; ebit agrees to the million"
     },
     {
       "ticker": "SONY",
       "entity_class": "OperatingCompany",
-      "note": "ADR, JPY statements under a USD line",
+      "note": "Japanese conglomerate filing IFRS (ifrs-full, JPY) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026-06-18), so the newest annual facts are from the FY2025 (March 2025) 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age. Its legacy us-gaap facts stop at FY2021 and are not taken: the taxonomy with the newest anchors decides. Its FY2025 filing still consolidates Sony Bank's deposits in the working-capital family, so delta_nwc would be null with a note even when fresh.",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Failed",
+      "expected_reason": "latest annual filing is",
+      "cross_check_note": "not valued (filing age); the vendor's rows for the March 2025 year differ from the filed ones on eight fields (revenue 12957bn against 12035bn, debt 2354bn against 3599bn): Sony Financial's deconsolidation in October 2025 restated the comparatives the vendor carries; the filing is as originally reported"
     },
     {
       "ticker": "AZN.L",

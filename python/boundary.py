@@ -2336,6 +2336,7 @@ class Valuation:
     status: Status
     failed_reason: Optional[str]
     inputs: Optional[ModelInputs]
+    taxonomy: str = field(default_factory=lambda: "")
     filing_age_days: Optional[int] = None
     cross_check: Optional[CrossCheck] = None
     implied: Optional[Implied] = None
@@ -2364,6 +2365,7 @@ class Valuation:
                 status=Status.from_json(x['status']) if 'status' in x else _atd_missing_json_field('Valuation', 'status'),
                 failed_reason=_atd_read_nullable(_atd_read_string)(x['failed_reason']) if 'failed_reason' in x else _atd_missing_json_field('Valuation', 'failed_reason'),
                 inputs=_atd_read_nullable(ModelInputs.from_json)(x['inputs']) if 'inputs' in x else _atd_missing_json_field('Valuation', 'inputs'),
+                taxonomy=_atd_read_string(x['taxonomy']) if 'taxonomy' in x else "",
                 filing_age_days=_atd_read_int(x['filing_age_days']) if 'filing_age_days' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
                 implied=Implied.from_json(x['implied']) if 'implied' in x else None,
@@ -2393,6 +2395,7 @@ class Valuation:
         res['status'] = (lambda x: x.to_json())(self.status)
         res['failed_reason'] = _atd_write_nullable(_atd_write_string)(self.failed_reason)
         res['inputs'] = _atd_write_nullable((lambda x: x.to_json()))(self.inputs)
+        res['taxonomy'] = _atd_write_string(self.taxonomy)
         if self.filing_age_days is not None:
             res['filing_age_days'] = _atd_write_int(self.filing_age_days)
         if self.cross_check is not None:
@@ -2647,6 +2650,8 @@ class Financials:
     periods: List[FiscalPeriod]
     notes: List[str]
     provider: str = field(default_factory=lambda: "")
+    taxonomy: str = field(default_factory=lambda: "")
+    vendor_financial_currency: Optional[str] = None
     market_provider: str = field(default_factory=lambda: "")
     provider_reason: str = field(default_factory=lambda: "")
     statements_unavailable: str = field(default_factory=lambda: "")
@@ -2671,6 +2676,8 @@ class Financials:
                 periods=_atd_read_list(FiscalPeriod.from_json)(x['periods']) if 'periods' in x else _atd_missing_json_field('Financials', 'periods'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else _atd_missing_json_field('Financials', 'notes'),
                 provider=_atd_read_string(x['provider']) if 'provider' in x else "",
+                taxonomy=_atd_read_string(x['taxonomy']) if 'taxonomy' in x else "",
+                vendor_financial_currency=_atd_read_string(x['vendor_financial_currency']) if 'vendor_financial_currency' in x else None,
                 market_provider=_atd_read_string(x['market_provider']) if 'market_provider' in x else "",
                 provider_reason=_atd_read_string(x['provider_reason']) if 'provider_reason' in x else "",
                 statements_unavailable=_atd_read_string(x['statements_unavailable']) if 'statements_unavailable' in x else "",
@@ -2696,6 +2703,9 @@ class Financials:
         res['periods'] = _atd_write_list((lambda x: x.to_json()))(self.periods)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         res['provider'] = _atd_write_string(self.provider)
+        res['taxonomy'] = _atd_write_string(self.taxonomy)
+        if self.vendor_financial_currency is not None:
+            res['vendor_financial_currency'] = _atd_write_string(self.vendor_financial_currency)
         res['market_provider'] = _atd_write_string(self.market_provider)
         res['provider_reason'] = _atd_write_string(self.provider_reason)
         res['statements_unavailable'] = _atd_write_string(self.statements_unavailable)
