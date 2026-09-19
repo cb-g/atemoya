@@ -12,15 +12,21 @@ val summary :
   ?universe:Reference_t.universe ->
   ?definitions:Reference_t.field_definitions ->
   ?stability_line:string ->
+  ?run_dir:string ->
   Boundary_t.valuation list ->
   string
-(** Includes the field definitions in force when given, the universe-level
+(** Opens with the valuation date and the model version of the records (21);
+    ends by naming the dated run directory when given. Includes the field definitions in force when given, the universe-level
     implied line (median and range of the solved half-lives, the counts beyond
     range each way, the count where level is the meaningful readout), and a
     cross-check section: how many records with a cross-check had any field beyond
     threshold, which fields most often, then every such record with each
     disagreeing field's two values and their relative difference, and
     nothing else: a finding, never explained by the run. *)
+
+val dated_run_dir : exists:(string -> bool) -> root:string -> string -> string
+(** [root/<valued_on>], or [root/<valued_on>-2], [-3] ... when that already
+    exists: a run is never overwritten (21). *)
 
 val drivers : Boundary_t.model_inputs -> (string * float * string) list
 (** Every input a fair value can move with, by model: the statement fields,
@@ -38,10 +44,12 @@ val run_diff :
     both sides, the delta, and for a moved fair value every driver whose value
     differs, old and new, with the composition behind it, and, given the
     baseline's raw JSON per ticker, every input field the baseline carried that
-    the model no longer has, with its value (a removed term is a driver). A
-    moved fair value with no differing driver and nothing removed is printed
-    as such: the arithmetic itself changed, or it is a bug. Status lines carry
-    the signal. Records only one side has are listed. *)
+    the model no longer has, with its value (a removed term is a driver). The
+    header names both runs' model versions; a moved fair value with no
+    differing driver and nothing removed is printed as moved under this
+    version against the baseline's with unchanged inputs: the arithmetic
+    itself changed, or it is a bug. Status lines carry the signal. Records
+    only one side has are listed. *)
 
 val provider_diff : (Boundary_t.valuation * Boundary_t.valuation option) list -> string
 (** One block per record whose statements provider is not the vendor, given

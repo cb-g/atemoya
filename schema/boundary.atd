@@ -552,6 +552,7 @@ type valuation = {
   ticker : string;
   as_of : string;                     (* the fetch timestamp, from financials *)
   valued_on : string;                 (* ISO 8601 date parameter ages are measured at *)
+  ~model_version : string;            (* the code that produced the record: git short hash, "-dirty" when the tree had uncommitted edits, "unversioned" outside a checkout (21); empty only on records written before it existed *)
   currency : string nullable;         (* basis of price and fair_value *)
   price : float nullable;
   fair_value : float nullable;        (* per share *)

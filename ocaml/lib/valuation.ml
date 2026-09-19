@@ -150,7 +150,7 @@ let point_in_time_gates (fin : financials) =
       | None, None, Some currency -> Error ("rate source has no history for " ^ currency)
       | None, None, None -> Ok ())
 
-let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declaration
+let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~model_version ~declaration
     (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
   let hold_vintage = Option.is_some original.point_in_time in
@@ -171,6 +171,7 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
       ticker = fin.ticker;
       as_of = fin.as_of;
       valued_on = today;
+      model_version;
       currency = fin.currency;
       price;
       fair_value;

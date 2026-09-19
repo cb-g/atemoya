@@ -2641,6 +2641,7 @@ class Valuation:
     status: Status
     failed_reason: Optional[str]
     inputs: Optional[ModelInputs]
+    model_version: str = field(default_factory=lambda: "")
     taxonomy: str = field(default_factory=lambda: "")
     filing_age_days: Optional[int] = None
     cross_check: Optional[CrossCheck] = None
@@ -2671,6 +2672,7 @@ class Valuation:
                 status=Status.from_json(x['status']) if 'status' in x else _atd_missing_json_field('Valuation', 'status'),
                 failed_reason=_atd_read_nullable(_atd_read_string)(x['failed_reason']) if 'failed_reason' in x else _atd_missing_json_field('Valuation', 'failed_reason'),
                 inputs=_atd_read_nullable(ModelInputs.from_json)(x['inputs']) if 'inputs' in x else _atd_missing_json_field('Valuation', 'inputs'),
+                model_version=_atd_read_string(x['model_version']) if 'model_version' in x else "",
                 taxonomy=_atd_read_string(x['taxonomy']) if 'taxonomy' in x else "",
                 filing_age_days=_atd_read_int(x['filing_age_days']) if 'filing_age_days' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
@@ -2702,6 +2704,7 @@ class Valuation:
         res['status'] = (lambda x: x.to_json())(self.status)
         res['failed_reason'] = _atd_write_nullable(_atd_write_string)(self.failed_reason)
         res['inputs'] = _atd_write_nullable((lambda x: x.to_json()))(self.inputs)
+        res['model_version'] = _atd_write_string(self.model_version)
         res['taxonomy'] = _atd_write_string(self.taxonomy)
         if self.filing_age_days is not None:
             res['filing_age_days'] = _atd_write_int(self.filing_age_days)

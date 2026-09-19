@@ -2,10 +2,11 @@
   "source": "two field reports from a project that ran the previous implementation daily for about 14 months on about 215 names (a DCF on a bank, a DCF on a regulated utility mid capex cycle, an AISC screen on a royalty company, an insurer pinned at +571.9% upside), plus that implementation's own findings",
   "as_of": "2026-09-19",
   "notes": [
-    "Models today: dcf (OperatingCompany), residual_income (Bank), residual_income_insurer (Insurer, needs filed statements). A class with [] has no admissible model yet and is refused with its lens named.",
+    "Models today: dcf (OperatingCompany, HighGrowthSoftware), residual_income (Bank), residual_income_insurer (Insurer, needs filed statements), reit_ffo_dividend (Reit). A class with [] has no admissible model yet and is refused with its lens named.",
     "Inadmissible is Failed with the lens named: the reader learns what the right measurement is.",
     "Anything that fits no class gets a class added to the boundary variant and a row here, never a place in OperatingCompany.",
-    "Reit (18): the FFO-covered dividend discounted at the CAPM cost of equity with the REIT industry beta, FFO per NAREIT from filed tags; the lens is on FFO, not AFFO, because AFFO's adjustments are not reliably tagged, and every record says so. The distribution rule (a U.S. REIT distributes at least 90% of its REIT taxable income excluding net capital gain; jurisdiction-specific) is recorded here and not used: the payout is observed. A mortgage REIT is not this lens; none is classed Reit today."
+    "Reit (18): the FFO-covered dividend discounted at the CAPM cost of equity with the REIT industry beta, FFO per NAREIT from filed tags; the lens is on FFO, not AFFO, because AFFO's adjustments are not reliably tagged, and every record says so. The distribution rule (a U.S. REIT distributes at least 90% of its REIT taxable income excluding net capital gain; jurisdiction-specific) is recorded here and not used: the payout is observed. A mortgage REIT is not this lens; none is classed Reit today.",
+    "HighGrowthSoftware (21): the DCF is admissible. A growth path that reverts inside the explicit horizon is the anchor at conservative persistence, and the implied readouts say what the price needs and for how long; stock compensation stays inside EBIT as the filed expense, no add-back. PreProfit stays refused: negative free cash flow makes the DCF meaningless, not conservative, and the solvers have nothing to invert."
   ],
   "classes": {
     "OperatingCompany": {
@@ -65,10 +66,12 @@
       "floor_basis_default": "NAV of the royalty book at a long-run price deck"
     },
     "HighGrowthSoftware": {
-      "lens": "recurring revenue growth, retention and the margin path; never P/E or FCF yield",
-      "admissible_models": [],
-      "never": "P/E, FCF yield, or a DCF whose growth reverts inside the explicit horizon",
-      "floor_basis_default": "none from this tool: the value is the growth path, which a floor cannot carry"
+      "lens": "the DCF at the settled reversion is the anchor at conservative persistence; the implied readouts are the reading",
+      "admissible_models": [
+        "dcf"
+      ],
+      "never": "P/E or FCF yield: the value is the growth path, which a single year's earnings or cash flow cannot carry",
+      "floor_basis_default": "a completed FCFF DCF: the discounted free cash flow per share"
     },
     "PreProfit": {
       "lens": "cash runway against the catalyst calendar; no multiple applies",

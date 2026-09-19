@@ -222,7 +222,8 @@ let params : Params.t =
             "Insurer": {"lens": "operating-profit multiple with the solvency ratio", "admissible_models": ["residual_income_insurer"], "never": "an FCFF DCF", "floor_basis_default": "adjusted book value per share"},
             "Reit": {"lens": "price/FFO and dividend coverage by FFO; never accounting EPS", "admissible_models": ["reit_ffo_dividend"], "never": "accounting EPS", "floor_basis_default": "FFO per share and the dividend it covers"},
             "PreProfit": {"lens": "cash runway vs the catalyst calendar", "admissible_models": [], "never": "any multiple", "floor_basis_default": "no floor until the catalyst", "floor_present_default": false},
-            "Wrapper": {"lens": "NAV premium or discount", "admissible_models": [], "never": "headline yield", "floor_basis_default": "NAV per unit"}}}|};
+            "Wrapper": {"lens": "NAV premium or discount", "admissible_models": [], "never": "headline yield", "floor_basis_default": "NAV per unit"},
+            "HighGrowthSoftware": {"lens": "the DCF at the settled reversion is the anchor", "admissible_models": ["dcf"], "never": "P/E or FCF yield", "floor_basis_default": "a completed FCFF DCF"}}}|};
     fx_sources =
       Reference_j.fx_sources_of_string
         {|{"source": "test", "as_of": "2026-09-10", "max_age_days": 10,
@@ -251,7 +252,7 @@ let declaration ?(scope_limits = []) entity_class = { Valuation.entity_class; sc
 
 (* Most valuation tests declare an operating company; the class tests declare otherwise. *)
 let run ?(declared = Some (declaration `OperatingCompany)) fin =
-  Valuation.run params ~today ~declaration:declared fin
+  Valuation.run params ~today ~model_version:"test" ~declaration:declared fin
 
 (* --- testables --- *)
 
@@ -875,8 +876,8 @@ let test_table_and_variant_agree () =
           if r.lens = "" || r.floor_basis_default = "" || r.never = "" then
             Alcotest.failf "%s: incomplete row" (Admissibility.class_name c);
           Alcotest.(check bool)
-            (Admissibility.class_name c ^ " admits the dcf iff it is the operating company")
-            (c = `OperatingCompany) (Admissibility.admits r `Dcf);
+            (Admissibility.class_name c ^ " admits the dcf iff it is the operating company or the software class (21)")
+            (c = `OperatingCompany || c = `HighGrowthSoftware) (Admissibility.admits r `Dcf);
           Alcotest.(check bool)
             (Admissibility.class_name c ^ " admits residual income iff it is a bank")
             (c = `Bank) (Admissibility.admits r `Residual_income);
@@ -1300,7 +1301,7 @@ let test_minor_unit_guard () =
       "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
       "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400, "values": {"United States": 0.02, "United Kingdom": 0.0}},
       "unwired": {}}|} ]) } in
-  let run_gbp fin = Valuation.run uk_rates ~today ~declaration:(Some (declaration `OperatingCompany)) fin in
+  let run_gbp fin = Valuation.run uk_rates ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) fin in
   let converted = run_gbp (gbp 10. ~price_unit:`Minor ~price_unit_divisor:100.) in
   let unconverted = run_gbp (gbp 1000. ~price_unit:`Major ~price_unit_divisor:1.) in
   (match converted.failed_reason with Some r -> Alcotest.failf "converted: %s" r | None -> ());
@@ -1491,7 +1492,7 @@ let test_run_diff_lists_drivers () =
       "was: no fiscal periods in statements"; "inputs now present (dcf)";
       "cash                       1000 [cash_and_short_term_investments: cash_equivalents 600 (Cash) + short_term_investments 400 (Other Short Term Investments)]";
       "GHOST      Ok 27.94 Buy -> Ok 28.94 Buy delta +1.00 (+3.6%)";
-      "NO DRIVER: no input or parameter differs";
+      "NO DRIVER: moved under test against test with unchanged inputs";
       "SAME       Ok 27.94 Buy -> Ok 27.94 Buy unchanged";
       "FRESH      new: Ok 27.94 Buy; not in the baseline";
       "GONE       in the baseline (Ok 27.94 Buy), not in this run";
@@ -1869,7 +1870,7 @@ let test_stability_classifier () =
     (classes (Batch.moved_inputs ~old:(run a, Some a) ~now:(run newer, Some newer)));
   (* a parameter moved: rate or fx *)
   let rf_moved = { params with risk_free = Reference_j.risk_free_rates_of_string (String.concat "" [ {|{"max_age_days": 45, "tenors": ["7y"], "countries": {"United States": {"source": "FRED", "tier": "official", "as_of": "2026-09-09", "rates": {"7y": 0.05}}}}|} ]) } in
-  let v_rf = Valuation.run rf_moved ~today ~declaration:(Some (declaration `OperatingCompany)) base in
+  let v_rf = Valuation.run rf_moved ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) base in
   Alcotest.(check (list (pair string string))) "rate"
     [ ("risk_free_rate", "rate_or_fx") ]
     (classes (Batch.moved_inputs ~old:(v0, Some base) ~now:(v_rf, Some base)));
@@ -1911,7 +1912,7 @@ let test_point_in_time_gates_and_vintages () =
   check_reason (run no_rates) [ "rate source has no history for EUR" ];
   (* a past date: the ERP, tax and assumption vintages postdate it; held and declared, never refused *)
   let past = { (filed ~latest_filing:"2025-02-20" (history ())) with point_in_time = Some (pit "2025-06-30") } in
-  let v = Valuation.run params ~today:"2025-06-30" ~declaration:(Some (declaration `OperatingCompany)) past in
+  let v = Valuation.run params ~today:"2025-06-30" ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) past in
   Alcotest.check status "valued on the past date" `Ok v.status;
   (match v.point_in_time with
   | Some p ->
@@ -1924,7 +1925,7 @@ let test_point_in_time_gates_and_vintages () =
   | Some (`Dcf i) -> Alcotest.(check bool) "held vintage carries a negative age" true (i.equity_risk_premium.age_days < 0)
   | _ -> Alcotest.fail "no inputs");
   (* the live path is untouched: a future vintage is still refused *)
-  let live = Valuation.run params ~today:"2025-06-30" ~declaration:(Some (declaration `OperatingCompany)) (filed ~latest_filing:"2025-02-20" (history ())) in
+  let live = Valuation.run params ~today:"2025-06-30" ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (filed ~latest_filing:"2025-02-20" (history ())) in
   check_reason live [ "later than the valuation date" ];
   if contains (Boundary_j.string_of_valuation live) "point_in_time" then Alcotest.fail "point_in_time leaked into a live record"
 
@@ -2063,6 +2064,38 @@ let test_batch_summary () =
   reject {|{"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "scope_limits": "x"}]}|} [ "scope_limits must be a list of strings" ];
   reject {|{"names": []}|} [ "no tickers list" ];
   Alcotest.(check bool) "the tracked file loads strictly" true (Result.is_ok (Universe.load "../../reference/universe.json"));
+  (* model_version (21): the stamp, the summary's first line, the run diff's header *)
+  let ok = List.hd vs in
+  Alcotest.(check string) "clean tree" "abc1234" (Model_version.stamp ~head:(Some "abc1234\n") ~porcelain:"");
+  Alcotest.(check string) "dirty tree" "abc1234-dirty"
+    (Model_version.stamp ~head:(Some "abc1234\n") ~porcelain:" M ocaml/lib/batch.ml\n?? notes.txt\n");
+  Alcotest.(check string) "outside a checkout" "unversioned" (Model_version.stamp ~head:None ~porcelain:"");
+  Alcotest.(check string) "an empty hash is no version" "unversioned" (Model_version.stamp ~head:(Some "\n") ~porcelain:"");
+  check_mentions "summary opens with the version" s [ "valued_on 2026-09-10, model_version test: 3 records, 1 Ok, 2 Failed" ];
+  check_mentions "a run without a version is said so"
+    (Batch.summary [ { ok with model_version = "" } ]) [ "model_version unrecorded:" ];
+  check_mentions "the dated run directory is named last" (Batch.summary ~run_dir:"output/runs/2026-09-10-2" [ ok ])
+    [ "\nrun written to output/runs/2026-09-10-2\n" ];
+  check_mentions "the run diff names both versions"
+    (Batch.run_diff ~baseline:[ { ok with model_version = "old1" } ] [ { ok with fair_value = Some 1.0 } ])
+    [ "this run (valued_on 2026-09-10, model_version test) against the baseline run (valued_on 2026-09-10, model_version old1)";
+      "NO DRIVER: moved under test against old1 with unchanged inputs" ];
+  (* dated runs (21): never overwritten *)
+  let taken = [ "out/runs/2026-09-10"; "out/runs/2026-09-10-2" ] in
+  let exists d = List.mem d taken in
+  Alcotest.(check string) "first run of the day" "out/runs/2026-09-11" (Batch.dated_run_dir ~exists ~root:"out/runs" "2026-09-11");
+  Alcotest.(check string) "third run of the day" "out/runs/2026-09-10-3" (Batch.dated_run_dir ~exists ~root:"out/runs" "2026-09-10");
+  (* the software class (21) values on the dcf like an operating company *)
+  let software = run ~declared:(Some (declaration `HighGrowthSoftware)) (financials (history ())) in
+  Alcotest.check status "software class is Ok on the dcf" `Ok software.status;
+  Alcotest.(check (option model)) "routed to the dcf" (Some `Dcf) software.model;
+  Alcotest.(check (option approx)) "same number as the operating company" ok.fair_value software.fair_value;
+  Alcotest.(check string) "stamped" "test" software.model_version;
+  (* and in the tracked table the software class admits the dcf while PreProfit still refuses *)
+  let tracked = get (Params.load ~dir:"../../reference") in
+  let admits c = match Admissibility.rule tracked.admissibility c with Ok r -> r.admissible_models | Error e -> Alcotest.fail e in
+  Alcotest.(check (list string)) "tracked: software admits the dcf" [ "dcf" ] (admits `HighGrowthSoftware);
+  Alcotest.(check (list string)) "tracked: pre-profit admits nothing" [] (admits `PreProfit);
   Alcotest.(check string) "reason key drops specifics" "risk_free_rate for Germany/7y"
     (Batch.reason_key "risk_free_rate for Germany/7y (as_of 2026-06-05) is 97 days old");
   Alcotest.(check string) "reason key groups refusals by class" "dcf not admissible for Bank"
@@ -2185,7 +2218,7 @@ let test_missing_market_data () =
   Alcotest.(check bool) "nothing computed" true (Option.is_none v.inputs)
 let test_wacc_below_terminal_growth () =
   let v =
-    Valuation.run ~declaration:(Some (declaration `OperatingCompany))
+    Valuation.run ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany))
       { params with
         params =
           Reference_j.params_of_string

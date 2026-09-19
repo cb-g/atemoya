@@ -10,8 +10,10 @@
    provider_diff.txt opens with this run against that one, every record, every moved fair
    value with the inputs that moved. With --baseline-snapshot DIR as well (the financials
    the baseline run was valued from), DIR/stability_<old>_<new>.txt classifies every moved
-   input of every record and the summary gains the counts per class. Valuation never
-   fetches. *)
+   input of every record and the summary gains the counts per class. Every record carries
+   model_version (git short hash, -dirty on an uncommitted tree, unversioned outside a
+   checkout), and every --out run is also written, never overwritten, to
+   DIR/runs/<valued_on>/ (-2, -3 on the same date). Valuation never fetches. *)
 
 open Atemoya
 
@@ -86,6 +88,20 @@ let write_file path contents =
   let oc = open_out_bin path in
   output_string oc contents;
   close_out oc
+
+(* The code that produced this run (21): stdout of a command, None when it did not exit 0
+   (git outside a checkout exits 128; stderr is discarded). *)
+let command_output cmd =
+  match Unix.open_process_in cmd with
+  | ic -> (
+      let out = In_channel.input_all ic in
+      match Unix.close_process_in ic with Unix.WEXITED 0 -> Some out | _ -> None)
+  | exception Unix.Unix_error _ -> None
+
+let model_version () =
+  Model_version.stamp
+    ~head:(command_output "git rev-parse --short HEAD 2>/dev/null")
+    ~porcelain:(Option.value ~default:"" (command_output "git status --porcelain 2>/dev/null"))
 
 let class_or_exit s =
   match Admissibility.class_of_string s with
@@ -165,6 +181,7 @@ let () =
             exit 2)
   in
   let declaration = declarations universe o.entity_class in
+  let model_version = model_version () in
   let files = List.concat_map expand paths in
   (* Each record, and the valuation of its vendor-statement shadow when the fetch wrote one
      (an XBRL-primary name): same declaration, same parameters, for the provider diff. *)
@@ -173,7 +190,7 @@ let () =
       (fun path ->
         Option.map
           (fun (fin : Boundary_t.financials) ->
-            let value = Valuation.run params ~today:o.today ~declaration:(declaration fin.ticker) in
+            let value = Valuation.run params ~today:o.today ~model_version ~declaration:(declaration fin.ticker) in
             let shadow_path =
               Filename.concat (Filename.dirname path) (fin.ticker ^ ".shadow-yfinance.json")
             in
@@ -244,13 +261,25 @@ let () =
         | _ -> None
       in
       let stability_line = Option.map (fun (_, _, l) -> l) stability in
-      let summary = Batch.summary ?universe ~definitions:params.field_definitions ?stability_line results in
-      write_file (Filename.concat dir "summary.txt") summary;
-      Option.iter (fun (file, text, _) -> write_file (Filename.concat dir file) text) stability;
-      write_file (Filename.concat dir "provider_diff.txt")
-        ((match baseline with
+      (* Dated runs (21): the same three files again under DIR/runs/<valued_on>/, never
+         overwritten, so what the model said that day survives the next run. *)
+      let run_dir = Batch.dated_run_dir ~exists:Sys.file_exists ~root:(Filename.concat dir "runs") o.today in
+      let summary =
+        Batch.summary ?universe ~definitions:params.field_definitions ?stability_line ~run_dir results
+      in
+      let diff =
+        (match baseline with
          | Some b -> Batch.run_diff ~baseline_raw:(List.map snd b) ~baseline:(List.map fst b) results ^ "\n"
          | None -> "")
-        ^ Batch.provider_diff paired);
+        ^ Batch.provider_diff paired
+      in
+      Option.iter (fun (file, text, _) -> write_file (Filename.concat dir file) text) stability;
+      mkdir_p run_dir;
+      List.iter
+        (fun d ->
+          write_file (Filename.concat d "valuations.jsonl") jsonl;
+          write_file (Filename.concat d "summary.txt") summary;
+          write_file (Filename.concat d "provider_diff.txt") diff)
+        [ dir; run_dir ];
       print_string summary);
   exit (if unreadable > 0 then 1 else 0)

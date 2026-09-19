@@ -37,3 +37,18 @@ def test_loader_rejects_anything_beyond_the_declaration() -> None:
         universe.load_text(json.dumps({"tickers": [{"ticker": "X", "entity_class": "Bank", "why": " "}]}))
     with pytest.raises(universe.UniverseError, match="no tickers list"):
         universe.load_text(json.dumps({"names": []}))
+
+
+def test_a_second_universe_file_is_the_same_format() -> None:
+    """A private universe under data/ (21) goes through the same strict loader: the
+    four fields, and an unknown field is rejected the same way."""
+    private = {"tickers": [
+        {"ticker": "PRIV.A", "entity_class": "OperatingCompany", "why": "a plain operating company"},
+        {"ticker": "PRIV.B", "entity_class": "HighGrowthSoftware", "why": "software compounding revenue, profitable", "scope_limits": ["nothing the models see"]},
+    ]}
+    loaded = universe.load_text(json.dumps(private))
+    assert [e.ticker for e in loaded.tickers] == ["PRIV.A", "PRIV.B"]
+    assert loaded.tickers[1].scope_limits == ["nothing the models see"]
+    private["tickers"][0]["position"] = "held"
+    with pytest.raises(universe.UniverseError, match="universe entry PRIV.A carries unknown field\\(s\\) position"):
+        universe.load_text(json.dumps(private))

@@ -60,8 +60,10 @@ val run :
   ?thresholds:thresholds ->
   Params.t ->
   today:string ->
+  model_version:string ->
   declaration:declaration option ->
   Boundary_t.financials ->
   Boundary_t.valuation
 (** [today] is the ISO 8601 date parameter ages are measured at; it is echoed
-    as [valued_on]. *)
+    as [valued_on]. [model_version] ([Model_version.stamp]) is echoed on the
+    record: the code that produced it. *)

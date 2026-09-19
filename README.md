@@ -48,11 +48,13 @@ uv run python/refresh_rates.py --all        # sovereign curves per reference/rat
 uv run python/refresh_fx.py --all           # FX via FRED H.10 -> reference/fx_rates.json
 
 uv run python/fetch_all.py                  # every ticker in reference/universe.json -> data/snapshots/<date>/, data/financials -> the latest
-dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt
+dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt, and the same three under output/runs/<date>/ (never overwritten)
 dune exec atemoya -- data/financials --out output --baseline previous/valuations.jsonl   # plus this run against that one
 dune exec atemoya -- data/snapshots/<new> --out output --baseline previous/valuations.jsonl --baseline-snapshot data/snapshots/<old>   # plus stability_<old>_<new>.txt
 uv run python/fetch_all.py --as-of 2025-06-30   # point-in-time: data/pit/2025-06-30/ from what was known on that date, with its reference/
 dune exec atemoya -- data/pit/2025-06-30 --reference data/pit/2025-06-30/reference --today 2025-06-30 --out output/pit/2025-06-30
+uv run python/fetch_all.py --universe data/universe.private.json --snapshots data/snapshots-private   # a second universe file, same format, never tracked
+dune exec atemoya -- data/snapshots-private/<date> --universe data/universe.private.json --out output/private
 uv run python/build_panel.py                    # every quarter-end 2022-03-31 .. 2026-06-30 -> output/pit/panel.jsonl, panel_summary.txt
 ```
 
@@ -93,7 +95,8 @@ growth (or ROE) the price needs, and the reversion half-life the observed start 
 and the whole number of explicit years the observed start would have to persist (an
 integer scan to 40 years, the risk-free rate held at its recorded point), the last two only
 where the start lies above its target; a rule on the record says which one to read, and
-every null carries its reason. With `--baseline`, `provider_diff.txt` opens with
+every null carries its reason, and `model_version` names the code that produced it (the
+git short hash, `-dirty` when the tree had uncommitted edits). With `--baseline`, `provider_diff.txt` opens with
 every record against the previous run and lists the inputs behind every moved fair value;
 with `--baseline-snapshot` as well, every moved input of every record is classified (price,
 new filing, restatement, vendor row, rate or FX, unexplained) in a stability report, so two

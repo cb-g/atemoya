@@ -65,12 +65,15 @@ let flagged_fields (v : valuation) =
   | Some c -> List.filter_map (fun (f : field_check) -> if f.agree = Some false then Some f.field else None) c.fields
   | None -> []
 
-let summary ?universe ?definitions ?stability_line (vs : valuation list) =
+let version_of (vs : valuation list) =
+  match vs with { model_version = ""; _ } :: _ | [] -> "unrecorded" | v :: _ -> v.model_version
+
+let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list) =
   let b = Buffer.create 4096 in
   let n = List.length vs in
   let ok = List.length (List.filter (fun v -> v.status = `Ok) vs) in
   let valued_on = match vs with v :: _ -> v.valued_on | [] -> "-" in
-  Printf.bprintf b "valued_on %s: %d records, %d Ok, %d Failed\n\n" valued_on n
+  Printf.bprintf b "valued_on %s, model_version %s: %d records, %d Ok, %d Failed\n\n" valued_on (version_of vs) n
     ok (n - ok);
   (match definitions with
   | Some (d : Reference_t.field_definitions) ->
@@ -245,7 +248,18 @@ let summary ?universe ?definitions ?stability_line (vs : valuation list) =
           (String.concat ", "
              (List.map (fun (e : Reference_t.universe_entry) -> e.ticker) missing))
   | None -> ());
+  Option.iter (fun d -> Printf.bprintf b "\nrun written to %s\n" d) run_dir;
   Buffer.contents b
+
+let dated_run_dir ~exists ~root valued_on =
+  let first = Filename.concat root valued_on in
+  if not (exists first) then first
+  else
+    let rec go n =
+      let candidate = Filename.concat root (Printf.sprintf "%s-%d" valued_on n) in
+      if exists candidate then go (n + 1) else candidate
+    in
+    go 2
 
 let fair_value_text = function Some fv -> Printf.sprintf "%.2f" fv | None -> "none"
 
@@ -387,9 +401,10 @@ let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
   let b = Buffer.create 8192 in
   let base_on = match baseline with v :: _ -> v.valued_on | [] -> "-" in
   let this_on = match vs with v :: _ -> v.valued_on | [] -> "-" in
+  let this_version = version_of vs and base_version = version_of baseline in
   Printf.bprintf b
-    "run diff: this run (valued_on %s) against the baseline run (valued_on %s): every record, and for every moved fair value the inputs that moved\n\n"
-    this_on base_on;
+    "run diff: this run (valued_on %s, model_version %s) against the baseline run (valued_on %s, model_version %s): every record, and for every moved fair value the inputs that moved\n\n"
+    this_on this_version base_on base_version;
   let moved = ref 0 and unexplained = ref 0 and status_changed = ref 0 in
   List.iter
     (fun (v : valuation) ->
@@ -444,7 +459,8 @@ let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
               if fv_moved && changed = [] && removed = [] then begin
                 incr unexplained;
                 Printf.bprintf b
-                  "           NO DRIVER: no input or parameter differs; the model arithmetic itself changed, or this is a bug\n"
+                  "           NO DRIVER: moved under %s against %s with unchanged inputs; the model arithmetic itself changed, or this is a bug\n"
+                  this_version base_version
               end
           | None, Some nd ->
               Printf.bprintf b "           inputs now present (%s):\n"
