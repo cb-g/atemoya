@@ -2634,7 +2634,6 @@ class Valuation:
     model: Optional[Model]
     class_check: Optional[ClassCheck]
     floor: Floor
-    lens_note: str
     scope_limits: List[str]
     statements_provider: str
     market_provider: str
@@ -2665,7 +2664,6 @@ class Valuation:
                 model=_atd_read_nullable(Model.from_json)(x['model']) if 'model' in x else _atd_missing_json_field('Valuation', 'model'),
                 class_check=_atd_read_nullable(ClassCheck.from_json)(x['class_check']) if 'class_check' in x else _atd_missing_json_field('Valuation', 'class_check'),
                 floor=Floor.from_json(x['floor']) if 'floor' in x else _atd_missing_json_field('Valuation', 'floor'),
-                lens_note=_atd_read_string(x['lens_note']) if 'lens_note' in x else _atd_missing_json_field('Valuation', 'lens_note'),
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('Valuation', 'scope_limits'),
                 statements_provider=_atd_read_string(x['statements_provider']) if 'statements_provider' in x else _atd_missing_json_field('Valuation', 'statements_provider'),
                 market_provider=_atd_read_string(x['market_provider']) if 'market_provider' in x else _atd_missing_json_field('Valuation', 'market_provider'),
@@ -2697,7 +2695,6 @@ class Valuation:
         res['model'] = _atd_write_nullable((lambda x: x.to_json()))(self.model)
         res['class_check'] = _atd_write_nullable((lambda x: x.to_json()))(self.class_check)
         res['floor'] = (lambda x: x.to_json())(self.floor)
-        res['lens_note'] = _atd_write_string(self.lens_note)
         res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
         res['statements_provider'] = _atd_write_string(self.statements_provider)
         res['market_provider'] = _atd_write_string(self.market_provider)

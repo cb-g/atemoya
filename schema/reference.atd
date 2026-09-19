@@ -93,17 +93,17 @@ type params = {
   unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
 }
 
-(* The fixed ticker set the batch runs over, with the outcome each is expected to
-   produce today. A deviation in the batch summary is a finding, never something to tune. *)
+(* The fixed ticker set the batch runs over: a declaration, nothing else. Each entry names
+   the ticker, the class a human declared for it, why that class (in words that will still
+   hold in years: no numbers, fiscal years, tag names or parameter values), and what no
+   model can see for the name. Nothing here remembers an outcome or a finding; those belong
+   to the run, and "did anything change since the last run" is the baseline diff. The loader
+   is strict: an unknown field is a load error. *)
 type universe_entry = {
   ticker : string;
   entity_class : string;                (* a constructor of the boundary's entity_class; validated at load *)
-  note : string;                        (* why it is in the set *)
-  ~lens_note : string;                  (* free text beside the class; carried into the output *)
-  ~scope_limits : string list;          (* what the models cannot see for this name; carried verbatim *)
-  expected_status : string;             (* "Ok" or "Failed" *)
-  ?expected_reason : string option;     (* prefix the failed_reason must start with *)
-  ~cross_check_note : string;           (* why the vendor still disagrees on this name under the shared definitions: vendor lag, restatement, another filed line, or unexplained *)
+  why : string;                         (* why this class *)
+  ~scope_limits : string list;          (* durable: what the models cannot see for this name; carried verbatim *)
 }
 
 type universe = {

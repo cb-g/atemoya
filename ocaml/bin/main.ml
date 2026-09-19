@@ -5,7 +5,8 @@
    <reference>/universe.json); a ticker not in it takes --entity-class CLASS if given,
    otherwise it fails as undeclared. Without --out, one valuation record per line goes to
    stdout. With --out DIR, DIR/valuations.jsonl and DIR/summary.txt are written and the
-   summary is printed. With --baseline FILE (a previous run's valuations.jsonl),
+   summary is printed; the universe file is loaded strictly (exactly ticker, entity_class,
+   why and scope_limits per entry). With --baseline FILE (a previous run's valuations.jsonl),
    provider_diff.txt opens with this run against that one, every record, every moved fair
    value with the inputs that moved. With --baseline-snapshot DIR as well (the financials
    the baseline run was valued from), DIR/stability_<old>_<new>.txt classifies every moved
@@ -106,14 +107,13 @@ let declarations (universe : Reference_t.universe option) cli_class =
             ( e.ticker,
               {
                 Valuation.entity_class = class_or_exit e.entity_class;
-                lens_note = e.lens_note;
                 scope_limits = e.scope_limits;
               } ))
           u.tickers
   in
   let fallback =
     Option.map
-      (fun s -> { Valuation.entity_class = class_or_exit s; lens_note = ""; scope_limits = [] })
+      (fun s -> { Valuation.entity_class = class_or_exit s; scope_limits = [] })
       cli_class
   in
   fun ticker ->
@@ -158,9 +158,11 @@ let () =
     match path with
     | None -> None
     | Some p -> (
-        match read "universe" Reference_j.read_universe p with
-        | Some u -> Some u
-        | None -> exit 2)
+        match Universe.load p with
+        | Ok u -> Some u
+        | Error msg ->
+            Printf.eprintf "%s\n%!" msg;
+            exit 2)
   in
   let declaration = declarations universe o.entity_class in
   let files = List.concat_map expand paths in

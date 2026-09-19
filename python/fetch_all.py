@@ -25,7 +25,7 @@ from pathlib import Path
 
 import fetch
 import pit
-import reference
+import universe as universe_file
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_UNIVERSE = REPO_ROOT / "reference" / "universe.json"
@@ -65,8 +65,7 @@ def main(argv: list[str]) -> int:
     universe_path: Path = args.universe
     out: Path | None = args.out
     as_of: date | None = args.as_of
-    universe = reference.Universe.from_json_string(universe_path.read_text())
-    tickers = [e.ticker for e in universe.tickers]
+    tickers = [e.ticker for e in universe_file.load(universe_path).tickers]
     print(f"{len(tickers)} tickers from {universe_path}")
     if as_of is not None:
         written = pit.run_date(as_of, tickers, histories={}, quotes={}, sec=fetch.SecContext())

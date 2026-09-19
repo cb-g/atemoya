@@ -1,16 +1,12 @@
 (** The human-readable summary of a batch of valuations: counts by status,
     entity class and failure reason, one line per ticker, and, when the
-    universe is given, whether each ticker met its expected outcome. Pure and
-    deterministic for a given input order. *)
+    universe is given, which of its names were not run. Pure and deterministic
+    for a given input order. Whether anything changed since the last run, and
+    why, is the baseline diff ([run_diff]), never a stored expectation. *)
 
 val reason_key : string -> string
 (** A failure reason with its parenthesised specifics and any named lens
     dropped, for grouping: inadmissible refusals group by class. *)
-
-val meets_expectation :
-  Reference_t.universe_entry -> Boundary_t.valuation -> bool
-(** Status matches, and when the entry names an expected reason, the record's
-    reason starts with it. *)
 
 val summary :
   ?universe:Reference_t.universe ->
@@ -23,8 +19,8 @@ val summary :
     range each way, the count where level is the meaningful readout), and a
     cross-check section: how many records with a cross-check had any field beyond
     threshold, which fields most often, then every such record with each
-    disagreeing field's two values and the universe entry's characterisation
-    of the gap when it has one. *)
+    disagreeing field's two values and their relative difference, and
+    nothing else: a finding, never explained by the run. *)
 
 val drivers : Boundary_t.model_inputs -> (string * float * string) list
 (** Every input a fair value can move with, by model: the statement fields,

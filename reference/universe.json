@@ -1,312 +1,180 @@
 {
   "notes": [
-    "The previous implementation's verification set plus plain U.S. names and one name per new entity class. entity_class is declared here, never inferred; expected_status and expected_reason (a prefix of failed_reason) describe the outcome today, and the batch summary marks every deviation.",
-    "Do not tune thresholds or this list to make the expectations come true; a deviation is a finding."
+    "A declaration, nothing else: the ticker, the class a human declared for it (never inferred), why that class in words meant to hold for years, and what no model can see for the name. No outcome, number, date, tag or parameter lives here; the run records those per record, and whether anything changed since the last run is the baseline diff. The loader is strict: an unknown field is a load error."
   ],
   "tickers": [
     {
       "ticker": "AAPL",
       "entity_class": "OperatingCompany",
-      "note": "baseline",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok"
+      "why": "a plain operating company: positive, stable free cash flow with no structural break"
     },
     {
       "ticker": "MSFT",
       "entity_class": "OperatingCompany",
-      "note": "plain U.S. non-financial; the net-interest-income false-positive test (tiny positive NII every year)",
-      "lens_note": "DCF at lambda 0.25 assumes a ~3-year growth half-life; the market assumes longer. Reclassify to HighGrowthSoftware if that is the judgment.",
-      "scope_limits": [],
-      "expected_status": "Ok"
+      "why": "a plain operating company with a small net interest income line every year, which must not read as a bank"
     },
     {
       "ticker": "GOOGL",
       "entity_class": "OperatingCompany",
-      "note": "plain U.S. non-financial",
-      "lens_note": "DCF at lambda 0.25 assumes a ~3-year growth half-life; the market assumes longer. Reclassify to HighGrowthSoftware if that is the judgment.",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "vendor omits the 2.0bn current portion of long-term debt (LongTermDebtCurrent) it carries no row for; on working capital the vendor's payables-and-accrued line exceeds the filed IncreaseDecreaseInAccruedLiabilities by 0.9bn (13.838 vs 12.939bn) and no filed fact carries the difference: unexplained"
+      "why": "a plain operating company"
     },
     {
       "ticker": "JNJ",
       "entity_class": "OperatingCompany",
-      "note": "plain U.S. non-financial; statements are filed (SEC XBRL); Johnson & Johnson last tagged OperatingIncomeLoss in FY2014, so ebit follows the derived recipe (pretax plus interest less interest income and other non-operating income, recorded as ebit_recipe), validated within 2% of the vendor's operating income by the cross-check",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "ebit passes after the refinement (25.29bn against the vendor's 25.60bn, 1.2%); capex: the vendor's row exceeds the filed PaymentsToAcquirePropertyPlantAndEquipment by 0.385bn and no filed fact carries it: unexplained"
+      "why": "a plain operating company; files no operating income line, so its EBIT is derived from filed tags"
     },
     {
       "ticker": "KO",
       "entity_class": "OperatingCompany",
-      "note": "plain U.S. non-financial with negative net interest income",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "ebit: the vendor's Operating Income (14.911bn) sits 1.149bn above the filed OperatingIncomeLoss, the company's own operating income line; unexplained by a filed fact. cash: the known residual of the first-present rule, Coca-Cola's 1.934bn MarketableSecurities line beside its 3.602bn OtherShortTermInvestments, which the vendor sums"
+      "why": "a plain operating company with negative net interest income"
     },
     {
       "ticker": "COST",
       "entity_class": "OperatingCompany",
-      "note": "plain U.S. non-financial",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok"
+      "why": "a plain operating company"
     },
     {
       "ticker": "XOM",
       "entity_class": "OperatingCompany",
-      "note": "oil & gas: no statement signature, stays Generic; vendor files its charge only as Depreciation Amortization Depletion and its latest Total Debt as Long Term Debt + Current Debt",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok"
+      "why": "an integrated oil company; no statement signature, so it stays a plain operating company"
     },
     {
       "ticker": "CVX",
       "entity_class": "OperatingCompany",
-      "note": "oil & gas, stays Generic; statements are filed (SEC XBRL); Chevron tags no OperatingIncomeLoss, so ebit follows the derived recipe (pretax plus interest less non-operating income); the refined value 17.96bn still sits 7.2% from the vendor's operating income because Chevron's 1.29bn interest and other income is tagged under no standard us-gaap element, so the refinement policy fails the name rather than valuing it on an overstated EBIT",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Failed",
-      "cross_check_note": "vendor error on debt: the filed DebtCurrent is 10.918bn (the balance sheet's short-term debt, 10-K filed 2026-02-24) against the vendor's 0.191bn Current Debt; ebit is the refined recipe (pretax + interest - 3.0bn equity-affiliate earnings) and still misses by 7.2% because the 1.29bn interest and other income carries no standard tag, so the name fails per policy; revenue: the filed Revenues tag (189.0bn, total revenues and other income) is taken before RevenueFromContractWithCustomerExcludingAssessedTax (184.4bn), which the vendor uses; a tag-order question for the revenue field, outside this file's four",
-      "expected_reason": "operating income not filed; derived EBIT misses the cross-check"
+      "why": "an integrated oil company; files no operating income line, so its EBIT is derived from filed tags"
     },
     {
       "ticker": "JPM",
       "entity_class": "Bank",
-      "note": "U.S. bank; valued by residual income",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "not a model input (bank): the vendor's Other Short Term Investments row on a bank is its 499.5bn securities portfolio; the filer's cash is the restricted-inclusive total less 29.0bn RestrictedCashAndCashEquivalents"
+      "why": "a U.S. bank: judged on price to book against return on equity"
     },
     {
       "ticker": "BAC",
       "entity_class": "Bank",
-      "note": "U.S. bank; statements are filed (SEC XBRL); Bank of America's PaymentsOfDividends stops at FY2013 and it never files PaymentsOfDividendsCommonStock, so dividends come from PaymentsOfOrdinaryDividends (common and preferred, as the other banks' PaymentsOfDividends), recorded as the row",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "not model inputs (bank): the vendor's Other Short Term Investments row on a bank is its 386.8bn securities portfolio, which no filed short-term-investments tag matches; for debt the filer tags its 48.1bn short-term borrowings line as OtherShortTermBorrowings and the 20.4bn commercial paper inside it separately, and the definition's first-present order takes the commercial paper"
+      "why": "a U.S. bank; files no common-dividend payment line under the usual tag, so the ordinary-dividend tag stands in"
     },
     {
       "ticker": "NU",
       "entity_class": "Bank",
-      "note": "Brazilian digital bank filing IFRS (ifrs-full, USD) on a 20-F; companyfacts lags its 2026 20-F, so the lag decision routes it to the vendor, where it fails as before the IFRS routing: the vendor has no dividends row for it, and on filed statements it tags no dividends either (an absent tag is never zero)",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "payout not derivable",
-      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (FY2024), not valued (payout): the vendor's -3.99bn operating income against the filed ProfitLossFromOperatingActivities 5.63bn is a construction netting interest expense; revenue, cash and debt are the vendor's bank-row bundles"
+      "why": "a Brazilian digital bank reporting in U.S. dollars, filing under IFRS on a 20-F"
     },
     {
       "ticker": "IBN",
       "entity_class": "Bank",
-      "note": "Indian bank ADR, INR statements under a USD line; as HDB",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok"
+      "why": "an Indian bank ADR reporting in rupees under a dollar listing"
     },
     {
       "ticker": "ITUB",
       "entity_class": "Bank",
-      "note": "Brazilian bank ADR filing IFRS (ifrs-full, BRL) on a 20-F; companyfacts carries no facts from its 2026 20-F while SEC's submissions index lists it, so by the recorded lag decision the vendor's statements are used (provider_reason names the filing and the facts' end) and the record is Ok on the vendor path as before the IFRS routing; on filed statements it would also fail payout, its DividendsPaid tag stopping at FY2022",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (FY2024); not model inputs (bank) except none: tax_provision +5.428bn where the filing shows -5.428bn (a benefit, as filed), a vendor sign error the definitions expose; cash and capex are the bank's investment and intangible lines the vendor bundles"
+      "why": "a Brazilian bank ADR filing under IFRS on a 20-F"
     },
     {
       "ticker": "ALL",
       "entity_class": "Insurer",
-      "note": "U.S. insurer; statements from SEC XBRL, valued by residual income on AOCI-adjusted book",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "vendor bundles preferred dividends: its Cash Dividends Paid 1.153bn = the filed PaymentsOfDividendsCommonStock 1.036bn + PaymentsOfDividendsPreferredStockAndPreferenceStock 0.117bn; the model reads the filed common figure"
+      "why": "a U.S. property and casualty insurer, valued on AOCI-adjusted book from filed statements"
     },
     {
       "ticker": "MET",
       "entity_class": "Insurer",
-      "note": "U.S. insurer; statements from SEC XBRL, valued by residual income on AOCI-adjusted book",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "dividends: the vendor bundles preferred dividends (1.703bn = the filed 1.509bn common + 0.194bn preferred); the model reads the filed common figure. The rest are not insurer-model inputs: the vendor's Other Short Term Investments row is 96.3bn of the investment portfolio, its D&A row 0.753bn against the filed 0.200bn aggregate, its operating income its own construction"
+      "why": "a U.S. life insurer, valued on AOCI-adjusted book from filed statements"
     },
     {
       "ticker": "PGR",
       "entity_class": "Insurer",
-      "note": "U.S. insurer; statements from SEC XBRL, valued by residual income on AOCI-adjusted book",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "not a model input (insurer): the vendor's Other Short Term Investments row (19.7bn) is the investment portfolio against the filed ShortTermInvestments 10.0bn"
+      "why": "a U.S. property and casualty insurer, valued on AOCI-adjusted book from filed statements"
     },
     {
       "ticker": "ALV.DE",
       "entity_class": "Insurer",
-      "note": "European insurer with no SEC filings (ALV in SEC's ticker map is Autoliv); the insurer model needs filed statements",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "insurer model requires filed-statement data"
+      "why": "a European insurer with no SEC filings; the insurer model needs filed statements"
     },
     {
       "ticker": "HDB",
       "entity_class": "Bank",
-      "note": "Indian bank ADR filing US GAAP (us-gaap, INR) on a 20-F; companyfacts carries no facts from its 2026 20-F while SEC's submissions index lists it, so by the recorded lag decision the vendor's statements are used (provider_reason names the filing and the facts' end) and the record is Ok on the vendor path as before the IFRS routing",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (March 2025); not model inputs (bank): the vendor's cash row bundles balances with banks and investments (9196bn INR) against the filed cash and equivalents; revenue: the vendor's 1839bn total revenue construction against the filed Revenues 2190bn"
+      "why": "an Indian bank ADR filing under U.S. GAAP on a 20-F, reporting in rupees"
     },
     {
       "ticker": "GS",
       "entity_class": "Bank",
-      "note": "fee-heavy investment bank; .info says Capital Markets, so only the statement ratio (0.233 on 2026-09-18) keeps it out of the generic dcf; valued by residual income",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "not a model input (bank): the vendor's Other Short Term Investments row (15.1bn) has no filed short-term-investments tag on the bank"
+      "why": "a fee-heavy investment bank: the vendor's industry label says capital markets, the statements say bank, and the declaration wins"
     },
     {
       "ticker": "MS",
       "entity_class": "Bank",
-      "note": "fee-heavy investment bank; .info says Capital Markets; ratio 0.152 on 2026-09-18 sits a knife edge above the 0.15 threshold; valued by residual income",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "not model inputs (bank): the vendor's Other Short Term Investments row (35.4bn) has no filed tag; the vendor splits borrowings into 349.4bn long-term and 21.1bn current while the filer tags LongTermDebt 341.7bn and no short-term borrowings for FY2025"
+      "why": "a fee-heavy investment bank whose net interest income sits close to the bank threshold; the declaration wins"
     },
     {
       "ticker": "KSPI",
       "entity_class": "Bank",
-      "note": "fintech; .info says Software, no NII row; KZT statements under a USD line and FRED carries no tenge series, so the pair is refused until a source is wired",
-      "lens_note": "fintech; .info says Software, no NII row on the vendor's statements. The human declaration wins.",
-      "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "fx not available for KZT/USD",
-      "cross_check_note": "not valued (fx); ebit and cash are the vendor's bank-row constructions against the filed ProfitLossFromOperatingActivities and CashAndCashEquivalents"
+      "why": "a Kazakh fintech that is a bank by its statements, reporting in tenge under a dollar listing"
     },
     {
       "ticker": "TSM",
       "entity_class": "OperatingCompany",
-      "note": "Taiwanese foundry filing IFRS (ifrs-full, TWD) on a 20-F; companyfacts carries no facts from its 2026 20-F while SEC's submissions index lists it, so by the recorded lag decision the vendor's statements are used (provider_reason names the filing and the facts' end) and the record is Ok on the vendor path as before the IFRS routing",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (FY2024): working capital -13.4bn against the filed family's 108.6bn absorbed (the vendor's line adds an accrued-expenses movement of 94.8bn TSMC tags outside the family), debt 1018.3bn against bonds plus borrowings by group 1075.4bn, cash 2.5%; read by the model: delta_nwc, cash, total_debt"
+      "why": "a Taiwanese foundry filing under IFRS on a 20-F, reporting in Taiwan dollars"
     },
     {
       "ticker": "005930.KS",
       "entity_class": "OperatingCompany",
-      "note": "Korean listing; South Korea's curve is the OECD 10y via FRED, 7y substituted and recorded",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok"
+      "why": "a Korean listing valued in won on the Korean curve"
     },
     {
       "ticker": "000660.KS",
       "entity_class": "OperatingCompany",
-      "note": "Korean listing; South Korea's curve is the OECD 10y via FRED, 7y substituted and recorded",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok"
+      "why": "a Korean listing valued in won on the Korean curve"
     },
     {
       "ticker": "SAP",
       "entity_class": "OperatingCompany",
-      "note": "German software company filing IFRS (ifrs-full, EUR) on a 20-F, the one IFRS filer whose 2026 20-F facts are in companyfacts; valued from filed statements in EUR, converted to USD on the cross-currency path",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "working capital: the IFRS adjustment family carries SAP's receivables, other assets and contract liabilities (0.367bn absorbed) while the vendor's line adds an other-working-capital item of 1.347bn no family tag names; debt: the filed Borrowings 6.150bn (LongtermBorrowings 4.550 + current 1.600) against the vendor's 5.792bn, whose Long Term Debt row of 4.194bn omits 0.356bn of the filed long-term borrowings; ebit agrees to the million"
+      "why": "a German software company filing under IFRS on a 20-F, reporting in euros under a dollar listing"
     },
     {
       "ticker": "SONY",
       "entity_class": "OperatingCompany",
-      "note": "Japanese conglomerate filing IFRS (ifrs-full, JPY) on a 20-F; companyfacts carries no facts from its 2026 20-F while SEC's submissions index lists it, so by the recorded lag decision the vendor's statements are used (provider_reason names the filing and the facts' end) and the record is Ok on the vendor path as before the IFRS routing; its legacy us-gaap facts stop at FY2021 and are not taken",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (March 2025): eight fields differ (revenue 12035bn against the filed 12957bn, debt 3599bn against 2354bn) because Sony Financial's deconsolidation in October 2025 restated the comparatives the vendor carries while the filing is as originally reported; the model reads the vendor's restated figures for the March 2026 year"
+      "why": "a Japanese conglomerate filing under IFRS on a 20-F, reporting in yen under a dollar listing"
     },
     {
       "ticker": "AZN.L",
       "entity_class": "OperatingCompany",
-      "note": "USD statements under a GBp (pence) price: both the currency and the minor-unit conversion; the UK curve applies",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok"
+      "why": "dollar statements under a pence price: the cross-currency and minor-unit path"
     },
     {
       "ticker": "SPY",
       "entity_class": "Wrapper",
-      "note": "ETF: no country",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Wrapper"
+      "why": "an exchange-traded fund: a wrapper with no country and no operating business"
     },
     {
       "ticker": "DUK",
       "entity_class": "RegulatedUtility",
-      "note": "regulated electric utility mid capex cycle; a DCF reads rate-base construction as value destruction",
-      "lens_note": "",
+      "why": "a regulated electric utility mid capex cycle; a DCF reads rate-base construction as value destruction",
       "scope_limits": [
         "fuel cost passes through revenue"
-      ],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for RegulatedUtility"
+      ]
     },
     {
       "ticker": "O",
       "entity_class": "Reit",
-      "note": "net-lease REIT; accounting EPS is dominated by depreciation; valued on the FFO-covered dividend (18): all four FFO components tagged",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok"
+      "why": "a net-lease REIT: accounting earnings are dominated by real-estate depreciation, so it is valued on the dividend FFO covers"
     },
     {
       "ticker": "FNV",
       "entity_class": "Royalty",
-      "note": "precious-metals royalty company; an AISC screen has the sign inverted for this class",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for Royalty"
+      "why": "a precious-metals royalty company; a cost screen has its sign inverted for this class"
     },
     {
       "ticker": "CRWD",
       "entity_class": "HighGrowthSoftware",
-      "note": "security software compounding revenue; a DCF whose growth reverts inside the horizon cannot see it",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for HighGrowthSoftware",
-      "cross_check_note": "not model inputs (HighGrowthSoftware): the vendor's Capital Expenditure adds 68.8m of capitalised software development (PaymentsToDevelopSoftware) to the filed 302.1m PP&E additions; its working-capital line nets the deferred contract acquisition costs the filer reports outside the IncreaseDecreaseIn tags"
+      "why": "security software compounding revenue; a DCF whose growth reverts inside the horizon cannot see it"
     },
     {
       "ticker": "PLD",
       "entity_class": "Reit",
-      "note": "industrial REIT (18); FFO from NetIncomeLossAvailableToCommonStockholdersBasic and DepreciationAndAmortization, impairment and gains not tagged since 2012 and 2018 (taken as 0, recorded); dividends as PaymentsOfDividends (common and preferred)",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "not a model input (the REIT model reads net income, D&A and dividends, which agree): the vendor's Operating Income 3414m is its own construction against the filed OperatingIncomeLoss 4358m"
+      "why": "an industrial REIT, valued on the dividend FFO covers"
     },
     {
       "ticker": "SPG",
       "entity_class": "Reit",
-      "note": "mall REIT (18); files no common-dividend payment tag after 2018 (only PaymentsOfDividendsMinorityInterest), so dividends_paid is null and the covered dividend cannot be formed; its FY2025 net income also carries gains no standard tag names",
-      "lens_note": "",
-      "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "missing statement fields",
-      "cross_check_note": "not valued (no dividend tag); not model inputs: the vendor's tax row 35.8m against the filed 20.3m and its D&A 1554m against the filed 1426m DepreciationAndAmortization (the vendor adds amortisation the filer reports elsewhere); no filed fact carries either difference"
+      "why": "a mall REIT, valued on the dividend FFO covers where its filings supply the dividend line"
     }
   ]
 }

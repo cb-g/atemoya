@@ -36,7 +36,6 @@ val signal : thresholds -> float -> Boundary_t.signal
     command line. *)
 type declaration = {
   entity_class : Boundary_t.entity_class;
-  lens_note : string;
   scope_limits : string list;
 }
 

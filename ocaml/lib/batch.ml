@@ -12,10 +12,6 @@ let contains haystack needle =
   let rec go i = i + n <= h && (String.sub haystack i n = needle || go (i + 1)) in
   n = 0 || go 0
 
-let starts_with ~prefix s =
-  String.length s >= String.length prefix
-  && String.sub s 0 (String.length prefix) = prefix
-
 let cut_at reason marker =
   let n = String.length marker in
   let rec find i =
@@ -26,14 +22,6 @@ let cut_at reason marker =
   match find 0 with Some i -> String.sub reason 0 i | None -> reason
 
 let reason_key reason = cut_at (cut_at reason " (") "; lens:"
-
-let meets_expectation (e : Reference_t.universe_entry) (v : valuation) =
-  status_name v.status = e.expected_status
-  &&
-  match (e.expected_reason, v.failed_reason) with
-  | None, _ -> true
-  | Some prefix, Some reason -> starts_with ~prefix reason
-  | Some _, None -> false
 
 (* Counts by key, most frequent first, ties by key. *)
 let count_by key items =
@@ -76,10 +64,6 @@ let flagged_fields (v : valuation) =
   match v.cross_check with
   | Some c -> List.filter_map (fun (f : field_check) -> if f.agree = Some false then Some f.field else None) c.fields
   | None -> []
-
-let entry_of universe ticker =
-  Option.bind universe (fun (u : Reference_t.universe) ->
-      List.find_opt (fun (e : Reference_t.universe_entry) -> e.ticker = ticker) u.tickers)
 
 let summary ?universe ?definitions ?stability_line (vs : valuation list) =
   let b = Buffer.create 4096 in
@@ -155,6 +139,8 @@ let summary ?universe ?definitions ?stability_line (vs : valuation list) =
         match v.cross_check with
         | None -> ()
         | Some c ->
+            (* A finding: field, filed value, vendor value, relative difference, and nothing
+               else. Never resolved by the run and never explained by a note. *)
             let flagged = List.filter (fun (f : field_check) -> f.agree = Some false) c.fields in
             Printf.bprintf b "  %-10s %s\n" v.ticker
               (String.concat "; "
@@ -164,18 +150,7 @@ let summary ?universe ?definitions ?stability_line (vs : valuation list) =
                         (match f.primary with Some x -> money x | None -> "none")
                         (match f.secondary with Some x -> money x | None -> "none")
                         (match f.relative_difference with Some d -> d *. 100. | None -> 0.))
-                    flagged));
-            let read = List.filter (fun f -> List.mem f (model_reads v.model)) (flagged_fields v) in
-            Printf.bprintf b "             %s\n"
-              (match read with
-              | [] -> "none of these is an input of the routed model"
-              | fs -> "read by the model: " ^ String.concat ", " fs);
-            let note =
-              match entry_of universe v.ticker with
-              | Some (e : Reference_t.universe_entry) when e.cross_check_note <> "" -> e.cross_check_note
-              | _ -> "uncharacterised"
-            in
-            Printf.bprintf b "             %s\n" note)
+                    flagged)))
       disagreeing
   end;
   (* What the market needs to be true, across the Ok names. *)
@@ -237,9 +212,7 @@ let summary ?universe ?definitions ?stability_line (vs : valuation list) =
       never_decay below_no_growth level_guard
   end;
   (match stability_line with Some l -> Printf.bprintf b "\n%s\n" l | None -> ());
-  Printf.bprintf b "\nper ticker%s:\n"
-    (if Option.is_some universe then " (expected from the universe file)"
-     else "");
+  Printf.bprintf b "\nper ticker:\n";
   List.iter
     (fun v ->
       let detail =
@@ -251,17 +224,10 @@ let summary ?universe ?definitions ?stability_line (vs : valuation list) =
       in
       let verdict =
         match universe with
-        | None -> ""
-        | Some _ -> (
-            match entry_of universe v.ticker with
-            | None -> "  [not in universe]"
-            | Some e ->
-                if meets_expectation e v then "  as expected"
-                else
-                  Printf.sprintf "  EXPECTED %s%s" e.expected_status
-                    (match e.expected_reason with
-                    | Some r -> " " ^ r
-                    | None -> ""))
+        | Some (u : Reference_t.universe)
+          when not (List.exists (fun (e : Reference_t.universe_entry) -> e.ticker = v.ticker) u.tickers) ->
+            "  [not in universe]"
+        | _ -> ""
       in
       Printf.bprintf b "  %-10s %-7s %-18s %s%s\n" v.ticker
         (status_name v.status) (class_label v.entity_class) detail verdict)

@@ -390,12 +390,8 @@ class UniverseEntry:
 
     ticker: str
     entity_class: str
-    note: str
-    expected_status: str
-    lens_note: str = field(default_factory=lambda: "")
+    why: str
     scope_limits: List[str] = field(default_factory=lambda: [])
-    expected_reason: Optional[str] = None
-    cross_check_note: str = field(default_factory=lambda: "")
 
     @classmethod
     def from_json(cls, x: Any) -> 'UniverseEntry':
@@ -403,12 +399,8 @@ class UniverseEntry:
             return cls(
                 ticker=_atd_read_string(x['ticker']) if 'ticker' in x else _atd_missing_json_field('UniverseEntry', 'ticker'),
                 entity_class=_atd_read_string(x['entity_class']) if 'entity_class' in x else _atd_missing_json_field('UniverseEntry', 'entity_class'),
-                note=_atd_read_string(x['note']) if 'note' in x else _atd_missing_json_field('UniverseEntry', 'note'),
-                expected_status=_atd_read_string(x['expected_status']) if 'expected_status' in x else _atd_missing_json_field('UniverseEntry', 'expected_status'),
-                lens_note=_atd_read_string(x['lens_note']) if 'lens_note' in x else "",
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('UniverseEntry', 'why'),
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
-                expected_reason=_atd_read_string(x['expected_reason']) if 'expected_reason' in x else None,
-                cross_check_note=_atd_read_string(x['cross_check_note']) if 'cross_check_note' in x else "",
             )
         else:
             _atd_bad_json('UniverseEntry', x)
@@ -417,13 +409,8 @@ class UniverseEntry:
         res: Dict[str, Any] = {}
         res['ticker'] = _atd_write_string(self.ticker)
         res['entity_class'] = _atd_write_string(self.entity_class)
-        res['note'] = _atd_write_string(self.note)
-        res['expected_status'] = _atd_write_string(self.expected_status)
-        res['lens_note'] = _atd_write_string(self.lens_note)
+        res['why'] = _atd_write_string(self.why)
         res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
-        if self.expected_reason is not None:
-            res['expected_reason'] = _atd_write_string(self.expected_reason)
-        res['cross_check_note'] = _atd_write_string(self.cross_check_note)
         return res
 
     @classmethod

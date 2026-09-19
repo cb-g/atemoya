@@ -561,7 +561,6 @@ type valuation = {
   model : model nullable;                 (* the model the record was routed to *)
   class_check : class_check nullable;
   floor : floor;
-  lens_note : string;                     (* free text from the declaration; may be empty *)
   scope_limits : string list;             (* what the models cannot see for this name, verbatim from the declaration *)
   statements_provider : string;           (* the provider decision, on every record *)
   ~taxonomy : string;                     (* us-gaap | ifrs-full on filed statements; empty otherwise (13) *)

@@ -22,7 +22,7 @@ flowchart TD
     THR -- "stale / future / missing" --> PFAIL
 
     THR -- yes --> SIG["statement signature: Bank iff NII/revenue >= threshold, else Insurer iff premium row > 0, else none"]
-    SIG --> DECL{"entity_class declared? (universe entry or --entity-class)"}
+    SIG --> DECL{"entity_class declared? (a universe entry, exactly ticker, entity_class, why and scope_limits, loaded strictly; or --entity-class)"}
     DECL -- "no, no signature" --> F_UNDECL["entity_class not declared"]:::failed
     DECL -- "no, signature fired" --> F_UNDECL_HINT["entity_class not declared; statements indicate (Bank|Insurer) (evidence)"]:::failed
     DECL -- "declared OperatingCompany, signature fired" --> F_DISAGREE["class disagreement: declared OperatingCompany, statements indicate (Bank|Insurer) (evidence)"]:::failed
@@ -140,16 +140,19 @@ flowchart TD
     F_NONPOS --> FLOOR
     F_BOUND --> FLOOR
     IMPLIED --> RECORD
-    FLOOR["floor: present = true (verified), false (PreProfit, Ballast by definition), null (not assessable here), with basis from the admissibility row; scope_limits and lens_note verbatim from the declaration"] --> RECORD[/"record: one line in output/valuations.jsonl; summary groups Failed by reason and inadmissible by class"/]
+    FLOOR["floor: present = true (verified), false (PreProfit, Ballast by definition), null (not assessable here), with basis from the admissibility row; scope_limits verbatim from the declaration"] --> RECORD[/"record: one line in output/valuations.jsonl; summary groups Failed by reason and inadmissible by class; whether anything changed since the last run, and why, is the baseline diff (--baseline, --baseline-snapshot), the acceptance mechanism of every change, never a stored expectation"/]
 ```
 
 ## Reading the chart against a run
 
 `output/summary.txt` lists each ticker's `failed_reason`; find the same string here to see
 which branch produced it. Reason text with numbers or names in it is shown with the
-variable part in parentheses. Every `Failed` record still carries `floor`, `scope_limits`
-and `lens_note`, so the floor node applies to all red terminals, not only the ones drawn
-into it.
+variable part in parentheses. Every `Failed` record still carries `floor` and
+`scope_limits`, so the floor node applies to all red terminals, not only the ones drawn
+into it. The universe file declares and does not remember: a run's outcomes live in its
+records, and the acceptance of any change is the run diff against the previous run
+(`--baseline`), with every moved input classified against the previous snapshot
+(`--baseline-snapshot`).
 
 ## Changelog
 
@@ -187,3 +190,6 @@ into it.
 - share counts and point-in-time recoveries (19): two share definitions (a period's weighted-average diluted count for any flow
   per share, a point count for market cap), the point-in-time balance-sheet fallback and
   the same-period vendor check. No new `Failed` string; two reworded.
+- universe declares only (20): the universe entry is exactly ticker, entity_class, why and
+  scope_limits, loaded strictly; the expectation check and the note echo leave the batch;
+  the record loses its per-name lens text. No new `Failed` string.

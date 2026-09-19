@@ -11,7 +11,6 @@ let signal t margin_of_safety : signal =
 
 type declaration = {
   entity_class : entity_class;
-  lens_note : string;
   scope_limits : string list;
 }
 
@@ -164,11 +163,7 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
   let filing_age_days =
     match filing_age with Some (Ok n) -> Some n | _ -> None
   in
-  let lens_note, scope_limits =
-    match declaration with
-    | Some d -> (d.lens_note, d.scope_limits)
-    | None -> ("", [])
-  in
+  let scope_limits = match declaration with Some d -> d.scope_limits | None -> [] in
   (* [fin] is the record the model saw: the original, or its converted copy. *)
   let record ~(fin : financials) ?model ?class_check ?inputs ?fair_value ?margin_of_safety
       ?signal ?failed_reason ~price ~status ~floor () =
@@ -185,7 +180,6 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
       model;
       class_check;
       floor;
-      lens_note;
       scope_limits;
       statements_provider = original.provider;
       taxonomy = original.taxonomy;

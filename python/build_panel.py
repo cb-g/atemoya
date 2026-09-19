@@ -28,7 +28,7 @@ from pathlib import Path
 
 import fetch
 import pit
-import reference
+import universe as universe_file
 import yfinance as yf
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -76,7 +76,7 @@ def main(argv: list[str]) -> int:
     if not binary.exists():
         print(f"{binary} not built: run dune build first", file=sys.stderr)
         return 2
-    tickers = [e.ticker for e in reference.Universe.from_json_string(universe_path.read_text()).tickers]
+    tickers = [e.ticker for e in universe_file.load(universe_path).tickers]
     sec = fetch.SecContext()
     histories: dict[str, pit.History] = {}
     quotes: dict[str, tuple[fetch.Quote | None, fetch.Profile | None]] = {}

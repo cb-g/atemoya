@@ -247,8 +247,7 @@ let params : Params.t =
             "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit", "as_of": "2026-08-01", "quoted": 1.3, "usd_per_unit": 1.3}}}|};
   }
 
-let declaration ?(lens_note = "") ?(scope_limits = []) entity_class =
-  { Valuation.entity_class; lens_note; scope_limits }
+let declaration ?(scope_limits = []) entity_class = { Valuation.entity_class; scope_limits }
 
 (* Most valuation tests declare an operating company; the class tests declare otherwise. *)
 let run ?(declared = Some (declaration `OperatingCompany)) fin =
@@ -789,7 +788,7 @@ let check_floor name (v : Boundary_t.valuation) present =
 let test_inadmissible_refuses_with_lens () =
   (* Full generic statement fields present: the dcf could run, and must not. *)
   let v =
-    run ~declared:(Some (declaration ~lens_note:"note" ~scope_limits:[ "a"; "b" ] `Wrapper))
+    run ~declared:(Some (declaration ~scope_limits:[ "a"; "b" ] `Wrapper))
       (financials (history ()))
   in
   check_reason v [ "dcf not admissible for Wrapper"; "lens: NAV premium or discount" ];
@@ -799,7 +798,6 @@ let test_inadmissible_refuses_with_lens () =
   Alcotest.(check bool) "inputs never computed" true (Option.is_none v.inputs);
   check_floor "wrapper" v None;
   check_mentions "floor basis" v.floor.basis [ "NAV per unit" ];
-  Alcotest.(check string) "lens_note carried" "note" v.lens_note;
   Alcotest.(check (list string)) "scope_limits carried" [ "a"; "b" ] v.scope_limits;
   match v.class_check with
   | None -> Alcotest.fail "no class_check evidence"
@@ -900,7 +898,7 @@ let test_table_and_variant_agree () =
   Alcotest.(check (option entity_class)) "parser rejects unknown" None
     (Admissibility.class_of_string "Conglomerate");
   let u =
-    Atdgen_runtime.Util.Json.from_file Reference_j.read_universe "../../reference/universe.json"
+    get (Universe.load "../../reference/universe.json")
   in
   List.iter
     (fun (e : Reference_t.universe_entry) ->
@@ -1525,17 +1523,14 @@ let test_summary_definitions_and_cross_check_listing () =
     [ "field definitions (reference/field_definitions.json, as_of 2026-09-19): cash = cash_and_short_term_investments; total_debt = financial_debt_excluding_operating_leases; delta_nwc = cash_flow_statement_change_in_operating_working_capital; ebit = operating_income_else_pretax_plus_interest";
       "cross-check: 1 of 1 filed-statement records disagree";
       "  on a field the routed model reads: 1 of 1 (TEST)";
-      "  TEST       cash filed 36 vendor 54.7 (34.2%)"; "read by the model: cash"; "uncharacterised" ];
+      "  TEST       cash filed 36 vendor 54.7 (34.2%)" ];
   let bank = run ~declared:(Some (declaration `Bank)) (filed ~cross_check:a_cross_check [ bank_period () ]) in
-  check_mentions "a flag off the model's inputs" (Batch.summary [ bank ])
-    [ "on a field the routed model reads: 0 of 1\n"; "none of these is an input of the routed model" ];
-  let universe =
-    Reference_j.universe_of_string
-      {|{"tickers": [{"ticker": "TEST", "entity_class": "OperatingCompany", "note": "ok", "expected_status": "Ok",
-                      "cross_check_note": "vendor lag: the vendor still shows the prior filing's cash"}]}|}
-  in
-  check_mentions "characterised" (Batch.summary ~universe [ primary ])
-    [ "             vendor lag: the vendor still shows the prior filing's cash" ];
+  check_mentions "a flag off the model's inputs" (Batch.summary [ bank ]) [ "on a field the routed model reads: 0 of 1\n" ];
+  (* a disagreement is listed with its values and nothing else: no free text *)
+  let lines = String.split_on_char '\n' s in
+  let flag_line = List.find (fun l -> contains l "TEST       cash filed 36 vendor 54.7 (34.2%)") lines in
+  Alcotest.(check string) "the flag line is values only" "  TEST       cash filed 36 vendor 54.7 (34.2%)" flag_line;
+  if contains s "uncharacterised" || contains s "read by the model" then Alcotest.fail "free text beside a cross-check flag";
   if contains (Batch.summary [ run (financials (history ())) ]) "field definitions" then
     Alcotest.fail "definitions line without definitions"
 
@@ -2033,12 +2028,13 @@ let test_reit_routes_and_implied () =
 
 let test_batch_summary () =
   let universe =
-    Reference_j.universe_of_string
-      {|{"tickers": [
-          {"ticker": "TEST", "entity_class": "OperatingCompany", "note": "ok", "expected_status": "Ok"},
-          {"ticker": "WRP", "entity_class": "Wrapper", "note": "wrapper", "expected_status": "Failed", "expected_reason": "dcf not admissible for Wrapper"},
-          {"ticker": "WRONG", "entity_class": "OperatingCompany", "note": "expects ok", "expected_status": "Ok"},
-          {"ticker": "ABSENT", "entity_class": "Wrapper", "note": "never run", "expected_status": "Ok"}]}|}
+    get
+      (Universe.load_string
+         {|{"tickers": [
+          {"ticker": "TEST", "entity_class": "OperatingCompany", "why": "a plain operating company"},
+          {"ticker": "WRP", "entity_class": "Wrapper", "why": "a fund"},
+          {"ticker": "WRONG", "entity_class": "OperatingCompany", "why": "a plain operating company"},
+          {"ticker": "ABSENT", "entity_class": "Wrapper", "why": "a fund", "scope_limits": ["never run"]}]}|})
   in
   let rename t (v : Boundary_t.valuation) = { v with ticker = t } in
   let vs =
@@ -2052,9 +2048,21 @@ let test_batch_summary () =
   check_mentions "summary" s
     [ "3 records, 1 Ok, 2 Failed"; "by class: OperatingCompany 2, Wrapper 1";
       "1  dcf not admissible for Wrapper"; "1  no fiscal periods in statements";
-      "TEST       Ok      OperatingCompany   fair_value"; "as expected";
-      "WRONG      Failed  OperatingCompany   no fiscal periods in statements  EXPECTED Ok";
+      "TEST       Ok      OperatingCompany   fair_value";
+      "WRONG      Failed  OperatingCompany   no fiscal periods in statements";
       "in the universe but not run: ABSENT" ];
+  if contains s "EXPECTED" || contains s "as expected" then Alcotest.fail "the summary judged a run against a stored expectation";
+  check_mentions "a ticker outside the universe is marked" (Batch.summary ~universe [ rename "ELSE" (run (financials (history ()))) ]) [ "[not in universe]" ];
+  (* the strict loader: an unknown field, a missing why, an unknown class *)
+  let reject text needles = match Universe.load_string text with Ok _ -> Alcotest.fail "loaded" | Error e -> check_mentions "load error" e needles in
+  reject {|{"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "outcome": "Ok"}]}|} [ "universe entry X carries unknown field(s) outcome"; "exactly ticker, entity_class, why, scope_limits" ];
+  reject {|{"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "note": "n", "finding": "f"}]}|} [ "unknown field(s) note, finding" ];
+  reject {|{"tickers": [{"ticker": "X", "entity_class": "Bank"}]}|} [ "universe entry X lacks why" ];
+  reject {|{"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "  "}]}|} [ "lacks why" ];
+  reject {|{"tickers": [{"ticker": "X", "entity_class": "Hedge", "why": "a fund"}]}|} [ "declares unknown class \"Hedge\"" ];
+  reject {|{"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "scope_limits": "x"}]}|} [ "scope_limits must be a list of strings" ];
+  reject {|{"names": []}|} [ "no tickers list" ];
+  Alcotest.(check bool) "the tracked file loads strictly" true (Result.is_ok (Universe.load "../../reference/universe.json"));
   Alcotest.(check string) "reason key drops specifics" "risk_free_rate for Germany/7y"
     (Batch.reason_key "risk_free_rate for Germany/7y (as_of 2026-06-05) is 97 days old");
   Alcotest.(check string) "reason key groups refusals by class" "dcf not admissible for Bank"

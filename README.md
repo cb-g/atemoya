@@ -71,9 +71,9 @@ with its basis) that gates nothing. A name whose statements and price are in dif
 currencies is converted at one recorded FX rate (statement totals, never per-share
 fields) and valued in the trading currency with that currency's country's rates plus the
 domicile's country risk premium; prices quoted in pence or cents are converted to the
-major unit at the fetch. With `--out`, the summary checks each ticker against
-the expected outcome in the universe file; a deviation there is a finding, not something
-to tune away.
+major unit at the fetch. The universe file declares only: ticker, class, why, and what no
+model can see; it is loaded strictly. Whether a change moved anything is answered by the
+run diff against the previous run, never by a stored expectation.
 Filed statements come in the taxonomy the filer uses (us-gaap or ifrs-full, each a
 section of `reference/xbrl_tags.json`) and in the currency the facts carry, which the
 record names as its statement currency and which must agree with the vendor's, else the
