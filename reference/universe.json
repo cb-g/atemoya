@@ -26,16 +26,17 @@
       "note": "plain U.S. non-financial",
       "lens_note": "DCF at lambda 0.25 assumes a ~3-year growth half-life; the market assumes longer. Reclassify to HighGrowthSoftware if that is the judgment.",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Ok",
+      "cross_check_note": "vendor omits the 2.0bn current portion of long-term debt (LongTermDebtCurrent) it carries no row for; on working capital the vendor's payables-and-accrued line exceeds the filed IncreaseDecreaseInAccruedLiabilities by 0.9bn (13.838 vs 12.939bn) and no filed fact carries the difference: unexplained"
     },
     {
       "ticker": "JNJ",
       "entity_class": "OperatingCompany",
-      "note": "plain U.S. non-financial; statements are filed (SEC XBRL) and Johnson & Johnson last tagged OperatingIncomeLoss in FY2014, so the dcf's ebit is absent and there is no per-field fallback to the vendor",
+      "note": "plain U.S. non-financial; statements are filed (SEC XBRL); Johnson & Johnson last tagged OperatingIncomeLoss in FY2014, so ebit follows the pretax_plus_interest recipe from filed tags (recorded as ebit_recipe), which carries FY2025's 7.2bn other non-operating income",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "missing statement fields"
+      "expected_status": "Ok",
+      "cross_check_note": "ebit is the pretax_plus_interest recipe, carrying the 7.209bn OtherNonoperatingIncomeExpense (largely the talc accrual reversal) and 1.056bn interest income the vendor's operating income excludes (the known approximation); capex: the vendor's row exceeds the filed PaymentsToAcquirePropertyPlantAndEquipment by 0.385bn and no filed fact carries it: unexplained"
     },
     {
       "ticker": "KO",
@@ -43,7 +44,8 @@
       "note": "plain U.S. non-financial with negative net interest income",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Ok",
+      "cross_check_note": "ebit: the vendor's Operating Income (14.911bn) sits 1.149bn above the filed OperatingIncomeLoss, the company's own operating income line; unexplained by a filed fact. cash: the known residual of the first-present rule, Coca-Cola's 1.934bn MarketableSecurities line beside its 3.602bn OtherShortTermInvestments, which the vendor sums"
     },
     {
       "ticker": "COST",
@@ -64,11 +66,11 @@
     {
       "ticker": "CVX",
       "entity_class": "OperatingCompany",
-      "note": "oil & gas, stays Generic; statements are filed (SEC XBRL) and Chevron tags no OperatingIncomeLoss, so the dcf's ebit is absent and there is no per-field fallback to the vendor",
+      "note": "oil & gas, stays Generic; statements are filed (SEC XBRL); Chevron tags no OperatingIncomeLoss, so ebit follows the pretax_plus_interest recipe from filed tags (recorded as ebit_recipe), which carries its 3.0bn equity-affiliate earnings",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "missing statement fields"
+      "expected_status": "Ok",
+      "cross_check_note": "vendor error on debt: the filed DebtCurrent is 10.918bn (the balance sheet's short-term debt, 10-K filed 2026-02-24) against the vendor's 0.191bn Current Debt; ebit is the pretax_plus_interest recipe carrying 3.0bn equity-affiliate earnings and 1.3bn other income against the vendor's operating income (the known approximation); revenue: the filed Revenues tag (189.0bn, total revenues and other income) is taken before RevenueFromContractWithCustomerExcludingAssessedTax (184.4bn), which the vendor uses; a tag-order question for the revenue field, outside this file's four"
     },
     {
       "ticker": "JPM",
@@ -76,16 +78,17 @@
       "note": "U.S. bank; valued by residual income",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Ok",
+      "cross_check_note": "not a model input (bank): the vendor's Other Short Term Investments row on a bank is its 499.5bn securities portfolio; the filer's cash is the restricted-inclusive total less 29.0bn RestrictedCashAndCashEquivalents"
     },
     {
       "ticker": "BAC",
       "entity_class": "Bank",
-      "note": "U.S. bank; statements are filed (SEC XBRL) and Bank of America's companyfacts carry no annual common-dividend fact after 2013 (PaymentsOfDividends stops at FY2013, PaymentsOfDividendsCommonStock is not filed), so retention is not derivable",
+      "note": "U.S. bank; statements are filed (SEC XBRL); Bank of America's PaymentsOfDividends stops at FY2013 and it never files PaymentsOfDividendsCommonStock, so dividends come from PaymentsOfOrdinaryDividends (common and preferred, as the other banks' PaymentsOfDividends), recorded as the row",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "payout not derivable"
+      "expected_status": "Ok",
+      "cross_check_note": "not model inputs (bank): the vendor's Other Short Term Investments row on a bank is its 386.8bn securities portfolio, which no filed short-term-investments tag matches; for debt the filer tags its 48.1bn short-term borrowings line as OtherShortTermBorrowings and the 20.4bn commercial paper inside it separately, and the definition's first-present order takes the commercial paper"
     },
     {
       "ticker": "NU",
@@ -118,7 +121,8 @@
       "note": "U.S. insurer; statements from SEC XBRL, valued by residual income on AOCI-adjusted book",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Ok",
+      "cross_check_note": "vendor bundles preferred dividends: its Cash Dividends Paid 1.153bn = the filed PaymentsOfDividendsCommonStock 1.036bn + PaymentsOfDividendsPreferredStockAndPreferenceStock 0.117bn; the model reads the filed common figure"
     },
     {
       "ticker": "MET",
@@ -126,7 +130,8 @@
       "note": "U.S. insurer; statements from SEC XBRL, valued by residual income on AOCI-adjusted book",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Ok",
+      "cross_check_note": "dividends: the vendor bundles preferred dividends (1.703bn = the filed 1.509bn common + 0.194bn preferred); the model reads the filed common figure. The rest are not insurer-model inputs: the vendor's Other Short Term Investments row is 96.3bn of the investment portfolio, its D&A row 0.753bn against the filed 0.200bn aggregate, its operating income its own construction"
     },
     {
       "ticker": "PGR",
@@ -134,7 +139,8 @@
       "note": "U.S. insurer; statements from SEC XBRL, valued by residual income on AOCI-adjusted book",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Ok",
+      "cross_check_note": "not a model input (insurer): the vendor's Other Short Term Investments row (19.7bn) is the investment portfolio against the filed ShortTermInvestments 10.0bn"
     },
     {
       "ticker": "ALV.DE",
@@ -159,7 +165,8 @@
       "note": "fee-heavy investment bank; .info says Capital Markets, so only the statement ratio (0.233 on 2026-09-18) keeps it out of the generic dcf; valued by residual income",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Ok",
+      "cross_check_note": "not a model input (bank): the vendor's Other Short Term Investments row (15.1bn) has no filed short-term-investments tag on the bank"
     },
     {
       "ticker": "MS",
@@ -167,7 +174,8 @@
       "note": "fee-heavy investment bank; .info says Capital Markets; ratio 0.152 on 2026-09-18 sits a knife edge above the 0.15 threshold; valued by residual income",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Ok",
+      "cross_check_note": "not model inputs (bank): the vendor's Other Short Term Investments row (35.4bn) has no filed tag; the vendor splits borrowings into 349.4bn long-term and 21.1bn current while the filer tags LongTermDebt 341.7bn and no short-term borrowings for FY2025"
     },
     {
       "ticker": "KSPI",
@@ -271,7 +279,8 @@
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "dcf not admissible for HighGrowthSoftware"
+      "expected_reason": "dcf not admissible for HighGrowthSoftware",
+      "cross_check_note": "not model inputs (HighGrowthSoftware): the vendor's Capital Expenditure adds 68.8m of capitalised software development (PaymentsToDevelopSoftware) to the filed 302.1m PP&E additions; its working-capital line nets the deferred contract acquisition costs the filer reports outside the IncreaseDecreaseIn tags"
     }
   ]
 }

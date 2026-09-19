@@ -1,0 +1,203 @@
+{
+  "source": "one definition per statement field, applied identically to filed statements (SEC XBRL companyfacts, us-gaap tags) and to the vendor feed (yfinance 1.7.0 rows); components verified against the universe's FY2025 filings and vendor statements on 2026-09-19",
+  "as_of": "2026-09-19",
+  "notes": [
+    "This file is the only place cash, total_debt, delta_nwc and ebit are defined. python/fetch.py reads the vendor rows from it, python/fetch_sec.py the us-gaap tags, and every record's fiscal periods carry a composition per field naming the definition and the components summed; the valuation refuses a record whose composition names a definition this file does not.",
+    "Within each list the first present entry wins; 'first complete' means every entry of an alternative must be present. A component absent on both providers is absent, never a substituted zero; only the optional components (short-term investments, short-term borrowings, the current portion of debt on the vendor) may be missing without failing the field.",
+    "The cross-check (reference/xbrl_tags.json cross_check_threshold) compares the two providers on the same definitions, so what it still flags is a vendor row that is wrong, lagging or built from a different filed line, never a definitional gap."
+  ],
+  "cash": {
+    "name": "cash_and_short_term_investments",
+    "why": "A DCF nets debt against non-operating financial assets, and a company's short-term or marketable securities are exactly that; cash-equivalents-only understated equity value on every name that parks its liquidity in securities (Apple by 18.8bn, Microsoft by 55.9bn, Alphabet by 96.1bn at their FY2025 ends). Restricted cash is not available to pay debt: when a filer tags only the total that includes it, the restricted components it tags are deducted (Chevron: 7.285bn less 0.174bn current and 0.818bn noncurrent = 6.293bn, the vendor's balance-sheet cash). The investment tags are taken first-present, not summed, because they overlap for some filers (Apple has tagged both MarketableSecuritiesCurrent and AvailableForSaleSecuritiesDebtSecuritiesCurrent); Coca-Cola files short-term investments (OtherShortTermInvestments 3.602bn) and marketable securities (MarketableSecurities 1.934bn) on separate lines and the vendor sums both, so its cross-check gap of 1.9bn is a known residual of the first-present rule.",
+    "xbrl": {
+      "cash_equivalents": [
+        "CashAndCashEquivalentsAtCarryingValue",
+        "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"
+      ],
+      "restricted_inclusive": [
+        "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"
+      ],
+      "restricted_cash": [
+        [
+          "RestrictedCashAndCashEquivalents"
+        ],
+        [
+          "RestrictedCash"
+        ],
+        [
+          "RestrictedCashCurrent",
+          "RestrictedCashNoncurrent"
+        ]
+      ],
+      "short_term_investments": [
+        "ShortTermInvestments",
+        "OtherShortTermInvestments",
+        "MarketableSecuritiesCurrent",
+        "AvailableForSaleSecuritiesDebtSecuritiesCurrent"
+      ]
+    },
+    "vendor": {
+      "cash_equivalents": [
+        "Cash And Cash Equivalents"
+      ],
+      "short_term_investments": [
+        "Other Short Term Investments"
+      ],
+      "not_used": [
+        "Cash Cash Equivalents And Short Term Investments"
+      ],
+      "notes": [
+        "The vendor's own subtotal row equals the two components on every name checked (Apple 35.934 + 18.763 = 54.697bn, Coca-Cola 10.270 + 5.536 = 15.806bn) and is not read, so that both providers record the same two components."
+      ]
+    }
+  },
+  "total_debt": {
+    "name": "financial_debt_excluding_operating_leases",
+    "why": "Financial debt only: long-term debt (current and non-current portions) plus commercial paper and other short-term borrowings. Operating lease liabilities are excluded: under ASC 842 they sit on the balance sheet, but their cost is already inside operating expense, so EBIT and FCFF already bear it and adding the liability to debt as well double-counts (Microsoft 21.9bn, Alphabet 16.0bn, Costco 2.7bn at FY2025). Finance leases stay when the filer folds them into its debt tag (Coca-Cola's and Chevron's LongTermDebtAndCapitalLeaseObligations). The vendor's Total Debt row is not used: it is Long Term Debt + Current Debt + its two lease rows on all 31 names with a balance sheet, and those lease rows carry the operating lease liability for Microsoft (16.532bn = OperatingLeaseLiabilityNoncurrent), Alphabet (12.744bn) and Costco (2.460bn). The vendor's Current Debt already contains Commercial Paper (Apple: 7.979 + 12.350 Other Current Borrowings = 20.329bn), so commercial paper is never added on top of it.",
+    "xbrl": {
+      "noncurrent": [
+        "LongTermDebtNoncurrent",
+        "LongTermDebtAndCapitalLeaseObligations"
+      ],
+      "current_total": [
+        "DebtCurrent"
+      ],
+      "current_long_term": [
+        "LongTermDebtCurrent",
+        "LongTermDebtAndCapitalLeaseObligationsCurrent"
+      ],
+      "short_term_borrowings": [
+        "ShortTermBorrowings",
+        "CommercialPaper",
+        "OtherShortTermBorrowings"
+      ],
+      "total_including_current": [
+        "LongTermDebt"
+      ],
+      "excluded": [
+        "OperatingLeaseLiability",
+        "OperatingLeaseLiabilityNoncurrent",
+        "OperatingLeaseLiabilityCurrent"
+      ],
+      "notes": [
+        "Recipes, first complete wins: (1) noncurrent + current_total, when the filer tags all debt due within a year as one line (Johnson & Johnson 39.438 + 8.500bn, Chevron 39.781 + 10.918bn); (2) noncurrent + current_long_term, plus short_term_borrowings when tagged (Apple 78.328 + 12.350 + 7.979bn, Microsoft 31.067 + 9.227bn, Coca-Cola 42.119 + 1.822 + 1.495bn); (3) total_including_current, plus short_term_borrowings when tagged. DebtCurrent is the us-gaap sum of the current portion of long-term debt, finance leases due within a year and short-term borrowings, so it is never combined with the other current tags."
+      ]
+    },
+    "vendor": {
+      "long_term_debt": [
+        "Long Term Debt"
+      ],
+      "current_debt": [
+        "Current Debt"
+      ],
+      "current_debt_components": [
+        "Commercial Paper",
+        "Other Current Borrowings"
+      ],
+      "not_used": [
+        "Total Debt",
+        "Long Term Capital Lease Obligation",
+        "Current Capital Lease Obligation"
+      ],
+      "notes": [
+        "Long Term Debt is required; Current Debt is added when the row exists, else the sum of its components when either exists; a name whose vendor statements show no current debt row at all (Alphabet, Costco at FY2025) carries the long-term row alone and the composition says so. The vendor's Long Term Debt excludes finance leases where it shows them separately (Chevron 39.122bn against the filed 39.781bn that folds in 0.659bn of finance leases), a residual the cross-check reports."
+      ]
+    }
+  },
+  "delta_nwc": {
+    "name": "cash_flow_statement_change_in_operating_working_capital",
+    "why": "The cash-flow statement's change in operating assets and liabilities is the filed number for cash absorbed by working capital and the conventional FCFF input; the balance-sheet reconstruction used before missed reclassifications, acquisitions and FX (Apple: reconstructed -0.26bn against the filed 25.0bn for FY2025). Positive = cash absorbed. Sign convention, verified on Coca-Cola's FY2025 filing where the aggregate and the components are both tagged: us-gaap IncreaseDecreaseIn<asset> is positive when the asset grows (an outflow, added) and IncreaseDecreaseIn<liability> is positive when the liability grows (an inflow, subtracted); -0.334 + 0.154 + 0.388 + 6.612 + 0.558 - 0.170 = 7.208bn, the filed IncreaseDecreaseInOperatingCapital. The component sum is attempted only when every IncreaseDecreaseIn* tag the filer carries for the period is classified here (asset, liability or excluded); an unclassified tag leaves the field null with a note naming it, so a bank's deposits or an insurer's reserves never become a partial working-capital number. Averaged over at least two periods by the model.",
+    "xbrl": {
+      "aggregate": [
+        "IncreaseDecreaseInOperatingCapital"
+      ],
+      "asset_components": [
+        "IncreaseDecreaseInAccountsReceivable",
+        "IncreaseDecreaseInAccountsAndNotesReceivable",
+        "IncreaseDecreaseInReceivables",
+        "IncreaseDecreaseInOtherReceivables",
+        "IncreaseDecreaseInAccountsAndOtherReceivables",
+        "IncreaseDecreaseInLongTermReceivablesCurrent",
+        "IncreaseDecreaseInInventories",
+        "IncreaseDecreaseInPrepaidDeferredExpenseAndOtherAssets",
+        "IncreaseDecreaseInPrepaidExpense",
+        "IncreaseDecreaseInOtherOperatingAssets",
+        "IncreaseDecreaseInOtherCurrentAssets",
+        "IncreaseDecreaseInOtherNoncurrentAssets",
+        "IncreaseDecreaseInAccountsReceivableAndOtherOperatingAssets",
+        "IncreaseDecreaseInDeferredCharges",
+        "IncreaseDecreaseInTimeDeposits",
+        "IncreaseDecreaseInContractWithCustomerAsset",
+        "IncreaseDecreaseInOtherOperatingCapitalNet"
+      ],
+      "liability_components": [
+        "IncreaseDecreaseInAccountsPayable",
+        "IncreaseDecreaseInAccountsPayableAndAccruedLiabilities",
+        "IncreaseDecreaseInAccruedLiabilities",
+        "IncreaseDecreaseInAccruedLiabilitiesAndOtherOperatingLiabilities",
+        "IncreaseDecreaseInOtherAccruedLiabilities",
+        "IncreaseDecreaseInOtherAccountsPayableAndAccruedLiabilities",
+        "IncreaseDecreaseInAccruedIncomeTaxesPayable",
+        "IncreaseDecreaseInAccruedTaxesPayable",
+        "IncreaseDecreaseInIncomeTaxes",
+        "IncreaseDecreaseInIncomeTaxesPayableNetOfIncomeTaxesReceivable",
+        "IncreaseDecreaseInContractWithCustomerLiability",
+        "IncreaseDecreaseInDeferredRevenue",
+        "IncreaseDecreaseInOtherOperatingLiabilities",
+        "IncreaseDecreaseInOtherCurrentLiabilities",
+        "IncreaseDecreaseInOtherNoncurrentLiabilities",
+        "IncreaseDecreaseInEmployeeRelatedLiabilities",
+        "IncreaseDecreaseInOperatingLeaseLiability"
+      ],
+      "excluded": [
+        "IncreaseDecreaseInDeferredIncomeTaxes",
+        "IncreaseDecreaseInDeferredLiabilities",
+        "IncreaseDecreaseInPensionPlanObligations",
+        "IncreaseDecreaseInRestrictedCash",
+        "IncreaseDecreaseInOutstandingChecksFinancingActivities"
+      ],
+      "notes": [
+        "IncreaseDecreaseInOtherOperatingCapitalNet is a net asset (operating assets less operating liabilities), so it is added: Costco FY2025 -0.559 (inventories) + 0.404 x -1 (payables) + -0.801 (other, net) = -1.764bn, the vendor's line to the million.",
+        "Apple, Microsoft, Alphabet, Johnson & Johnson and Costco tag components only; Coca-Cola and Chevron tag the aggregate. Chevron's aggregate (0.718bn) excludes the deferred charges and long-term receivables the vendor bundles into its line (1.648bn); the aggregate is the filed operating working capital line and wins.",
+        "excluded: deferred tax and pension movements, restricted cash, and Costco's FY2021 IncreaseDecreaseInOutstandingChecksFinancingActivities (a financing flow by its own name) are recognised so they do not block the sum, and never enter it."
+      ]
+    },
+    "vendor": {
+      "change_in_working_capital": [
+        "Change In Working Capital"
+      ],
+      "sign": -1.0,
+      "notes": [
+        "The vendor's line is the same cash-flow statement figure with the statement's sign (a release positive), flipped to the boundary's (an increase positive)."
+      ]
+    }
+  },
+  "ebit": {
+    "name": "operating_income_else_pretax_plus_interest",
+    "recipes": [
+      "operating_income",
+      "pretax_plus_interest"
+    ],
+    "why": "Operating income as filed or reported. When the filer tags no OperatingIncomeLoss (Chevron never has; Johnson & Johnson not since FY2014), EBIT is derived from filed tags, never from the vendor: pretax income (the record's canonical pretax_income) plus interest expense. Non-operating income remains inside the result, a known approximation recorded as ebit_recipe = pretax_plus_interest with both components: for FY2025 it carries Johnson & Johnson's 7.209bn other non-operating income (largely the reversal of the talc litigation accrual) and Chevron's 3.0bn equity-affiliate earnings, so the cross-check against the vendor's operating income flags both and the summary names them. The vendor path follows the same two recipes with its Operating Income, Pretax Income and Interest Expense rows.",
+    "xbrl": {
+      "operating_income": [
+        "OperatingIncomeLoss"
+      ],
+      "interest_expense": [
+        "InterestExpense",
+        "InterestExpenseNonoperating",
+        "InterestExpenseDebt",
+        "InterestAndDebtExpense"
+      ]
+    },
+    "vendor": {
+      "operating_income": [
+        "Operating Income"
+      ],
+      "interest_expense": [
+        "Interest Expense",
+        "Interest Expense Non Operating"
+      ]
+    }
+  }
+}

@@ -1135,6 +1135,73 @@ class GrowthSource:
 
 
 @dataclass
+class Component:
+    """Original type: component = { ... }
+    """
+
+    name: str
+    value: float
+    row: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Component':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('Component', 'name'),
+                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('Component', 'value'),
+                row=_atd_read_string(x['row']) if 'row' in x else _atd_missing_json_field('Component', 'row'),
+            )
+        else:
+            _atd_bad_json('Component', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['value'] = _atd_write_float(self.value)
+        res['row'] = _atd_write_string(self.row)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Component':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Composition:
+    """Original type: composition = { ... }
+    """
+
+    definition: str
+    components: List[Component]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Composition':
+        if isinstance(x, dict):
+            return cls(
+                definition=_atd_read_string(x['definition']) if 'definition' in x else _atd_missing_json_field('Composition', 'definition'),
+                components=_atd_read_list(Component.from_json)(x['components']) if 'components' in x else _atd_missing_json_field('Composition', 'components'),
+            )
+        else:
+            _atd_bad_json('Composition', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['definition'] = _atd_write_string(self.definition)
+        res['components'] = _atd_write_list((lambda x: x.to_json()))(self.components)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Composition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Inputs:
     """Original type: inputs = { ... }
     """
@@ -1187,6 +1254,11 @@ class Inputs:
     projection_years: IntParameter
     enterprise_value: float
     equity_value: float
+    ebit_recipe: Optional[str] = None
+    ebit_composition: Optional[Composition] = None
+    delta_nwc_compositions: List[Optional[Composition]] = field(default_factory=lambda: [])
+    cash_composition: Optional[Composition] = None
+    total_debt_composition: Optional[Composition] = None
     country_risk_premium: Optional[Parameter] = None
     conversion: Optional[Conversion] = None
 
@@ -1242,6 +1314,11 @@ class Inputs:
                 projection_years=IntParameter.from_json(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('Inputs', 'projection_years'),
                 enterprise_value=_atd_read_float(x['enterprise_value']) if 'enterprise_value' in x else _atd_missing_json_field('Inputs', 'enterprise_value'),
                 equity_value=_atd_read_float(x['equity_value']) if 'equity_value' in x else _atd_missing_json_field('Inputs', 'equity_value'),
+                ebit_recipe=_atd_read_string(x['ebit_recipe']) if 'ebit_recipe' in x else None,
+                ebit_composition=Composition.from_json(x['ebit_composition']) if 'ebit_composition' in x else None,
+                delta_nwc_compositions=_atd_read_list(_atd_read_nullable(Composition.from_json))(x['delta_nwc_compositions']) if 'delta_nwc_compositions' in x else [],
+                cash_composition=Composition.from_json(x['cash_composition']) if 'cash_composition' in x else None,
+                total_debt_composition=Composition.from_json(x['total_debt_composition']) if 'total_debt_composition' in x else None,
                 country_risk_premium=Parameter.from_json(x['country_risk_premium']) if 'country_risk_premium' in x else None,
                 conversion=Conversion.from_json(x['conversion']) if 'conversion' in x else None,
             )
@@ -1298,6 +1375,15 @@ class Inputs:
         res['projection_years'] = (lambda x: x.to_json())(self.projection_years)
         res['enterprise_value'] = _atd_write_float(self.enterprise_value)
         res['equity_value'] = _atd_write_float(self.equity_value)
+        if self.ebit_recipe is not None:
+            res['ebit_recipe'] = _atd_write_string(self.ebit_recipe)
+        if self.ebit_composition is not None:
+            res['ebit_composition'] = (lambda x: x.to_json())(self.ebit_composition)
+        res['delta_nwc_compositions'] = _atd_write_list(_atd_write_nullable((lambda x: x.to_json())))(self.delta_nwc_compositions)
+        if self.cash_composition is not None:
+            res['cash_composition'] = (lambda x: x.to_json())(self.cash_composition)
+        if self.total_debt_composition is not None:
+            res['total_debt_composition'] = (lambda x: x.to_json())(self.total_debt_composition)
         if self.country_risk_premium is not None:
             res['country_risk_premium'] = (lambda x: x.to_json())(self.country_risk_premium)
         if self.conversion is not None:
@@ -2253,6 +2339,11 @@ class FiscalPeriod:
     book_equity_row: Optional[str] = None
     net_income_row: Optional[str] = None
     net_interest_income_row: Optional[str] = None
+    ebit_recipe: Optional[str] = None
+    ebit_composition: Optional[Composition] = None
+    cash_composition: Optional[Composition] = None
+    total_debt_composition: Optional[Composition] = None
+    delta_nwc_composition: Optional[Composition] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'FiscalPeriod':
@@ -2307,6 +2398,11 @@ class FiscalPeriod:
                 book_equity_row=_atd_read_string(x['book_equity_row']) if 'book_equity_row' in x else None,
                 net_income_row=_atd_read_string(x['net_income_row']) if 'net_income_row' in x else None,
                 net_interest_income_row=_atd_read_string(x['net_interest_income_row']) if 'net_interest_income_row' in x else None,
+                ebit_recipe=_atd_read_string(x['ebit_recipe']) if 'ebit_recipe' in x else None,
+                ebit_composition=Composition.from_json(x['ebit_composition']) if 'ebit_composition' in x else None,
+                cash_composition=Composition.from_json(x['cash_composition']) if 'cash_composition' in x else None,
+                total_debt_composition=Composition.from_json(x['total_debt_composition']) if 'total_debt_composition' in x else None,
+                delta_nwc_composition=Composition.from_json(x['delta_nwc_composition']) if 'delta_nwc_composition' in x else None,
             )
         else:
             _atd_bad_json('FiscalPeriod', x)
@@ -2388,6 +2484,16 @@ class FiscalPeriod:
             res['net_income_row'] = _atd_write_string(self.net_income_row)
         if self.net_interest_income_row is not None:
             res['net_interest_income_row'] = _atd_write_string(self.net_interest_income_row)
+        if self.ebit_recipe is not None:
+            res['ebit_recipe'] = _atd_write_string(self.ebit_recipe)
+        if self.ebit_composition is not None:
+            res['ebit_composition'] = (lambda x: x.to_json())(self.ebit_composition)
+        if self.cash_composition is not None:
+            res['cash_composition'] = (lambda x: x.to_json())(self.cash_composition)
+        if self.total_debt_composition is not None:
+            res['total_debt_composition'] = (lambda x: x.to_json())(self.total_debt_composition)
+        if self.delta_nwc_composition is not None:
+            res['delta_nwc_composition'] = (lambda x: x.to_json())(self.delta_nwc_composition)
         return res
 
     @classmethod

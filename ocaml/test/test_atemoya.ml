@@ -15,7 +15,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?operating_expense_row ?future_policy_benefits ?future_policy_benefits_row
     ?claims_liability ?claims_liability_row ?total_revenue_row ?ebit_row ?pretax_income_row
     ?tax_provision_row ?capex_row ?delta_nwc_row ?cash_row ?book_equity_row ?net_income_row
-    ?net_interest_income_row () : Boundary_t.fiscal_period =
+    ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
+    ?total_debt_composition ?delta_nwc_composition () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -66,6 +67,11 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     book_equity_row;
     net_income_row;
     net_interest_income_row;
+    ebit_recipe;
+    ebit_composition;
+    cash_composition;
+    total_debt_composition;
+    delta_nwc_composition;
   }
 
 let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
@@ -218,7 +224,10 @@ let params : Params.t =
       Reference_j.xbrl_tags_of_string
         {|{"source": "test", "as_of": "2026-09-19", "cross_check_threshold": 0.02, "max_filing_age_days": 400,
            "annual_forms": ["10-K"], "annual_span_days": [350, 380], "fields": {},
-           "depreciation_components": [], "debt_recipes": [], "debt_optional_add": [], "working_capital": {}}|};
+           "depreciation_components": []}|};
+    field_definitions =
+      Atdgen_runtime.Util.Json.from_file Reference_j.read_field_definitions
+        "../../reference/field_definitions.json";
     fx_rates =
       Reference_j.fx_rates_of_string
         {|{"source": "test", "currencies": {
@@ -1052,7 +1061,7 @@ let test_flow_chart_names_every_reason () =
       "insurer model requires filed-statement data"; "fx not available for";
       "latest annual filing is";
       "missing market data: financial_currency"; "missing market data: trading_currency";
-      "fx for" ]
+      "fx for"; "field definition mismatch" ]
 
 (* --- the insurer model --- *)
 
@@ -1371,6 +1380,120 @@ let test_summary_cross_check_line_and_provider_diff () =
   let quiet = Batch.summary [ shadow ] in
   if contains quiet "cross-check:" then Alcotest.fail "cross-check line on a batch without checks"
 
+(* --- field definitions: compositions carried, the gate, fx, the run diff --- *)
+
+let comp ?(definition = "cash_and_short_term_investments") parts : Boundary_t.composition =
+  { definition; components = List.map (fun (name, value, row) -> ({ name; value; row } : Boundary_t.component)) parts }
+
+let defined_period ?(cash_definition = "cash_and_short_term_investments") ?(ebit_recipe = "operating_income") period_end =
+  { (full_period ~period_end ()) with
+    cash_composition = Some (comp ~definition:cash_definition [ ("cash_equivalents", 600., "Cash"); ("short_term_investments", 400., "Other Short Term Investments") ]);
+    total_debt_composition = Some (comp ~definition:"financial_debt_excluding_operating_leases" [ ("long_term_debt", 4000., "Long Term Debt"); ("current_debt", 1000., "Current Debt") ]);
+    delta_nwc_composition = Some (comp ~definition:"cash_flow_statement_change_in_operating_working_capital" [ ("change_in_working_capital", 50., "Change In Working Capital") ]);
+    ebit_recipe = Some ebit_recipe;
+    ebit_composition = Some (comp ~definition:"operating_income_else_pretax_plus_interest" [ ("operating_income", 1200., "Operating Income") ]) }
+
+let defined_history () = List.map defined_period [ "2025-09-30"; "2024-09-30"; "2023-09-30" ]
+
+let test_compositions_carried_into_inputs () =
+  let v = run (financials (defined_history ())) in
+  Alcotest.check status "values" `Ok v.status;
+  match v.inputs with
+  | Some (`Dcf (i : Boundary_t.inputs)) ->
+      Alcotest.(check (option string)) "recipe" (Some "operating_income") i.ebit_recipe;
+      (match i.cash_composition with
+      | Some c ->
+          Alcotest.(check string) "cash definition" "cash_and_short_term_investments" c.definition;
+          Alcotest.(check (list string)) "cash components"
+            [ "cash_equivalents"; "short_term_investments" ]
+            (List.map (fun (k : Boundary_t.component) -> k.name) c.components);
+          check_float "components sum to the field" i.cash
+            (List.fold_left (fun acc (k : Boundary_t.component) -> acc +. k.value) 0. c.components)
+      | None -> Alcotest.fail "cash composition dropped");
+      Alcotest.(check bool) "debt composition carried" true (Option.is_some i.total_debt_composition);
+      Alcotest.(check int) "one delta_nwc composition per averaged period" (List.length i.delta_nwc_periods)
+        (List.length i.delta_nwc_compositions);
+      Alcotest.(check bool) "every averaged period has its composition" true
+        (List.for_all Option.is_some i.delta_nwc_compositions);
+      check_mentions "json" (Boundary_j.string_of_valuation v)
+        [ {|"ebit_recipe":"operating_income"|}; {|"cash_composition":{"definition":"cash_and_short_term_investments"|};
+          {|"delta_nwc_compositions":[{"definition":"cash_flow_statement_change_in_operating_working_capital"|} ]
+  | _ -> Alcotest.fail "no dcf inputs"
+
+let test_definitions_gate () =
+  let stale = [ defined_period "2025-09-30"; defined_period ~cash_definition:"cash_equivalents_only" "2024-09-30"; defined_period "2023-09-30" ] in
+  let v = run (financials stale) in
+  check_reason v
+    [ "field definition mismatch: cash follows \"cash_equivalents_only\", reference/field_definitions.json defines \"cash_and_short_term_investments\"; refetch the statements" ];
+  Alcotest.(check (option model)) "routed before the gate" (Some `Dcf) v.model;
+  Alcotest.(check bool) "nothing computed" true (Option.is_none v.inputs);
+  let v = run (financials [ defined_period ~ebit_recipe:"vendor_ebit_row" "2025-09-30"; defined_period "2024-09-30" ]) in
+  check_reason v [ "field definition mismatch: ebit recipe follows \"vendor_ebit_row\", reference/field_definitions.json defines \"operating_income | pretax_plus_interest\"" ];
+  (* the gate sits before the filing-age gate *)
+  let v = run (filed ~latest_filing:"2025-01-01" stale) in
+  check_reason v [ "field definition mismatch" ];
+  (* a record naming no definition passes *)
+  Alcotest.check status "legacy record values" `Ok (run (financials (history ()))).status;
+  Alcotest.(check bool) "check is pure" true (Result.is_ok (Valuation.definitions_check params.field_definitions (financials (defined_history ()))))
+
+let test_fx_scales_compositions () =
+  let c = Fx.convert ~rate:2.0 (financials ~currency:None ~financial_currency:(Some "BRL") ~trading_currency:(Some "USD") (defined_history ())) in
+  match (List.hd c.periods).cash_composition with
+  | Some k ->
+      Alcotest.(check (list approx)) "component values scaled" [ 1200.; 800. ]
+        (List.map (fun (k : Boundary_t.component) -> k.value) k.components);
+      Alcotest.(check (option approx)) "field scaled" (Some 2000.) (List.hd c.periods).cash
+  | None -> Alcotest.fail "composition dropped"
+
+let test_run_diff_lists_drivers () =
+  let rename t (v : Boundary_t.valuation) = { v with ticker = t } in
+  let base_ok = run (financials (history ())) in
+  let base_failed = rename "WAS_FAILED" (run (financials [])) in
+  let base_gone = rename "GONE" base_ok in
+  let base_ghost = rename "GHOST" base_ok in
+  let moved = run (financials (history ~capex:400. ())) in
+  let recovered = rename "WAS_FAILED" (run (financials (defined_history ()))) in
+  let ghost = rename "GHOST" { base_ok with fair_value = Option.map (fun fv -> fv +. 1.) base_ok.fair_value } in
+  let same = rename "SAME" base_ok in
+  let fresh = rename "FRESH" base_ok in
+  let d = Batch.run_diff ~baseline:[ base_ok; base_failed; base_gone; base_ghost; rename "SAME" base_ok ] [ moved; recovered; ghost; same; fresh ] in
+  check_mentions "diff" d
+    [ "TEST       Ok 27.94 -> Ok 11.21 delta -16.73 (-59.9%); statements yfinance -> yfinance";
+      "capex                      50 -> 400";
+      "WAS_FAILED Failed none -> Ok 27.94; statements yfinance -> yfinance";
+      "was: no fiscal periods in statements"; "inputs now present (dcf)";
+      "cash                       1000 [cash_and_short_term_investments: cash_equivalents 600 (Cash) + short_term_investments 400 (Other Short Term Investments)]";
+      "GHOST      Ok 27.94 -> Ok 28.94 delta +1.00 (+3.6%)";
+      "NO DRIVER: no input or parameter differs";
+      "SAME       Ok 27.94 -> Ok 27.94 unchanged";
+      "FRESH      new: Ok 27.94; not in the baseline";
+      "GONE       in the baseline (Ok 27.94), not in this run";
+      "3 of 5 fair values moved, 1 status changes, 1 moved without a driver" ];
+  if contains d "SAME       Ok 27.94 -> Ok 27.94 unchanged; statements yfinance -> yfinance\n           " then
+    Alcotest.fail "an unchanged record listed drivers";
+  Alcotest.(check string) "deterministic" d (Batch.run_diff ~baseline:[ base_ok; base_failed; base_gone; base_ghost; rename "SAME" base_ok ] [ moved; recovered; ghost; same; fresh ])
+
+let test_summary_definitions_and_cross_check_listing () =
+  let primary = run (filed ~cross_check:a_cross_check (history ())) in
+  let s = Batch.summary ~definitions:params.field_definitions [ primary ] in
+  check_mentions "summary" s
+    [ "field definitions (reference/field_definitions.json, as_of 2026-09-19): cash = cash_and_short_term_investments; total_debt = financial_debt_excluding_operating_leases; delta_nwc = cash_flow_statement_change_in_operating_working_capital; ebit = operating_income_else_pretax_plus_interest";
+      "cross-check: 1 of 1 filed-statement records disagree";
+      "  on a field the routed model reads: 1 of 1 (TEST)";
+      "  TEST       cash filed 36 vendor 54.7 (34.2%)"; "read by the model: cash"; "uncharacterised" ];
+  let bank = run ~declared:(Some (declaration `Bank)) (filed ~cross_check:a_cross_check [ bank_period () ]) in
+  check_mentions "a flag off the model's inputs" (Batch.summary [ bank ])
+    [ "on a field the routed model reads: 0 of 1\n"; "none of these is an input of the routed model" ];
+  let universe =
+    Reference_j.universe_of_string
+      {|{"tickers": [{"ticker": "TEST", "entity_class": "OperatingCompany", "note": "ok", "expected_status": "Ok",
+                      "cross_check_note": "vendor lag: the vendor still shows the prior filing's cash"}]}|}
+  in
+  check_mentions "characterised" (Batch.summary ~universe [ primary ])
+    [ "             vendor lag: the vendor still shows the prior filing's cash" ];
+  if contains (Batch.summary [ run (financials (history ())) ]) "field definitions" then
+    Alcotest.fail "definitions line without definitions"
+
 (* --- batch summary --- *)
 
 let test_batch_summary () =
@@ -1656,6 +1779,14 @@ let () =
           case "filing-age gate" test_filing_age_gate;
           case "provider decision on every record, cross-check carried" test_provider_decision_on_every_record;
           case "summary cross-check line and provider diff" test_summary_cross_check_line_and_provider_diff;
+        ] );
+      ( "field definitions",
+        [
+          case "compositions carried into the inputs" test_compositions_carried_into_inputs;
+          case "gate refuses another definition, names both" test_definitions_gate;
+          case "fx scales the components too" test_fx_scales_compositions;
+          case "run diff lists every moved fair value's drivers" test_run_diff_lists_drivers;
+          case "summary names the definitions and characterises each flag" test_summary_definitions_and_cross_check_listing;
         ] );
       ( "cross-currency",
         [

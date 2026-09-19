@@ -55,6 +55,40 @@ let with_conversion conversion (inputs : model_inputs) : model_inputs =
   | `Residual_income_insurer i ->
       `Residual_income_insurer { i with core = { i.core with conversion = Some conversion } }
 
+(* A record's compositions must follow the reference's definitions on every period: a
+   data file fetched under another definition is refused, never valued as if it were the
+   current one. A record that names no definition (fetched before them) passes. *)
+let definitions_check (defs : Reference_t.field_definitions) (fin : financials) =
+  let mismatch field recorded expected =
+    Error
+      (Printf.sprintf
+         "field definition mismatch: %s follows %S, reference/field_definitions.json defines \
+          %S; refetch the statements"
+         field recorded expected)
+  in
+  let check field (recorded : composition option) expected =
+    match recorded with
+    | Some c when c.definition <> expected -> mismatch field c.definition expected
+    | _ -> Ok ()
+  in
+  let ( let* ) = Result.bind in
+  let cash_name = (defs.cash : Reference_t.cash_definition).name in
+  let debt_name = (defs.total_debt : Reference_t.debt_definition).name in
+  let nwc_name = (defs.delta_nwc : Reference_t.nwc_definition).name in
+  let ebit = (defs.ebit : Reference_t.ebit_definition) in
+  List.fold_left
+    (fun acc (p : fiscal_period) ->
+      let* () = acc in
+      let* () = check "cash" p.cash_composition cash_name in
+      let* () = check "total_debt" p.total_debt_composition debt_name in
+      let* () = check "delta_nwc" p.delta_nwc_composition nwc_name in
+      let* () = check "ebit" p.ebit_composition ebit.name in
+      match p.ebit_recipe with
+      | Some r when not (List.mem r ebit.recipes) ->
+          mismatch "ebit recipe" r (String.concat " | " ebit.recipes)
+      | _ -> Ok ())
+    (Ok ()) fin.periods
+
 let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declaration
     (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
@@ -167,21 +201,22 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
   let value ~model ~class_check ~rule ~country =
     let failed = failed ~model ~class_check ~floor:(floor_of_rule rule) in
     let max_age = params.xbrl_tags.max_filing_age_days in
-    match (filing_age, original.financial_currency, original.trading_currency) with
-    | Some (Error msg), _, _ -> failed (Printf.sprintf "latest_filing: %s" msg)
-    | Some (Ok n), _, _ when n > max_age ->
+    match (definitions_check params.field_definitions original, filing_age, original.financial_currency, original.trading_currency) with
+    | Error reason, _, _, _ -> failed reason
+    | Ok (), Some (Error msg), _, _ -> failed (Printf.sprintf "latest_filing: %s" msg)
+    | Ok (), Some (Ok n), _, _ when n > max_age ->
         failed
           (Printf.sprintf
              "latest annual filing is %d days old, older than its max_filing_age_days %d" n
              max_age)
-    | _, None, _ -> failed "missing market data: financial_currency"
-    | _, _, None -> failed "missing market data: trading_currency"
-    | _, Some financial, Some trading when financial = trading -> (
+    | Ok (), _, None, _ -> failed "missing market data: financial_currency"
+    | Ok (), _, _, None -> failed "missing market data: trading_currency"
+    | Ok (), _, Some financial, Some trading when financial = trading -> (
         match Params.resolve params ~today ~country ~industry:original.industry with
         | Error reason -> failed reason
         | Ok assumptions ->
             run_model ~fin:original ~model ~class_check ~rule ~country assumptions)
-    | _, Some financial, Some trading -> (
+    | Ok (), _, Some financial, Some trading -> (
         match Fx.rate params.fx_sources params.fx_rates ~today ~financial ~trading with
         | Error reason -> failed reason
         | Ok legs -> (

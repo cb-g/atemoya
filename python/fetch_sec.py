@@ -1,5 +1,7 @@
 """SEC XBRL companyfacts as a statements provider: filed 10-K facts, canonical us-gaap tags
-chosen per fiscal period from reference/xbrl_tags.json.
+chosen per fiscal period from reference/xbrl_tags.json; cash, total debt, the change in
+working capital and ebit assembled per reference/field_definitions.json, the one
+definition both providers follow, with the components recorded on every period.
 
     uv run python/fetch_sec.py ALL MET PGR       ->  the same routed fetch as fetch.py
 
@@ -33,6 +35,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DOTENV_PATH = REPO_ROOT / ".env"
 CACHE_DIR = REPO_ROOT / "data" / "sec"
 TAGS_PATH = REPO_ROOT / "reference" / "xbrl_tags.json"
+DEFINITIONS_PATH = REPO_ROOT / "reference" / "field_definitions.json"
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 PROVIDER = "SEC XBRL companyfacts"
@@ -74,6 +77,10 @@ def identity() -> str:
 
 def load_tags() -> reference.XbrlTags:
     return reference.XbrlTags.from_json_string(TAGS_PATH.read_text())
+
+
+def load_definitions() -> reference.FieldDefinitions:
+    return reference.FieldDefinitions.from_json_string(DEFINITIONS_PATH.read_text())
 
 
 def _get(url: str, user_agent: str) -> bytes:
@@ -156,10 +163,10 @@ def select(gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str
     for field, spec in tags.fields:
         per_end: dict[date, tuple[Fact, str]] = {}
         for tag in spec.tags:
-            node = gaap.get(tag)
-            if not isinstance(node, dict):
+            entries = _usd_entries(gaap.get(tag))
+            if not entries:
                 continue
-            for end, fact in annual_facts(_usd_entries(node), instant=spec.kind == "instant", tags=tags, notes=notes, tag=tag).items():
+            for end, fact in annual_facts(entries, instant=spec.kind == "instant", tags=tags, notes=notes, tag=tag).items():
                 per_end.setdefault(end, (fact, tag))
         out[field] = per_end
     return out
@@ -190,63 +197,185 @@ def depreciation(selected: Selected, tags: reference.XbrlTags, end: date) -> tup
     return sum(v for v, _ in parts), " + ".join(r for _, r in parts)
 
 
-def total_debt(selected: Selected, tags: reference.XbrlTags, end: date) -> tuple[float | None, str | None]:
-    for recipe in tags.debt_recipes:
-        parts = [value_of(selected, field, end) for field in recipe]
-        if any(v is None for v, _ in parts):
-            continue
-        total = sum(v for v, _ in parts if v is not None)
-        rows = [r or f for (_, r), f in zip(parts, recipe)]
-        for field in tags.debt_optional_add:
-            v, r = value_of(selected, field, end)
-            if v is not None:
-                total += v
-                rows.append(r or field)
-        return total, " + ".join(rows)
-    return None, None
+class Facts:
+    """A filer's us-gaap facts with annual selection per tag, memoised, for the fields
+    reference/field_definitions.json assembles from more than one tag."""
+
+    def __init__(self, gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str]) -> None:
+        self._gaap = gaap
+        self._tags = tags
+        self._notes = notes
+        self._memo: dict[tuple[str, bool], dict[date, Fact]] = {}
+
+    def annual(self, tag: str, *, instant: bool) -> dict[date, Fact]:
+        key = (tag, instant)
+        if key not in self._memo:
+            entries = _usd_entries(self._gaap.get(tag))
+            self._memo[key] = annual_facts(entries, instant=instant, tags=self._tags, notes=self._notes, tag=tag)
+        return self._memo[key]
+
+    def at(self, tag: str, end: date, *, instant: bool) -> float | None:
+        fact = self.annual(tag, instant=instant).get(end)
+        return None if fact is None else fact.val
+
+    def first(self, candidates: Iterable[str], end: date, *, instant: bool) -> tuple[float, str] | None:
+        for tag in candidates:
+            value = self.at(tag, end, instant=instant)
+            if value is not None:
+                return value, tag
+        return None
+
+    def duration_tags_with_prefix(self, prefix: str, end: date) -> list[str]:
+        """Every us-gaap tag with the prefix that carries an annual duration fact at [end]."""
+        return sorted(tag for tag in self._gaap if tag.startswith(prefix) and self.at(tag, end, instant=False) is not None)
 
 
-def working_capital(selected: Selected, tags: reference.XbrlTags, end: date) -> tuple[float | None, str]:
-    """(current assets - cash) - (current liabilities - current debt where filed); the label says which."""
-    wc = dict(tags.working_capital)
-    assets, a_row = value_of(selected, wc["assets"], end)
-    liabilities, l_row = value_of(selected, wc["liabilities"], end)
-    cash, c_row = value_of(selected, wc["cash"], end)
-    debt, d_row = value_of(selected, wc["debt_current"], end)
-    if assets is None or liabilities is None or cash is None:
-        return None, ""
-    label = f"({a_row} - {c_row}) - ({l_row}" + (f" - {d_row})" if debt is not None else ")")
-    return (assets - cash) - (liabilities - (debt or 0.0)), label
+def _composition(definition: str, parts: list[boundary.Component]) -> boundary.Composition:
+    return boundary.Composition(definition=definition, components=parts)
 
 
-def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str]) -> list[boundary.FiscalPeriod]:
+SUBTRACTED = frozenset({"restricted_cash", "liability_components"})  # components summed with their sign flipped
+
+
+def _label(parts: list[boundary.Component]) -> str:
+    """The row label: tags joined with the sign each entered the sum with."""
+    out = ""
+    for i, part in enumerate(parts):
+        sign = "-" if part.name in SUBTRACTED else "+"
+        if i == 0:
+            out = ("-" if sign == "-" else "") + part.row
+        else:
+            out += f" {sign} {part.row}"
+    return out
+
+
+Derived = tuple[float | None, str | None, boundary.Composition | None]
+
+
+def cash(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
+    """Cash and equivalents (less the restricted components when only the restricted-inclusive
+    total is tagged) plus the first present short-term investments tag."""
+    d = defs.cash.xbrl
+    equivalents = facts.first(d.cash_equivalents, end, instant=True)
+    if equivalents is None:
+        return None, None, None
+    value, tag = equivalents
+    parts = [boundary.Component(name="cash_equivalents", value=value, row=tag)]
+    if tag in d.restricted_inclusive:
+        for alternative in d.restricted_cash:
+            found = [(facts.at(t, end, instant=True), t) for t in alternative]
+            if all(v is not None for v, _ in found):
+                parts.extend(boundary.Component(name="restricted_cash", value=-v, row=t) for v, t in found if v is not None)
+                break
+    investments = facts.first(d.short_term_investments, end, instant=True)
+    if investments is not None:
+        parts.append(boundary.Component(name="short_term_investments", value=investments[0], row=investments[1]))
+    return sum(p.value for p in parts), _label(parts), _composition(defs.cash.name, parts)
+
+
+def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
+    """Financial debt, first complete recipe: noncurrent + all current debt as one tag;
+    noncurrent + the current portion of long-term debt (+ short-term borrowings when
+    tagged); long-term debt filed with its current portion (+ short-term borrowings);
+    noncurrent alone when the filer tags nothing current at all. Operating lease tags are
+    never read."""
+    d = defs.total_debt.xbrl
+    noncurrent = facts.first(d.noncurrent, end, instant=True)
+    current_total = facts.first(d.current_total, end, instant=True)
+    current_long_term = facts.first(d.current_long_term, end, instant=True)
+    short_term = facts.first(d.short_term_borrowings, end, instant=True)
+    total_including_current = facts.first(d.total_including_current, end, instant=True)
+
+    def part(name: str, hit: tuple[float, str]) -> boundary.Component:
+        return boundary.Component(name=name, value=hit[0], row=hit[1])
+
+    parts: list[boundary.Component]
+    if noncurrent is not None and current_total is not None:
+        parts = [part("noncurrent", noncurrent), part("current_total", current_total)]
+    elif noncurrent is not None and current_long_term is not None:
+        parts = [part("noncurrent", noncurrent), part("current_long_term", current_long_term)]
+        if short_term is not None:
+            parts.append(part("short_term_borrowings", short_term))
+    elif total_including_current is not None:
+        parts = [part("total_including_current", total_including_current)]
+        if short_term is not None:
+            parts.append(part("short_term_borrowings", short_term))
+    elif noncurrent is not None and short_term is None:
+        parts = [part("noncurrent", noncurrent)]
+    else:
+        return None, None, None
+    return sum(p.value for p in parts), _label(parts), _composition(defs.total_debt.name, parts)
+
+
+def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: list[str]) -> Derived:
+    """The filed change in operating working capital: the aggregate tag, else the sum of
+    the components (assets added, liabilities subtracted), attempted only when every
+    IncreaseDecreaseIn tag the filer carries for the period is classified."""
+    d = defs.delta_nwc.xbrl
+    aggregate = facts.first(d.aggregate, end, instant=False)
+    if aggregate is not None:
+        parts = [boundary.Component(name="aggregate", value=aggregate[0], row=aggregate[1])]
+        return aggregate[0], aggregate[1], _composition(defs.delta_nwc.name, parts)
+    present = facts.duration_tags_with_prefix("IncreaseDecreaseIn", end)
+    classified = set(d.aggregate) | set(d.asset_components) | set(d.liability_components) | set(d.excluded)
+    unclassified = [t for t in present if t not in classified]
+    if unclassified:
+        notes.append(f"delta_nwc {end}: left null, unclassified working-capital tags: {', '.join(unclassified)}")
+        return None, None, None
+    parts: list[boundary.Component] = []
+    for tag in d.asset_components:
+        value = facts.at(tag, end, instant=False)
+        if value is not None:
+            parts.append(boundary.Component(name="asset_components", value=value, row=tag))
+    for tag in d.liability_components:
+        value = facts.at(tag, end, instant=False)
+        if value is not None:
+            parts.append(boundary.Component(name="liability_components", value=-value, row=tag))
+    if not parts:
+        return None, None, None
+    return sum(p.value for p in parts), _label(parts), _composition(defs.delta_nwc.name, parts)
+
+
+def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: float | None, pretax_row: str | None) -> tuple[float | None, str | None, str | None, boundary.Composition | None]:
+    """Operating income as filed; else pretax income plus interest expense, recorded as the
+    recipe pretax_plus_interest. (value, row, recipe, composition)."""
+    d = defs.ebit.xbrl
+    operating = facts.first(d.operating_income, end, instant=False)
+    if operating is not None:
+        parts = [boundary.Component(name="operating_income", value=operating[0], row=operating[1])]
+        return operating[0], operating[1], "operating_income", _composition(defs.ebit.name, parts)
+    interest = facts.first(d.interest_expense, end, instant=False)
+    if pretax is None or pretax_row is None or interest is None:
+        return None, None, None, None
+    parts = [boundary.Component(name="pretax_income", value=pretax, row=pretax_row),
+             boundary.Component(name="interest_expense", value=interest[0], row=interest[1])]
+    return pretax + interest[0], _label(parts), "pretax_plus_interest", _composition(defs.ebit.name, parts)
+
+
+def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str]) -> list[boundary.FiscalPeriod]:
     selected = select(gaap, tags, notes)
-    ends = sorted(set(selected["net_income"]) & set(selected["book_equity"]), reverse=True)[: PERIODS + 1]
-    nwc = {end: working_capital(selected, tags, end) for end in ends}
+    facts = Facts(gaap, tags, notes)
+    ends = sorted(set(selected["net_income"]) & set(selected["book_equity"]), reverse=True)[:PERIODS]
     periods: list[boundary.FiscalPeriod] = []
-    for i, end in enumerate(ends[:PERIODS]):
+    for end in ends:
         anchor = selected["net_income"][end][0]
         v: dict[str, float | None] = {}
         r: dict[str, str | None] = {}
         for field, _ in tags.fields:
             v[field], r[field] = value_of(selected, field, end)
         dna, dna_row = depreciation(selected, tags, end)
-        debt, debt_row = total_debt(selected, tags, end)
-        delta_nwc: float | None = None
-        delta_row: str | None = None
-        if i + 1 < len(ends):
-            this_nwc, label = nwc[end]
-            prev_nwc, _ = nwc[ends[i + 1]]
-            if this_nwc is not None and prev_nwc is not None:
-                delta_nwc, delta_row = this_nwc - prev_nwc, f"change in {label} from {ends[i + 1]}"
+        cash_value, cash_row, cash_composition = cash(facts, defs, end)
+        debt, debt_row, debt_composition = total_debt(facts, defs, end)
+        nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
+        ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"])
         periods.append(
             boundary.FiscalPeriod(
                 period_end=end.isoformat(),
-                ebit=v["ebit"], pretax_income=v["pretax_income"], tax_provision=v["tax_provision"],
+                ebit=ebit_value, pretax_income=v["pretax_income"], tax_provision=v["tax_provision"],
                 total_revenue=v["total_revenue"], net_interest_income=v["net_interest_income"],
                 premiums_earned=v["premiums_earned"], premiums_earned_row=r["premiums_earned"],
                 depreciation_amortization=dna, depreciation_amortization_row=dna_row,
-                capex=v["capex"], delta_nwc=delta_nwc, cash=v["cash"],
+                capex=v["capex"], delta_nwc=nwc, cash=cash_value,
                 total_debt=debt, total_debt_source=debt_row,
                 book_equity=v["book_equity"], net_income=v["net_income"],
                 dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
@@ -260,10 +389,12 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, not
                 operating_expense=v["operating_expense"], operating_expense_row=r["operating_expense"],
                 future_policy_benefits=v["future_policy_benefits"], future_policy_benefits_row=r["future_policy_benefits"],
                 claims_liability=v["claims_liability"], claims_liability_row=r["claims_liability"],
-                total_revenue_row=r["total_revenue"], ebit_row=r["ebit"], pretax_income_row=r["pretax_income"],
-                tax_provision_row=r["tax_provision"], capex_row=r["capex"], delta_nwc_row=delta_row,
-                cash_row=r["cash"], book_equity_row=r["book_equity"], net_income_row=r["net_income"],
+                total_revenue_row=r["total_revenue"], ebit_row=ebit_row, pretax_income_row=r["pretax_income"],
+                tax_provision_row=r["tax_provision"], capex_row=r["capex"], delta_nwc_row=nwc_row,
+                cash_row=cash_row, book_equity_row=r["book_equity"], net_income_row=r["net_income"],
                 net_interest_income_row=r["net_interest_income"],
+                ebit_recipe=ebit_recipe, ebit_composition=ebit_composition, cash_composition=cash_composition,
+                total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,
             )
         )
     return periods

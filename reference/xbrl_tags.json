@@ -1,14 +1,13 @@
 {
-  "source": "us-gaap tag candidates per canonical field, verified against the universe's SEC XBRL companyfacts on 2026-09-19; selection is per fiscal period because tags change between years (Apple's Revenues stops at FY2018, Microsoft's at FY2010, Allstate's IncurredClaimsPropertyCasualtyAndLiability at FY2023, Coca-Cola's LongTermDebt at FY2023)",
+  "source": "us-gaap tag candidates per canonical field, verified against the universe's SEC XBRL companyfacts on 2026-09-19; selection is per fiscal period because tags change between years (Apple's Revenues stops at FY2018, Microsoft's at FY2010, Allstate's IncurredClaimsPropertyCasualtyAndLiability at FY2023, Bank of America's PaymentsOfDividends at FY2013)",
   "as_of": "2026-09-19",
   "notes": [
     "Only annual facts: form in annual_forms with fp = FY; a duration fact must span annual_span_days because fp = FY also marks quarters; a balance must carry no start; the latest filing wins per fiscal year end.",
     "A canonical field the map cannot supply for a period stays null and the valuation fails naming it; there is no per-field fallback to the vendor feed.",
+    "cash, total_debt, delta_nwc and ebit are not here: they follow reference/field_definitions.json, the one definition applied to both providers.",
     "depreciation_amortization: the aggregate tags first; when none is filed, Depreciation plus AmortizationOfIntangibleAssets where filed (Microsoft and Alphabet file only these), labelled as the sum.",
-    "total_debt: the first complete recipe, plus DebtCurrent where filed; LongTermDebt already includes the current portion of long-term debt, and commercial paper is not included, so the vendor's total debt will usually read higher; the cross-check records it.",
-    "delta_nwc: year-over-year change in (current assets - cash) - (current liabilities - current debt where filed), from the balance sheets; filers rarely tag the aggregate working-capital line.",
-    "cash is cash and equivalents only; the vendor's canonical cash includes short-term investments, so the cross-check will flag cash-rich names.",
-    "cross_check_threshold 0.02 is an assumption: two providers reading the same filing should agree to within rounding; a larger gap is a definitional difference worth reading."
+    "dividends_paid: the common-stock payments tag, then total payments (common and preferred, as JPMorgan, Goldman Sachs and Morgan Stanley file them), then PaymentsOfOrdinaryDividends (Bank of America 9.56bn FY2025: its PaymentsOfDividends stops at FY2013 and it never files PaymentsOfDividendsCommonStock), then the declared-dividend tags; the tag matched is recorded per period.",
+    "cross_check_threshold 0.02 is an assumption: two providers reading the same filing under the same definitions should agree to within rounding; a larger gap is a vendor row that is wrong, lagging or built from another filed line, and the summary lists it."
   ],
   "cross_check_threshold": 0.02,
   "max_filing_age_days": 400,
@@ -27,12 +26,6 @@
         "Revenues",
         "RevenueFromContractWithCustomerExcludingAssessedTax",
         "SalesRevenueNet"
-      ]
-    },
-    "ebit": {
-      "kind": "duration",
-      "tags": [
-        "OperatingIncomeLoss"
       ]
     },
     "pretax_income": {
@@ -75,60 +68,11 @@
         "PaymentsToAcquireProductiveAssets"
       ]
     },
-    "current_assets": {
-      "kind": "instant",
-      "tags": [
-        "AssetsCurrent"
-      ]
-    },
-    "current_liabilities": {
-      "kind": "instant",
-      "tags": [
-        "LiabilitiesCurrent"
-      ]
-    },
-    "cash": {
-      "kind": "instant",
-      "tags": [
-        "CashAndCashEquivalentsAtCarryingValue",
-        "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"
-      ]
-    },
     "book_equity": {
       "kind": "instant",
       "tags": [
         "StockholdersEquity",
         "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"
-      ]
-    },
-    "long_term_debt": {
-      "kind": "instant",
-      "tags": [
-        "LongTermDebt"
-      ]
-    },
-    "long_term_debt_noncurrent": {
-      "kind": "instant",
-      "tags": [
-        "LongTermDebtNoncurrent"
-      ]
-    },
-    "long_term_debt_current": {
-      "kind": "instant",
-      "tags": [
-        "LongTermDebtCurrent"
-      ]
-    },
-    "long_term_debt_and_leases": {
-      "kind": "instant",
-      "tags": [
-        "LongTermDebtAndCapitalLeaseObligations"
-      ]
-    },
-    "debt_current": {
-      "kind": "instant",
-      "tags": [
-        "DebtCurrent"
       ]
     },
     "net_income": {
@@ -141,7 +85,10 @@
       "kind": "duration",
       "tags": [
         "PaymentsOfDividendsCommonStock",
-        "PaymentsOfDividends"
+        "PaymentsOfDividends",
+        "PaymentsOfOrdinaryDividends",
+        "DividendsCommonStockCash",
+        "DividendsCommonStock"
       ]
     },
     "net_interest_income": {
@@ -206,26 +153,5 @@
   "depreciation_components": [
     "depreciation",
     "amortization_of_intangibles"
-  ],
-  "debt_recipes": [
-    [
-      "long_term_debt"
-    ],
-    [
-      "long_term_debt_noncurrent",
-      "long_term_debt_current"
-    ],
-    [
-      "long_term_debt_and_leases"
-    ]
-  ],
-  "debt_optional_add": [
-    "debt_current"
-  ],
-  "working_capital": {
-    "assets": "current_assets",
-    "liabilities": "current_liabilities",
-    "cash": "cash",
-    "debt_current": "debt_current"
-  }
+  ]
 }

@@ -29,9 +29,23 @@
    days measured at [valued_on], so "where did this number come from" is answerable from
    the record alone. *)
 
+(* How a defined field was assembled: the definition it follows (its name in
+   reference/field_definitions.json, or for ebit the recipe) and the components summed,
+   each with the provider's row label or us-gaap tag. Money in the record's currency. *)
+type component = {
+  name : string;                              (* the component's name in the definition, e.g. "cash_equivalents" *)
+  value : float;                              (* as summed: sign already applied *)
+  row : string;                               (* the row label or tag that supplied it *)
+}
+
+type composition = {
+  definition : string;
+  components : component list;
+}
+
 type fiscal_period = {
   period_end : string;                        (* ISO 8601 date, fiscal year end *)
-  ebit : float nullable;                      (* operating income; any sign *)
+  ebit : float nullable;                      (* operating income, else pretax income + interest expense (ebit_recipe says which); any sign *)
   pretax_income : float nullable;             (* any sign *)
   tax_provision : float nullable;             (* income tax expense; negative = benefit *)
   total_revenue : float nullable;             (* >= 0 *)
@@ -41,9 +55,9 @@ type fiscal_period = {
   depreciation_amortization : float nullable; (* >= 0; non-cash add-back, depletion included where the vendor bundles it *)
   depreciation_amortization_row : string nullable;  (* the vendor's row label that supplied it *)
   capex : float nullable;                     (* capital expenditure; >= 0 = cash spent *)
-  delta_nwc : float nullable;                 (* increase in net working capital; > 0 = cash absorbed *)
-  cash : float nullable;                      (* cash, equivalents and short-term investments; >= 0 *)
-  total_debt : float nullable;                (* >= 0; never a substituted zero *)
+  delta_nwc : float nullable;                 (* the cash-flow statement's change in operating working capital; > 0 = cash absorbed *)
+  cash : float nullable;                      (* cash and equivalents plus short-term investments, restricted cash excluded; >= 0 *)
+  total_debt : float nullable;                (* financial debt, operating leases excluded; >= 0; never a substituted zero *)
   total_debt_source : string nullable;        (* the vendor row or row sum that supplied it *)
   book_equity : float nullable;               (* total stockholders' equity at period end; any sign *)
   net_income : float nullable;                (* any sign *)
@@ -81,6 +95,12 @@ type fiscal_period = {
   ?book_equity_row : string option;
   ?net_income_row : string option;
   ?net_interest_income_row : string option;
+  (* The definition each composed field follows and the components summed (11). *)
+  ?ebit_recipe : string option;               (* "operating_income" | "pretax_plus_interest" *)
+  ?ebit_composition : composition option;
+  ?cash_composition : composition option;
+  ?total_debt_composition : composition option;
+  ?delta_nwc_composition : composition option;
 }
 
 (* One canonical field compared between the statements provider and the cross-check
@@ -253,6 +273,8 @@ type inputs = {
   market_cap : float;
   shares : float;                     (* effective shares = market_cap / price *)
   ebit : float;
+  ?ebit_recipe : string option;       (* operating_income | pretax_plus_interest; omitted on a record fetched before the definitions *)
+  ?ebit_composition : composition option;
   tax_rate : float;                   (* the rate applied *)
   tax_rate_source : tax_rate_source;
   statutory_tax_rate : parameter;     (* the country's rate, applied iff tax_rate_source = Statutory *)
@@ -262,10 +284,13 @@ type inputs = {
   capex : float;
   delta_nwc : float;                  (* mean over delta_nwc_periods *)
   delta_nwc_periods : string list;    (* the fiscal periods averaged, at least 2 *)
+  ~delta_nwc_compositions : composition nullable list;   (* one per averaged period, in the same order; empty before the definitions *)
   fcff : float;                       (* nopat + d&a - capex - delta_nwc *)
   cash : float;
+  ?cash_composition : composition option;
   total_debt : float;
   total_debt_source : string nullable;
+  ?total_debt_composition : composition option;
   net_debt : float;                   (* total_debt - cash *)
   book_equity : float;
   invested_capital : float;           (* book_equity + total_debt *)

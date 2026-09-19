@@ -3,9 +3,13 @@
     gate, parameter resolution, the routed model, sanity checks, signal, floor,
     and the [`Failed]-with-nulls shape.
 
-    Order: declaration and class check -> admissibility -> country -> currency
-    gate -> resolve parameters -> the first admissible model -> sanity bound ->
-    record. The currency gate: with both currencies present and equal the
+    Order: declaration and class check -> admissibility -> country -> field
+    definitions -> filing age -> currency gate -> resolve parameters -> the first
+    admissible model -> sanity bound -> record. The field-definitions gate: a
+    record whose periods carry a composition naming another definition than
+    [reference/field_definitions.json] (or an ebit recipe it does not list) is
+    [`Failed] naming both, so statements fetched under one definition are never
+    valued under another; a record naming none passes. The currency gate: with both currencies present and equal the
     same-currency path runs exactly as before; otherwise the record's statement
     totals are converted at one recorded FX rate into the trading currency, the
     parameters come from [Params.resolve_cross], the same model runs on the
@@ -30,6 +34,10 @@ type declaration = {
   lens_note : string;
   scope_limits : string list;
 }
+
+val definitions_check :
+  Reference_t.field_definitions -> Boundary_t.financials -> (unit, string) result
+(** The field-definitions gate on every period of the record. *)
 
 val run :
   ?thresholds:thresholds ->

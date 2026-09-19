@@ -5,13 +5,15 @@
    <reference>/universe.json); a ticker not in it takes --entity-class CLASS if given,
    otherwise it fails as undeclared. Without --out, one valuation record per line goes to
    stdout. With --out DIR, DIR/valuations.jsonl and DIR/summary.txt are written and the
-   summary is printed. Valuation never fetches. *)
+   summary is printed. With --baseline FILE (a previous run's valuations.jsonl),
+   provider_diff.txt opens with this run against that one, every record, every moved fair
+   value with the inputs that moved. Valuation never fetches. *)
 
 open Atemoya
 
 let usage =
   "usage: atemoya [--reference DIR] [--today YYYY-MM-DD] [--out DIR] [--universe FILE] \
-   [--entity-class CLASS] <financials.json | directory>...\n"
+   [--entity-class CLASS] [--baseline valuations.jsonl] <financials.json | directory>...\n"
 
 type options = {
   reference : string;
@@ -19,6 +21,7 @@ type options = {
   out : string option;
   universe : string option;
   entity_class : string option;
+  baseline : string option;
 }
 
 let usage_exit () =
@@ -36,7 +39,8 @@ let rec parse o paths = function
   | "--out" :: v :: rest -> parse { o with out = Some v } paths rest
   | "--universe" :: v :: rest -> parse { o with universe = Some v } paths rest
   | "--entity-class" :: v :: rest -> parse { o with entity_class = Some v } paths rest
-  | [ ("--reference" | "--today" | "--out" | "--universe" | "--entity-class") ] ->
+  | "--baseline" :: v :: rest -> parse { o with baseline = Some v } paths rest
+  | [ ("--reference" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline") ] ->
       usage_exit ()
   | p :: rest -> parse o (p :: paths) rest
 
@@ -118,6 +122,7 @@ let () =
         out = None;
         universe = None;
         entity_class = None;
+        baseline = None;
       }
       []
       (List.tl (Array.to_list Sys.argv))
@@ -173,6 +178,28 @@ let () =
       files
   in
   let results = List.map fst paired in
+  (* A previous run's valuations.jsonl, one record per line; an unreadable line is
+     reported and skipped, an unreadable file exits. *)
+  let baseline =
+    Option.map
+      (fun path ->
+        let lines =
+          match In_channel.with_open_bin path In_channel.input_all with
+          | text -> String.split_on_char '\n' text |> List.filter (fun l -> String.trim l <> "")
+          | exception Sys_error msg ->
+              Printf.eprintf "--baseline: cannot read %s: %s\n%!" path msg;
+              exit 2
+        in
+        List.filter_map
+          (fun line ->
+            match Boundary_j.valuation_of_string line with
+            | v -> Some v
+            | exception (Yojson.Json_error msg | Atdgen_runtime.Oj_run.Error msg) ->
+                Printf.eprintf "%s: skipping a baseline line: %s\n%!" path msg;
+                None)
+          lines)
+      o.baseline
+  in
   let unreadable = List.length files - List.length results in
   let jsonl =
     String.concat ""
@@ -183,8 +210,10 @@ let () =
   | Some dir ->
       mkdir_p dir;
       write_file (Filename.concat dir "valuations.jsonl") jsonl;
-      let summary = Batch.summary ?universe results in
+      let summary = Batch.summary ?universe ~definitions:params.field_definitions results in
       write_file (Filename.concat dir "summary.txt") summary;
-      write_file (Filename.concat dir "provider_diff.txt") (Batch.provider_diff paired);
+      write_file (Filename.concat dir "provider_diff.txt")
+        ((match baseline with Some b -> Batch.run_diff ~baseline:b results ^ "\n" | None -> "")
+        ^ Batch.provider_diff paired);
       print_string summary);
   exit (if unreadable > 0 then 1 else 0)

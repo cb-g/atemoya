@@ -21,10 +21,12 @@ type t = {
   fx_sources : Reference_t.fx_sources;
   fx_rates : Reference_t.fx_rates;
   xbrl_tags : Reference_t.xbrl_tags;
+  field_definitions : Reference_t.field_definitions;
+      (** the one definition per composed statement field, applied by both fetchers *)
 }
 
 val load : dir:string -> (t, string) result
-(** Reads the nine files under [dir]; the error names the file and the parse
+(** Reads the ten files under [dir]; the error names the file and the parse
     problem. *)
 
 val days_between : from:string -> until:string -> (int, string) result

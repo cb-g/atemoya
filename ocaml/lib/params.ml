@@ -12,6 +12,7 @@ type t = {
   fx_sources : fx_sources;
   fx_rates : fx_rates;
   xbrl_tags : xbrl_tags;
+  field_definitions : field_definitions;
 }
 
 let read reader path =
@@ -43,6 +44,9 @@ let load ~dir =
   let* fx_sources = read Reference_j.read_fx_sources (file "fx_sources.json") in
   let* fx_rates = read Reference_j.read_fx_rates (file "fx_rates.json") in
   let* xbrl_tags = read Reference_j.read_xbrl_tags (file "xbrl_tags.json") in
+  let* field_definitions =
+    read Reference_j.read_field_definitions (file "field_definitions.json")
+  in
   Ok
     {
       risk_free;
@@ -54,6 +58,7 @@ let load ~dir =
       fx_sources;
       fx_rates;
       xbrl_tags;
+      field_definitions;
     }
 
 let days_between = Date.days_between

@@ -6,7 +6,7 @@ are the exact `failed_reason` strings, with variable parts in parentheses, so th
 checkable against `output/summary.txt`; a test asserts every reason string in the code
 appears here. **Every change that adds a branch updates this file in the same commit.**
 
-Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source.
+Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field.
 
 ```mermaid
 flowchart TD
@@ -15,7 +15,7 @@ flowchart TD
     classDef new stroke-dasharray: 4 3
 
     IN[/"ticker: data/financials/(TICKER).json"/] --> FETCHED{"file parses as boundary financials?"}
-    PROVIDER["statements provider (10): per ticker, decided by the filing and recorded on the record with the reason. CIK resolves exactly in SEC's ticker map and the facts carry annual 10-K net income and stockholders' equity under us-gaap: filed statements (SEC XBRL companyfacts) are primary, the us-gaap tag per field per period from reference/xbrl_tags.json, filing date and accession on each period, the vendor's statements fetched as a cross-check (recorded per field, never a gate) and written beside as a shadow record. IFRS filer, facts on 20-F only, no annual anchors, no CIK, or companyfacts 404: the vendor feed (yfinance). Price, market cap and currencies always from yfinance."]:::new -.-> IN
+    PROVIDER["statements provider (10): per ticker, decided by the filing and recorded on the record with the reason. CIK resolves exactly in SEC's ticker map and the facts carry annual 10-K net income and stockholders' equity under us-gaap: filed statements (SEC XBRL companyfacts) are primary, the us-gaap tag per field per period from reference/xbrl_tags.json, filing date and accession on each period, the vendor's statements fetched as a cross-check (recorded per field, never a gate) and written beside as a shadow record. IFRS filer, facts on 20-F only, no annual anchors, no CIK, or companyfacts 404: the vendor feed (yfinance). Price, market cap and currencies always from yfinance. On either provider cash, total_debt, delta_nwc and ebit follow reference/field_definitions.json (11): cash and equivalents plus short-term investments less restricted cash; financial debt with operating leases excluded; the cash-flow statement's change in operating working capital (aggregate tag, else the classified components, null with a note when a tag is unclassified); operating income, else pretax plus interest expense as ebit_recipe = pretax_plus_interest; every period records the composition (definition and components summed)."]:::new -.-> IN
     FETCHED -- no --> UNREAD["stderr: cannot read financials; no record"]:::failed
     FETCHED -- yes --> THR{"bank_nii_ratio_threshold fresh?"}
     THR -- "stale / future / missing" --> PFAIL
@@ -35,7 +35,9 @@ flowchart TD
     ADM -- "residual_income_insurer (Insurer) (08)" --> COUNTRY
 
     COUNTRY{"country in the fetch?"} -- no --> F_COUNTRY["country not determinable from the fetch"]:::failed
-    COUNTRY -- yes --> FILING{"filed statements: newest annual filing within max_filing_age_days 400? (10)"}:::new
+    COUNTRY -- yes --> DEFS{"every period's compositions name the definitions in reference/field_definitions.json, and its ebit_recipe one the file lists? (11)"}:::new
+    DEFS -- "another definition or recipe" --> F_DEFS["field definition mismatch: (field) follows (recorded), reference/field_definitions.json defines (name); refetch the statements (11)"]:::failed
+    DEFS -- "yes, or none recorded" --> FILING{"filed statements: newest annual filing within max_filing_age_days 400? (10)"}:::new
     FILING -- "older" --> F_FILING["latest annual filing is N days old, older than its max_filing_age_days 400 (10)"]:::failed
     FILING -- "fresh, or vendor statements" --> CUR{"currency gate (09): financial_currency and trading_currency present? equal?"}:::new
     CUR -- "a field missing" --> F_CUR["missing market data: financial_currency, or missing market data: trading_currency (09)"]:::failed
@@ -103,6 +105,7 @@ flowchart TD
     F_PAYOUT --> FLOOR
     F_FILED --> FLOOR
     F_FILING --> FLOOR
+    F_DEFS --> FLOOR
     F_NONPOS --> FLOOR
     F_BOUND --> FLOOR
     OK --> RECORD
@@ -132,3 +135,6 @@ into it.
   field, a missing FX pair and a stale FX leg.
 - filed statements (10): filed statements as the primary provider for us-gaap annual filers, the
   provider decision on every record, the vendor cross-check, and the filing-age `Failed`.
+- field definitions (11): one definition per field on both providers (`reference/field_definitions.json`),
+  the composition on every period and in the DCF inputs, the ebit recipe, and the
+  field-definitions gate with its `Failed` string.

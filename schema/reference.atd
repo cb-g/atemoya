@@ -105,6 +105,7 @@ type universe_entry = {
   ~scope_limits : string list;          (* what the models cannot see for this name; carried verbatim *)
   expected_status : string;             (* "Ok" or "Failed" *)
   ?expected_reason : string option;     (* prefix the failed_reason must start with *)
+  ~cross_check_note : string;           (* why the vendor still disagrees on this name under the shared definitions: vendor lag, restatement, another filed line, or unexplained *)
 }
 
 type universe = {
@@ -178,7 +179,101 @@ type xbrl_tags = {
   annual_span_days : int list;          (* [min; max] days a duration fact must span *)
   fields : (string * xbrl_field) list <json repr="object">;
   depreciation_components : string list;    (* canonical fields summed when no aggregate d&a tag: the first required *)
-  debt_recipes : string list list;          (* canonical fields summed for total debt, first complete recipe wins *)
-  debt_optional_add : string list;          (* canonical fields added to the recipe when present *)
-  working_capital : (string * string) list <json repr="object">;   (* assets, liabilities, cash, debt_current -> canonical fields *)
+}
+
+(* One definition per statement field, applied identically to filed statements (us-gaap
+   tags) and to the vendor feed (row labels): reference/field_definitions.json, the only
+   place cash, total_debt, delta_nwc and ebit are defined. python/fetch.py reads the vendor
+   side, python/fetch_sec.py the xbrl side; OCaml loads it to refuse a record whose
+   compositions name another definition. Every list is first-present unless the comment
+   says otherwise; [why] carries the reasoning on the record. *)
+type cash_xbrl = {
+  cash_equivalents : string list;
+  restricted_inclusive : string list;       (* cash_equivalents tags that include restricted cash *)
+  restricted_cash : string list list;       (* deducted when a restricted_inclusive tag supplied the value: first complete alternative *)
+  short_term_investments : string list;     (* optional component *)
+}
+
+type cash_vendor = {
+  cash_equivalents : string list;
+  short_term_investments : string list;     (* optional component *)
+  ~not_used : string list;                  (* rows deliberately not read *)
+  ~notes : string list;
+}
+
+type cash_definition = {
+  name : string;
+  why : string;
+  xbrl : cash_xbrl;
+  vendor : cash_vendor;
+}
+
+type debt_xbrl = {
+  noncurrent : string list;
+  current_total : string list;              (* all debt due within a year as one tag; recipe 1 with noncurrent *)
+  current_long_term : string list;          (* the current portion of long-term debt; recipe 2 with noncurrent *)
+  short_term_borrowings : string list;      (* optional in recipes 2 and 3 *)
+  total_including_current : string list;    (* long-term debt filed with its current portion; recipe 3 *)
+  excluded : string list;                   (* operating lease liabilities: never summed *)
+  ~notes : string list;
+}
+
+type debt_vendor = {
+  long_term_debt : string list;             (* required *)
+  current_debt : string list;               (* optional; already contains commercial paper *)
+  current_debt_components : string list;    (* summed when no current_debt row and either is present *)
+  ~not_used : string list;
+  ~notes : string list;
+}
+
+type debt_definition = {
+  name : string;
+  why : string;
+  xbrl : debt_xbrl;
+  vendor : debt_vendor;
+}
+
+type nwc_xbrl = {
+  aggregate : string list;                  (* the filed change in operating working capital, positive = cash absorbed *)
+  asset_components : string list;           (* positive = the asset grew = cash absorbed: added *)
+  liability_components : string list;       (* positive = the liability grew = cash released: subtracted *)
+  excluded : string list;                   (* recognised as outside working capital, never summed *)
+  ~notes : string list;
+}
+
+type nwc_vendor = {
+  change_in_working_capital : string list;
+  sign : float;                             (* multiplies the vendor's row into the boundary's sign *)
+  ~notes : string list;
+}
+
+type nwc_definition = {
+  name : string;
+  why : string;
+  xbrl : nwc_xbrl;
+  vendor : nwc_vendor;
+}
+
+(* Pretax income is the record's canonical pretax_income on either provider. *)
+type ebit_rows = {
+  operating_income : string list;
+  interest_expense : string list;
+}
+
+type ebit_definition = {
+  name : string;
+  recipes : string list;                    (* the recipe names a record may carry as ebit_recipe *)
+  why : string;
+  xbrl : ebit_rows;
+  vendor : ebit_rows;
+}
+
+type field_definitions = {
+  source : string;
+  as_of : string;
+  ~notes : string list;
+  cash : cash_definition;
+  total_debt : debt_definition;
+  delta_nwc : nwc_definition;
+  ebit : ebit_definition;
 }

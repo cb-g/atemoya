@@ -64,6 +64,10 @@ let country_of (sources : Reference_t.fx_sources) currency =
 
 let scale rate = Option.map (fun v -> v *. rate)
 
+let scale_composition rate =
+  Option.map (fun (c : composition) ->
+      { c with components = List.map (fun (k : component) -> { k with value = k.value *. rate }) c.components })
+
 let convert ~rate (fin : financials) =
   let period (p : fiscal_period) =
     {
@@ -91,6 +95,10 @@ let convert ~rate (fin : financials) =
       operating_expense = scale rate p.operating_expense;
       future_policy_benefits = scale rate p.future_policy_benefits;
       claims_liability = scale rate p.claims_liability;
+      ebit_composition = scale_composition rate p.ebit_composition;
+      cash_composition = scale_composition rate p.cash_composition;
+      total_debt_composition = scale_composition rate p.total_debt_composition;
+      delta_nwc_composition = scale_composition rate p.delta_nwc_composition;
     }
   in
   { fin with periods = List.map period fin.periods; currency = fin.trading_currency }

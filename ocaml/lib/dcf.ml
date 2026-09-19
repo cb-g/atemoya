@@ -109,6 +109,15 @@ let value a ~country (fin : financials) =
   let ( let* ) = Result.bind in
   let* p = latest_period fin in
   let nwc = series fin (fun q -> q.delta_nwc) in
+  (* The composition of each averaged delta_nwc, aligned with [nwc]. *)
+  let nwc_compositions =
+    List.map
+      (fun (period_end, _) ->
+        Option.bind
+          (List.find_opt (fun (q : fiscal_period) -> q.period_end = period_end) fin.periods)
+          (fun (q : fiscal_period) -> q.delta_nwc_composition))
+      nwc
+  in
   let revenues = series fin (fun q -> q.total_revenue) in
   match
     ( fin.currency,
@@ -202,6 +211,8 @@ let value a ~country (fin : financials) =
                   market_cap;
                   shares;
                   ebit;
+                  ebit_recipe = p.ebit_recipe;
+                  ebit_composition = p.ebit_composition;
                   tax_rate;
                   tax_rate_source;
                   statutory_tax_rate = a.statutory_tax_rate;
@@ -211,10 +222,13 @@ let value a ~country (fin : financials) =
                   capex;
                   delta_nwc;
                   delta_nwc_periods = List.map fst nwc;
+                  delta_nwc_compositions = nwc_compositions;
                   fcff;
                   cash;
+                  cash_composition = p.cash_composition;
                   total_debt;
                   total_debt_source = p.total_debt_source;
+                  total_debt_composition = p.total_debt_composition;
                   net_debt;
                   book_equity;
                   invested_capital = estimate.invested_capital;

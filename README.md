@@ -49,6 +49,7 @@ uv run python/refresh_fx.py --all           # FX via FRED H.10 -> reference/fx_r
 
 uv run python/fetch_all.py                  # every ticker in reference/universe.json
 dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt
+dune exec atemoya -- data/financials --out output --baseline previous/valuations.jsonl   # plus this run against that one
 ```
 
 `dune exec atemoya` reads parameters from `reference/` (`--reference DIR` to override) and
@@ -69,6 +70,11 @@ domicile's country risk premium; prices quoted in pence or cents are converted t
 major unit at the fetch. With `--out`, the summary checks each ticker against
 the expected outcome in the universe file; a deviation there is a finding, not something
 to tune away.
+Both providers assemble cash, total debt, the change in working capital and ebit per
+`reference/field_definitions.json`, the one definition per field with its reasoning; every
+period records the components summed, and a record fetched under another definition fails
+rather than being valued under this one. With `--baseline`, `provider_diff.txt` opens with
+every record against the previous run and lists the inputs behind every moved fair value.
 Valuation never fetches, so running it twice on the same inputs with `--today` pinned gives
 byte-identical output. `data/` and `output/` are generated and gitignored; versioned inputs
 live in `reference/`.
