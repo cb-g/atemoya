@@ -14,7 +14,10 @@ type assumptions = {
   projection_years : int_parameter;
   statutory_tax_rate : parameter;
   midcycle_window_years : int_parameter;
+  required_return : declared_return option;
 }
+
+and declared_return = { premium_over_rf : float; source : string; version : string }
 
 let max_effective_tax_rate = 0.5
 
@@ -51,9 +54,16 @@ let tax_rate ~statutory ~pretax_income ~tax_provision =
       else (statutory, `Statutory)
   | _ -> (statutory, `Statutory)
 
-let cost_of_equity a =
+let cost_of_equity_capm a =
   let domestic = a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value) in
   match a.country_risk_premium with None -> domestic | Some crp -> domestic +. crp.value
+
+(* The rate used (34): a declared premium over the risk-free rate replaces the whole CAPM
+   chain above it; without a declaration, CAPM. *)
+let cost_of_equity a =
+  match a.required_return with
+  | Some r -> a.risk_free_rate.value +. r.premium_over_rf
+  | None -> cost_of_equity_capm a
 
 let latest_period fin =
   match Period.latest fin with

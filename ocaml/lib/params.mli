@@ -30,6 +30,8 @@ type t = {
       (** the one definition per composed statement field, applied by both fetchers *)
   beliefs : Reference_t.class_beliefs;
       (** the declared class defaults on long-run growth (24); empty when the directory has no beliefs.json *)
+  required_returns : Reference_t.required_returns;
+      (** the declared required returns (34); both sections empty until the user declares one *)
 }
 
 val load : dir:string -> fetched:string -> (t, string) result
@@ -69,6 +71,7 @@ val resolve_cross :
   (Dcf.assumptions, string) result
 (** The cross-currency path: the risk-free rate and terminal growth from
     [rate_country] (the trading currency's), the statutory tax rate from the
-    [domicile], and the international CAPM's components: [equity_risk_premium]
+    [domicile], and the international CAPM's components (a declared required return,
+    resolved by the valuation per name, replaces them above the risk-free rate, 34): [equity_risk_premium]
     is the mature-market base and [country_risk_premium] the domicile's total
     ERP less that base. Beta from the industry table as always. *)

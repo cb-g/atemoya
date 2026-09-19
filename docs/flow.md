@@ -66,7 +66,8 @@ flowchart TD
     PARAMS -- "tenor absent" --> F_NOTENOR["risk-free curve for (key) has no (tenor) tenor"]:::failed
     PARAMS -- "stale" --> PFAIL["(parameter) for (key) (as_of date) is N days old, older than its max_age_days M"]:::failed
     PARAMS -- "future as_of" --> F_FUTURE["(parameter) for (key) has as_of (date), later than the valuation date (today)"]:::failed
-    PARAMS -- "resolved" --> WHICH{"routed model"}
+    PARAMS -- "resolved" --> RR["required return (34): a names entry, else the class default, else CAPM; a declaration replaces the CAPM chain above the risk-free rate on every model (the WACC blend and the after-tax cost of debt unchanged); every Ok record carries cost_of_equity_capm, cost_of_equity_used, required_return_source and, when declared, required_return_version"]:::new
+    RR --> WHICH{"routed model"}
 
     WHICH -- dcf --> EBIT{"ebit on the latest period derived (ebit_recipe other than operating_income)? then the record's cross-check must find it within threshold of the vendor's operating income (12)"}:::new
     EBIT -- "derived and the check misses, or no vendor figure to check against" --> F_EBIT["operating income not filed; derived EBIT misses the cross-check ((recipe): derived (x) against the vendor's (y), (d)% beyond the 2% threshold, or: no vendor operating income to check against) (12)"]:::failed
@@ -191,6 +192,34 @@ and read by the batch from `--fetched DIR` (default `data/reference`). Point-in-
 its own per-date copies under `data/pit/(D)/reference/` and the panel passes that
 directory as both `--reference` and `--fetched`. A record that needs a curve or a rate
 the user has not fetched fails naming the refresher to run.
+
+## Required return
+
+CAPM is the default cost of equity and is never silently replaced. A declared required
+return (34) is a premium in percentage points over the country's risk-free rate, resolved
+per name (a `names` entry, else the class default, else CAPM) from
+`reference/required_returns.json`, both sections empty until the user declares one, or a
+further `--required-returns` file. The rules of use:
+
+1. **A required return is yours.** It is declared, dated, and carries a why: a premium in
+   percentage points over the country's risk-free rate at the model's tenor. The tool
+   never derives it from a beta, a prior or history. The loader accepts exactly three
+   fields (`premium_over_rf`, `why`, `as_of`) and refuses anything else.
+2. **Revise it by a dated declaration when evidence warrants**, never because of what a
+   number looks like.
+3. **The parameter is the premium over the risk-free rate**, so a declaration serves every
+   currency: on the cross-currency path it replaces beta times ERP and the country
+   premium, and the risk-free rate stays the trading currency's.
+4. **A declaration moves the anchor**, not the signal thresholds; the readouts, the
+   sensitivity step, the belief map and the probability all run on the rate used.
+5. **Every record stamps `required_return_version`** when a declaration applies, and the
+   run diff names every record whose version changed.
+6. **Class defaults and per-name entries are tracked** in `reference/required_returns.json`;
+   both sections ship empty. A further file given as `--required-returns` overrides the
+   tracked entries.
+7. **CAPM is the default and is never silently replaced.** Every Ok record carries
+   `cost_of_equity_capm`, `cost_of_equity_used` and `required_return_source`, so the gap
+   between the two rates is visible on every record a declaration touches.
 
 ## Definition rules
 
@@ -358,3 +387,7 @@ in this order:
 - the reinvestment floor (33): the mid-cycle reinvestment rate is floored at zero with the
   measured rate recorded beside it and a flag; the disinvestment guard and its `Failed`
   string are gone.
+- declared required return (34): `reference/required_returns.json` with empty class and
+  name sections and strict loaders; a declaration replaces CAPM above the risk-free rate on
+  every model; both rates and the source on every Ok record; readouts, sensitivity, map
+  and probability on the rate used. No new `Failed` string; no number moves.

@@ -17,14 +17,16 @@
    checkout), and every --out run is also written, never overwritten, to
    DIR/runs/<valued_on>/ (-2, -3 on the same date); the belief map's grid per Ok name with a
    growth-then-terminal path goes to DIR/maps/<ticker>.json (23). With --beliefs FILE, a further file of
-   per-name beliefs on long-run growth (24) overrides the entries in <reference>/beliefs.json.
+   per-name beliefs on long-run growth (24) overrides the entries in <reference>/beliefs.json;
+   --required-returns FILE likewise for declared required returns (34) over
+   <reference>/required_returns.json, CAPM being the default on every name without one.
    Valuation never fetches. *)
 
 open Atemoya
 
 let usage =
   "usage: atemoya [--reference DIR] [--fetched DIR] [--today YYYY-MM-DD] [--out DIR] [--universe FILE] \
-   [--entity-class CLASS] [--baseline valuations.jsonl] [--baseline-snapshot DIR] [--beliefs FILE] \
+   [--entity-class CLASS] [--baseline valuations.jsonl] [--baseline-snapshot DIR] [--beliefs FILE] [--required-returns FILE] \
    <financials.json | directory>...\n"
 
 type options = {
@@ -37,6 +39,7 @@ type options = {
   baseline : string option;
   baseline_snapshot : string option;
   beliefs : string option;
+  required_returns : string option;
 }
 
 let usage_exit () =
@@ -58,7 +61,8 @@ let rec parse o paths = function
   | "--baseline" :: v :: rest -> parse { o with baseline = Some v } paths rest
   | "--baseline-snapshot" :: v :: rest -> parse { o with baseline_snapshot = Some v } paths rest
   | "--beliefs" :: v :: rest -> parse { o with beliefs = Some v } paths rest
-  | [ ("--reference" | "--fetched" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline" | "--baseline-snapshot" | "--beliefs") ] ->
+  | "--required-returns" :: v :: rest -> parse { o with required_returns = Some v } paths rest
+  | [ ("--reference" | "--fetched" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline" | "--baseline-snapshot" | "--beliefs" | "--required-returns") ] ->
       usage_exit ()
   | p :: rest -> parse o (p :: paths) rest
 
@@ -157,6 +161,7 @@ let () =
         baseline = None;
         baseline_snapshot = None;
         beliefs = None;
+        required_returns = None;
       }
       []
       (List.tl (Array.to_list Sys.argv))
@@ -203,6 +208,16 @@ let () =
             exit 2)
       o.beliefs
   in
+  let name_required_returns =
+    Option.map
+      (fun p ->
+        match Required_returns.load_names p with
+        | Ok r -> r
+        | Error msg ->
+            Printf.eprintf "%s\n%!" msg;
+            exit 2)
+      o.required_returns
+  in
   let model_version = model_version () in
   let files = List.concat_map expand paths in
   (* Each record, and the valuation of its vendor-statement shadow when the fetch wrote one
@@ -212,7 +227,7 @@ let () =
       (fun path ->
         Option.map
           (fun (fin : Boundary_t.financials) ->
-            let value = Valuation.run ?name_beliefs params ~today:o.today ~model_version ~declaration:(declaration fin.ticker) in
+            let value = Valuation.run ?name_beliefs ?name_required_returns params ~today:o.today ~model_version ~declaration:(declaration fin.ticker) in
             let shadow_path =
               Filename.concat (Filename.dirname path) (fin.ticker ^ ".shadow-yfinance.json")
             in

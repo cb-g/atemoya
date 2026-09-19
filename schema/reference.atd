@@ -516,3 +516,26 @@ type name_beliefs = {
   ~notes : string list;
   tickers : (string * belief) list <json repr="object">;   (* ticker -> absolute, in percentage points *)
 }
+
+(* A declared required return (34), beside CAPM: three fields and nothing else, a premium
+   in percentage points over the country's risk-free rate at the model's tenor, dated,
+   with a why. Never derived from anything by the tool; CAPM is the default and is never
+   silently replaced. Both sections ship empty. *)
+type required_return = {
+  premium_over_rf : float;
+  why : string;
+  as_of : string;
+}
+
+type required_returns = {
+  ~notes : string list;
+  classes : (string * required_return) list <json repr="object">;
+  ~names : (string * required_return) list <json repr="object">;   (* ticker -> overrides the class default *)
+}
+
+(* A further file given as --required-returns FILE: the same three fields; its entries
+   override the tracked ones. *)
+type name_required_returns = {
+  ~notes : string list;
+  tickers : (string * required_return) list <json repr="object">;
+}

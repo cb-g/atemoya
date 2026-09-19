@@ -170,8 +170,8 @@ let point_in_time_gates (fin : financials) =
       | None, None, Some currency -> Error ("rate source has no history for " ^ currency)
       | None, None, None -> Ok ())
 
-let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~today ~model_version ~declaration
-    (original : financials) : valuation =
+let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns (params : Params.t) ~today ~model_version
+    ~declaration (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
   let hold_vintage = Option.is_some original.point_in_time in
   (* Age of the newest filing the statements come from, when they are filed ones. *)
@@ -233,7 +233,19 @@ let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~to
       belief_version = None;
       belief = None;
       belief_reason = None;
+      cost_of_equity_capm = None;
+      cost_of_equity_used = None;
+      required_return_source = None;
+      required_return_version = None;
     }
+  in
+  (* The declared required return (34), per name: a names entry, else the class default,
+     else CAPM; it replaces the CAPM chain above the risk-free rate on both paths. *)
+  let with_required_return (a : Dcf.assumptions) =
+    let entity_class = match declared with Some c -> Admissibility.class_name c | None -> "" in
+    { a with
+      required_return =
+        Required_returns.resolve params.required_returns ?names:name_required_returns ~ticker:original.ticker ~entity_class () }
   in
   (* The declared belief (24) on a growth-then-terminal path: the fourth readout and the
      probability of overpaying under it; the residual-income paths and an undeclared class
@@ -281,7 +293,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~to
     | None -> floor_undeclared
   in
   (* After a model produced a fair value: applicability, sanity bound, signal, floor. *)
-  let conclude ~fin ~model ~class_check ~rule ~price (inputs : model_inputs) fair_value =
+  let conclude ~fin ~model ~class_check ~rule ~price ~(assumptions : Dcf.assumptions) (inputs : model_inputs) fair_value =
     let failed = failed ~fin ~model ~class_check ~inputs ~floor:(floor_of_rule rule) in
     if fair_value <= 0. then
       failed (Printf.sprintf "non-positive fair value %g: model not applicable" fair_value)
@@ -309,6 +321,11 @@ let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~to
           belief_version = (match belief_of ~price ~fair_value inputs with Ok r -> Some r.belief_version | Error _ -> None);
           belief = Result.to_option (belief_of ~price ~fair_value inputs);
           belief_reason = (match belief_of ~price ~fair_value inputs with Error r -> Some r | Ok _ -> None);
+          cost_of_equity_capm = Some (Dcf.cost_of_equity_capm assumptions);
+          cost_of_equity_used = Some (Dcf.cost_of_equity assumptions);
+          required_return_source =
+            Some (match assumptions.required_return with Some r -> r.source | None -> "capm");
+          required_return_version = Option.map (fun (r : Dcf.declared_return) -> r.version) assumptions.required_return;
         }
   in
   (* A derived ebit (any recipe but operating income) runs the dcf only when the record's
@@ -343,7 +360,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~to
       let inputs =
         match conversion with Some c -> with_conversion c inputs | None -> inputs
       in
-      conclude ~fin ~model ~class_check ~rule ~price inputs fair_value
+      conclude ~fin ~model ~class_check ~rule ~price ~assumptions inputs fair_value
     in
     match model with
     | `Dcf -> (
@@ -403,7 +420,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~to
         match Params.resolve ~hold_vintage params ~today ~country ~industry:original.industry with
         | Error reason -> failed reason
         | Ok assumptions ->
-            run_model ~fin:original ~model ~class_check ~rule ~country assumptions)
+            run_model ~fin:original ~model ~class_check ~rule ~country (with_required_return assumptions))
     | Ok (), _, Some financial, Some trading -> (
         match Fx.rate params.fx_sources params.fx_rates ~today ~financial ~trading with
         | Error reason -> failed reason
@@ -436,7 +453,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~to
                       }
                     in
                     run_model ~fin:converted ~conversion ~model ~class_check ~rule ~country
-                      assumptions)))
+                      (with_required_return assumptions))))
   in
   match Params.classification_threshold ~hold_vintage params ~today with
   | Error reason -> failed ~floor:(floor_default ()) reason

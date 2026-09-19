@@ -734,4 +734,8 @@ type valuation = {
   ?belief_version : string option;        (* (24) on every Ok record that used a belief; absent (null) on a run without one for the name *)
   ?belief : belief_readout option;        (* (24) present iff belief_version is *)
   ?belief_reason : string option;         (* (24) why an Ok record has no belief: the residual-income path, or no declaration for the class or name *)
+  ?cost_of_equity_capm : float option;    (* (34) rf + beta x ERP (+ country premium), the chain as always; on every Ok record *)
+  ?cost_of_equity_used : float option;    (* (34) the rate the model, the readouts, the sensitivity, the map and the probability ran on *)
+  ?required_return_source : string option;   (* (34) capm | declared: class <name> | declared: name *)
+  ?required_return_version : string option;  (* (34) as_of, a hash of the three fields, class or name; absent (null) under capm *)
 }

@@ -3187,6 +3187,10 @@ class Valuation:
     belief_version: Optional[str] = None
     belief: Optional[BeliefReadout] = None
     belief_reason: Optional[str] = None
+    cost_of_equity_capm: Optional[float] = None
+    cost_of_equity_used: Optional[float] = None
+    required_return_source: Optional[str] = None
+    required_return_version: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -3224,6 +3228,10 @@ class Valuation:
                 belief_version=_atd_read_string(x['belief_version']) if 'belief_version' in x else None,
                 belief=BeliefReadout.from_json(x['belief']) if 'belief' in x else None,
                 belief_reason=_atd_read_string(x['belief_reason']) if 'belief_reason' in x else None,
+                cost_of_equity_capm=_atd_read_float(x['cost_of_equity_capm']) if 'cost_of_equity_capm' in x else None,
+                cost_of_equity_used=_atd_read_float(x['cost_of_equity_used']) if 'cost_of_equity_used' in x else None,
+                required_return_source=_atd_read_string(x['required_return_source']) if 'required_return_source' in x else None,
+                required_return_version=_atd_read_string(x['required_return_version']) if 'required_return_version' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -3273,6 +3281,14 @@ class Valuation:
             res['belief'] = (lambda x: x.to_json())(self.belief)
         if self.belief_reason is not None:
             res['belief_reason'] = _atd_write_string(self.belief_reason)
+        if self.cost_of_equity_capm is not None:
+            res['cost_of_equity_capm'] = _atd_write_float(self.cost_of_equity_capm)
+        if self.cost_of_equity_used is not None:
+            res['cost_of_equity_used'] = _atd_write_float(self.cost_of_equity_used)
+        if self.required_return_source is not None:
+            res['required_return_source'] = _atd_write_string(self.required_return_source)
+        if self.required_return_version is not None:
+            res['required_return_version'] = _atd_write_string(self.required_return_version)
         return res
 
     @classmethod

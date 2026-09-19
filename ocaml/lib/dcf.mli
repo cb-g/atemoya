@@ -31,7 +31,12 @@ type assumptions = {
       (** used when no effective rate in [0, max_effective_tax_rate] is derivable *)
   midcycle_window_years : Boundary_t.int_parameter;
       (** the mid-cycle DCF's window (22); unused by this module *)
+  required_return : declared_return option;
+      (** a declared required return (34): its premium over the risk-free rate replaces
+          the CAPM chain above it; [None] is CAPM *)
 }
+
+and declared_return = { premium_over_rf : float; source : string; version : string }
 
 val max_effective_tax_rate : float
 
@@ -71,8 +76,12 @@ val tax_rate :
 (** Effective rate [tax_provision / pretax_income] when [pretax_income > 0] and the
     result lies in [0, max_effective_tax_rate]; otherwise [statutory]. *)
 
+val cost_of_equity_capm : assumptions -> float
+(** [risk_free_rate + beta * equity_risk_premium (+ country_risk_premium)]: the chain,
+    always recorded. *)
+
 val cost_of_equity : assumptions -> float
-(** [risk_free_rate + beta * equity_risk_premium (+ country_risk_premium)]. *)
+(** The rate used: [risk_free_rate + premium_over_rf] under a declaration, else CAPM. *)
 
 val missing_report : Boundary_t.financials -> Boundary_t.fiscal_period -> nwc_periods:int -> string
 (** "missing market data: ...; missing statement fields for fiscal period ending D: ...". *)

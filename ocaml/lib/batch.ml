@@ -238,6 +238,10 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
       (String.concat "; "
          (List.map (fun (r, n) -> Printf.sprintf "%d %s" n r)
             (count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> v.belief_reason) no_belief))));
+    let sources = count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> v.required_return_source) vs) in
+    Printf.bprintf b "required return (34), across %d Ok names: %s\n"
+      (List.length (List.filter (fun (v : valuation) -> Option.is_some v.required_return_source) vs))
+      (match sources with [] -> "none" | xs -> String.concat ", " (List.map (fun (s, n) -> Printf.sprintf "%s %d" s n) xs));
     Printf.bprintf b "implied half-life, across %d Ok names: %s; beyond range: %d would need growth or roe that never decays, %d priced below the no-growth value; level is the meaningful readout for %d (start at or below its target)\n"
       (List.length implied)
       (match (median, half_lives) with
@@ -484,6 +488,9 @@ let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
           if o.belief_version <> v.belief_version then
             Printf.bprintf b "           belief_version %s -> %s\n"
               (Option.value o.belief_version ~default:"null") (Option.value v.belief_version ~default:"null");
+          if o.required_return_version <> v.required_return_version then
+            Printf.bprintf b "           required_return_version %s -> %s\n"
+              (Option.value o.required_return_version ~default:"null") (Option.value v.required_return_version ~default:"null");
           (match (v.status, v.failed_reason) with
           | `Failed, Some r -> Printf.bprintf b "           now: %s\n" r
           | _ -> ());

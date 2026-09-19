@@ -126,14 +126,7 @@ let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumption
                    (List.length payout_rows))
         in
         let retention = 1. -. payout_ratio in
-        let cost_of_equity =
-          let domestic =
-            a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value)
-          in
-          match a.country_risk_premium with
-          | None -> domestic
-          | Some crp -> domestic +. crp.value
-        in
+        let cost_of_equity = Dcf.cost_of_equity a in
         if a.projection_years.value < 0 then
           Error
             (Printf.sprintf "projection horizon %d years is negative" a.projection_years.value)

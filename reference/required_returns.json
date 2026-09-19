@@ -1,0 +1,9 @@
+{
+  "notes": [
+    "Declared required returns on equity (34), beside CAPM. Three fields per entry and nothing else: premium_over_rf (percentage points over the country's risk-free rate at the model's tenor), why, as_of. A names entry overrides the class default; with neither, the cost of equity is CAPM (risk-free plus beta times the equity risk premium, plus a country premium on the cross-currency path). A declaration replaces the whole CAPM chain above the risk-free rate; on the cross-currency path the risk-free rate stays the trading currency's.",
+    "Never derived by the tool from history, a beta or a prior; the numbers are a declaration, dated, revised by a dated declaration when evidence warrants, never because of what a number looks like. CAPM is the default and is never silently replaced: every record carries the CAPM rate, the rate used and the source, so a declaration is visible on every record it touches.",
+    "Both sections ship empty: no class or name carries a declared required return until the user writes one here."
+  ],
+  "classes": {},
+  "names": {}
+}

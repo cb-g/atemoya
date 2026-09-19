@@ -754,6 +754,76 @@ class RiskFreeRates:
 
 
 @dataclass
+class RequiredReturn:
+    """Original type: required_return = { ... }
+    """
+
+    premium_over_rf: float
+    why: str
+    as_of: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'RequiredReturn':
+        if isinstance(x, dict):
+            return cls(
+                premium_over_rf=_atd_read_float(x['premium_over_rf']) if 'premium_over_rf' in x else _atd_missing_json_field('RequiredReturn', 'premium_over_rf'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('RequiredReturn', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('RequiredReturn', 'as_of'),
+            )
+        else:
+            _atd_bad_json('RequiredReturn', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['premium_over_rf'] = _atd_write_float(self.premium_over_rf)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'RequiredReturn':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class RequiredReturns:
+    """Original type: required_returns = { ... }
+    """
+
+    classes: List[Tuple[str, RequiredReturn]]
+    notes: List[str] = field(default_factory=lambda: [])
+    names: List[Tuple[str, RequiredReturn]] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'RequiredReturns':
+        if isinstance(x, dict):
+            return cls(
+                classes=_atd_read_assoc_object_into_list(RequiredReturn.from_json)(x['classes']) if 'classes' in x else _atd_missing_json_field('RequiredReturns', 'classes'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                names=_atd_read_assoc_object_into_list(RequiredReturn.from_json)(x['names']) if 'names' in x else [],
+            )
+        else:
+            _atd_bad_json('RequiredReturns', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['classes'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.classes)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        res['names'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.names)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'RequiredReturns':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class RequiredOnLatestPeriod:
     """Original type: required_on_latest_period = { ... }
     """
@@ -1216,6 +1286,38 @@ class NwcDefinition:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'NwcDefinition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class NameRequiredReturns:
+    """Original type: name_required_returns = { ... }
+    """
+
+    tickers: List[Tuple[str, RequiredReturn]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'NameRequiredReturns':
+        if isinstance(x, dict):
+            return cls(
+                tickers=_atd_read_assoc_object_into_list(RequiredReturn.from_json)(x['tickers']) if 'tickers' in x else _atd_missing_json_field('NameRequiredReturns', 'tickers'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('NameRequiredReturns', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['tickers'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.tickers)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'NameRequiredReturns':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:

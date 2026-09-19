@@ -84,10 +84,7 @@ let value (a : Dcf.assumptions) ~country (fin : financials) =
                 (Printf.sprintf "ffo growth needs two periods with ffo and weighted-average shares, have %d"
                    (List.length series))
         in
-        let cost_of_equity =
-          let domestic = a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value) in
-          match a.country_risk_premium with None -> domestic | Some crp -> domestic +. crp.value
-        in
+        let cost_of_equity = Dcf.cost_of_equity a in
         let terminal_growth_rate = a.terminal_growth_rate.value in
         if cost_of_equity <= terminal_growth_rate then
           Error

@@ -166,6 +166,7 @@ let assumptions : Dcf.assumptions =
     statutory_tax_rate = param 0.21;
     midcycle_window_years =
       { value = 15; key = "global"; source = "test"; as_of = today; age_days = 0 };
+    required_return = None;
   }
 
 (* A reference set as JSON, exercising aliases, estimated cells and staleness. Every rate
@@ -266,6 +267,7 @@ let params : Params.t =
             "OperatingCompany": {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 2, "why": "near the economy's", "as_of": "2026-09-19"},
             "Cyclical": {"mean": 0, "sd": 1.0, "floor": -3, "ceiling": 2, "why": "wider below", "as_of": "2026-09-19"},
             "Reit": {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 1, "why": "rent tracks inflation", "as_of": "2026-09-19"}}}|};
+    required_returns = Reference_j.required_returns_of_string {|{"classes": {}, "names": {}}|};
   }
 
 let declaration ?(scope_limits = []) entity_class = { Valuation.entity_class; scope_limits }
@@ -1467,6 +1469,105 @@ let test_beliefs_cdf_and_probability () =
   check_mentions "two runs under different beliefs are different runs" (Batch.run_diff ~baseline:[ v ] [ own ]) [ "belief_version 2026-09-19-"; "-class -> 2026-09-01-"; "-name" ];
   let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation own) in
   Alcotest.check valuation "json round trip" own again
+
+
+(* --- the declared required return (34) --- *)
+
+let rr_json ?(premium = "3") ?(why = "\"a stated hurdle\"") ?(as_of = "\"2026-09-19\"") ?(extra = "") () =
+  Printf.sprintf {|{"classes": {"OperatingCompany": {"premium_over_rf": %s, "why": %s, "as_of": %s%s}}, "names": {"TEST": {"premium_over_rf": 5, "why": "a name I know", "as_of": "2026-09-01"}}}|} premium why as_of extra
+
+let test_required_return_loader_and_resolution () =
+  let reject text needles = match Required_returns.load_classes_string text with Ok _ -> Alcotest.fail "loaded" | Error e -> check_mentions "load error" e needles in
+  reject (rr_json ~extra:{|, "beta": 1.2|} ()) [ "required return OperatingCompany carries unknown field(s) beta"; "exactly premium_over_rf, why, as_of" ];
+  reject {|{"classes": {"OperatingCompany": {"premium_over_rf": 3, "as_of": "2026-09-19"}}}|} [ "required return OperatingCompany lacks why" ];
+  reject (rr_json ~why:"\"  \"" ()) [ "why is empty" ];
+  reject (rr_json ~as_of:"\"last year\"" ()) [ "as_of" ];
+  reject {|{"names": {}}|} [ "no classes object" ];
+  (* the tracked file loads, with both sections empty *)
+  let tracked = get (Required_returns.load_classes "../../reference/required_returns.json") in
+  Alcotest.(check int) "no class declaration ships" 0 (List.length tracked.classes);
+  Alcotest.(check int) "no name declaration ships" 0 (List.length tracked.names);
+  (* resolution: name, then class, then CAPM *)
+  let table = get (Required_returns.load_classes_string (rr_json ())) in
+  let name = Option.get (Required_returns.resolve table ~ticker:"TEST" ~entity_class:"OperatingCompany" ()) in
+  check_float "the name's premium, a decimal" 0.05 name.premium_over_rf;
+  Alcotest.(check string) "name source" "declared: name" name.source;
+  let cls = Option.get (Required_returns.resolve table ~ticker:"OTHER" ~entity_class:"OperatingCompany" ()) in
+  check_float "the class premium" 0.03 cls.premium_over_rf;
+  Alcotest.(check string) "class source" "declared: class OperatingCompany" cls.source;
+  Alcotest.(check bool) "an undeclared class is CAPM" true (Option.is_none (Required_returns.resolve table ~ticker:"OTHER" ~entity_class:"Bank" ()));
+  let further = get (Required_returns.load_names_string {|{"tickers": {"OTHER": {"premium_over_rf": 4, "why": "further", "as_of": "2026-09-10"}}}|}) in
+  let extra = Option.get (Required_returns.resolve table ~names:further ~ticker:"OTHER" ~entity_class:"OperatingCompany" ()) in
+  check_float "a further file beats the tracked ones" 0.04 extra.premium_over_rf;
+  check_mentions "and says so" extra.source [ "--required-returns file" ];
+  (* the version stamp changes with any of the three fields *)
+  let r : Reference_t.required_return = { premium_over_rf = 3.; why = "a stated hurdle"; as_of = "2026-09-19" } in
+  let base = Required_returns.version r ~source_kind:"class" in
+  check_mentions "shape" base [ "2026-09-19-"; "-class" ];
+  List.iter
+    (fun (what, (x : Reference_t.required_return)) -> if Required_returns.version x ~source_kind:"class" = base then Alcotest.failf "unchanged after %s" what)
+    [ ("premium", { r with premium_over_rf = 3.5 }); ("why", { r with why = "other" }); ("as_of", { r with as_of = "2026-09-20" }) ];
+  Alcotest.(check string) "the version is the assumption's" base cls.version
+
+(* Under a declaration the cost of equity is rf + premium; on the fixture rf 0.02 and a 5-point
+   premium, 0.07 against CAPM's 0.12; E = D = 5000, kd 0.04 after tax at 21%, so the WACC is
+   0.5 x 0.07 + 0.5 x 0.0316 = 0.0508. *)
+let test_required_return_on_the_record_and_the_paths () =
+  let table = get (Required_returns.load_classes_string (rr_json ())) in
+  let declared = { params with required_returns = table } in
+  let v = Valuation.run declared ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  let capm = run (financials (history ())) in
+  Alcotest.check status "values" `Ok v.status;
+  Alcotest.(check (option string)) "source" (Some "declared: name") v.required_return_source;
+  Alcotest.(check bool) "version stamped" true (Option.is_some v.required_return_version);
+  Alcotest.(check (option approx)) "the CAPM rate stays on the record" capm.cost_of_equity_used v.cost_of_equity_capm;
+  (match (v.cost_of_equity_used, v.cost_of_equity_capm, v.inputs) with
+  | Some used, Some c, Some (`Dcf i) ->
+      Alcotest.(check bool) "used differs from CAPM" true (Float.abs (used -. c) > 1e-6);
+      check_float "the engine's cost of equity is the rate used" used i.cost_of_equity;
+      let rf = i.risk_free_rate.value in
+      check_float "rf + 5 points" (rf +. 0.05) used;
+      check_float "the WACC blends the rate used" ((i.market_cap /. (i.market_cap +. i.total_debt) *. used) +. (i.total_debt /. (i.market_cap +. i.total_debt) *. i.cost_of_debt *. (1. -. i.tax_rate))) i.wacc
+  | _ -> Alcotest.fail "no dcf inputs");
+  (* the readouts and the sensitivity run on the rate used *)
+  let held name (im : Boundary_t.implied) = (List.find (fun (h : Boundary_t.held_input) -> h.name = name) im.held).value in
+  (match (v.implied, v.inputs, v.sensitivity) with
+  | Some im, Some (`Dcf i), Some s ->
+      check_float "implied holds the blended wacc" i.wacc (held "wacc" im);
+      let w = List.find (fun (e : Boundary_t.sensitivity_entry) -> e.input = "wacc") s.entries in
+      check_float "the discount-rate step sits around the rate used" i.wacc w.recorded
+  | _ -> Alcotest.fail "no readouts");
+  (* CAPM everywhere without a declaration: source capm, no version, both rates equal *)
+  Alcotest.(check (option string)) "capm source" (Some "capm") capm.required_return_source;
+  Alcotest.(check (option string)) "no version under capm" None capm.required_return_version;
+  Alcotest.(check (option approx)) "both rates equal under capm" capm.cost_of_equity_capm capm.cost_of_equity_used;
+  (* the engine by hand on the round assumptions *)
+  let a = { assumptions with required_return = Some { Dcf.premium_over_rf = 0.05; source = "declared: name"; version = "v" } } in
+  check_float "capm chain unchanged" 0.12 (Dcf.cost_of_equity_capm a);
+  check_float "rate used" 0.07 (Dcf.cost_of_equity a);
+  let i, _ = get (Dcf.value a ~country:"United States" (financials (history ()))) in
+  check_float "wacc by hand" ((0.5 *. 0.07) +. (0.5 *. 0.04 *. 0.5)) i.wacc;
+  (* the cross-currency path: the declared premium replaces beta x ERP + the country premium, rf stays the trading currency's *)
+  let cross = financials ~currency:None ~financial_currency:(Some "BRL") ~trading_currency:(Some "USD") (history ()) in
+  let x = Valuation.run declared ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) cross in
+  (match (x.inputs, x.cost_of_equity_capm, x.cost_of_equity_used) with
+  | Some (`Dcf i), Some c, Some used ->
+      Alcotest.(check bool) "the country premium is on the record" true (Option.is_some i.country_risk_premium);
+      check_float "capm carries the country premium" (i.risk_free_rate.value +. (i.beta.value *. i.equity_risk_premium.value) +. (Option.get i.country_risk_premium).value) c;
+      check_float "the declaration replaces everything above the trading currency's rf" (i.risk_free_rate.value +. 0.05) used;
+      Alcotest.(check string) "the rf is the trading currency's country" "United States/7y" i.risk_free_rate.key
+  | _ -> Alcotest.failf "cross path: %s" (Option.value x.failed_reason ~default:""));
+  (* the residual-income and REIT paths read the same rate *)
+  let bank = Valuation.run { declared with required_returns = get (Required_returns.load_classes_string {|{"classes": {"Bank": {"premium_over_rf": 6, "why": "w", "as_of": "2026-09-19"}}}|}) }
+      ~today ~model_version:"test" ~declaration:(Some (declaration `Bank)) (bank_financials (bank_history ())) in
+  (match (bank.inputs, bank.cost_of_equity_used) with
+  | Some (`Residual_income i), Some used -> check_float "bank ke is the rate used" used i.cost_of_equity; check_float "rf + 6 points" (i.risk_free_rate.value +. 0.06) used
+  | _ -> Alcotest.failf "bank: %s" (Option.value bank.failed_reason ~default:""));
+  (* the run diff and the summary say so *)
+  check_mentions "diff" (Batch.run_diff ~baseline:[ capm ] [ v ]) [ "required_return_version null -> 2026-09-01-" ];
+  check_mentions "summary" (Batch.summary [ capm; v ]) [ "required return (34), across 2 Ok names: capm 1, declared: name 1" ];
+  let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
+  Alcotest.check valuation "json round trip" v again
 
 let test_flow_chart_names_every_reason () =
   let chart =
@@ -2872,5 +2973,7 @@ let () =
           case "belief map model, contour, grid, ri null (23)" test_belief_map;
           case "beliefs: strict loader, offsets, override, version (24)" test_beliefs_loader_and_resolution;
           case "beliefs: cdf, monotone terminal, implied, probability (24)" test_beliefs_cdf_and_probability;
+          case "required return: loader, resolution, version (34)" test_required_return_loader_and_resolution;
+          case "required return: record, paths, readouts (34)" test_required_return_on_the_record_and_the_paths;
         ] );
     ]

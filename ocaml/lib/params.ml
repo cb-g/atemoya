@@ -14,6 +14,7 @@ type t = {
   xbrl_tags : xbrl_tags;
   field_definitions : field_definitions;
   beliefs : class_beliefs;
+  required_returns : required_returns;
 }
 
 let read reader path =
@@ -57,6 +58,11 @@ let load ~dir ~fetched =
     if Sys.file_exists (file "beliefs.json") then Beliefs.load_classes (file "beliefs.json")
     else Ok ({ notes = [ "no beliefs.json in " ^ dir ]; classes = []; names = [] } : Reference_t.class_beliefs)
   in
+  (* The declared required returns (34), strictly; empty when the directory has no file. *)
+  let* required_returns =
+    if Sys.file_exists (file "required_returns.json") then Required_returns.load_classes (file "required_returns.json")
+    else Ok ({ notes = [ "no required_returns.json in " ^ dir ]; classes = []; names = [] } : Reference_t.required_returns)
+  in
   Ok
     {
       risk_free;
@@ -70,6 +76,7 @@ let load ~dir ~fetched =
       xbrl_tags;
       field_definitions;
       beliefs;
+      required_returns;
     }
 
 let days_between = Date.days_between
@@ -218,6 +225,7 @@ let resolve ?hold_vintage t ~today ~country ~industry =
       projection_years;
       statutory_tax_rate;
       midcycle_window_years;
+      required_return = None;
     }
 
 let resolve_cross ?hold_vintage t ~today ~domicile ~rate_country ~industry =
@@ -273,4 +281,5 @@ let resolve_cross ?hold_vintage t ~today ~domicile ~rate_country ~industry =
       projection_years;
       statutory_tax_rate;
       midcycle_window_years;
+      required_return = None;
     }
