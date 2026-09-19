@@ -1,4 +1,8 @@
-"""Refresh sovereign risk-free curves in reference/risk_free_rates.json from their sources.
+"""Refresh sovereign risk-free curves in data/reference/risk_free_rates.json from their sources.
+
+Nothing fetched from a provider is tracked (29): the file is gitignored, every user runs
+this with their own FRED key before the first valuation, and a missing curve fails the
+record naming this refresher.
 
     uv run python/refresh_rates.py --all
     uv run python/refresh_rates.py --country Brazil --country "South Korea"
@@ -40,7 +44,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 import reference
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-RATES_PATH = REPO_ROOT / "reference" / "risk_free_rates.json"
+RATES_PATH = REPO_ROOT / "data" / "reference" / "risk_free_rates.json"
 REGISTRY_PATH = REPO_ROOT / "reference" / "rate_sources.json"
 DOTENV_PATH = REPO_ROOT / ".env"
 FRED_OBSERVATIONS = "https://api.stlouisfed.org/fred/series/observations"
@@ -391,7 +395,9 @@ def main(argv: list[str]) -> int:
     wanted: list[str] = list(args.country)
     do_all: bool = args.all
     registry = reference.RateSources.from_json_string(REGISTRY_PATH.read_text())
-    table = reference.RiskFreeRates.from_json_string(RATES_PATH.read_text())
+    table = (reference.RiskFreeRates.from_json_string(RATES_PATH.read_text()) if RATES_PATH.exists()
+             else reference.RiskFreeRates(max_age_days=registry.max_age_days, tenors=registry.tenors, aliases=registry.aliases, countries=[],
+                                          notes=["written by python/refresh_rates.py from the sources in rate_sources.json; fetched data, never tracked"]))
     rules = dict(registry.countries)
     if do_all:
         wanted = list(rules)
@@ -433,6 +439,7 @@ def main(argv: list[str]) -> int:
         table.countries.sort(key=lambda cv: (cv[0] != "United States", cv[0]))
         text = table.to_json_string(indent=2, allow_nan=False, ensure_ascii=False)
         reference.RiskFreeRates.from_json_string(text)  # parse-time type check of what we write
+        RATES_PATH.parent.mkdir(parents=True, exist_ok=True)
         write_atomically(RATES_PATH, text + "\n")
         print(f"\nwrote {len(fetched)} curve(s) to {RATES_PATH}")
     if failures:

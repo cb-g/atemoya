@@ -20,6 +20,10 @@ creds.txt
 **/data/
 **/output/
 **/log/
+# Fetched rates and FX live under data/reference/ (29); never at their old paths either.
+data/reference/
+reference/risk_free_rates.json
+reference/fx_rates.json
 
 # --- editor / OS ---
 .DS_Store

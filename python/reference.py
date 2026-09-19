@@ -877,7 +877,10 @@ class RateSources:
 
     source: str
     as_of: str
+    max_age_days: int
+    tenors: List[str]
     countries: List[Tuple[str, RateSource]]
+    aliases: List[Tuple[str, str]] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -886,7 +889,10 @@ class RateSources:
             return cls(
                 source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('RateSources', 'source'),
                 as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('RateSources', 'as_of'),
+                max_age_days=_atd_read_int(x['max_age_days']) if 'max_age_days' in x else _atd_missing_json_field('RateSources', 'max_age_days'),
+                tenors=_atd_read_list(_atd_read_string)(x['tenors']) if 'tenors' in x else _atd_missing_json_field('RateSources', 'tenors'),
                 countries=_atd_read_assoc_object_into_list(RateSource.from_json)(x['countries']) if 'countries' in x else _atd_missing_json_field('RateSources', 'countries'),
+                aliases=_atd_read_assoc_object_into_list(_atd_read_string)(x['aliases']) if 'aliases' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -896,7 +902,10 @@ class RateSources:
         res: Dict[str, Any] = {}
         res['source'] = _atd_write_string(self.source)
         res['as_of'] = _atd_write_string(self.as_of)
+        res['max_age_days'] = _atd_write_int(self.max_age_days)
+        res['tenors'] = _atd_write_list(_atd_write_string)(self.tenors)
         res['countries'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.countries)
+        res['aliases'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.aliases)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 

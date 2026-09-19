@@ -1,10 +1,22 @@
 {
   "source": "verified live on 2026-09-18: each official or fred_oecd_10y entry returned a dated observation to python/refresh_rates.py before it was recorded here",
   "as_of": "2026-09-18",
+  "max_age_days": 45,
+  "tenors": [
+    "1y",
+    "3y",
+    "5y",
+    "7y",
+    "10y"
+  ],
+  "aliases": {
+    "USA": "United States"
+  },
   "notes": [
     "Tiers: official (issuer or central bank, machine-readable) > fred_oecd_10y (OECD monthly 10y via FRED; the 7y is taken from the 10y and recorded as a substitution) > manual (hand-copied; the 45-day gate forces the refresh).",
     "Aggregators (worldgovernmentbonds, tradingeconomics) are never a programmatic source; they are where a human reads a manual entry from.",
-    "A failed fetch writes nothing; the existing entry stays and ages out."
+    "A failed fetch writes nothing; the existing entry stays and ages out.",
+    "Nothing fetched is tracked (29): the curves themselves are written by python/refresh_rates.py to data/reference/risk_free_rates.json, gitignored, and every user runs the refresher with their own FRED key; a missing curve fails the record naming the refresher. max_age_days, tenors and aliases here seed that file."
   ],
   "countries": {
     "United States": {

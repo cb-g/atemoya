@@ -238,14 +238,14 @@ def fx_on(code: str, rule: reference.FxSource, d: date, key: str) -> reference.F
 
 
 def write_reference(d: date, out: Path, *, countries: set[str], currencies: set[str], key: str) -> dict[str, str]:
-    """reference/ as of [d] under [out]: every file copied, the risk-free and FX files
-    rewritten from FRED history for the countries and currencies asked for. Returns the
+    """reference/ as of [d] under [out]: every declaration copied, and the risk-free and FX
+    files written from FRED history for the countries and currencies asked for (the batch
+    reads them from the same directory with --fetched). Returns the
     series -> observation date used; a country whose source has no history is left out."""
     out.mkdir(parents=True, exist_ok=True)
     for path in REFERENCE.glob("*.json"):
         shutil.copy(path, out / path.name)
     registry = reference.RateSources.from_json_string((REFERENCE / "rate_sources.json").read_text())
-    rates = reference.RiskFreeRates.from_json_string((REFERENCE / "risk_free_rates.json").read_text())
     observed: dict[str, str] = {}
     curves: list[tuple[str, reference.Curve]] = []
     for country, rule in registry.countries:
@@ -256,7 +256,7 @@ def write_reference(d: date, out: Path, *, countries: set[str], currencies: set[
             curves.append((country, curve))
             observed[f"risk_free {country}"] = curve.as_of
     (out / "risk_free_rates.json").write_text(reference.RiskFreeRates(
-        max_age_days=rates.max_age_days, tenors=rates.tenors, aliases=rates.aliases, countries=curves,
+        max_age_days=registry.max_age_days, tenors=registry.tenors, aliases=registry.aliases, countries=curves,
         notes=[f"point-in-time: FRED observations on or before {d}; countries whose source has no history are absent"]).to_json_string(indent=2) + "\n")
     fx_sources = reference.FxSources.from_json_string((REFERENCE / "fx_sources.json").read_text())
     fx: list[tuple[str, reference.FxRate]] = []

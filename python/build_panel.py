@@ -59,7 +59,7 @@ def forward_return(history: pit.History, d: date, days: int = 365) -> float | No
 def run_batch(pit_dir: Path, d: date, binary: Path) -> Path:
     out = OUT / d.isoformat()
     out.mkdir(parents=True, exist_ok=True)
-    subprocess.run([str(binary), str(pit_dir), "--reference", str(pit_dir / "reference"), "--today", d.isoformat(), "--out", str(out)],
+    subprocess.run([str(binary), str(pit_dir), "--reference", str(pit_dir / "reference"), "--fetched", str(pit_dir / "reference"), "--today", d.isoformat(), "--out", str(out)],
                    check=True, capture_output=True, cwd=REPO_ROOT)
     return out / "valuations.jsonl"
 

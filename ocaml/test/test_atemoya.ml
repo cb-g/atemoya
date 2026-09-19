@@ -206,7 +206,7 @@ let params_json =
 
 let params : Params.t =
   {
-    risk_free = Reference_j.risk_free_rates_of_string risk_free_json;
+    risk_free = Some (Reference_j.risk_free_rates_of_string risk_free_json);
     equity_risk_premiums =
       Reference_j.country_table_of_string
         (country_table_json ~source:"Damodaran Jan 2026"
@@ -248,11 +248,11 @@ let params : Params.t =
       Atdgen_runtime.Util.Json.from_file Reference_j.read_field_definitions
         "../../reference/field_definitions.json";
     fx_rates =
-      Reference_j.fx_rates_of_string
+      Some (Reference_j.fx_rates_of_string
         {|{"source": "test", "currencies": {
             "BRL": {"series": "DEXBZUS", "direction": "units_per_usd", "as_of": "2026-09-08", "quoted": 5.0, "usd_per_unit": 0.2},
             "EUR": {"series": "DEXUSEU", "direction": "usd_per_unit", "as_of": "2026-09-09", "quoted": 1.25, "usd_per_unit": 1.25},
-            "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit", "as_of": "2026-08-01", "quoted": 1.3, "usd_per_unit": 1.3}}}|};
+            "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit", "as_of": "2026-08-01", "quoted": 1.3, "usd_per_unit": 1.3}}}|});
     beliefs =
       Reference_j.class_beliefs_of_string
         {|{"classes": {
@@ -630,7 +630,7 @@ let test_resolve_future_as_of () =
          "countries": {"United States": {"source": "FRED", "as_of": "2026-09-11", "rates": {"7y": 0.04}}}}|}
   in
   check_error "as_of after today"
-    (Params.resolve { params with risk_free = rf } ~today ~country:"United States" ~industry:None)
+    (Params.resolve { params with risk_free = Some rf } ~today ~country:"United States" ~industry:None)
     [ "risk_free_rate"; "2026-09-11"; "later than" ]
 
 let test_beta_default () =
@@ -651,50 +651,44 @@ let test_beta_default () =
   Alcotest.check beta_source "listed source" `Industry_table a.beta_source
 
 let test_reference_files_load () =
-  (* The tracked reference/ tree, as copied into the test's build directory. *)
-  let t = get (Params.load ~dir:"../../reference") in
-  let tenors = t.risk_free.tenors in
-  let horizon = Printf.sprintf "%dy" t.params.projection_years.value in
+  (* The tracked reference/ tree, as copied into the test's build directory: declarations
+     only. The fetched curves and FX are not there (29), so they load as None, and the
+     registry carries what seeds the fetched file. *)
+  let t = get (Params.load ~dir:"../../reference" ~fetched:"../../reference") in
+  Alcotest.(check bool) "no fetched curves in reference/" true (Option.is_none t.risk_free);
+  Alcotest.(check bool) "no fetched fx in reference/" true (Option.is_none t.fx_rates);
   let registry =
     Atdgen_runtime.Util.Json.from_file Reference_j.read_rate_sources
       "../../reference/rate_sources.json"
   in
+  let horizon = Printf.sprintf "%dy" t.params.projection_years.value in
+  Alcotest.(check bool) "the registry's tenors carry the horizon" true (List.mem horizon registry.tenors);
+  Alcotest.(check int) "curve age gate" 45 registry.max_age_days;
   List.iter
-    (fun (country, (curve : Reference_t.curve)) ->
-      if not (List.mem_assoc horizon curve.rates) then
-        Alcotest.failf "%s lacks the %s tenor the horizon needs" country horizon;
-      List.iter
-        (fun (tenor, _) ->
-          if not (List.mem tenor tenors) then
-            Alcotest.failf "%s carries unknown tenor %s" country tenor)
-        curve.rates;
-      List.iter
-        (fun tenor ->
-          if not (List.mem_assoc tenor curve.rates) then
-            Alcotest.failf "%s marks %s as estimated but does not carry it" country tenor)
-        curve.estimated;
-      List.iter
-        (fun (requested, used) ->
-          if not (List.mem_assoc requested curve.rates && List.mem_assoc used curve.rates) then
-            Alcotest.failf "%s records a substitution %s<-%s it does not carry" country requested used)
-        curve.tenor_used;
-      match List.assoc_opt country registry.countries with
-      | None -> Alcotest.failf "%s has a curve but no registry entry" country
-      | Some (r : Reference_t.rate_source) ->
-          if List.mem curve.tier [ "official"; "fred_oecd_10y"; "manual" ] |> not then
-            Alcotest.failf "%s has tier %S" country curve.tier;
-          if curve.tier <> "manual" && curve.tier <> r.tier then
-            Alcotest.failf "%s: curve tier %s but registry tier %s" country curve.tier r.tier)
-    t.risk_free.countries;
-  List.iter
-    (fun (country, _) ->
-      if not (List.mem_assoc country t.risk_free.countries) then
-        Alcotest.failf "registry lists %s but the rate file has no curve" country)
+    (fun (country, (r : Reference_t.rate_source)) ->
+      if not (List.mem r.tier [ "official"; "fred_oecd_10y"; "manual" ]) then Alcotest.failf "%s has tier %S" country r.tier)
     registry.countries;
-  Alcotest.(check (list string)) "Singapore estimated cells" [ "3y"; "7y" ]
-    (List.assoc "Singapore" t.risk_free.countries).estimated;
-  Alcotest.(check (list string)) "Taiwan estimated cells" [ "1y"; "3y"; "7y" ]
-    (List.assoc "Taiwan" t.risk_free.countries).estimated;
+  (* a synthetic fetched table in a scratch directory loads as Some and is checked for shape *)
+  let scratch = Filename.temp_dir "atemoya-fetched" "" in
+  Out_channel.with_open_bin (Filename.concat scratch "risk_free_rates.json") (fun oc -> output_string oc risk_free_json);
+  let loaded = get (Params.load ~dir:"../../reference" ~fetched:scratch) in
+  (match loaded.risk_free with
+  | Some rf ->
+      List.iter
+        (fun (country, (curve : Reference_t.curve)) ->
+          List.iter (fun (tenor, _) -> if not (List.mem tenor rf.tenors) then Alcotest.failf "%s carries unknown tenor %s" country tenor) curve.rates;
+          List.iter (fun tenor -> if not (List.mem_assoc tenor curve.rates) then Alcotest.failf "%s marks %s as estimated but does not carry it" country tenor) curve.estimated)
+        rf.countries
+  | None -> Alcotest.fail "the scratch curve file did not load");
+  Alcotest.(check bool) "fx still absent" true (Option.is_none loaded.fx_rates);
+  (* a record that needs a curve or an fx rate fails naming the refresher (29) *)
+  let unfetched = { params with risk_free = None; fx_rates = None } in
+  let v = Valuation.run unfetched ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  check_reason v [ "risk-free curve not fetched for United States: run python/refresh_rates.py with your FRED key" ];
+  let cross = financials ~currency:None ~financial_currency:(Some "BRL") ~trading_currency:(Some "USD") (history ()) in
+  let v = Valuation.run { params with fx_rates = None } ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) cross in
+  check_reason v [ "fx not fetched for BRL/USD: run python/refresh_fx.py with your FRED key" ];
+  Alcotest.check status "with the files present the same record values" `Ok (run (financials (history ()))).status;
   Alcotest.(check int) "projection horizon" 7 t.params.projection_years.value;
   Alcotest.(check int) "industry betas" 155 (List.length t.industry_betas.values);
   let countries (c : Reference_t.country_table) = List.sort compare (List.map fst c.values) in
@@ -881,7 +875,7 @@ let test_sanity_bound_names_structural_break () =
   check_reason v [ "sanity bound"; "structural break"; "entity_class" ]
 
 let test_table_and_variant_agree () =
-  let t = get (Params.load ~dir:"../../reference") in
+  let t = get (Params.load ~dir:"../../reference" ~fetched:"../../reference") in
   List.iter
     (fun c ->
       match Admissibility.rule t.admissibility c with
@@ -1204,7 +1198,7 @@ let test_midcycle_guards () =
   fail (List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 0 then { p with cash = None } else p) (midcycle_periods ()))
     [ "missing statement fields for fiscal period ending 2025-12-31: cash" ];
   (* the tracked definitions say the same, and the dcf's list is the engine's *)
-  let tracked = get (Params.load ~dir:"../../reference") in
+  let tracked = get (Params.load ~dir:"../../reference" ~fetched:"../../reference") in
   let required = Option.get tracked.field_definitions.required_on_latest_period in
   Alcotest.(check (list string)) "mid-cycle: balance sheet only" balance_sheet (List.assoc "dcf_midcycle" required.models);
   Alcotest.(check (list string)) "dcf: everything the engine reads"
@@ -1473,6 +1467,7 @@ let test_flow_chart_names_every_reason () =
       "through the cycle the business did not earn a positive return on its capital";
       "through the cycle the business reinvested more than it earned";
       "mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat";
+      "risk-free curve not fetched for"; "fx not fetched for";
       "missing market data: financial_currency"; "missing market data: trading_currency";
       "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
       "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";
@@ -1671,10 +1666,10 @@ let test_minor_unit_guard () =
       ~country:(Some "United Kingdom") ~price:(Some price) ~market_cap:(Some 5000.)
       ~price_unit ~price_unit_divisor (history ())
   in
-  let fresh_gbp = { params with fx_rates = Reference_j.fx_rates_of_string
-    {|{"source": "t", "currencies": {"GBP": {"series": "DEXUSUK", "direction": "usd_per_unit", "as_of": "2026-09-09", "quoted": 1.25, "usd_per_unit": 1.25}}}|} } in
-  let uk_rates = { fresh_gbp with risk_free = Reference_j.risk_free_rates_of_string
-    {|{"max_age_days": 45, "tenors": ["7y"], "countries": {"United Kingdom": {"source": "t", "tier": "official", "as_of": "2026-09-08", "rates": {"7y": 0.0468}}}}|};
+  let fresh_gbp = { params with fx_rates = Some (Reference_j.fx_rates_of_string
+    {|{"source": "t", "currencies": {"GBP": {"series": "DEXUSUK", "direction": "usd_per_unit", "as_of": "2026-09-09", "quoted": 1.25, "usd_per_unit": 1.25}}}|}) } in
+  let uk_rates = { fresh_gbp with risk_free = Some (Reference_j.risk_free_rates_of_string
+    {|{"max_age_days": 45, "tenors": ["7y"], "countries": {"United Kingdom": {"source": "t", "tier": "official", "as_of": "2026-09-08", "rates": {"7y": 0.0468}}}}|});
     equity_risk_premiums = Reference_j.country_table_of_string (country_table_json ~source:"t" {|{"United States": 0.0446, "United Kingdom": 0.0501}|});
     tax_rates = Reference_j.country_table_of_string (country_table_json ~source:"t" {|{"United States": 0.21, "United Kingdom": 0.25}|});
     params = Reference_j.params_of_string (String.concat "" [ {|{"projection_years": {"value": 7, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
@@ -2259,7 +2254,7 @@ let test_stability_classifier () =
     [ ("capex", "new_filing") ]
     (classes (Batch.moved_inputs ~old:(run a, Some a) ~now:(run newer, Some newer)));
   (* a parameter moved: rate or fx *)
-  let rf_moved = { params with risk_free = Reference_j.risk_free_rates_of_string (String.concat "" [ {|{"max_age_days": 45, "tenors": ["7y"], "countries": {"United States": {"source": "FRED", "tier": "official", "as_of": "2026-09-09", "rates": {"7y": 0.05}}}}|} ]) } in
+  let rf_moved = { params with risk_free = Some (Reference_j.risk_free_rates_of_string (String.concat "" [ {|{"max_age_days": 45, "tenors": ["7y"], "countries": {"United States": {"source": "FRED", "tier": "official", "as_of": "2026-09-09", "rates": {"7y": 0.05}}}}|} ])) } in
   let v_rf = Valuation.run rf_moved ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) base in
   Alcotest.(check (list (pair string string))) "rate"
     [ ("risk_free_rate", "rate_or_fx") ]
@@ -2482,7 +2477,7 @@ let test_batch_summary () =
   Alcotest.(check (option approx)) "same number as the operating company" ok.fair_value software.fair_value;
   Alcotest.(check string) "stamped" "test" software.model_version;
   (* and in the tracked table the software class admits the dcf while Unprofitable still refuses *)
-  let tracked = get (Params.load ~dir:"../../reference") in
+  let tracked = get (Params.load ~dir:"../../reference" ~fetched:"../../reference") in
   let admits c = match Admissibility.rule tracked.admissibility c with Ok r -> r.admissible_models | Error e -> Alcotest.fail e in
   Alcotest.(check (list string)) "tracked: software admits the dcf" [ "dcf" ] (admits `HighGrowthSoftware);
   Alcotest.(check (list string)) "tracked: unprofitable admits nothing" [] (admits `Unprofitable);

@@ -1,4 +1,7 @@
-"""Refresh reference/fx_rates.json from FRED's daily H.10 exchange-rate series.
+"""Refresh data/reference/fx_rates.json from FRED's daily H.10 exchange-rate series.
+
+Nothing fetched from a provider is tracked (29): the file is gitignored, every user runs
+this with their own FRED key, and a missing rate fails the record naming this refresher.
 
     uv run python/refresh_fx.py --all
     uv run python/refresh_fx.py --currency BRL --currency EUR
@@ -22,7 +25,7 @@ import reference
 import refresh_rates as rr
 
 REPO_ROOT = rr.REPO_ROOT
-FX_PATH = REPO_ROOT / "reference" / "fx_rates.json"
+FX_PATH = REPO_ROOT / "data" / "reference" / "fx_rates.json"
 REGISTRY_PATH = REPO_ROOT / "reference" / "fx_sources.json"
 MAX_OBSERVATION_AGE_DAYS = 30
 
@@ -63,7 +66,8 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     wanted: list[str] = [c.upper() for c in args.currency]
     registry = reference.FxSources.from_json_string(REGISTRY_PATH.read_text())
-    table = reference.FxRates.from_json_string(FX_PATH.read_text())
+    table = (reference.FxRates.from_json_string(FX_PATH.read_text()) if FX_PATH.exists()
+             else reference.FxRates(source="written by python/refresh_fx.py from the series in fx_sources.json; fetched data, never tracked", currencies=[]))
     rules = dict(registry.currencies)
     if args.all:
         wanted = list(rules)
@@ -93,6 +97,7 @@ def main(argv: list[str]) -> int:
         table.currencies = sorted(list(fetched.items()) + kept)
         text = table.to_json_string(indent=2, allow_nan=False, ensure_ascii=False)
         reference.FxRates.from_json_string(text)
+        FX_PATH.parent.mkdir(parents=True, exist_ok=True)
         rr.write_atomically(FX_PATH, text + "\n")
         print(f"\nwrote {len(fetched)} rate(s) to {FX_PATH}")
     if failures:

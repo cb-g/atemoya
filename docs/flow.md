@@ -52,13 +52,15 @@ flowchart TD
     FILING -- "fresh, or vendor statements" --> CUR{"currency gate (09): financial_currency and trading_currency present? equal?"}:::new
     CUR -- "a field missing" --> F_CUR["missing market data: financial_currency, or missing market data: trading_currency (09)"]:::failed
     CUR -- "equal: the same-currency path, untouched" --> PARAMS
-    CUR -- "differ: cross-currency (09)" --> FX{"FX both legs through USD from reference/fx_rates.json, fresh? (09)"}:::new
+    CUR -- "differ: cross-currency (09)" --> FX{"FX both legs through USD from data/reference/fx_rates.json (fetched by python/refresh_fx.py with the user's own FRED key, never tracked, 29), fresh? (09)"}:::new
+    FX -- "file never fetched" --> F_FXFETCH["fx not fetched for (financial)/(trading): run python/refresh_fx.py with your FRED key (29)"]:::failed
     FX -- "no series for a leg" --> F_FX["fx not available for (financial)/(trading) (09)"]:::failed
     FX -- "a leg stale or future" --> F_FXSTALE["fx for (code) (as_of date) is N days old, older than its max_age_days M (09)"]:::failed
     FX -- ok --> CONV["convert every statement total by fx_rate into the trading currency; price and market cap untouched (minor-unit prices were already divided at the fetch and the divisor recorded); parameters via resolve_cross: risk-free and terminal growth from the trading currency's country, tax from the domicile, cost of equity = rf + beta x mature ERP + country risk premium (domicile total ERP less the base); the same model runs on the converted record and the conversion rides on its inputs (09)"]:::new
     CONV --> PARAMS
     PARAMS["resolve parameters: projection_years, risk-free (country, 7y), ERP, statutory tax, terminal growth, debt spread, growth clamp, lambda, beta (industry table or default 1.0)"]
     PARAMS -. "risk-free curve tier (07): official (issuer or central bank) / fred_oecd_10y (the 7y taken from the OECD 10y, recorded as tenor_used) / manual (hand-copied, ages out under the 45-day gate); tier, tenor_requested and tenor_used ride on the parameter" .-> PARAMS
+    PARAMS -- "curve file never fetched (data/reference/risk_free_rates.json, written by python/refresh_rates.py with the user's own FRED key, never tracked, 29)" --> F_NOFETCH["risk-free curve not fetched for (country): run python/refresh_rates.py with your FRED key (29)"]:::failed
     PARAMS -- "country absent" --> F_NOCURVE["no risk-free curve for country (country)"]:::failed
     PARAMS -- "country absent" --> F_NOPARAM["no (equity_risk_premium|statutory_tax_rate|terminal_growth_rate) for country (country)"]:::failed
     PARAMS -- "tenor absent" --> F_NOTENOR["risk-free curve for (key) has no (tenor) tenor"]:::failed
@@ -143,6 +145,8 @@ flowchart TD
     F_MIDROIC --> FLOOR
     F_MIDREINV --> FLOOR
     F_MIDREINVN --> FLOOR
+    F_NOFETCH --> FLOOR
+    F_FXFETCH --> FLOOR
     F_ROE --> FLOOR
     F_PAYOUT --> FLOOR
     F_FILED --> FLOOR
@@ -175,6 +179,16 @@ into it. The universe file declares and does not remember: a run's outcomes live
 records, and the acceptance of any change is the run diff against the previous run
 (`--baseline`), with every moved input classified against the previous snapshot
 (`--baseline-snapshot`).
+
+## Fetched data
+
+Nothing obtained from a data provider is tracked (29). `reference/` holds declarations and
+attributed vintage tables; the risk-free curves and FX rates are written by the refreshers
+to `data/reference/`, gitignored at that path and at their old paths under `reference/`,
+and read by the batch from `--fetched DIR` (default `data/reference`). Point-in-time writes
+its own per-date copies under `data/pit/(D)/reference/` and the panel passes that
+directory as both `--reference` and `--fetched`. A record that needs a curve or a rate
+the user has not fetched fails naming the refresher to run.
 
 ## Definition rules
 
@@ -312,3 +326,7 @@ in this order:
   definitions, exclusions named inside the mid-cycle window with a guard on the
   reinvestment sums, spot fcff a nullable readout; D&A the largest filed total with
   candidates recorded. One new `Failed` string (the reinvestment guard).
+- no fetched data in the repo (29): the risk-free curves and FX rates move from
+  `reference/` to gitignored `data/reference/`, written by the refreshers and read with
+  `--fetched`; the registry seeds the curve file; two new `Failed` strings name the
+  refresher to run when a file was never fetched.

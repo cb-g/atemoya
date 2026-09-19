@@ -1,5 +1,7 @@
-(* Values boundary financials JSON files. Parameters come from reference/ (or --reference
-   DIR); ages are measured at today's UTC date unless --today YYYY-MM-DD is given.
+(* Values boundary financials JSON files. Declared parameters come from reference/ (or
+   --reference DIR); the fetched risk-free curves and FX rates from data/reference/ (or
+   --fetched DIR), written by the refreshers and never tracked (29), a missing one failing
+   each record that needs it with the refresher to run; ages are measured at today's UTC date unless --today YYYY-MM-DD is given.
    Inputs may be files or directories (every *.json inside, sorted). The entity class of
    each ticker comes from the universe file (--universe FILE, default
    <reference>/universe.json); a ticker not in it takes --entity-class CLASS if given,
@@ -21,12 +23,13 @@
 open Atemoya
 
 let usage =
-  "usage: atemoya [--reference DIR] [--today YYYY-MM-DD] [--out DIR] [--universe FILE] \
+  "usage: atemoya [--reference DIR] [--fetched DIR] [--today YYYY-MM-DD] [--out DIR] [--universe FILE] \
    [--entity-class CLASS] [--baseline valuations.jsonl] [--baseline-snapshot DIR] [--beliefs FILE] \
    <financials.json | directory>...\n"
 
 type options = {
   reference : string;
+  fetched : string;
   today : string;
   out : string option;
   universe : string option;
@@ -47,6 +50,7 @@ let today_utc () =
 let rec parse o paths = function
   | [] -> (o, List.rev paths)
   | "--reference" :: v :: rest -> parse { o with reference = v } paths rest
+  | "--fetched" :: v :: rest -> parse { o with fetched = v } paths rest
   | "--today" :: v :: rest -> parse { o with today = v } paths rest
   | "--out" :: v :: rest -> parse { o with out = Some v } paths rest
   | "--universe" :: v :: rest -> parse { o with universe = Some v } paths rest
@@ -54,7 +58,7 @@ let rec parse o paths = function
   | "--baseline" :: v :: rest -> parse { o with baseline = Some v } paths rest
   | "--baseline-snapshot" :: v :: rest -> parse { o with baseline_snapshot = Some v } paths rest
   | "--beliefs" :: v :: rest -> parse { o with beliefs = Some v } paths rest
-  | [ ("--reference" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline" | "--baseline-snapshot" | "--beliefs") ] ->
+  | [ ("--reference" | "--fetched" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline" | "--baseline-snapshot" | "--beliefs") ] ->
       usage_exit ()
   | p :: rest -> parse o (p :: paths) rest
 
@@ -145,6 +149,7 @@ let () =
     parse
       {
         reference = "reference";
+        fetched = "data/reference";
         today = today_utc ();
         out = None;
         universe = None;
@@ -163,7 +168,7 @@ let () =
       Printf.eprintf "--today: %s\n%!" msg;
       exit 2);
   let params =
-    match Params.load ~dir:o.reference with
+    match Params.load ~dir:o.reference ~fetched:o.fetched with
     | Ok p -> p
     | Error msg ->
         Printf.eprintf "cannot load parameters from %s: %s\n%!" o.reference msg;

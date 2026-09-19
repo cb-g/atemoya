@@ -4,7 +4,7 @@
     [rate] gives the trading currency per unit of the financial currency,
     through USD, with both legs' provenance and the older leg's age; a currency
     with no rate is an [Error] naming the pair; a stale leg is an [Error] naming
-    it. [convert] multiplies every money total of every period by the rate and
+    it; a table never fetched is an [Error] naming the refresher (29). [convert] multiplies every money total of every period by the rate and
     sets the record's currency to the trading currency, so the models run on it
     unchanged; price and market cap are already in the trading currency and are
     untouched. [country_of] names the country whose curve and terminal growth a
@@ -21,7 +21,7 @@ type legs = {
 
 val rate :
   Reference_t.fx_sources ->
-  Reference_t.fx_rates ->
+  Reference_t.fx_rates option ->
   today:string ->
   financial:string ->
   trading:string ->

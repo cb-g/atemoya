@@ -73,7 +73,7 @@ def main(argv: list[str]) -> int:
     print(f"{len(tickers)} tickers from {universe_path}")
     if as_of is not None:
         written = pit.run_date(as_of, tickers, histories={}, quotes={}, sec=fetch.SecContext(), ciks=ciks)
-        print(f"point-in-time {as_of}: {written} (batch: dune exec atemoya -- {written} --reference {written}/reference --today {as_of} --out output/pit/{as_of})")
+        print(f"point-in-time {as_of}: {written} (batch: dune exec atemoya -- {written} --reference {written}/reference --fetched {written}/reference --today {as_of} --out output/pit/{as_of})")
         return 0
     if out is None:
         out = snapshot_dir(datetime.now(timezone.utc).strftime("%Y-%m-%d"))

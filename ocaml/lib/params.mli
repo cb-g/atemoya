@@ -9,19 +9,22 @@
     warning; an [as_of] in the future of [today] is an error. Nothing falls back
     to another country's values. The one default is beta: a missing or unlisted
     industry yields 1.0 with [beta_source = `Default_no_industry] and
-    [source = "default_no_industry"]. With [hold_vintage] (point-in-time, 17) a
+    [source = "default_no_industry"]. A curve or FX table that was never fetched is
+    an error naming the refresher (29). With [hold_vintage] (point-in-time, 17) a
     parameter whose as_of postdates [today] is not an error: it comes back with a
     negative age, for the valuation to declare as anachronistic. *)
 
 type t = {
-  risk_free : Reference_t.risk_free_rates;
+  risk_free : Reference_t.risk_free_rates option;
+      (** fetched by python/refresh_rates.py to data/reference, never tracked (29); [None] when absent *)
   equity_risk_premiums : Reference_t.country_table;
   tax_rates : Reference_t.country_table;
   industry_betas : Reference_t.industry_table;
   params : Reference_t.params;
   admissibility : Reference_t.admissibility;
   fx_sources : Reference_t.fx_sources;
-  fx_rates : Reference_t.fx_rates;
+  fx_rates : Reference_t.fx_rates option;
+      (** fetched by python/refresh_fx.py to data/reference, never tracked (29); [None] when absent *)
   xbrl_tags : Reference_t.xbrl_tags;
   field_definitions : Reference_t.field_definitions;
       (** the one definition per composed statement field, applied by both fetchers *)
@@ -29,9 +32,11 @@ type t = {
       (** the declared class defaults on long-run growth (24); empty when the directory has no beliefs.json *)
 }
 
-val load : dir:string -> (t, string) result
-(** Reads the ten files under [dir], and beliefs.json when present; the error names
-    the file and the parse problem. *)
+val load : dir:string -> fetched:string -> (t, string) result
+(** Reads the declarations under [dir] (and beliefs.json when present) and the two
+    fetched files under [fetched] when present; a fetched file that is absent leaves
+    [None], and every record that needs it fails naming the refresher to run. The
+    error names the file and the parse problem. *)
 
 val days_between : from:string -> until:string -> (int, string) result
 (** Calendar days from [from] to [until], both ISO 8601 dates (YYYY-MM-DD);

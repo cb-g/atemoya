@@ -34,6 +34,9 @@ type rate_source = {
 type rate_sources = {
   source : string;
   as_of : string;
+  max_age_days : int;                                   (* the fetched curve file inherits these three (29) *)
+  tenors : string list;
+  ~aliases : (string * string) list <json repr="object">;
   ~notes : string list;
   countries : (string * rate_source) list <json repr="object">;
 }

@@ -3,14 +3,14 @@ open Reference_t
 let ( let* ) = Result.bind
 
 type t = {
-  risk_free : risk_free_rates;
+  risk_free : risk_free_rates option;   (* fetched (29): None when data/reference has no file *)
   equity_risk_premiums : country_table;
   tax_rates : country_table;
   industry_betas : industry_table;
   params : params;
   admissibility : admissibility;
   fx_sources : fx_sources;
-  fx_rates : fx_rates;
+  fx_rates : fx_rates option;           (* fetched (29): likewise *)
   xbrl_tags : xbrl_tags;
   field_definitions : field_definitions;
   beliefs : class_beliefs;
@@ -26,11 +26,14 @@ let read reader path =
       | Failure m ) ->
       Error (Printf.sprintf "%s: %s" path m)
 
-let load ~dir =
+(* A fetched file (29): read when present, None when absent; the absence is reported on
+   every record that needs it, naming the refresher to run. *)
+let read_fetched reader path = if Sys.file_exists path then Result.map Option.some (read reader path) else Ok None
+
+let load ~dir ~fetched =
   let file name = Filename.concat dir name in
-  let* risk_free =
-    read Reference_j.read_risk_free_rates (file "risk_free_rates.json")
-  in
+  let fetched_file name = Filename.concat fetched name in
+  let* risk_free = read_fetched Reference_j.read_risk_free_rates (fetched_file "risk_free_rates.json") in
   let* equity_risk_premiums =
     read Reference_j.read_country_table (file "equity_risk_premiums.json")
   in
@@ -43,7 +46,7 @@ let load ~dir =
     read Reference_j.read_admissibility (file "admissibility.json")
   in
   let* fx_sources = read Reference_j.read_fx_sources (file "fx_sources.json") in
-  let* fx_rates = read Reference_j.read_fx_rates (file "fx_rates.json") in
+  let* fx_rates = read_fetched Reference_j.read_fx_rates (fetched_file "fx_rates.json") in
   let* xbrl_tags = read Reference_j.read_xbrl_tags (file "xbrl_tags.json") in
   let* field_definitions =
     read Reference_j.read_field_definitions (file "field_definitions.json")
@@ -104,7 +107,12 @@ let country_value ?hold_vintage (table : country_table) ~today ~name ~country =
       in
       Ok (parameter ~value ~key ~source:table.source ~as_of:table.as_of ~age_days ())
 
-let risk_free ?hold_vintage (rf : risk_free_rates) ~today ~country ~tenor =
+let risk_free ?hold_vintage (rf : risk_free_rates option) ~today ~country ~tenor =
+  match rf with
+  | None ->
+      Error
+        (Printf.sprintf "risk-free curve not fetched for %s: run python/refresh_rates.py with your FRED key" country)
+  | Some rf -> (
   let key = canonical rf.aliases country in
   match List.assoc_opt key rf.countries with
   | None -> Error (Printf.sprintf "no risk-free curve for country %s" country)
@@ -126,7 +134,7 @@ let risk_free ?hold_vintage (rf : risk_free_rates) ~today ~country ~tenor =
             (parameter
                ~estimated:(List.mem tenor curve.estimated)
                ~tier:curve.tier ~tenor_requested:tenor ~tenor_used ~value ~key
-               ~source:curve.source ~as_of:curve.as_of ~age_days ()))
+               ~source:curve.source ~as_of:curve.as_of ~age_days ())))
 
 let beta ?hold_vintage (table : industry_table) ~today ~industry =
   let default key =

@@ -32,8 +32,13 @@ let leg (sources : Reference_t.fx_sources) (rates : Reference_t.fx_rates) ~today
           Error (Printf.sprintf "fx for %s is not positive" code)
         else Ok (r.usd_per_unit, Some (r.as_of, age, r.series))
 
-let rate sources rates ~today ~financial ~trading =
+let rate sources (rates : Reference_t.fx_rates option) ~today ~financial ~trading =
   let pair = financial ^ "/" ^ trading in
+  let* rates =
+    match rates with
+    | Some r -> Ok r
+    | None -> Error (Printf.sprintf "fx not fetched for %s: run python/refresh_fx.py with your FRED key" pair)
+  in
   let* usd_per_financial, fin_leg = leg sources rates ~today ~pair financial in
   let* usd_per_trading, trade_leg = leg sources rates ~today ~pair trading in
   let described =

@@ -39,13 +39,31 @@ requires every request to identify its sender: put `"<name> <email>"` after
 `SEC_EDGAR_IDENTITY=`, quoted.
 `.env` is gitignored and the pre-commit hook refuses it.
 
+## Data policy and first run
+
+**Nothing obtained from a data provider is ever committed.** Rates, FX, filings, snapshots,
+runs: all under gitignored `data/` or `output/`. `reference/` holds declarations and
+hand-transcribed, attributed vintage tables only. Every user of a clone provides their own
+FRED key and runs the refreshers before the first valuation; a missing fetched file fails
+each record that needs it with the refresher to run, never a shipped default.
+
+First run, in this order:
+
+1. `cp .env.example .env`.
+2. Obtain a FRED API key (free, at fred.stlouisfed.org) and set `FRED_API_KEY` in `.env`.
+3. Set `SEC_EDGAR_IDENTITY` in `.env` (name and email, sent as the User-Agent).
+4. `uv run python/refresh_rates.py --all` and `uv run python/refresh_fx.py --all`, which write
+   `data/reference/risk_free_rates.json` and `data/reference/fx_rates.json`.
+5. `uv run python/fetch_all.py`.
+6. `dune exec atemoya -- data/financials --out output`.
+
 ## Run
 
 ```sh
 uv run python/fetch.py AAPL MSFT SAP        # statements from SEC XBRL (10-K or 20-F filers, us-gaap or ifrs-full) or yfinance -> data/financials/<TICKER>.json
 dune exec atemoya -- data/financials/*.json # one valuation record per line on stdout
-uv run python/refresh_rates.py --all        # sovereign curves per reference/rate_sources.json
-uv run python/refresh_fx.py --all           # FX via FRED H.10 -> reference/fx_rates.json
+uv run python/refresh_rates.py --all        # sovereign curves per reference/rate_sources.json -> data/reference/risk_free_rates.json (never tracked)
+uv run python/refresh_fx.py --all           # FX via FRED H.10 -> data/reference/fx_rates.json (never tracked)
 
 uv run python/fetch_all.py                  # every ticker in reference/universe.json -> data/snapshots/<date>/, data/financials -> the latest
 dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt, the same three under output/runs/<date>/ (never overwritten), and output/maps/<ticker>.json per belief map
@@ -53,12 +71,13 @@ uv run python/plot_map.py AAPL                   # -> output/maps/AAPL.png: the 
 dune exec atemoya -- data/financials --out output --baseline previous/valuations.jsonl   # plus this run against that one
 dune exec atemoya -- data/snapshots/<new> --out output --baseline previous/valuations.jsonl --baseline-snapshot data/snapshots/<old>   # plus stability_<old>_<new>.txt
 uv run python/fetch_all.py --as-of 2025-06-30   # point-in-time: data/pit/2025-06-30/ from what was known on that date, with its reference/
-dune exec atemoya -- data/pit/2025-06-30 --reference data/pit/2025-06-30/reference --today 2025-06-30 --out output/pit/2025-06-30
+dune exec atemoya -- data/pit/2025-06-30 --reference data/pit/2025-06-30/reference --fetched data/pit/2025-06-30/reference --today 2025-06-30 --out output/pit/2025-06-30
 dune exec atemoya -- --entity-class OperatingCompany --out output data/financials/NEW.json   # a name not in the universe, declared on the command line
 uv run python/build_panel.py                    # every quarter-end 2022-03-31 .. 2026-06-30 -> output/pit/panel.jsonl, panel_summary.txt
 ```
 
-`dune exec atemoya` reads parameters from `reference/` (`--reference DIR` to override) and
+`dune exec atemoya` reads declared parameters from `reference/` (`--reference DIR` to
+override) and the fetched curves and FX from `data/reference/` (`--fetched DIR`), and
 measures their age against today's UTC date (`--today YYYY-MM-DD` to override). Inputs may
 be files or directories. Every ticker needs a declared `entity_class`, from its entry in
 `reference/universe.json` or from `--entity-class CLASS` for an ad-hoc run; without one the
