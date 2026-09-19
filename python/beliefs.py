@@ -58,11 +58,42 @@ def _table(text: str, key: str) -> None:
         _check(str(name), entry)
 
 
+def _correlation(raw: dict[Any, Any]) -> None:
+    """The correlation section (35): exactly common, why, as_of and an optional pairs list
+    of exactly a, b, rho, why, as_of; common in [0, 1), rho in (-1, 1)."""
+    section = raw.get("correlation")
+    if section is None:
+        return
+    if not isinstance(section, dict):
+        raise BeliefError("correlation must be an object")
+    kv = {str(k): v for k, v in cast(dict[Any, Any], section).items()}
+    unknown = [k for k in kv if k not in ("common", "why", "as_of", "pairs")]
+    missing = [k for k in ("common", "why", "as_of") if k not in kv]
+    if unknown:
+        raise BeliefError(f"correlation section carries unknown field(s) {', '.join(unknown)}")
+    if missing:
+        raise BeliefError(f"correlation section lacks {', '.join(missing)}")
+    common = kv["common"]
+    if not isinstance(common, (int, float)) or isinstance(common, bool) or not 0 <= common < 1:
+        raise BeliefError(f"correlation common {common} is not in [0, 1)")
+    for pair in cast(list[Any], kv.get("pairs", [])):
+        if not isinstance(pair, dict):
+            raise BeliefError("correlation pair is not an object")
+        pkv = {str(k): v for k, v in cast(dict[Any, Any], pair).items()}
+        if set(pkv) != {"a", "b", "rho", "why", "as_of"}:
+            raise BeliefError(f"correlation pair fields are {sorted(pkv)}, not exactly a, b, rho, why, as_of")
+        rho = pkv["rho"]
+        if not isinstance(rho, (int, float)) or isinstance(rho, bool) or not -1 < rho < 1:
+            raise BeliefError(f"correlation pair rho {rho} is not in (-1, 1)")
+
+
 def load_classes_text(text: str) -> reference.ClassBeliefs:
     _table(text, "classes")
     raw: object = json.loads(text)
-    if isinstance(raw, dict) and "names" in cast(dict[Any, Any], raw):
-        _table(text, "names")
+    if isinstance(raw, dict):
+        if "names" in cast(dict[Any, Any], raw):
+            _table(text, "names")
+        _correlation(cast(dict[Any, Any], raw))
     return reference.ClassBeliefs.from_json_string(text)
 
 

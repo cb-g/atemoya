@@ -14,9 +14,16 @@
     revisited only on an argument about the model, never on what it does to a number. *)
 
 val load_classes_string : string -> (Reference_t.class_beliefs, string) result
+(** Also checks the optional [correlation] section (35): exactly common, why, as_of and
+    pairs of exactly a, b, rho, why, as_of; common in [0, 1), rho in (-1, 1). *)
+
 val load_classes : string -> (Reference_t.class_beliefs, string) result
 val load_names_string : string -> (Reference_t.name_beliefs, string) result
 val load_names : string -> (Reference_t.name_beliefs, string) result
+
+val surplus_curve : Boundary_t.belief -> f:(float -> float) -> price:float -> Boundary_t.surplus_point list
+(** (35) The value surplus [(f g - price) / price] at 41 evenly spaced long-run growths
+    from the belief's floor to its ceiling. *)
 
 val resolve :
   classes:Reference_t.class_beliefs ->

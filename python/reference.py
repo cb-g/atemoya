@@ -1086,6 +1086,8 @@ class Params:
     mature_market_erp: Scalar
     midcycle_window_years: IntScalar
     sensitivity_steps: SensitivitySteps
+    frontier_draws: IntScalar
+    frontier_seed: IntScalar
     terminal_growth_rate: CountryTable
     unwired: Any
 
@@ -1102,6 +1104,8 @@ class Params:
                 mature_market_erp=Scalar.from_json(x['mature_market_erp']) if 'mature_market_erp' in x else _atd_missing_json_field('Params', 'mature_market_erp'),
                 midcycle_window_years=IntScalar.from_json(x['midcycle_window_years']) if 'midcycle_window_years' in x else _atd_missing_json_field('Params', 'midcycle_window_years'),
                 sensitivity_steps=SensitivitySteps.from_json(x['sensitivity_steps']) if 'sensitivity_steps' in x else _atd_missing_json_field('Params', 'sensitivity_steps'),
+                frontier_draws=IntScalar.from_json(x['frontier_draws']) if 'frontier_draws' in x else _atd_missing_json_field('Params', 'frontier_draws'),
+                frontier_seed=IntScalar.from_json(x['frontier_seed']) if 'frontier_seed' in x else _atd_missing_json_field('Params', 'frontier_seed'),
                 terminal_growth_rate=CountryTable.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Params', 'terminal_growth_rate'),
                 unwired=(lambda x: x)(x['unwired']) if 'unwired' in x else _atd_missing_json_field('Params', 'unwired'),
             )
@@ -1119,6 +1123,8 @@ class Params:
         res['mature_market_erp'] = (lambda x: x.to_json())(self.mature_market_erp)
         res['midcycle_window_years'] = (lambda x: x.to_json())(self.midcycle_window_years)
         res['sensitivity_steps'] = (lambda x: x.to_json())(self.sensitivity_steps)
+        res['frontier_draws'] = (lambda x: x.to_json())(self.frontier_draws)
+        res['frontier_seed'] = (lambda x: x.to_json())(self.frontier_seed)
         res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
         res['unwired'] = (lambda x: x)(self.unwired)
         return res
@@ -2445,6 +2451,85 @@ class FieldDefinitions:
 
 
 @dataclass
+class CorrelationPair:
+    """Original type: correlation_pair = { ... }
+    """
+
+    a: str
+    b: str
+    rho: float
+    why: str
+    as_of: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'CorrelationPair':
+        if isinstance(x, dict):
+            return cls(
+                a=_atd_read_string(x['a']) if 'a' in x else _atd_missing_json_field('CorrelationPair', 'a'),
+                b=_atd_read_string(x['b']) if 'b' in x else _atd_missing_json_field('CorrelationPair', 'b'),
+                rho=_atd_read_float(x['rho']) if 'rho' in x else _atd_missing_json_field('CorrelationPair', 'rho'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('CorrelationPair', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('CorrelationPair', 'as_of'),
+            )
+        else:
+            _atd_bad_json('CorrelationPair', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['a'] = _atd_write_string(self.a)
+        res['b'] = _atd_write_string(self.b)
+        res['rho'] = _atd_write_float(self.rho)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'CorrelationPair':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Correlation:
+    """Original type: correlation = { ... }
+    """
+
+    common: float
+    why: str
+    as_of: str
+    pairs: List[CorrelationPair] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Correlation':
+        if isinstance(x, dict):
+            return cls(
+                common=_atd_read_float(x['common']) if 'common' in x else _atd_missing_json_field('Correlation', 'common'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('Correlation', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Correlation', 'as_of'),
+                pairs=_atd_read_list(CorrelationPair.from_json)(x['pairs']) if 'pairs' in x else [],
+            )
+        else:
+            _atd_bad_json('Correlation', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['common'] = _atd_write_float(self.common)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['pairs'] = _atd_write_list((lambda x: x.to_json()))(self.pairs)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Correlation':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class ClassRule:
     """Original type: class_rule = { ... }
     """
@@ -2496,6 +2581,7 @@ class ClassBeliefs:
     classes: List[Tuple[str, Belief]]
     notes: List[str] = field(default_factory=lambda: [])
     names: List[Tuple[str, Belief]] = field(default_factory=lambda: [])
+    correlation: Optional[Correlation] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'ClassBeliefs':
@@ -2504,6 +2590,7 @@ class ClassBeliefs:
                 classes=_atd_read_assoc_object_into_list(Belief.from_json)(x['classes']) if 'classes' in x else _atd_missing_json_field('ClassBeliefs', 'classes'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
                 names=_atd_read_assoc_object_into_list(Belief.from_json)(x['names']) if 'names' in x else [],
+                correlation=Correlation.from_json(x['correlation']) if 'correlation' in x else None,
             )
         else:
             _atd_bad_json('ClassBeliefs', x)
@@ -2513,6 +2600,8 @@ class ClassBeliefs:
         res['classes'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.classes)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         res['names'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.names)
+        if self.correlation is not None:
+            res['correlation'] = (lambda x: x.to_json())(self.correlation)
         return res
 
     @classmethod

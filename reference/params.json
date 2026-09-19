@@ -70,6 +70,18 @@
       "growth: starting growth or ROE0, plus or minus 2 percentage points. lambda: plus or minus 0.10. terminal_growth: plus or minus 0.5 percentage points. discount_rate: WACC or the cost of equity, plus or minus 1 percentage point. base_fraction: the cash-flow base (FCFF, FCFF_mid, the covered dividend per share, book equity), plus or minus 10 percent."
     ]
   },
+  "frontier_draws": {
+    "value": 20000,
+    "source": "the frontier's sample size (35): enough that the declared correlation reproduces within a hundredth and the 5% tail holds a thousand draws; fixed so two runs agree, and a change is a decision",
+    "as_of": "2026-09-19",
+    "max_age_days": 400
+  },
+  "frontier_seed": {
+    "value": 0,
+    "source": "the sampler's seed (35): fixed so two runs are byte-identical; a change is a decision, never a way to a nicer number",
+    "as_of": "2026-09-19",
+    "max_age_days": 400
+  },
   "terminal_growth_rate": {
     "source": "per-country long-run nominal growth estimates, June 2026 vintage",
     "as_of": "2026-06-01",

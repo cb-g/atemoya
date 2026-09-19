@@ -56,7 +56,7 @@ let load ~dir ~fetched =
      point-in-time one) has none, which is recorded, not defaulted. *)
   let* beliefs =
     if Sys.file_exists (file "beliefs.json") then Beliefs.load_classes (file "beliefs.json")
-    else Ok ({ notes = [ "no beliefs.json in " ^ dir ]; classes = []; names = [] } : Reference_t.class_beliefs)
+    else Ok ({ notes = [ "no beliefs.json in " ^ dir ]; classes = []; names = []; correlation = None } : Reference_t.class_beliefs)
   in
   (* The declared required returns (34), strictly; empty when the directory has no file. *)
   let* required_returns =

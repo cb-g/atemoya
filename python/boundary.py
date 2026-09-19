@@ -330,6 +330,38 @@ class TaxRateSource:
 
 
 @dataclass
+class SurplusPoint:
+    """Original type: surplus_point = { ... }
+    """
+
+    growth: float
+    surplus: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'SurplusPoint':
+        if isinstance(x, dict):
+            return cls(
+                growth=_atd_read_float(x['growth']) if 'growth' in x else _atd_missing_json_field('SurplusPoint', 'growth'),
+                surplus=_atd_read_float(x['surplus']) if 'surplus' in x else _atd_missing_json_field('SurplusPoint', 'surplus'),
+            )
+        else:
+            _atd_bad_json('SurplusPoint', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['growth'] = _atd_write_float(self.growth)
+        res['surplus'] = _atd_write_float(self.surplus)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'SurplusPoint':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Submission:
     """Original type: submission = { ... }
     """
@@ -3191,6 +3223,8 @@ class Valuation:
     cost_of_equity_used: Optional[float] = None
     required_return_source: Optional[str] = None
     required_return_version: Optional[str] = None
+    surplus_curve: Optional[List[SurplusPoint]] = None
+    surplus_curve_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -3232,6 +3266,8 @@ class Valuation:
                 cost_of_equity_used=_atd_read_float(x['cost_of_equity_used']) if 'cost_of_equity_used' in x else None,
                 required_return_source=_atd_read_string(x['required_return_source']) if 'required_return_source' in x else None,
                 required_return_version=_atd_read_string(x['required_return_version']) if 'required_return_version' in x else None,
+                surplus_curve=_atd_read_list(SurplusPoint.from_json)(x['surplus_curve']) if 'surplus_curve' in x else None,
+                surplus_curve_reason=_atd_read_string(x['surplus_curve_reason']) if 'surplus_curve_reason' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -3289,6 +3325,10 @@ class Valuation:
             res['required_return_source'] = _atd_write_string(self.required_return_source)
         if self.required_return_version is not None:
             res['required_return_version'] = _atd_write_string(self.required_return_version)
+        if self.surplus_curve is not None:
+            res['surplus_curve'] = _atd_write_list((lambda x: x.to_json()))(self.surplus_curve)
+        if self.surplus_curve_reason is not None:
+            res['surplus_curve_reason'] = _atd_write_string(self.surplus_curve_reason)
         return res
 
     @classmethod

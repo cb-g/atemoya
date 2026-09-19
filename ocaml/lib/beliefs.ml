@@ -47,9 +47,55 @@ let check_optional_table ~key text =
   | `Assoc top when List.mem_assoc key top -> check_table ~key text
   | _ -> Ok ()
 
+(* The correlation section (35): exactly common, why, as_of and an optional pairs list of
+   exactly a, b, rho, why, as_of; common in [0, 1), rho in (-1, 1). *)
+let check_correlation text =
+  let exact name (kv : (string * Yojson.Safe.t) list) required optional =
+    let unknown = List.filter (fun (k, _) -> not (List.mem k (required @ optional))) kv in
+    let missing = List.filter (fun k -> not (List.mem_assoc k kv)) required in
+    if unknown <> [] then
+      Error (Printf.sprintf "correlation %s carries unknown field(s) %s" name (String.concat ", " (List.map fst unknown)))
+    else if missing <> [] then Error (Printf.sprintf "correlation %s lacks %s" name (String.concat ", " missing))
+    else Ok ()
+  in
+  let number kv k = match List.assoc_opt k kv with Some (`Float x) -> Some x | Some (`Int n) -> Some (float_of_int n) | _ -> None in
+  match Yojson.Safe.from_string text with
+  | `Assoc top -> (
+      match List.assoc_opt "correlation" top with
+      | None -> Ok ()
+      | Some (`Assoc kv) -> (
+          match exact "section" kv [ "common"; "why"; "as_of" ] [ "pairs" ] with
+          | Error e -> Error e
+          | Ok () -> (
+              match number kv "common" with
+              | Some c when c < 0. || c >= 1. -> Error (Printf.sprintf "correlation common %g is not in [0, 1)" c)
+              | None -> Error "correlation common must be a number"
+              | Some _ -> (
+                  match List.assoc_opt "pairs" kv with
+                  | None | Some (`List []) -> Ok ()
+                  | Some (`List pairs) ->
+                      List.fold_left
+                        (fun acc pair ->
+                          match (acc, pair) with
+                          | Error _, _ -> acc
+                          | Ok (), `Assoc pkv -> (
+                              match exact "pair" pkv [ "a"; "b"; "rho"; "why"; "as_of" ] [] with
+                              | Error e -> Error e
+                              | Ok () -> (
+                                  match number pkv "rho" with
+                                  | Some r when r <= -1. || r >= 1. -> Error (Printf.sprintf "correlation pair rho %g is not in (-1, 1)" r)
+                                  | None -> Error "correlation pair rho must be a number"
+                                  | Some _ -> Ok ()))
+                          | Ok (), _ -> Error "correlation pair is not an object")
+                        (Ok ()) pairs
+                  | Some _ -> Error "correlation pairs must be a list")))
+      | Some _ -> Error "correlation must be an object")
+  | _ -> Error "beliefs: not an object"
+
 let load_classes_string text =
   Result.bind (check_table ~key:"classes" text) (fun () ->
-      Result.bind (check_optional_table ~key:"names" text) (fun () -> parse Reference_j.class_beliefs_of_string text))
+      Result.bind (check_optional_table ~key:"names" text) (fun () ->
+          Result.bind (check_correlation text) (fun () -> parse Reference_j.class_beliefs_of_string text)))
 
 let load_names_string text =
   Result.bind (check_table ~key:"tickers" text) (fun () -> parse Reference_j.name_beliefs_of_string text)
@@ -113,6 +159,13 @@ let implied_terminal_growth ~f ~price ~rate =
     | Implied.Flat -> { value = None; reason = Some "fair value does not vary with long-run growth" }
   in
   (r, [ lo; hi ])
+
+let surplus_points = 41
+
+let surplus_curve (b : belief) ~f ~price =
+  List.init surplus_points (fun k ->
+      let growth = b.floor +. ((b.ceiling -. b.floor) *. float_of_int k /. float_of_int (surplus_points - 1)) in
+      { growth; surplus = (f growth -. price) /. price })
 
 let note =
   "probability_overpaid is a statement of the declared belief, not a frequency: P(long-run growth below what the \

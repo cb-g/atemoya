@@ -205,7 +205,7 @@ let params_json =
   "growth_clamp_upper": {"value": 0.5, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mature_market_erp": {"value": 0.0423, "source": "Damodaran mature base", "as_of": "2026-01-01", "max_age_days": 400},
-  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
+  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
     "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03, "Brazil": 0.035}},
@@ -1468,7 +1468,35 @@ let test_beliefs_cdf_and_probability () =
   check_mentions "summary line" (Batch.summary [ v; bank ]) [ "probability_overpaid (24), across 1 Ok names with a declared belief: median"; "no belief on 1 Ok names (1 the residual-income path" ];
   check_mentions "two runs under different beliefs are different runs" (Batch.run_diff ~baseline:[ v ] [ own ]) [ "belief_version 2026-09-19-"; "-class -> 2026-09-01-"; "-name" ];
   let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation own) in
-  Alcotest.check valuation "json round trip" own again
+  Alcotest.check valuation "json round trip" own again;
+  (* the value-surplus curve (35): 41 points from the floor to the ceiling, the endpoints the
+     model's own values there; none on the residual-income path *)
+  (match (v.surplus_curve, v.belief, v.inputs, v.price) with
+  | Some curve, Some r, Some (`Dcf i), Some price ->
+      Alcotest.(check int) "41 points" 41 (List.length curve);
+      let first = List.hd curve and last = List.nth curve 40 in
+      check_float "starts at the floor" r.declared.floor first.growth;
+      check_float "ends at the ceiling" r.declared.ceiling last.growth;
+      let at g = (Implied.dcf_fair_value i ~terminal_growth_rate:g ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value -. price) /. price in
+      check_float "the floor's surplus is the model's" (at r.declared.floor) first.surplus;
+      check_float "the ceiling's surplus is the model's" (at r.declared.ceiling) last.surplus;
+      Alcotest.(check bool) "evenly spaced" true
+        (List.for_all2 (fun (p : Boundary_t.surplus_point) (q : Boundary_t.surplus_point) -> Float.abs ((q.growth -. p.growth) -. ((r.declared.ceiling -. r.declared.floor) /. 40.)) < 1e-12)
+           (List.filteri (fun k _ -> k < 40) curve) (List.tl curve))
+  | _ -> Alcotest.fail "no curve on the dcf record");
+  Alcotest.(check bool) "no curve on the residual-income path" true (Option.is_none bank.surplus_curve);
+  check_mentions "with the reason" (Option.value bank.surplus_curve_reason ~default:"") [ "no surplus curve: the residual-income path has no terminal growth" ];
+  (* the correlation section (35) loads strictly *)
+  let reject text needles = match Beliefs.load_classes_string text with Ok _ -> Alcotest.fail "loaded" | Error e -> check_mentions "load error" e needles in
+  let with_corr corr = Printf.sprintf {|{"classes": {"OperatingCompany": {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 2, "why": "w", "as_of": "2026-09-19"}}, "correlation": %s}|} corr in
+  let loaded = get (Beliefs.load_classes_string (with_corr {|{"common": 0.2, "why": "the book's", "as_of": "2026-09-19"}|})) in
+  check_float "common" 0.2 (Option.get loaded.correlation).common;
+  reject (with_corr {|{"common": 0.2, "why": "w", "as_of": "2026-09-19", "rho": 0.3}|}) [ "correlation section carries unknown field(s) rho" ];
+  reject (with_corr {|{"common": 1.0, "why": "w", "as_of": "2026-09-19"}|}) [ "correlation common 1 is not in [0, 1)" ];
+  reject (with_corr {|{"common": 0.2, "why": "w", "as_of": "2026-09-19", "pairs": [{"a": "X", "b": "Y", "rho": 0.5, "why": "w"}]}|}) [ "correlation pair lacks as_of" ];
+  reject (with_corr {|{"common": 0.2, "why": "w", "as_of": "2026-09-19", "pairs": [{"a": "X", "b": "Y", "rho": 1.5, "why": "w", "as_of": "2026-09-19"}]}|}) [ "rho 1.5 is not in (-1, 1)" ];
+  let tracked = get (Beliefs.load_classes "../../reference/beliefs.json") in
+  check_float "the draft common correlation" 0.2 (Option.get tracked.correlation).common
 
 
 (* --- the declared required return (34) --- *)
@@ -1804,7 +1832,7 @@ let test_minor_unit_guard () =
       "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-      "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400}, "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
+      "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400}, "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
       "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400, "values": {"United States": 0.02, "United Kingdom": 0.0}},
       "unwired": {}}|} ]) } in
   let run_gbp fin = Valuation.run uk_rates ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) fin in
@@ -2741,7 +2769,7 @@ let test_wacc_below_terminal_growth () =
                "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
-               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
+               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
                "unwired": {}}|} }

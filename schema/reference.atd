@@ -109,6 +109,8 @@ type params = {
   mature_market_erp : scalar;         (* the international CAPM's mature-market base; a domicile's total ERP less this is its country risk premium *)
   midcycle_window_years : int_scalar; (* the mid-cycle DCF's window (22): annual periods normalised over, and the period depth the fetch keeps for the class *)
   sensitivity_steps : sensitivity_steps;   (* (23) *)
+  frontier_draws : int_scalar;        (* (35) draws from the joint belief distribution; a change is a decision *)
+  frontier_seed : int_scalar;         (* (35) the sampler's seed; a change is a decision *)
   terminal_growth_rate : country_table;
   unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
 }
@@ -504,10 +506,28 @@ type belief = {
   as_of : string;
 }
 
+(* The joint distribution of the beliefs (35): one declared common-factor correlation for
+   every pair, with optional per-pair overrides; never estimated from anything. *)
+type correlation_pair = {
+  a : string;
+  b : string;
+  rho : float;
+  why : string;
+  as_of : string;
+}
+
+type correlation = {
+  common : float;                       (* in [0, 1) *)
+  why : string;
+  as_of : string;
+  ~pairs : correlation_pair list;
+}
+
 type class_beliefs = {
   ~notes : string list;
   classes : (string * belief) list <json repr="object">;   (* entity class -> offsets in percentage points *)
   ~names : (string * belief) list <json repr="object">;    (* ticker -> absolute, in percentage points; overrides the class default (26) *)
+  ?correlation : correlation option;                       (* (35) *)
 }
 
 (* A further file of per-name beliefs given as --beliefs FILE: the same six fields,

@@ -701,6 +701,13 @@ type belief_readout = {
   note : string;
 }
 
+(* One point of the value-surplus curve (35): the margin of safety (V - P) / P the model
+   gives at a long-run growth, everything else at its recorded value. *)
+type surplus_point = {
+  growth : float;
+  surplus : float;
+}
+
 type valuation = {
   ticker : string;
   as_of : string;                     (* the fetch timestamp, from financials *)
@@ -738,4 +745,6 @@ type valuation = {
   ?cost_of_equity_used : float option;    (* (34) the rate the model, the readouts, the sensitivity, the map and the probability ran on *)
   ?required_return_source : string option;   (* (34) capm | declared: class <name> | declared: name *)
   ?required_return_version : string option;  (* (34) as_of, a hash of the three fields, class or name; absent (null) under capm *)
+  ?surplus_curve : surplus_point list option;   (* (35) the value surplus at 41 evenly spaced long-run growths from the belief's floor to its ceiling, everything else held; present iff the record has a belief *)
+  ?surplus_curve_reason : string option;        (* (35) why there is none: no belief on the record *)
 }

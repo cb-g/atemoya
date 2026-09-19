@@ -5,7 +5,8 @@
     "The belief parameter is terminal growth, fixed on the merits: starting growth is observed from filings, the reversion speed is a structural assumption with its sensitivity shown, and long-run growth is the question every investor can answer. This choice may be revisited only on an argument about the model, never on what it does to a number.",
     "Bank and Insurer carry no belief: the residual-income path has no terminal growth, so the belief parameter is undefined there and the record says so.",
     "These four defaults were confirmed by the user as of 2026-09-19.",
-    "names: per-name beliefs, absolute in percentage points (the name's long-run nominal growth), same six fields, tracked here beside the class defaults; a name's entry overrides its class default. None declared yet."
+    "names: per-name beliefs, absolute in percentage points (the name's long-run nominal growth), same six fields, tracked here beside the class defaults; a name's entry overrides its class default. None declared yet.",
+    "correlation (35): the joint distribution of the beliefs is a Gaussian copula with one declared common-factor correlation for every pair (optional per-pair overrides under pairs, each exactly a, b, rho, why, as_of), mapped through each name's truncated normal. A draft for the user to confirm, like the class defaults were; never estimated from prices or history."
   ],
   "classes": {
     "OperatingCompany": {
@@ -41,5 +42,11 @@
       "as_of": "2026-09-19"
     }
   },
-  "names": {}
+  "names": {},
+  "correlation": {
+    "common": 0.2,
+    "why": "the book's assumption between Apple and JPM: long-run growth rates share the world economy but the businesses differ; one number for every pair until a pair earns its own",
+    "as_of": "2026-09-19",
+    "pairs": []
+  }
 }

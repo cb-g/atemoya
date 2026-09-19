@@ -237,6 +237,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       cost_of_equity_used = None;
       required_return_source = None;
       required_return_version = None;
+      surplus_curve = None;
+      surplus_curve_reason = None;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,
@@ -279,7 +281,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                  entity_class)
         | Some (b, source) ->
             let source_kind = if String.length source >= 8 && String.sub source 0 8 = "per-name" then "name" else "class" in
-            Ok (Beliefs.readout b ~source ~source_kind ~f ~price ~rate ~fair_value))
+            Ok (Beliefs.readout b ~source ~source_kind ~f ~price ~rate ~fair_value, Beliefs.surplus_curve b ~f ~price))
   in
   let failed ?(fin = original) ?model ?class_check ?inputs ~floor reason =
     record ~fin ?model ?class_check ?inputs ~price:fin.price ~status:`Failed
@@ -318,9 +320,12 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
           sensitivity = Some (Sensitivity.of_inputs params.params.sensitivity_steps inputs ~fair_value);
           belief_map = Result.to_option (Belief_map.of_inputs inputs ~price);
           belief_map_reason = (match Belief_map.of_inputs inputs ~price with Error r -> Some r | Ok _ -> None);
-          belief_version = (match belief_of ~price ~fair_value inputs with Ok r -> Some r.belief_version | Error _ -> None);
-          belief = Result.to_option (belief_of ~price ~fair_value inputs);
+          belief_version = (match belief_of ~price ~fair_value inputs with Ok (r, _) -> Some r.belief_version | Error _ -> None);
+          belief = (match belief_of ~price ~fair_value inputs with Ok (r, _) -> Some r | Error _ -> None);
           belief_reason = (match belief_of ~price ~fair_value inputs with Error r -> Some r | Ok _ -> None);
+          surplus_curve = (match belief_of ~price ~fair_value inputs with Ok (_, curve) -> Some curve | Error _ -> None);
+          surplus_curve_reason =
+            (match belief_of ~price ~fair_value inputs with Error r -> Some ("no surplus curve: " ^ r) | Ok _ -> None);
           cost_of_equity_capm = Some (Dcf.cost_of_equity_capm assumptions);
           cost_of_equity_used = Some (Dcf.cost_of_equity assumptions);
           required_return_source =
