@@ -1,5 +1,6 @@
-"""Each curve parser on a saved fixture in its source's format, and the validation that
-stands between a parsed observation and the rate file."""
+"""Each curve parser on a fixture in its source's format, and the validation that stands
+between a parsed observation and the rate file. Every number in a fixture is synthetic:
+nothing here was observed at any source."""
 
 from __future__ import annotations
 

@@ -162,7 +162,8 @@ let assumptions : Dcf.assumptions =
       { value = 15; key = "global"; source = "test"; as_of = today; age_days = 0 };
   }
 
-(* A reference set as JSON, exercising aliases, estimated cells and staleness.
+(* A reference set as JSON, exercising aliases, estimated cells and staleness. Every rate
+   is synthetic: nothing here was observed at any source (relay 30's rule).
    Singapore is fresh with interpolated cells; Germany's curve is 97 days old
    against a 45-day limit. *)
 let risk_free_json =
