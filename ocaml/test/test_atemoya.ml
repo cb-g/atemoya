@@ -16,8 +16,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?claims_liability ?claims_liability_row ?total_revenue_row ?ebit_row ?pretax_income_row
     ?tax_provision_row ?capex_row ?delta_nwc_row ?cash_row ?book_equity_row ?net_income_row
     ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
-    ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?cover_shares
-    ?cover_shares_tag () : Boundary_t.fiscal_period =
+    ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?weighted_shares
+    ?weighted_shares_tag () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -70,8 +70,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     net_interest_income_row;
     ffo;
     ffo_composition;
-    cover_shares;
-    cover_shares_tag;
+    weighted_shares;
+    weighted_shares_tag;
     ebit_recipe;
     ebit_composition;
     cash_composition;
@@ -1354,7 +1354,7 @@ let test_same_currency_path_carries_no_conversion () =
 
 let a_cross_check : Boundary_t.cross_check =
   {
-    provider = "yfinance"; period_end = "2025-09-27"; secondary_period_end = "2025-09-30"; threshold = 0.02;
+    provider = "yfinance"; source = ""; period_end = "2025-09-27"; secondary_period_end = "2025-09-30"; threshold = 0.02;
     fields =
       [ { field = "cash"; primary = Some 36.; secondary = Some 54.7; relative_difference = Some 0.342; agree = Some false };
         { field = "net_income"; primary = Some 112.; secondary = Some 112.; relative_difference = Some 0.; agree = Some true };
@@ -1935,14 +1935,14 @@ let test_point_in_time_gates_and_vintages () =
 
 (* --- the REIT model (18) --- *)
 
-(* Two filed years of a REIT: FFO 400 then 440 on 100 cover-page shares (ffo per share
-   4.0 -> 4.4, a 10% CAGR), dividends 300 (covered: coverage 0.75), 100 effective shares
-   at price 40 (market cap 4000). *)
-let reit_history ?(dividends = Some 300.) ?(ffo_now = Some 440.) () =
-  [ period ~period_end:"2025-12-31" ~net_income:200. ~depreciation_amortization:240. ?ffo:ffo_now ~cover_shares:100.
-      ~cover_shares_tag:"EntityCommonStockSharesOutstanding" ?dividends_paid:dividends ~dividends_paid_row:"PaymentsOfDividendsCommonStock" ();
-    period ~period_end:"2024-12-31" ~net_income:180. ~depreciation_amortization:220. ~ffo:400. ~cover_shares:100.
-      ~cover_shares_tag:"EntityCommonStockSharesOutstanding" ~dividends_paid:280. ~dividends_paid_row:"PaymentsOfDividendsCommonStock" () ]
+(* Two filed years of a REIT: FFO 400 then 440 on 100 weighted-average diluted shares (ffo
+   per share 4.0 -> 4.4, a 10% CAGR), dividends 300 (covered: coverage 0.75), 100 effective
+   shares at price 40 (market cap 4000). *)
+let reit_history ?(dividends = Some 300.) ?(ffo_now = Some 440.) ?(shares_now = 100.) () =
+  [ period ~period_end:"2025-12-31" ~net_income:200. ~depreciation_amortization:240. ?ffo:ffo_now ~weighted_shares:shares_now
+      ~weighted_shares_tag:"WeightedAverageNumberOfDilutedSharesOutstanding" ?dividends_paid:dividends ~dividends_paid_row:"PaymentsOfDividendsCommonStock" ();
+    period ~period_end:"2024-12-31" ~net_income:180. ~depreciation_amortization:220. ~ffo:400. ~weighted_shares:100.
+      ~weighted_shares_tag:"WeightedAverageNumberOfDilutedSharesOutstanding" ~dividends_paid:280. ~dividends_paid_row:"PaymentsOfDividendsCommonStock" () ]
 
 let reit_financials periods =
   { (filed periods) with price = Some 40.; market_cap = Some 4000.; industry = Some "REIT - Retail" }
@@ -1964,11 +1964,30 @@ let test_reit_value_by_hand () =
   check_float "coverage" (300. /. 440.) inputs.coverage;
   check_float "covered dividend" 300. inputs.covered_dividend;
   check_float "dividend per share" 3. inputs.dividend_per_share;
-  check_float "ffo per cover share cagr" g inputs.g_historical;
+  check_float "ffo per weighted share cagr" g inputs.g_historical;
   Alcotest.(check (list string)) "periods" [ "2025-12-31"; "2024-12-31" ] inputs.ffo_periods;
+  Alcotest.(check (list (pair string string))) "the count's tag per period"
+    [ ("2025-12-31", "WeightedAverageNumberOfDilutedSharesOutstanding"); ("2024-12-31", "WeightedAverageNumberOfDilutedSharesOutstanding") ]
+    inputs.weighted_shares_tags;
   Alcotest.(check (list approx)) "dividend path" [ d1; d2 ] inputs.dividend_path;
   check_float "terminal" terminal inputs.terminal_value;
   check_mentions "caveat" inputs.caveat [ "FFO overstates distributable cash" ]
+
+(* A merger year: FY2025's FFO 440 accrued over a weighted 100 shares, but a point count
+   taken after the merger closed would be 160. The growth series uses the weighted count,
+   and the period record has no field a point count could enter by. *)
+let test_reit_growth_uses_the_weighted_count_not_a_point_count () =
+  let inputs, _ = get (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ()))) in
+  Alcotest.(check (list (pair string approx))) "ffo per weighted share" [ ("2025-12-31", 4.4); ("2024-12-31", 4.0) ] inputs.ffo_per_weighted_share;
+  let point_count_cagr = (440. /. 160.) /. 4.0 -. 1. in
+  Alcotest.(check bool) "a point count would have read the merger as negative growth" true (point_count_cagr < 0. && inputs.g_historical > 0.09);
+  (* the weighted count moves with the merger: the same flows on 120 weighted shares *)
+  let merged, _ = get (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ~shares_now:120. ()))) in
+  check_float "ffo per weighted share on the merger year" (440. /. 120.) (List.assoc "2025-12-31" merged.ffo_per_weighted_share);
+  Alcotest.(check bool) "growth read on the period's own count" true (merged.g_historical < inputs.g_historical);
+  (* no weighted count on a period: that period leaves the series, never a substitute *)
+  let one = { (List.hd (reit_history ())) with weighted_shares = None } in
+  check_error "count absent" (Reit.value reit_assumptions ~country:"T" (reit_financials [ one; List.nth (reit_history ()) 1 ])) [ "ffo growth needs two periods with ffo and weighted-average shares, have 1" ]
 
 let test_reit_covered_dividend_and_guards () =
   (* payout above FFO: only the covered part is valued, coverage > 1 recorded *)
@@ -1980,7 +1999,7 @@ let test_reit_covered_dividend_and_guards () =
   check_float "the uncovered part adds nothing" covered_only fair_value;
   check_error "one period of ffo per share"
     (Reit.value reit_assumptions ~country:"T" (reit_financials [ List.hd (reit_history ()) ]))
-    [ "ffo growth needs two periods"; "have 1" ];
+    [ "ffo growth needs two periods with ffo and weighted-average shares"; "have 1" ];
   check_error "cost of equity vs terminal"
     (Reit.value { reit_assumptions with terminal_growth_rate = param 0.5 } ~country:"T" (reit_financials (reit_history ())))
     [ "cost of equity"; "does not exceed terminal growth" ];
@@ -2317,6 +2336,7 @@ let () =
       ( "reit",
         [
           case "value by hand" test_reit_value_by_hand;
+          case "growth on the weighted count, never a point count" test_reit_growth_uses_the_weighted_count_not_a_point_count;
           case "covered dividend, growth needs two periods, guards" test_reit_covered_dividend_and_guards;
           case "routes, floors, implied g0 and horizon" test_reit_routes_and_implied;
         ] );

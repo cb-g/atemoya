@@ -41,10 +41,9 @@ PIT_ROOT = REPO_ROOT / "data" / "pit"
 FRED_CACHE = PIT_ROOT / "fred"
 REFERENCE = REPO_ROOT / "reference"
 HISTORY_START = "2020-01-01"
-SHARES_TAG = "EntityCommonStockSharesOutstanding"
 FRED_PARSERS = ("fred_dgs", "fred_oecd_10y")  # the rate sources with history at a date
 VENDOR_REASON = "vendor provider carries no filing dates"
-SHARES_REASON = "dei cover page count not filed"
+SHARES_REASON = "no cover page or balance-sheet count filed by the date"
 
 
 # --- facts filed on or before D ---------------------------------------------------------
@@ -90,19 +89,63 @@ def submissions_on_or_before(index: Mapping[str, object] | None, d: date) -> dic
 # --- shares from the cover page ----------------------------------------------------------
 
 
-def dei_shares(facts: Mapping[str, object], d: date) -> tuple[float, str, str, str] | None:
-    """(shares, tag, cover-page date, filed) from the newest cover page filed on or before
-    [d]; a filer with several share classes files one entry per class under the same date,
-    and distinct values on that date are summed."""
-    node = fetch_sec._as_dict(fetch_sec._as_dict(fetch_sec._as_dict(facts.get("facts")).get("dei")).get(SHARES_TAG))  # pyright: ignore[reportPrivateUsage]
-    entries = [fetch_sec._as_dict(e) for e in cast(list[object], fetch_sec._as_dict(node.get("units")).get("shares", []))]  # pyright: ignore[reportPrivateUsage]
-    dated = [(str(e["filed"]), str(e["end"]), float(cast(float, e["val"]))) for e in entries
-             if "filed" in e and "end" in e and "val" in e and str(e["filed"]) <= d.isoformat()]
-    if not dated:
+class PointCount:
+    """A point count for market cap on the date: (shares, source, tag, as_of, filed)."""
+
+    def __init__(self, shares: float, source: str, tag: str, as_of: str, filed: str) -> None:
+        self.shares, self.source, self.tag, self.as_of, self.filed = shares, source, tag, as_of, filed
+
+
+def dei_shares(facts: Mapping[str, object], d: date, tags: list[str]) -> PointCount | None:
+    """The newest cover page filed on or before [d]; a filer with several share classes files
+    one entry per class under the same date, and distinct values on that date are summed."""
+    dei = fetch_sec._as_dict(fetch_sec._as_dict(facts.get("facts")).get("dei"))  # pyright: ignore[reportPrivateUsage]
+    for tag in tags:
+        node = fetch_sec._as_dict(dei.get(tag))  # pyright: ignore[reportPrivateUsage]
+        entries = [fetch_sec._as_dict(e) for e in cast(list[object], fetch_sec._as_dict(node.get("units")).get("shares", []))]  # pyright: ignore[reportPrivateUsage]
+        dated = [(str(e["filed"]), str(e["end"]), float(cast(float, e["val"]))) for e in entries
+                 if "filed" in e and "end" in e and "val" in e and str(e["filed"]) <= d.isoformat()]
+        if dated:
+            newest = max((filed, end) for filed, end, _ in dated)
+            values = sorted({v for filed, end, v in dated if (filed, end) == newest})
+            return PointCount(sum(values), "dei cover page", tag, newest[1], newest[0])
+    return None
+
+
+def balance_sheet_shares(facts: Mapping[str, object], d: date, tags: list[str], xbrl_tags: reference.XbrlTags) -> PointCount | None:
+    """The balance-sheet count at the newest fiscal period end filed on or before [d]
+    (the facts are already filtered to that date)."""
+    gaap = fetch_sec._as_dict(fetch_sec._as_dict(facts.get("facts")).get("us-gaap"))  # pyright: ignore[reportPrivateUsage]
+    for tag in tags:
+        annual = fetch_sec.annual_facts(fetch_sec._entries(gaap.get(tag), "shares"), instant=True, tags=xbrl_tags, notes=[], tag=tag)  # pyright: ignore[reportPrivateUsage]
+        if annual:
+            end = max(annual)
+            return PointCount(annual[end].val, "balance sheet count", tag, end.isoformat(), annual[end].filed.isoformat())
+    return None
+
+
+def point_count(facts: Mapping[str, object], d: date, defs: reference.FieldDefinitions, xbrl_tags: reference.XbrlTags) -> PointCount | None:
+    """shares_for_market_cap point-in-time: the cover page, else the balance-sheet count."""
+    sources = defs.shares_for_market_cap.point_in_time
+    return dei_shares(facts, d, sources.cover_page) or balance_sheet_shares(facts, d, sources.balance_sheet, xbrl_tags)
+
+
+VENDOR_CHECK_SOURCE = "live vendor statements, same fiscal period, fetched after D"
+
+
+def same_period_check(periods: list[boundary.FiscalPeriod], vendor: list[boundary.FiscalPeriod], threshold: float) -> boundary.CrossCheck | None:
+    """The cross-check of the filed period against the vendor's column for the same fiscal
+    period, from the live fetch: a value fetched after D that describes the period being
+    valued is legitimate for a check, which gates only a derived recipe's admissibility and
+    is never an input; the record says where it came from. None when no column matches."""
+    if not periods:
         return None
-    newest = max((filed, end) for filed, end, _ in dated)
-    values = sorted({v for filed, end, v in dated if (filed, end) == newest})
-    return sum(values), SHARES_TAG, newest[1], newest[0]
+    match = fetch.match_period(periods[0], vendor)
+    if match is None:
+        return None
+    check = fetch.cross_check(periods[0], match, threshold, "yfinance")
+    check.source = VENDOR_CHECK_SOURCE
+    return check
 
 
 # --- price on the last trading day on or before D ---------------------------------------
@@ -256,7 +299,7 @@ def statements_on(symbol: str, d: date, sec: SecLike, notes: list[str]) -> tuple
     decision = fetch_sec.decide(filtered, sec.tags)
     if not decision.xbrl or decision.currency is None:
         return [], decision, VENDOR_REASON, submission, filtered
-    periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, notes, taxonomy=decision.taxonomy, unit=decision.currency, dei=decision.dei)
+    periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, notes, taxonomy=decision.taxonomy, unit=decision.currency)
     notes.append(f"CIK {cik}: {len(decision.facts)} {decision.taxonomy} tags filed by {d}; {len(periods)} annual periods in {decision.currency}")
     lag = fetch.lag_of(submission, periods)
     if lag is not None:
@@ -267,15 +310,19 @@ def statements_on(symbol: str, d: date, sec: SecLike, notes: list[str]) -> tuple
     return periods, decision, None, submission, filtered
 
 
-def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Quote | None, profile: fetch.Profile | None) -> boundary.Financials:
+def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Quote | None, profile: fetch.Profile | None,
+           vendor: list[boundary.FiscalPeriod] | None = None) -> boundary.Financials:
     notes: list[str] = []
     periods, decision, why, submission, facts = statements_on(symbol, d, sec, notes)
     priced = price_on(history, d)
-    shares = dei_shares(facts, d) if facts is not None else None
+    shares = point_count(facts, d, sec.definitions, sec.tags) if facts is not None else None
+    check = same_period_check(periods, vendor, sec.tags.cross_check_threshold) if why is None and vendor else None
+    if why is None and check is None:
+        notes.append("cross-check: the vendor's live statements carry no column for the filed period; a derived ebit cannot be checked on this date")
     trading = quote.trading_currency if quote else None
     divisor = quote.price_unit_divisor if quote else 1.0
     price = None if priced is None else priced[1] * priced[2] / divisor
-    market_cap = None if price is None or shares is None else price * shares[0]
+    market_cap = None if price is None or shares is None else price * shares.shares
     filing_currency = decision.currency if decision is not None and decision.xbrl else None
     currency = filing_currency if filing_currency is not None and filing_currency == trading else None
     rate_country = None
@@ -290,10 +337,10 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         price_date=None if priced is None else priced[0].isoformat(),
         close_as_served=None if priced is None else priced[1],
         split_factor=None if priced is None else priced[2],
-        shares_source="dei cover page",
-        shares_tag=None if shares is None else shares[1],
-        shares_as_of=None if shares is None else shares[2],
-        shares_filed=None if shares is None else shares[3],
+        shares_source="" if shares is None else shares.source,
+        shares_tag=None if shares is None else shares.tag,
+        shares_as_of=None if shares is None else shares.as_of,
+        shares_filed=None if shares is None else shares.filed,
         rate_observations=[],
         anachronistic_inputs=[],
         statements_unavailable=why,
@@ -313,23 +360,28 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         vendor_financial_currency=(quote.financial_currency if quote else None) if why is None else None,
         market_provider="yfinance (closes and splits), SEC dei (shares)", provider_reason=(decision.reason if decision is not None and why is None else why or ""),
         latest_filing=fetch_sec.latest_filing(periods) if why is None else None,
+        cross_check=check,
         submissions_latest_annual=submission, point_in_time=pit,
     )
 
 
 def run_date(d: date, tickers: list[str], *, histories: dict[str, History], quotes: dict[str, tuple[fetch.Quote | None, fetch.Profile | None]],
-             sec: SecLike, out_root: Path = PIT_ROOT) -> Path:
-    """data/pit/<D>/ with a record per ticker and the reference as of D."""
+             sec: SecLike, out_root: Path = PIT_ROOT, vendors: dict[str, list[boundary.FiscalPeriod]] | None = None) -> Path:
+    """data/pit/<D>/ with a record per ticker and the reference as of D. The vendor's live
+    statements (fetched once per ticker) supply the same-period cross-check."""
     out = out_root / d.isoformat()
     out.mkdir(parents=True, exist_ok=True)
+    vendors = {} if vendors is None else vendors
     records: list[boundary.Financials] = []
     for symbol in tickers:
         if symbol not in histories:
             histories[symbol] = History.fetch(symbol)
         if symbol not in quotes:
             quotes[symbol] = fetch._info(yf.Ticker(symbol), [])  # pyright: ignore[reportPrivateUsage]
+        if symbol not in vendors:
+            vendors[symbol] = fetch.vendor_periods(yf.Ticker(symbol), [])
         quote, profile = quotes[symbol]
-        records.append(record(symbol, d, sec, histories[symbol], quote, profile))
+        records.append(record(symbol, d, sec, histories[symbol], quote, profile, vendors[symbol]))
     countries: set[str] = set()
     currencies: set[str] = set()
     fx_sources = reference.FxSources.from_json_string((REFERENCE / "fx_sources.json").read_text())

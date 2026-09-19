@@ -4,6 +4,7 @@ before the date, and the vendor-path record naming why it has no statements."""
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import math
 from datetime import date
@@ -30,9 +31,11 @@ def test_filed_on_or_before_excludes_later_filings() -> None:
     assert p.period_end == "2024-12-31" and p.filed == "2025-02-20"
     # nothing filed by the date: no anchors at all
     assert not fetch_sec_decide(pit.filed_on_or_before(facts, date(2024, 1, 1))).xbrl
-    assert pit.dei_shares(on, date(2025, 6, 30)) == (100.0, "EntityCommonStockSharesOutstanding", "2025-01-31", "2025-02-20")
-    assert pit.dei_shares(facts, date(2026, 6, 30)) == (90.0, "EntityCommonStockSharesOutstanding", "2026-01-31", "2026-02-20")
-    assert pit.dei_shares(facts, date(2024, 1, 1)) is None
+    cover = pit.point_count(on, date(2025, 6, 30), DEFS, TAGS)
+    assert cover is not None and (cover.shares, cover.source, cover.tag, cover.as_of, cover.filed) == (100.0, "dei cover page", "EntityCommonStockSharesOutstanding", "2025-01-31", "2025-02-20")
+    later = pit.point_count(facts, date(2026, 6, 30), DEFS, TAGS)
+    assert later is not None and (later.shares, later.as_of) == (90.0, "2026-01-31")
+    assert pit.point_count(pit.filed_on_or_before(facts, date(2024, 1, 1)), date(2024, 1, 1), DEFS, TAGS) is None
 
 
 def fetch_sec_decide(facts: dict[str, object]):  # pyright: ignore[reportUnknownParameterType]
@@ -52,8 +55,8 @@ def test_dei_shares_sums_share_classes_filed_on_the_same_date() -> None:
         fact("2025-01-31", 5.8e9, filed="2025-02-20"), fact("2025-01-31", 0.9e9, filed="2025-02-20"), fact("2025-01-31", 5.4e9, filed="2025-02-20"),
         fact("2025-01-31", 5.8e9, filed="2025-02-20"),  # a duplicate of one class is not counted twice
     ]}}}}}
-    got = pit.dei_shares(facts, date(2025, 3, 31))
-    assert got is not None and math.isclose(got[0], 12.1e9)
+    got = pit.point_count(facts, date(2025, 3, 31), DEFS, TAGS)
+    assert got is not None and math.isclose(got.shares, 12.1e9) and got.source == "dei cover page"
 
 
 def test_price_on_corrects_for_splits_after_the_date_and_takes_the_last_trading_day() -> None:
@@ -102,3 +105,30 @@ def test_vendor_path_record_names_why_it_has_no_statements() -> None:
     assert r.periods == [] and r.provider == "yfinance" and r.price == 20.0 and r.market_cap is None
     assert r.point_in_time.price_date == "2025-06-27" and r.as_of == "2025-06-30T00:00:00+00:00"
     assert r.point_in_time.shares_unavailable is None  # the statements reason comes first
+
+
+def test_point_count_falls_back_to_the_balance_sheet_count_then_fails() -> None:
+    """Alphabet: no undimensioned cover page, but a balance-sheet count at the newest fiscal
+    period end filed by the date; a weighted-average count never stands in for a point."""
+    facts = {"facts": {"us-gaap": {
+        "CommonStockSharesOutstanding": {"units": {"shares": [fact("2024-12-31", 12211e6, filed="2025-02-05"), fact("2025-12-31", 12088e6, filed="2026-02-05")]}},
+        "WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [fact("2025-12-31", 12150e6, start="2025-01-01", filed="2026-02-05")]}}}}}
+    on = pit.filed_on_or_before(facts, date(2025, 6, 30))
+    got = pit.point_count(on, date(2025, 6, 30), DEFS, TAGS)
+    assert got is not None and (got.shares, got.source, got.tag, got.as_of, got.filed) == (12211e6, "balance sheet count", "CommonStockSharesOutstanding", "2024-12-31", "2025-02-05")
+    newest = pit.point_count(facts, date(2026, 6, 30), DEFS, TAGS)
+    assert newest is not None and (newest.shares, newest.as_of) == (12088e6, "2025-12-31")
+    weighted_only = {"facts": {"us-gaap": {"WeightedAverageNumberOfDilutedSharesOutstanding": facts["facts"]["us-gaap"]["WeightedAverageNumberOfDilutedSharesOutstanding"]}}}  # pyright: ignore[reportIndexIssue]
+    assert pit.point_count(weighted_only, date(2026, 6, 30), DEFS, TAGS) is None
+    assert DEFS.shares_for_market_cap.point_in_time.cover_page == ["EntityCommonStockSharesOutstanding"]
+    assert DEFS.shares_for_market_cap.point_in_time.balance_sheet == ["CommonStockSharesOutstanding"]
+
+
+def test_same_period_vendor_check_matches_the_filed_period_or_none() -> None:
+    filed = [fetch._period(date(2025, 12, 28), None, None, None)]  # pyright: ignore[reportPrivateUsage]
+    vendor = [dataclasses.replace(fetch._period(date(2025, 12, 31), None, None, None), ebit=25.6e9),  # pyright: ignore[reportPrivateUsage]
+              dataclasses.replace(fetch._period(date(2024, 12, 31), None, None, None), ebit=21.2e9)]  # pyright: ignore[reportPrivateUsage]
+    check = pit.same_period_check(filed, vendor, 0.02)
+    assert check is not None and check.secondary_period_end == "2025-12-31" and check.source == "live vendor statements, same fiscal period, fetched after D"
+    assert pit.same_period_check([fetch._period(date(2021, 1, 2), None, None, None)], vendor, 0.02) is None  # no column for FY2020  # pyright: ignore[reportPrivateUsage]
+    assert pit.same_period_check([], vendor, 0.02) is None and pit.same_period_check(filed, [], 0.02) is None

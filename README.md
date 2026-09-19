@@ -98,9 +98,14 @@ every record against the previous run and lists the inputs behind every moved fa
 with `--baseline-snapshot` as well, every moved input of every record is classified (price,
 new filing, restatement, vendor row, rate or FX, unexplained) in a stability report, so two
 fetches with nothing having happened can be shown to agree.
-A point-in-time record values a name as of a past date from what was known then: facts
-filed by the date, the close on the last trading day on or before it (split-corrected),
-shares from the newest cover page filed by then, rates and FX observed by then; ERP, tax
+Two share counts live in `reference/field_definitions.json` and are never interchanged: a
+flow per share for a historical period (the REIT model's FFO growth) uses that period's
+weighted-average diluted count, and a point count (market cap) is effective shares live or
+a filed count point-in-time. A point-in-time record values a name as of a past date from
+what was known then: facts filed by the date, the close on the last trading day on or
+before it (split-corrected), shares from the newest cover page filed by then (else the
+balance-sheet count at the newest period end filed by then), rates and FX observed by
+then, and the vendor's live column for the same fiscal period as a cross-check only; ERP, tax
 rates, betas and the assumptions are held at the current vintage and every one whose
 vintage postdates the date is named on the record. Vendor-path names have no filing dates
 and fail, named. The panel builder writes one row per name and quarter-end with the forward

@@ -54,16 +54,20 @@ let value (a : Dcf.assumptions) ~country (fin : financials) =
       else if a.projection_years.value < 0 then
         Error (Printf.sprintf "projection horizon %d years is negative" a.projection_years.value)
       else
-        (* FFO per cover-page share, every period that carries both, for the growth. *)
+        (* FFO per weighted-average diluted share, every period that carries both, for the
+           growth: the period's own count, per shares_for_flows; the period record carries
+           no point count, so no other denominator is possible here. *)
         let series =
           List.filter_map
             (fun (q : fiscal_period) ->
-              match (q.ffo, q.cover_shares) with
-              | Some f, Some sh when sh > 0. -> Some (q.period_end, f /. sh)
+              match (q.ffo, q.weighted_shares, q.weighted_shares_tag) with
+              | Some f, Some sh, Some tag when sh > 0. -> Some (q.period_end, f /. sh, tag)
               | _ -> None)
             fin.periods
-          |> List.sort (fun (x, _) (y, _) -> compare y x)
+          |> List.sort (fun (x, _, _) (y, _, _) -> compare y x)
         in
+        let weighted_shares_tags = List.map (fun (e, _, tag) -> (e, tag)) series in
+        let series = List.map (fun (e, v, _) -> (e, v)) series in
         let* g_historical, ffo_periods =
           match series with
           | (last_end, last) :: _ when List.length series >= 2 -> (
@@ -77,7 +81,7 @@ let value (a : Dcf.assumptions) ~country (fin : financials) =
                        first_end last_end first last))
           | _ ->
               Error
-                (Printf.sprintf "ffo growth needs two periods with ffo and cover-page shares, have %d"
+                (Printf.sprintf "ffo growth needs two periods with ffo and weighted-average shares, have %d"
                    (List.length series))
         in
         let cost_of_equity =
@@ -125,7 +129,8 @@ let value (a : Dcf.assumptions) ~country (fin : financials) =
                   coverage = dividends_paid /. ffo;
                   covered_dividend;
                   dividend_per_share;
-                  ffo_per_cover_share = series;
+                  ffo_per_weighted_share = series;
+                  weighted_shares_tags;
                   ffo_periods;
                   g_historical;
                   g0;

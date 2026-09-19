@@ -683,7 +683,7 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext) -> tuple[boundary.Finan
                        provider_reason=f"CIK {cik}: {decision.reason}", submission=submission, submissions_unavailable=submissions_unavailable), None
 
     filed_notes = list(notes)
-    periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, filed_notes, taxonomy=decision.taxonomy, unit=decision.currency, dei=decision.dei)
+    periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, filed_notes, taxonomy=decision.taxonomy, unit=decision.currency)
     filed_notes.append(f"CIK {cik}: {len(decision.facts)} {decision.taxonomy} tags; {len(periods)} annual periods in {decision.currency}")
     reason = f"CIK {cik}: {decision.reason}"
     lag = lag_of(submission, periods)

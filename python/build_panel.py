@@ -80,14 +80,17 @@ def main(argv: list[str]) -> int:
     sec = fetch.SecContext()
     histories: dict[str, pit.History] = {}
     quotes: dict[str, tuple[fetch.Quote | None, fetch.Profile | None]] = {}
+    vendors: dict[str, list[pit.boundary.FiscalPeriod]] = {}
     for symbol in tickers:
+        ticker = yf.Ticker(symbol)
         histories[symbol] = pit.History.fetch(symbol)
-        quotes[symbol] = fetch._info(yf.Ticker(symbol), [])  # pyright: ignore[reportPrivateUsage]
+        quotes[symbol] = fetch._info(ticker, [])  # pyright: ignore[reportPrivateUsage]
+        vendors[symbol] = fetch.vendor_periods(ticker, [])
     OUT.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, object]] = []
     summary: list[str] = ["point-in-time panel: one descriptive table per date, no statistic", ""]
     for d in dates:
-        pit_dir = pit.run_date(d, tickers, histories=histories, quotes=quotes, sec=sec)
+        pit_dir = pit.run_date(d, tickers, histories=histories, quotes=quotes, sec=sec, vendors=vendors)
         valuations = run_batch(pit_dir, d, binary)
         day_rows: list[dict[str, object]] = []
         for line in valuations.read_text().splitlines():

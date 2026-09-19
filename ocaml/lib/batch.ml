@@ -369,7 +369,7 @@ let drivers (inputs : model_inputs) =
         ("ffo", i.ffo, composition_text i.ffo_composition);
         ("dividends_paid", i.dividends_paid, match i.dividends_paid_row with Some r -> " (" ^ r ^ ")" | None -> "");
         ("covered_dividend", i.covered_dividend, Printf.sprintf " (coverage %.3f)" i.coverage);
-        ("g_historical", i.g_historical, Printf.sprintf " (ffo per cover-page share over %s)" (String.concat ", " i.ffo_periods));
+        ("g_historical", i.g_historical, Printf.sprintf " (ffo per weighted-average share over %s)" (String.concat ", " i.ffo_periods));
       ]
       @ parameter_drivers
           ([

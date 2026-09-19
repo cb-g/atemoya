@@ -467,6 +467,120 @@ class Universe:
 
 
 @dataclass
+class PointCountSources:
+    """Original type: point_count_sources = { ... }
+    """
+
+    cover_page: List[str]
+    balance_sheet: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'PointCountSources':
+        if isinstance(x, dict):
+            return cls(
+                cover_page=_atd_read_list(_atd_read_string)(x['cover_page']) if 'cover_page' in x else _atd_missing_json_field('PointCountSources', 'cover_page'),
+                balance_sheet=_atd_read_list(_atd_read_string)(x['balance_sheet']) if 'balance_sheet' in x else _atd_missing_json_field('PointCountSources', 'balance_sheet'),
+            )
+        else:
+            _atd_bad_json('PointCountSources', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['cover_page'] = _atd_write_list(_atd_write_string)(self.cover_page)
+        res['balance_sheet'] = _atd_write_list(_atd_write_string)(self.balance_sheet)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'PointCountSources':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class SharesForMarketCap:
+    """Original type: shares_for_market_cap = { ... }
+    """
+
+    name: str
+    why: str
+    live: str
+    point_in_time: PointCountSources
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'SharesForMarketCap':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('SharesForMarketCap', 'name'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('SharesForMarketCap', 'why'),
+                live=_atd_read_string(x['live']) if 'live' in x else _atd_missing_json_field('SharesForMarketCap', 'live'),
+                point_in_time=PointCountSources.from_json(x['point_in_time']) if 'point_in_time' in x else _atd_missing_json_field('SharesForMarketCap', 'point_in_time'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('SharesForMarketCap', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['why'] = _atd_write_string(self.why)
+        res['live'] = _atd_write_string(self.live)
+        res['point_in_time'] = (lambda x: x.to_json())(self.point_in_time)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'SharesForMarketCap':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class SharesForFlows:
+    """Original type: shares_for_flows = { ... }
+    """
+
+    name: str
+    why: str
+    xbrl: List[str]
+    ifrs: List[str]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'SharesForFlows':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('SharesForFlows', 'name'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('SharesForFlows', 'why'),
+                xbrl=_atd_read_list(_atd_read_string)(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('SharesForFlows', 'xbrl'),
+                ifrs=_atd_read_list(_atd_read_string)(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('SharesForFlows', 'ifrs'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('SharesForFlows', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['why'] = _atd_write_string(self.why)
+        res['xbrl'] = _atd_write_list(_atd_write_string)(self.xbrl)
+        res['ifrs'] = _atd_write_list(_atd_write_string)(self.ifrs)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'SharesForFlows':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Scalar:
     """Original type: scalar = { ... }
     """
@@ -1720,6 +1834,8 @@ class FieldDefinitions:
     delta_nwc: NwcDefinition
     ebit: EbitDefinition
     ffo: FfoDefinition
+    shares_for_flows: SharesForFlows
+    shares_for_market_cap: SharesForMarketCap
     refinement_policy: RefinementPolicy
     notes: List[str] = field(default_factory=lambda: [])
 
@@ -1734,6 +1850,8 @@ class FieldDefinitions:
                 delta_nwc=NwcDefinition.from_json(x['delta_nwc']) if 'delta_nwc' in x else _atd_missing_json_field('FieldDefinitions', 'delta_nwc'),
                 ebit=EbitDefinition.from_json(x['ebit']) if 'ebit' in x else _atd_missing_json_field('FieldDefinitions', 'ebit'),
                 ffo=FfoDefinition.from_json(x['ffo']) if 'ffo' in x else _atd_missing_json_field('FieldDefinitions', 'ffo'),
+                shares_for_flows=SharesForFlows.from_json(x['shares_for_flows']) if 'shares_for_flows' in x else _atd_missing_json_field('FieldDefinitions', 'shares_for_flows'),
+                shares_for_market_cap=SharesForMarketCap.from_json(x['shares_for_market_cap']) if 'shares_for_market_cap' in x else _atd_missing_json_field('FieldDefinitions', 'shares_for_market_cap'),
                 refinement_policy=RefinementPolicy.from_json(x['refinement_policy']) if 'refinement_policy' in x else _atd_missing_json_field('FieldDefinitions', 'refinement_policy'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
@@ -1749,6 +1867,8 @@ class FieldDefinitions:
         res['delta_nwc'] = (lambda x: x.to_json())(self.delta_nwc)
         res['ebit'] = (lambda x: x.to_json())(self.ebit)
         res['ffo'] = (lambda x: x.to_json())(self.ffo)
+        res['shares_for_flows'] = (lambda x: x.to_json())(self.shares_for_flows)
+        res['shares_for_market_cap'] = (lambda x: x.to_json())(self.shares_for_market_cap)
         res['refinement_policy'] = (lambda x: x.to_json())(self.refinement_policy)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res

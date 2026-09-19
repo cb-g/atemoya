@@ -349,6 +349,31 @@ type ffo_definition = {
   ~notes : string list;
 }
 
+(* Two share counts (19), never interchanged. A flow (FFO, net income, dividends) expressed
+   per share for a historical period is divided by the period's weighted-average diluted
+   count, the shares outstanding while it accrued; a point count (market cap, price x shares)
+   is effective shares on the live run and a filed point count point-in-time. *)
+type shares_for_flows = {
+  name : string;
+  why : string;
+  xbrl : string list;                       (* first present per period: diluted, then basic (recorded as basic) *)
+  ifrs : string list;
+  ~notes : string list;
+}
+
+type point_count_sources = {
+  cover_page : string list;                 (* dei tags, the newest cover page filed by the date *)
+  balance_sheet : string list;              (* us-gaap instants at the newest fiscal period end filed by the date *)
+}
+
+type shares_for_market_cap = {
+  name : string;
+  why : string;
+  live : string;                            (* effective shares = market cap / price *)
+  point_in_time : point_count_sources;      (* tried in order; then Failed *)
+  ~notes : string list;
+}
+
 type field_definitions = {
   source : string;
   as_of : string;
@@ -358,5 +383,7 @@ type field_definitions = {
   delta_nwc : nwc_definition;
   ebit : ebit_definition;
   ffo : ffo_definition;
+  shares_for_flows : shares_for_flows;
+  shares_for_market_cap : shares_for_market_cap;
   refinement_policy : refinement_policy;
 }

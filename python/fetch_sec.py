@@ -25,7 +25,7 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterable, Mapping
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 from dataclasses import dataclass
 from typing import cast
@@ -252,22 +252,23 @@ class Facts:
         self._tags = tags
         self._notes = notes
         self._unit = unit
-        self._memo: dict[tuple[str, bool], dict[date, Fact]] = {}
+        self._memo: dict[tuple[str, bool, str], dict[date, Fact]] = {}
 
-    def annual(self, tag: str, *, instant: bool) -> dict[date, Fact]:
-        key = (tag, instant)
+    def annual(self, tag: str, *, instant: bool, unit: str | None = None) -> dict[date, Fact]:
+        """The tag's annual facts in the filer's currency unit, or in [unit] (e.g. shares)."""
+        key = (tag, instant, unit or self._unit)
         if key not in self._memo:
-            entries = _entries(self._gaap.get(tag), self._unit)
+            entries = _entries(self._gaap.get(tag), unit or self._unit)
             self._memo[key] = annual_facts(entries, instant=instant, tags=self._tags, notes=self._notes, tag=tag)
         return self._memo[key]
 
-    def at(self, tag: str, end: date, *, instant: bool) -> float | None:
-        fact = self.annual(tag, instant=instant).get(end)
+    def at(self, tag: str, end: date, *, instant: bool, unit: str | None = None) -> float | None:
+        fact = self.annual(tag, instant=instant, unit=unit).get(end)
         return None if fact is None else fact.val
 
-    def first(self, candidates: Iterable[str], end: date, *, instant: bool) -> tuple[float, str] | None:
+    def first(self, candidates: Iterable[str], end: date, *, instant: bool, unit: str | None = None) -> tuple[float, str] | None:
         for tag in candidates:
-            value = self.at(tag, end, instant=instant)
+            value = self.at(tag, end, instant=instant, unit=unit)
             if value is not None:
                 return value, tag
         return None
@@ -495,31 +496,14 @@ def ffo(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: 
     return sum(p.value for p in parts), _label(parts), _composition(defs.ffo.name, parts)
 
 
-COVER_PAGE_WINDOW_DAYS = 150  # an annual report's cover page is dated within this of its fiscal year end
+def weighted_shares(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> tuple[float, str] | None:
+    """The period's weighted-average diluted share count, else basic (its tag recorded):
+    the only count a flow per share may use (shares_for_flows)."""
+    tags = defs.shares_for_flows.ifrs if taxonomy == "ifrs-full" else defs.shares_for_flows.xbrl
+    return facts.first(tags, end, instant=False, unit="shares")
 
 
-def cover_shares(dei: Mapping[str, object], period_end: date, tags: reference.XbrlTags) -> tuple[float, str] | None:
-    """The dei cover-page share count of the annual report for the fiscal year ending
-    [period_end]: the annual-form entry dated after the year end and within the window,
-    the newest filing among them, several classes summed; None when none is filed."""
-    tag = "EntityCommonStockSharesOutstanding"
-    entries = [_as_dict(e) for e in cast(list[object], _as_dict(_as_dict(dei.get(tag)).get("units")).get("shares", []))]
-    dated: list[tuple[str, str, float]] = []
-    for e in entries:
-        try:
-            end = date.fromisoformat(str(e["end"]))
-            if str(e.get("form")) in tags.annual_forms and period_end < end <= period_end + timedelta(days=COVER_PAGE_WINDOW_DAYS):
-                dated.append((str(e["filed"]), str(e["end"]), float(cast(float, e["val"]))))
-        except (KeyError, ValueError):
-            continue
-    if not dated:
-        return None
-    newest = max((filed, end) for filed, end, _ in dated)
-    values = sorted({v for filed, end, v in dated if (filed, end) == newest})
-    return sum(values), tag
-
-
-def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD", dei: Mapping[str, object] | None = None) -> list[boundary.FiscalPeriod]:
+def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD") -> list[boundary.FiscalPeriod]:
     ifrs = taxonomy == "ifrs-full"
     selected = select(gaap, tags, notes, taxonomy=taxonomy, unit=unit)
     facts = Facts(gaap, tags, notes, unit=unit)
@@ -544,7 +528,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
             nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
         ffo_value, _, ffo_composition = ffo(facts, defs, end, taxonomy=taxonomy)
-        shares = cover_shares(dei, end, tags) if dei is not None else None
+        shares = weighted_shares(facts, defs, end, taxonomy=taxonomy)
         periods.append(
             boundary.FiscalPeriod(
                 period_end=end.isoformat(),
@@ -573,7 +557,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 ebit_recipe=ebit_recipe, ebit_composition=ebit_composition, cash_composition=cash_composition,
                 total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,
                 ffo=ffo_value, ffo_composition=ffo_composition,
-                cover_shares=None if shares is None else shares[0], cover_shares_tag=None if shares is None else shares[1],
+                weighted_shares=None if shares is None else shares[0], weighted_shares_tag=None if shares is None else shares[1],
             )
         )
     return periods

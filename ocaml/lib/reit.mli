@@ -5,8 +5,9 @@
     recipe from filed tags, components recorded); the model never derives it.
     D0 = min(dividends_paid, ffo) / effective shares: an uncovered dividend is
     never valued, and [coverage] records dividends over FFO. g0 is the CAGR of
-    FFO per cover-page share over the filed periods (at least two, else
-    [Error]), clamped as the DCF clamps and mean-reverting toward terminal growth
+    FFO per weighted-average diluted share, each period on its own count (the
+    period record carries no point count), over the filed periods (at least
+    two, else [Error]), clamped as the DCF clamps and mean-reverting toward terminal growth
     at the shared lambda; the cost of equity is CAPM with the industry beta; the
     cost of equity must exceed terminal growth. Value per share = sum of
     D_t / (1 + ke)^t + D_N (1 + g_T) / (ke - g_T) / (1 + ke)^N. Every guard is

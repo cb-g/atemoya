@@ -99,8 +99,8 @@ type fiscal_period = {
   (* REIT (18): funds from operations per the definition, filed statements only. *)
   ?ffo : float option;
   ?ffo_composition : composition option;
-  ?cover_shares : float option;               (* the cover-page share count filed with this period's annual report (dei) *)
-  ?cover_shares_tag : string option;
+  ?weighted_shares : float option;            (* the period's weighted-average diluted (else basic) share count, the only count a flow per share may use (19) *)
+  ?weighted_shares_tag : string option;
   ?ebit_recipe : string option;               (* "operating_income" | "pretax_plus_interest" *)
   ?ebit_composition : composition option;
   ?cash_composition : composition option;
@@ -120,6 +120,7 @@ type field_check = {
 
 type cross_check = {
   provider : string;                      (* the cross-check provider *)
+  ~source : string;                       (* point-in-time (19): "live vendor statements, same fiscal period, fetched after D"; empty on a live record *)
   period_end : string;                    (* the primary's period *)
   secondary_period_end : string;          (* the cross-check provider's matching period *)
   threshold : float;
@@ -490,8 +491,10 @@ type implied = {
    filed tags (net income + real-estate depreciation and amortisation + impairments - gains
    on property sales); D0 = min(dividends, FFO) / effective shares, so an uncovered dividend
    is never valued; g0 = the CAGR of FFO per cover-page share over the filed periods,
-   clamped and mean-reverting toward terminal growth as the DCF's growth does; the cost of
-   equity is CAPM with the REIT industry beta. Value = sum of D_t / (1 + ke)^t plus a Gordon
+   clamped and mean-reverting toward terminal growth as the DCF's growth does (the growth
+   series divides each period's FFO by that period's weighted-average diluted count, per
+   shares_for_flows; the level per share is on effective shares, per shares_for_market_cap);
+   the cost of equity is CAPM with the REIT industry beta. Value = sum of D_t / (1 + ke)^t plus a Gordon
    terminal on D_N. AFFO is not derivable from tags: FFO overstates distributable cash by
    the recurring capex and non-cash rent the filer does not tag, which [caveat] says. *)
 type reit_inputs = {
@@ -510,7 +513,8 @@ type reit_inputs = {
   coverage : float;                   (* dividends_paid / ffo *)
   covered_dividend : float;           (* min (dividends_paid, ffo) *)
   dividend_per_share : float;         (* D0 = covered_dividend / shares *)
-  ffo_per_cover_share : (string * float) list <json repr="object">;   (* period end -> ffo / cover-page shares, the growth series *)
+  ffo_per_weighted_share : (string * float) list <json repr="object">;   (* period end -> ffo / the period's weighted-average diluted shares, the growth series (19) *)
+  weighted_shares_tags : (string * string) list <json repr="object">;     (* period end -> the count's tag *)
   ffo_periods : string list;          (* the periods the CAGR spans *)
   g_historical : float;               (* the FFO-per-share CAGR *)
   g0 : float;                         (* after the clamp *)

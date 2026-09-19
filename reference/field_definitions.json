@@ -7,7 +7,8 @@
     "The cross-check (reference/xbrl_tags.json cross_check_threshold) compares the two providers on the same definitions, so what it still flags is a vendor row that is wrong, lagging or built from a different filed line, never a definitional gap.",
     "refinement_policy: a derived recipe may be refined once per field; a name whose derived value still misses the cross-check threshold, or cannot be checked, is Failed with on_miss. A second refinement requires changing this file on purpose.",
     "ifrs sections (13): the same four definitions on ifrs-full tags for 20-F filers, verified on SAP, Sony, TSMC, Itau, Nu and Kaspi; the recipes are the same, only the components differ. The vendor sections apply to both taxonomies' shadows.",
-    "ffo (18): the NAREIT recipe for the Reit class, filed statements only; the vendor has no FFO row, so FFO itself is not cross-checked (its components net income, D&A and dividends are, as before)."
+    "ffo (18): the NAREIT recipe for the Reit class, filed statements only; the vendor has no FFO row, so FFO itself is not cross-checked (its components net income, D&A and dividends are, as before).",
+    "shares (19): two definitions, a period's weighted-average diluted count for any flow per share and a point count for market cap; chosen here, never in code."
   ],
   "cash": {
     "name": "cash_and_short_term_investments",
@@ -358,6 +359,34 @@
     "notes": [
       "ifrs-full tags are not mapped: no IFRS REIT is in the universe; a filer with none of the net-income tags leaves ffo null and the model fails naming it.",
       "The distribution rule is recorded, not used: a U.S. REIT must distribute at least 90% of its REIT taxable income excluding net capital gain, jurisdiction-specific; the payout is observed, so the rule is not an input."
+    ]
+  },
+  "shares_for_flows": {
+    "name": "weighted_average_diluted_shares",
+    "why": "A flow accrues over the period and must be divided by the shares that were outstanding while it accrued; a point count taken after year end includes shares issued for acquisitions whose earnings the period does not contain. Realty Income's FFO per share divided by each annual report's cover-page count read 2.10, 3.73, 3.29, 3.98, 4.16 for FY2021 to FY2025 (an 18.7% CAGR) because the February 2022 and 2024 cover pages count the VEREIT and Spirit shares against pre-merger flows; on the period's weighted-average diluted count (908.3m, 863.8m, 693.0m, 612.2m, 414.8m) the growth is low single digits. Every flow per share for a historical period uses this count; the period record carries no point count, so a flow cannot be divided by one.",
+    "xbrl": [
+      "WeightedAverageNumberOfDilutedSharesOutstanding",
+      "WeightedAverageNumberOfSharesOutstandingBasic"
+    ],
+    "ifrs": [],
+    "notes": [
+      "Verified: Realty Income, Prologis and Simon Property file both tags for every annual period (221, 191 and 215 facts). The basic count is taken only when no diluted one is filed and the tag is recorded. No ifrs-full entry until a flow per share is needed on an IFRS filer."
+    ]
+  },
+  "shares_for_market_cap": {
+    "name": "point_count",
+    "why": "Market cap and price times shares need the shares outstanding at a point: effective shares (market cap / price) on the live run, so the ADR ratio cancels; point-in-time, the newest cover-page count filed by the date, else the balance-sheet count at the newest fiscal period end filed by the date (Alphabet files its cover page per share class with a dimension, which companyfacts omits, but its undimensioned CommonStockSharesOutstanding instant), else the record fails naming it. Never a weighted-average count.",
+    "live": "effective shares = market cap / price",
+    "point_in_time": {
+      "cover_page": [
+        "EntityCommonStockSharesOutstanding"
+      ],
+      "balance_sheet": [
+        "CommonStockSharesOutstanding"
+      ]
+    },
+    "notes": [
+      "The two definitions stay distinct: shares_for_flows is for a period's flow per share, this one for a point."
     ]
   }
 }

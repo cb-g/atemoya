@@ -489,18 +489,23 @@ def test_ffo_per_nareit_with_and_without_the_optional_components() -> None:
     assert period({k: v for k, v in o.items() if k != "NetIncomeLossAvailableToCommonStockholdersBasic"}).ffo_composition.components[0].row == "NetIncomeLoss"  # pyright: ignore[reportOptionalMemberAccess]
 
 
-def test_cover_shares_from_the_periods_own_annual_report() -> None:
-    """The annual report for the year ending 2025-12-31 carries its cover date in early 2026;
-    a quarterly cover page, or the next year's annual, is not this period's."""
-    dei = {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
-        {"end": "2026-02-20", "val": 900.0, "filed": "2026-02-25", "form": "10-K", "fp": "FY"},
-        {"end": "2026-02-20", "val": 100.0, "filed": "2026-02-25", "form": "10-K", "fp": "FY"},
-        {"end": "2026-04-30", "val": 990.0, "filed": "2026-05-07", "form": "10-Q", "fp": "Q1"},
-        {"end": "2025-02-18", "val": 950.0, "filed": "2025-02-25", "form": "10-K", "fp": "FY"},
-        {"end": "2027-02-19", "val": 980.0, "filed": "2027-02-24", "form": "10-K", "fp": "FY"}]}}}
-    assert fetch_sec.cover_shares(dei, date(2025, 12, 31), TAGS) == (1000.0, "EntityCommonStockSharesOutstanding")
-    assert fetch_sec.cover_shares(dei, date(2024, 12, 31), TAGS) == (950.0, "EntityCommonStockSharesOutstanding")
-    assert fetch_sec.cover_shares(dei, date(2023, 12, 31), TAGS) is None
-    p = fetch_sec.periods_from_facts(anchors(), TAGS, DEFS, [], dei=dei)[0]
-    assert p.cover_shares == 1000.0 and p.cover_shares_tag == "EntityCommonStockSharesOutstanding"
-    assert fetch_sec.periods_from_facts(anchors(), TAGS, DEFS, [])[0].cover_shares is None
+def test_weighted_average_shares_per_period_diluted_then_basic_recorded() -> None:
+    """The flow-per-share count is the period's own weighted-average diluted count; basic
+    only when no diluted one is filed, and the tag says so; a count is never a point count."""
+    def shares(tag: str, *facts: dict[str, object]) -> dict[str, object]:
+        return {tag: {"units": {"shares": list(facts)}}}
+
+    both = {**anchors(), **shares("WeightedAverageNumberOfDilutedSharesOutstanding", fact("2025-12-31", 908.3e6, start="2025-01-01")),
+            **shares("WeightedAverageNumberOfSharesOutstandingBasic", fact("2025-12-31", 907.2e6, start="2025-01-01")),
+            **shares("CommonStockSharesOutstanding", fact("2025-12-31", 932.4e6))}
+    p = period(both)
+    assert (p.weighted_shares, p.weighted_shares_tag) == (908.3e6, "WeightedAverageNumberOfDilutedSharesOutstanding")
+    basic_only = {**anchors(), **shares("WeightedAverageNumberOfSharesOutstandingBasic", fact("2025-12-31", 907.2e6, start="2025-01-01")),
+                  **shares("CommonStockSharesOutstanding", fact("2025-12-31", 932.4e6))}
+    p = period(basic_only)
+    assert (p.weighted_shares, p.weighted_shares_tag) == (907.2e6, "WeightedAverageNumberOfSharesOutstandingBasic")
+    point_only = {**anchors(), **shares("CommonStockSharesOutstanding", fact("2025-12-31", 932.4e6)), **shares("EntityCommonStockSharesOutstanding", fact("2026-02-20", 932.4e6))}
+    p = period(point_only)
+    assert p.weighted_shares is None and p.weighted_shares_tag is None  # a point count never stands in
+    assert DEFS.shares_for_flows.xbrl == ["WeightedAverageNumberOfDilutedSharesOutstanding", "WeightedAverageNumberOfSharesOutstandingBasic"]
+    assert "CommonStockSharesOutstanding" not in DEFS.shares_for_flows.xbrl and "EntityCommonStockSharesOutstanding" not in DEFS.shares_for_flows.xbrl

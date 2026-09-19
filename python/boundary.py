@@ -1051,7 +1051,8 @@ class ReitInputs:
     coverage: float
     covered_dividend: float
     dividend_per_share: float
-    ffo_per_cover_share: List[Tuple[str, float]]
+    ffo_per_weighted_share: List[Tuple[str, float]]
+    weighted_shares_tags: List[Tuple[str, str]]
     ffo_periods: List[str]
     g_historical: float
     g0: float
@@ -1095,7 +1096,8 @@ class ReitInputs:
                 coverage=_atd_read_float(x['coverage']) if 'coverage' in x else _atd_missing_json_field('ReitInputs', 'coverage'),
                 covered_dividend=_atd_read_float(x['covered_dividend']) if 'covered_dividend' in x else _atd_missing_json_field('ReitInputs', 'covered_dividend'),
                 dividend_per_share=_atd_read_float(x['dividend_per_share']) if 'dividend_per_share' in x else _atd_missing_json_field('ReitInputs', 'dividend_per_share'),
-                ffo_per_cover_share=_atd_read_assoc_object_into_list(_atd_read_float)(x['ffo_per_cover_share']) if 'ffo_per_cover_share' in x else _atd_missing_json_field('ReitInputs', 'ffo_per_cover_share'),
+                ffo_per_weighted_share=_atd_read_assoc_object_into_list(_atd_read_float)(x['ffo_per_weighted_share']) if 'ffo_per_weighted_share' in x else _atd_missing_json_field('ReitInputs', 'ffo_per_weighted_share'),
+                weighted_shares_tags=_atd_read_assoc_object_into_list(_atd_read_string)(x['weighted_shares_tags']) if 'weighted_shares_tags' in x else _atd_missing_json_field('ReitInputs', 'weighted_shares_tags'),
                 ffo_periods=_atd_read_list(_atd_read_string)(x['ffo_periods']) if 'ffo_periods' in x else _atd_missing_json_field('ReitInputs', 'ffo_periods'),
                 g_historical=_atd_read_float(x['g_historical']) if 'g_historical' in x else _atd_missing_json_field('ReitInputs', 'g_historical'),
                 g0=_atd_read_float(x['g0']) if 'g0' in x else _atd_missing_json_field('ReitInputs', 'g0'),
@@ -1140,7 +1142,8 @@ class ReitInputs:
         res['coverage'] = _atd_write_float(self.coverage)
         res['covered_dividend'] = _atd_write_float(self.covered_dividend)
         res['dividend_per_share'] = _atd_write_float(self.dividend_per_share)
-        res['ffo_per_cover_share'] = _atd_write_assoc_list_to_object(_atd_write_float)(self.ffo_per_cover_share)
+        res['ffo_per_weighted_share'] = _atd_write_assoc_list_to_object(_atd_write_float)(self.ffo_per_weighted_share)
+        res['weighted_shares_tags'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.weighted_shares_tags)
         res['ffo_periods'] = _atd_write_list(_atd_write_string)(self.ffo_periods)
         res['g_historical'] = _atd_write_float(self.g_historical)
         res['g0'] = _atd_write_float(self.g0)
@@ -2393,6 +2396,7 @@ class CrossCheck:
     threshold: float
     fields: List[FieldCheck]
     disagreements: int
+    source: str = field(default_factory=lambda: "")
 
     @classmethod
     def from_json(cls, x: Any) -> 'CrossCheck':
@@ -2404,6 +2408,7 @@ class CrossCheck:
                 threshold=_atd_read_float(x['threshold']) if 'threshold' in x else _atd_missing_json_field('CrossCheck', 'threshold'),
                 fields=_atd_read_list(FieldCheck.from_json)(x['fields']) if 'fields' in x else _atd_missing_json_field('CrossCheck', 'fields'),
                 disagreements=_atd_read_int(x['disagreements']) if 'disagreements' in x else _atd_missing_json_field('CrossCheck', 'disagreements'),
+                source=_atd_read_string(x['source']) if 'source' in x else "",
             )
         else:
             _atd_bad_json('CrossCheck', x)
@@ -2416,6 +2421,7 @@ class CrossCheck:
         res['threshold'] = _atd_write_float(self.threshold)
         res['fields'] = _atd_write_list((lambda x: x.to_json()))(self.fields)
         res['disagreements'] = _atd_write_int(self.disagreements)
+        res['source'] = _atd_write_string(self.source)
         return res
 
     @classmethod
@@ -2776,8 +2782,8 @@ class FiscalPeriod:
     net_interest_income_row: Optional[str] = None
     ffo: Optional[float] = None
     ffo_composition: Optional[Composition] = None
-    cover_shares: Optional[float] = None
-    cover_shares_tag: Optional[str] = None
+    weighted_shares: Optional[float] = None
+    weighted_shares_tag: Optional[str] = None
     ebit_recipe: Optional[str] = None
     ebit_composition: Optional[Composition] = None
     cash_composition: Optional[Composition] = None
@@ -2839,8 +2845,8 @@ class FiscalPeriod:
                 net_interest_income_row=_atd_read_string(x['net_interest_income_row']) if 'net_interest_income_row' in x else None,
                 ffo=_atd_read_float(x['ffo']) if 'ffo' in x else None,
                 ffo_composition=Composition.from_json(x['ffo_composition']) if 'ffo_composition' in x else None,
-                cover_shares=_atd_read_float(x['cover_shares']) if 'cover_shares' in x else None,
-                cover_shares_tag=_atd_read_string(x['cover_shares_tag']) if 'cover_shares_tag' in x else None,
+                weighted_shares=_atd_read_float(x['weighted_shares']) if 'weighted_shares' in x else None,
+                weighted_shares_tag=_atd_read_string(x['weighted_shares_tag']) if 'weighted_shares_tag' in x else None,
                 ebit_recipe=_atd_read_string(x['ebit_recipe']) if 'ebit_recipe' in x else None,
                 ebit_composition=Composition.from_json(x['ebit_composition']) if 'ebit_composition' in x else None,
                 cash_composition=Composition.from_json(x['cash_composition']) if 'cash_composition' in x else None,
@@ -2931,10 +2937,10 @@ class FiscalPeriod:
             res['ffo'] = _atd_write_float(self.ffo)
         if self.ffo_composition is not None:
             res['ffo_composition'] = (lambda x: x.to_json())(self.ffo_composition)
-        if self.cover_shares is not None:
-            res['cover_shares'] = _atd_write_float(self.cover_shares)
-        if self.cover_shares_tag is not None:
-            res['cover_shares_tag'] = _atd_write_string(self.cover_shares_tag)
+        if self.weighted_shares is not None:
+            res['weighted_shares'] = _atd_write_float(self.weighted_shares)
+        if self.weighted_shares_tag is not None:
+            res['weighted_shares_tag'] = _atd_write_string(self.weighted_shares_tag)
         if self.ebit_recipe is not None:
             res['ebit_recipe'] = _atd_write_string(self.ebit_recipe)
         if self.ebit_composition is not None:
