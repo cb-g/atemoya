@@ -13,7 +13,8 @@
    input of every record and the summary gains the counts per class. Every record carries
    model_version (git short hash, -dirty on an uncommitted tree, unversioned outside a
    checkout), and every --out run is also written, never overwritten, to
-   DIR/runs/<valued_on>/ (-2, -3 on the same date). Valuation never fetches. *)
+   DIR/runs/<valued_on>/ (-2, -3 on the same date); the belief map's grid per Ok name with a
+   growth-then-terminal path goes to DIR/maps/<ticker>.json (23). Valuation never fetches. *)
 
 open Atemoya
 
@@ -274,6 +275,17 @@ let () =
         ^ Batch.provider_diff paired
       in
       Option.iter (fun (file, text, _) -> write_file (Filename.concat dir file) text) stability;
+      (* The belief map's grid per name (23): DIR/maps/<ticker>.json, never on the record. *)
+      List.iter
+        (fun (v : Boundary_t.valuation) ->
+          match (v.belief_map, v.price) with
+          | Some b, Some price ->
+              mkdir_p (Filename.concat dir "maps");
+              write_file
+                (Filename.concat (Filename.concat dir "maps") (v.ticker ^ ".json"))
+                (Boundary_j.string_of_belief_grid (Belief_map.grid b ~ticker:v.ticker ~price) ^ "\n")
+          | _ -> ())
+        results;
       mkdir_p run_dir;
       List.iter
         (fun d ->

@@ -526,6 +526,132 @@ class Signal:
 
 
 @dataclass
+class Readout:
+    """Original type: readout = { ... }
+    """
+
+    value: Optional[float]
+    reason: Optional[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Readout':
+        if isinstance(x, dict):
+            return cls(
+                value=_atd_read_nullable(_atd_read_float)(x['value']) if 'value' in x else _atd_missing_json_field('Readout', 'value'),
+                reason=_atd_read_nullable(_atd_read_string)(x['reason']) if 'reason' in x else _atd_missing_json_field('Readout', 'reason'),
+            )
+        else:
+            _atd_bad_json('Readout', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['value'] = _atd_write_nullable(_atd_write_float)(self.value)
+        res['reason'] = _atd_write_nullable(_atd_write_string)(self.reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Readout':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class SensitivityEntry:
+    """Original type: sensitivity_entry = { ... }
+    """
+
+    input: str
+    recorded: float
+    step: float
+    step_kind: str
+    down: Readout
+    up: Readout
+    swing: Optional[float]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'SensitivityEntry':
+        if isinstance(x, dict):
+            return cls(
+                input=_atd_read_string(x['input']) if 'input' in x else _atd_missing_json_field('SensitivityEntry', 'input'),
+                recorded=_atd_read_float(x['recorded']) if 'recorded' in x else _atd_missing_json_field('SensitivityEntry', 'recorded'),
+                step=_atd_read_float(x['step']) if 'step' in x else _atd_missing_json_field('SensitivityEntry', 'step'),
+                step_kind=_atd_read_string(x['step_kind']) if 'step_kind' in x else _atd_missing_json_field('SensitivityEntry', 'step_kind'),
+                down=Readout.from_json(x['down']) if 'down' in x else _atd_missing_json_field('SensitivityEntry', 'down'),
+                up=Readout.from_json(x['up']) if 'up' in x else _atd_missing_json_field('SensitivityEntry', 'up'),
+                swing=_atd_read_nullable(_atd_read_float)(x['swing']) if 'swing' in x else _atd_missing_json_field('SensitivityEntry', 'swing'),
+            )
+        else:
+            _atd_bad_json('SensitivityEntry', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['input'] = _atd_write_string(self.input)
+        res['recorded'] = _atd_write_float(self.recorded)
+        res['step'] = _atd_write_float(self.step)
+        res['step_kind'] = _atd_write_string(self.step_kind)
+        res['down'] = (lambda x: x.to_json())(self.down)
+        res['up'] = (lambda x: x.to_json())(self.up)
+        res['swing'] = _atd_write_nullable(_atd_write_float)(self.swing)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'SensitivityEntry':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Sensitivity:
+    """Original type: sensitivity = { ... }
+    """
+
+    fair_value: float
+    steps_source: str
+    steps_as_of: str
+    entries: List[SensitivityEntry]
+    ranking: List[str]
+    binding_input: Optional[str]
+    note: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Sensitivity':
+        if isinstance(x, dict):
+            return cls(
+                fair_value=_atd_read_float(x['fair_value']) if 'fair_value' in x else _atd_missing_json_field('Sensitivity', 'fair_value'),
+                steps_source=_atd_read_string(x['steps_source']) if 'steps_source' in x else _atd_missing_json_field('Sensitivity', 'steps_source'),
+                steps_as_of=_atd_read_string(x['steps_as_of']) if 'steps_as_of' in x else _atd_missing_json_field('Sensitivity', 'steps_as_of'),
+                entries=_atd_read_list(SensitivityEntry.from_json)(x['entries']) if 'entries' in x else _atd_missing_json_field('Sensitivity', 'entries'),
+                ranking=_atd_read_list(_atd_read_string)(x['ranking']) if 'ranking' in x else _atd_missing_json_field('Sensitivity', 'ranking'),
+                binding_input=_atd_read_nullable(_atd_read_string)(x['binding_input']) if 'binding_input' in x else _atd_missing_json_field('Sensitivity', 'binding_input'),
+                note=_atd_read_string(x['note']) if 'note' in x else _atd_missing_json_field('Sensitivity', 'note'),
+            )
+        else:
+            _atd_bad_json('Sensitivity', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['fair_value'] = _atd_write_float(self.fair_value)
+        res['steps_source'] = _atd_write_string(self.steps_source)
+        res['steps_as_of'] = _atd_write_string(self.steps_as_of)
+        res['entries'] = _atd_write_list((lambda x: x.to_json()))(self.entries)
+        res['ranking'] = _atd_write_list(_atd_write_string)(self.ranking)
+        res['binding_input'] = _atd_write_nullable(_atd_write_string)(self.binding_input)
+        res['note'] = _atd_write_string(self.note)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Sensitivity':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class RoicObservation:
     """Original type: roic_observation = { ... }
     """
@@ -1217,38 +1343,6 @@ class ReitInputs:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'ReitInputs':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class Readout:
-    """Original type: readout = { ... }
-    """
-
-    value: Optional[float]
-    reason: Optional[str]
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'Readout':
-        if isinstance(x, dict):
-            return cls(
-                value=_atd_read_nullable(_atd_read_float)(x['value']) if 'value' in x else _atd_missing_json_field('Readout', 'value'),
-                reason=_atd_read_nullable(_atd_read_string)(x['reason']) if 'reason' in x else _atd_missing_json_field('Readout', 'reason'),
-            )
-        else:
-            _atd_bad_json('Readout', x)
-
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['value'] = _atd_write_nullable(_atd_write_float)(self.value)
-        res['reason'] = _atd_write_nullable(_atd_write_string)(self.reason)
-        return res
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'Readout':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -2609,6 +2703,38 @@ class CrossCheck:
 
 
 @dataclass
+class ContourPoint:
+    """Original type: contour_point = { ... }
+    """
+
+    years: int
+    growth: Readout
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ContourPoint':
+        if isinstance(x, dict):
+            return cls(
+                years=_atd_read_int(x['years']) if 'years' in x else _atd_missing_json_field('ContourPoint', 'years'),
+                growth=Readout.from_json(x['growth']) if 'growth' in x else _atd_missing_json_field('ContourPoint', 'growth'),
+            )
+        else:
+            _atd_bad_json('ContourPoint', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['years'] = _atd_write_int(self.years)
+        res['growth'] = (lambda x: x.to_json())(self.growth)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ContourPoint':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Consistent:
     """Original type: class_check_outcome = [ ... | Consistent | ... ]
     """
@@ -2794,6 +2920,77 @@ class ClassCheck:
 
 
 @dataclass
+class BeliefMap:
+    """Original type: belief_map = { ... }
+    """
+
+    map_model: str
+    base_name: str
+    base: float
+    rate_name: str
+    rate: float
+    terminal_growth_rate: float
+    net_debt: float
+    shares: float
+    observed_growth: float
+    growth_domain: List[float]
+    growth_step: float
+    horizon_max: int
+    price_contour: List[ContourPoint]
+    solver: str
+    tolerance: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BeliefMap':
+        if isinstance(x, dict):
+            return cls(
+                map_model=_atd_read_string(x['map_model']) if 'map_model' in x else _atd_missing_json_field('BeliefMap', 'map_model'),
+                base_name=_atd_read_string(x['base_name']) if 'base_name' in x else _atd_missing_json_field('BeliefMap', 'base_name'),
+                base=_atd_read_float(x['base']) if 'base' in x else _atd_missing_json_field('BeliefMap', 'base'),
+                rate_name=_atd_read_string(x['rate_name']) if 'rate_name' in x else _atd_missing_json_field('BeliefMap', 'rate_name'),
+                rate=_atd_read_float(x['rate']) if 'rate' in x else _atd_missing_json_field('BeliefMap', 'rate'),
+                terminal_growth_rate=_atd_read_float(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('BeliefMap', 'terminal_growth_rate'),
+                net_debt=_atd_read_float(x['net_debt']) if 'net_debt' in x else _atd_missing_json_field('BeliefMap', 'net_debt'),
+                shares=_atd_read_float(x['shares']) if 'shares' in x else _atd_missing_json_field('BeliefMap', 'shares'),
+                observed_growth=_atd_read_float(x['observed_growth']) if 'observed_growth' in x else _atd_missing_json_field('BeliefMap', 'observed_growth'),
+                growth_domain=_atd_read_list(_atd_read_float)(x['growth_domain']) if 'growth_domain' in x else _atd_missing_json_field('BeliefMap', 'growth_domain'),
+                growth_step=_atd_read_float(x['growth_step']) if 'growth_step' in x else _atd_missing_json_field('BeliefMap', 'growth_step'),
+                horizon_max=_atd_read_int(x['horizon_max']) if 'horizon_max' in x else _atd_missing_json_field('BeliefMap', 'horizon_max'),
+                price_contour=_atd_read_list(ContourPoint.from_json)(x['price_contour']) if 'price_contour' in x else _atd_missing_json_field('BeliefMap', 'price_contour'),
+                solver=_atd_read_string(x['solver']) if 'solver' in x else _atd_missing_json_field('BeliefMap', 'solver'),
+                tolerance=_atd_read_float(x['tolerance']) if 'tolerance' in x else _atd_missing_json_field('BeliefMap', 'tolerance'),
+            )
+        else:
+            _atd_bad_json('BeliefMap', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['map_model'] = _atd_write_string(self.map_model)
+        res['base_name'] = _atd_write_string(self.base_name)
+        res['base'] = _atd_write_float(self.base)
+        res['rate_name'] = _atd_write_string(self.rate_name)
+        res['rate'] = _atd_write_float(self.rate)
+        res['terminal_growth_rate'] = _atd_write_float(self.terminal_growth_rate)
+        res['net_debt'] = _atd_write_float(self.net_debt)
+        res['shares'] = _atd_write_float(self.shares)
+        res['observed_growth'] = _atd_write_float(self.observed_growth)
+        res['growth_domain'] = _atd_write_list(_atd_write_float)(self.growth_domain)
+        res['growth_step'] = _atd_write_float(self.growth_step)
+        res['horizon_max'] = _atd_write_int(self.horizon_max)
+        res['price_contour'] = _atd_write_list((lambda x: x.to_json()))(self.price_contour)
+        res['solver'] = _atd_write_string(self.solver)
+        res['tolerance'] = _atd_write_float(self.tolerance)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BeliefMap':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Valuation:
     """Original type: valuation = { ... }
     """
@@ -2824,6 +3021,9 @@ class Valuation:
     submissions_latest_annual: Optional[Submission] = None
     point_in_time: Optional[PointInTime] = None
     implied: Optional[Implied] = None
+    sensitivity: Optional[Sensitivity] = None
+    belief_map: Optional[BeliefMap] = None
+    belief_map_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -2855,6 +3055,9 @@ class Valuation:
                 submissions_latest_annual=Submission.from_json(x['submissions_latest_annual']) if 'submissions_latest_annual' in x else None,
                 point_in_time=PointInTime.from_json(x['point_in_time']) if 'point_in_time' in x else None,
                 implied=Implied.from_json(x['implied']) if 'implied' in x else None,
+                sensitivity=Sensitivity.from_json(x['sensitivity']) if 'sensitivity' in x else None,
+                belief_map=BeliefMap.from_json(x['belief_map']) if 'belief_map' in x else None,
+                belief_map_reason=_atd_read_string(x['belief_map_reason']) if 'belief_map_reason' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -2892,6 +3095,12 @@ class Valuation:
             res['point_in_time'] = (lambda x: x.to_json())(self.point_in_time)
         if self.implied is not None:
             res['implied'] = (lambda x: x.to_json())(self.implied)
+        if self.sensitivity is not None:
+            res['sensitivity'] = (lambda x: x.to_json())(self.sensitivity)
+        if self.belief_map is not None:
+            res['belief_map'] = (lambda x: x.to_json())(self.belief_map)
+        if self.belief_map_reason is not None:
+            res['belief_map_reason'] = _atd_write_string(self.belief_map_reason)
         return res
 
     @classmethod
@@ -3235,6 +3444,56 @@ class Financials:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'Financials':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BeliefGrid:
+    """Original type: belief_grid = { ... }
+    """
+
+    ticker: str
+    map_model: str
+    price: float
+    observed_growth: float
+    growth_grid: List[float]
+    horizon_grid: List[int]
+    fair_values: List[List[float]]
+    price_contour: List[ContourPoint]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BeliefGrid':
+        if isinstance(x, dict):
+            return cls(
+                ticker=_atd_read_string(x['ticker']) if 'ticker' in x else _atd_missing_json_field('BeliefGrid', 'ticker'),
+                map_model=_atd_read_string(x['map_model']) if 'map_model' in x else _atd_missing_json_field('BeliefGrid', 'map_model'),
+                price=_atd_read_float(x['price']) if 'price' in x else _atd_missing_json_field('BeliefGrid', 'price'),
+                observed_growth=_atd_read_float(x['observed_growth']) if 'observed_growth' in x else _atd_missing_json_field('BeliefGrid', 'observed_growth'),
+                growth_grid=_atd_read_list(_atd_read_float)(x['growth_grid']) if 'growth_grid' in x else _atd_missing_json_field('BeliefGrid', 'growth_grid'),
+                horizon_grid=_atd_read_list(_atd_read_int)(x['horizon_grid']) if 'horizon_grid' in x else _atd_missing_json_field('BeliefGrid', 'horizon_grid'),
+                fair_values=_atd_read_list(_atd_read_list(_atd_read_float))(x['fair_values']) if 'fair_values' in x else _atd_missing_json_field('BeliefGrid', 'fair_values'),
+                price_contour=_atd_read_list(ContourPoint.from_json)(x['price_contour']) if 'price_contour' in x else _atd_missing_json_field('BeliefGrid', 'price_contour'),
+            )
+        else:
+            _atd_bad_json('BeliefGrid', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['ticker'] = _atd_write_string(self.ticker)
+        res['map_model'] = _atd_write_string(self.map_model)
+        res['price'] = _atd_write_float(self.price)
+        res['observed_growth'] = _atd_write_float(self.observed_growth)
+        res['growth_grid'] = _atd_write_list(_atd_write_float)(self.growth_grid)
+        res['horizon_grid'] = _atd_write_list(_atd_write_int)(self.horizon_grid)
+        res['fair_values'] = _atd_write_list(_atd_write_list(_atd_write_float))(self.fair_values)
+        res['price_contour'] = _atd_write_list((lambda x: x.to_json()))(self.price_contour)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BeliefGrid':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:

@@ -31,12 +31,19 @@ val tolerance : float
 val max_horizon : int
 (** 40: the longest explicit period the horizon scan tries. *)
 
-val dcf_fair_value : ?projection_years:int -> Boundary_t.inputs -> g0:float -> lambda:float -> float
-val residual_income_fair_value : ?projection_years:int -> Boundary_t.residual_income_inputs -> roe_0:float -> lambda:float -> float
+val dcf_fair_value :
+  ?projection_years:int -> ?fcff:float -> ?wacc:float -> ?terminal_growth_rate:float ->
+  Boundary_t.inputs -> g0:float -> lambda:float -> float
+val residual_income_fair_value :
+  ?projection_years:int -> ?book_equity:float -> ?cost_of_equity:float ->
+  Boundary_t.residual_income_inputs -> roe_0:float -> lambda:float -> float
 (** [projection_years] defaults to the recorded horizon; the risk-free rate stays the
-    recorded one whatever the horizon. *)
+    recorded one whatever the horizon. The other optional arguments override one held
+    input at a time for the sensitivity block (23); absent, the recorded value holds. *)
 
-val reit_fair_value : ?projection_years:int -> Boundary_t.reit_inputs -> g0:float -> lambda:float -> float
+val reit_fair_value :
+  ?projection_years:int -> ?dividend_per_share:float -> ?cost_of_equity:float -> ?terminal_growth_rate:float ->
+  Boundary_t.reit_inputs -> g0:float -> lambda:float -> float
 (** The REIT model's fair value per share at any starting growth and lambda. *)
 
 val rf_tenor_note : string

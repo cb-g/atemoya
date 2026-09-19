@@ -56,6 +56,19 @@
       "The mid-cycle DCF's window: every annual period the record carries, newest first, up to this many; the fetch keeps this many periods for a class whose first admissible model is dcf_midcycle, five for every other model."
     ]
   },
+  "sensitivity_steps": {
+    "growth": 0.02,
+    "lambda": 0.1,
+    "terminal_growth": 0.005,
+    "discount_rate": 0.01,
+    "base_fraction": 0.1,
+    "source": "readability steps, not standard deviations: one fixed symmetric step per input kind, chosen so a reader can compare names on the same move; nothing here is estimated from history or a prior, and a step changes by a decision, never after seeing a result",
+    "as_of": "2026-09-19",
+    "max_age_days": 400,
+    "notes": [
+      "growth: starting growth or ROE0, plus or minus 2 percentage points. lambda: plus or minus 0.10. terminal_growth: plus or minus 0.5 percentage points. discount_rate: WACC or the cost of equity, plus or minus 1 percentage point. base_fraction: the cash-flow base (FCFF, FCFF_mid, the covered dividend per share, book equity), plus or minus 10 percent."
+    ]
+  },
   "terminal_growth_rate": {
     "source": "per-country long-run nominal growth estimates, June 2026 vintage",
     "as_of": "2026-06-01",

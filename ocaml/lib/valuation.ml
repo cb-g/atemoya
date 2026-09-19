@@ -217,6 +217,9 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~model_ver
       failed_reason;
       inputs;
       implied = None;
+      sensitivity = None;
+      belief_map = None;
+      belief_map_reason = None;
     }
   in
   let failed ?(fin = original) ?model ?class_check ?inputs ~floor reason =
@@ -253,6 +256,9 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~model_ver
              ())
           with
           implied = Some (Implied.of_inputs inputs ~price);
+          sensitivity = Some (Sensitivity.of_inputs params.params.sensitivity_steps inputs ~fair_value);
+          belief_map = Result.to_option (Belief_map.of_inputs inputs ~price);
+          belief_map_reason = (match Belief_map.of_inputs inputs ~price with Error r -> Some r | Ok _ -> None);
         }
   in
   (* A derived ebit (any recipe but operating income) runs the dcf only when the record's

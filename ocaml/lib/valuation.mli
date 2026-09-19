@@ -21,7 +21,9 @@
     [refinement_policy.on_miss] [`Failed]; the mid-cycle DCF (22) runs under the same
     policy. Each model's arithmetic lives in its own module. A record's [scope_limits]
     are the entry's own followed by the class's defaults from the admissibility row. [floor] is always populated and gates nothing. An [`Ok] record carries
-    the implied readouts ([Implied]); the headline never depends on them. *)
+    the implied readouts ([Implied]), the sensitivity block ([Sensitivity]) and, on a
+    growth-then-terminal path, the belief map's price contour ([Belief_map]) (23); the
+    headline never depends on them. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)

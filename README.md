@@ -48,7 +48,8 @@ uv run python/refresh_rates.py --all        # sovereign curves per reference/rat
 uv run python/refresh_fx.py --all           # FX via FRED H.10 -> reference/fx_rates.json
 
 uv run python/fetch_all.py                  # every ticker in reference/universe.json -> data/snapshots/<date>/, data/financials -> the latest
-dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt, and the same three under output/runs/<date>/ (never overwritten)
+dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt, the same three under output/runs/<date>/ (never overwritten), and output/maps/<ticker>.json per belief map
+uv run python/plot_map.py AAPL                   # -> output/maps/AAPL.png: the belief map's surface, the price contour, the observed starting growth
 dune exec atemoya -- data/financials --out output --baseline previous/valuations.jsonl   # plus this run against that one
 dune exec atemoya -- data/snapshots/<new> --out output --baseline previous/valuations.jsonl --baseline-snapshot data/snapshots/<old>   # plus stability_<old>_<new>.txt
 uv run python/fetch_all.py --as-of 2025-06-30   # point-in-time: data/pit/2025-06-30/ from what was known on that date, with its reference/

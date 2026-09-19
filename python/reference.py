@@ -572,6 +572,59 @@ class SharesForFlows:
 
 
 @dataclass
+class SensitivitySteps:
+    """Original type: sensitivity_steps = { ... }
+    """
+
+    growth: float
+    lambda_: float
+    terminal_growth: float
+    discount_rate: float
+    base_fraction: float
+    source: str
+    as_of: str
+    max_age_days: int
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'SensitivitySteps':
+        if isinstance(x, dict):
+            return cls(
+                growth=_atd_read_float(x['growth']) if 'growth' in x else _atd_missing_json_field('SensitivitySteps', 'growth'),
+                lambda_=_atd_read_float(x['lambda']) if 'lambda' in x else _atd_missing_json_field('SensitivitySteps', 'lambda'),
+                terminal_growth=_atd_read_float(x['terminal_growth']) if 'terminal_growth' in x else _atd_missing_json_field('SensitivitySteps', 'terminal_growth'),
+                discount_rate=_atd_read_float(x['discount_rate']) if 'discount_rate' in x else _atd_missing_json_field('SensitivitySteps', 'discount_rate'),
+                base_fraction=_atd_read_float(x['base_fraction']) if 'base_fraction' in x else _atd_missing_json_field('SensitivitySteps', 'base_fraction'),
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('SensitivitySteps', 'source'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('SensitivitySteps', 'as_of'),
+                max_age_days=_atd_read_int(x['max_age_days']) if 'max_age_days' in x else _atd_missing_json_field('SensitivitySteps', 'max_age_days'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('SensitivitySteps', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['growth'] = _atd_write_float(self.growth)
+        res['lambda'] = _atd_write_float(self.lambda_)
+        res['terminal_growth'] = _atd_write_float(self.terminal_growth)
+        res['discount_rate'] = _atd_write_float(self.discount_rate)
+        res['base_fraction'] = _atd_write_float(self.base_fraction)
+        res['source'] = _atd_write_string(self.source)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['max_age_days'] = _atd_write_int(self.max_age_days)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'SensitivitySteps':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Scalar:
     """Original type: scalar = { ... }
     """
@@ -921,6 +974,7 @@ class Params:
     mean_reversion_lambda: Scalar
     mature_market_erp: Scalar
     midcycle_window_years: IntScalar
+    sensitivity_steps: SensitivitySteps
     terminal_growth_rate: CountryTable
     unwired: Any
 
@@ -936,6 +990,7 @@ class Params:
                 mean_reversion_lambda=Scalar.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('Params', 'mean_reversion_lambda'),
                 mature_market_erp=Scalar.from_json(x['mature_market_erp']) if 'mature_market_erp' in x else _atd_missing_json_field('Params', 'mature_market_erp'),
                 midcycle_window_years=IntScalar.from_json(x['midcycle_window_years']) if 'midcycle_window_years' in x else _atd_missing_json_field('Params', 'midcycle_window_years'),
+                sensitivity_steps=SensitivitySteps.from_json(x['sensitivity_steps']) if 'sensitivity_steps' in x else _atd_missing_json_field('Params', 'sensitivity_steps'),
                 terminal_growth_rate=CountryTable.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Params', 'terminal_growth_rate'),
                 unwired=(lambda x: x)(x['unwired']) if 'unwired' in x else _atd_missing_json_field('Params', 'unwired'),
             )
@@ -952,6 +1007,7 @@ class Params:
         res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
         res['mature_market_erp'] = (lambda x: x.to_json())(self.mature_market_erp)
         res['midcycle_window_years'] = (lambda x: x.to_json())(self.midcycle_window_years)
+        res['sensitivity_steps'] = (lambda x: x.to_json())(self.sensitivity_steps)
         res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
         res['unwired'] = (lambda x: x)(self.unwired)
         return res

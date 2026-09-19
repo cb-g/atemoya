@@ -156,7 +156,9 @@ flowchart TD
     F_KE --> FLOOR
     F_NONPOS --> FLOOR
     F_BOUND --> FLOOR
-    IMPLIED --> RECORD
+    IMPLIED --> SENS["sensitivity (23), headline untouched: for each held input with a declared step in reference/params.json (sensitivity_steps: starting growth or ROE0 +-2 pp, lambda +-0.10, terminal growth +-0.5 pp, WACC or cost of equity +-1 pp, the cash-flow base fcff / fcff_mid / covered dividend / book equity +-10%; readability steps, not standard deviations, never derived from history), fair value at the input stepped down and up with everything else held, swing = |up - down| / fair value, the inputs ranked by swing and the first named binding_input; a step that crosses a guard (a discount rate reaching terminal growth, a non-positive base or lambda) is null with the reason on that side; the summary counts the binding input across Ok names"]:::new
+    SENS --> MAP["belief map (23), on dcf, dcf_midcycle and reit_ffo_dividend only (the residual-income paths carry belief_map_reason instead): the readout model, stated on the record as map_model = undecayed growth for N years, then terminal, is growth held at g for N years with no decay, then the settled terminal growth forever, everything else (discount rate, base, net debt, shares) at its recorded value, distinct from the headline's decaying path; the grid g = 0..50% in 2 pp steps by N = 1..40 goes to output/maps/(ticker).json, never onto the record; the record carries the price contour, for each N the g at which fair value equals price by bisection, null with reason where no g in [0, 50%] reaches it or the price sits below the zero-growth value; python/plot_map.py draws the surface, the contour and the observed starting growth to output/maps/(ticker).png (matplotlib, the first visualisation dependency; nothing in the batch imports it)"]:::new
+    MAP --> RECORD
     FLOOR["floor: present = true (verified), false (Unprofitable, Ballast by definition), null (not assessable here), with basis from the admissibility row; scope_limits: the entry's own verbatim, then the class's defaults from the admissibility row (22: Cyclical carries that the through-cycle average is backward-looking and reserve replacement, the energy transition or a declared structural break are not assessed)"] --> RECORD[/"record: one line in output/valuations.jsonl, stamped with model_version (21: git short hash, -dirty when the tree had uncommitted edits, unversioned outside a checkout; the summary's first line and the run diff's header carry it, and a fair value that moved with no moved input is labelled moved under this version against the baseline's); every --out run is also written to output/runs/(valued_on)/ (-2, -3 on the same date, never overwritten; the summary's last line names it), and a private universe's runs to its own --out root; summary groups Failed by reason and inadmissible by class; whether anything changed since the last run, and why, is the baseline diff (--baseline, --baseline-snapshot), the acceptance mechanism of every change, never a stored expectation"/]
 ```
 
@@ -220,3 +222,7 @@ records, and the acceptance of any change is the run diff against the previous r
   `PreProfit` renamed `Unprofitable`; the class's default scope limits on every record.
   Three new `Failed` strings (observations, return, reinvestment); the refusal string for
   the renamed class changes its class name.
+- sensitivity and the belief map (23): the deterministic sensitivity block with declared
+  readability steps on every Ok record; the belief map's price contour on the
+  growth-then-terminal paths, its grid to `output/maps/`, and `plot_map.py` on
+  matplotlib. No new `Failed` string; no headline moves.

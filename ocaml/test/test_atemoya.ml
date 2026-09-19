@@ -194,7 +194,7 @@ let params_json =
   "growth_clamp_upper": {"value": 0.5, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mature_market_erp": {"value": 0.0423, "source": "Damodaran mature base", "as_of": "2026-01-01", "max_age_days": 400},
-  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
+  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
     "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03, "Brazil": 0.035}},
@@ -1169,6 +1169,110 @@ let test_midcycle_guards () =
   let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation ok) in
   Alcotest.check valuation "json round trip" ok again
 
+
+(* --- sensitivity and the belief map (23) --- *)
+
+let steps : Reference_t.sensitivity_steps =
+  { growth = 0.02; lambda = 0.1; terminal_growth = 0.005; discount_rate = 0.01; base_fraction = 0.1;
+    source = "readability steps"; as_of = today; max_age_days = 400; notes = [] }
+
+(* The engine on the round-number assumptions (fair value 12), and the same fixture through
+   the full run on the reference-style parameters for the record-level checks. *)
+let dcf_ok () =
+  let i, fv = get (Dcf.value assumptions ~country:"United States" (financials (history ()))) in
+  (run (financials (history ())), i, fv)
+
+(* On the zero-growth fixture (fcff 700, wacc 0.07, terminal 0, g0 0, fair value 12): fcff
+   +-10% is 770 and 630 over 0.07, less net debt 4000, over 500 shares: 14 and 10; wacc +-1 pp
+   is 700 over 0.08 and 0.06: 9.5 and 15.3333. *)
+let test_sensitivity_by_hand () =
+  let v, i, fv = dcf_ok () in
+  check_float "anchor" 12. fv;
+  let s = Sensitivity.of_inputs steps (`Dcf i) ~fair_value:fv in
+  let entry name = List.find (fun (e : Boundary_t.sensitivity_entry) -> e.input = name) s.entries in
+  let fcff = entry "fcff" in
+  Alcotest.(check (option approx)) "fcff down" (Some 10.) fcff.down.value;
+  Alcotest.(check (option approx)) "fcff up" (Some 14.) fcff.up.value;
+  Alcotest.(check (option approx)) "fcff swing = 4 / 12" (Some (1. /. 3.)) fcff.swing;
+  Alcotest.(check string) "the base steps relatively" "relative" fcff.step_kind;
+  let wacc = entry "wacc" in
+  Alcotest.(check (option approx)) "wacc down (0.06)" (Some (((700. /. 0.06) -. 4000.) /. 500.)) wacc.down.value;
+  Alcotest.(check (option approx)) "wacc up (0.08)" (Some 9.5) wacc.up.value;
+  Alcotest.(check (option approx)) "wacc swing" (Some ((((700. /. 0.06) -. 4000.) /. 500. -. 9.5) /. 12.)) wacc.swing;
+  Alcotest.(check (option approx)) "lambda moves nothing on a flat path" (Some 0.) (entry "mean_reversion_lambda").swing;
+  Alcotest.(check (option string)) "wacc binds" (Some "wacc") s.binding_input;
+  Alcotest.(check (list string)) "ranking head" [ "wacc"; "fcff" ] (List.filteri (fun k _ -> k < 2) s.ranking);
+  Alcotest.(check int) "every ranked input has a swing" 5 (List.length s.ranking);
+  Alcotest.(check string) "provenance" "readability steps" s.steps_source;
+  (* on the record, from the tracked-style params fixture *)
+  (match v.sensitivity with
+  | Some r ->
+      Alcotest.(check bool) "record carries the block with a binding input" true (Option.is_some r.binding_input);
+      Alcotest.(check int) "five entries on the dcf" 5 (List.length r.entries)
+  | None -> Alcotest.fail "no sensitivity on an Ok record");
+  (* a step that crosses a guard: terminal growth at 6.5% with wacc 7%, the wacc step down reaches it *)
+  let tight = { i with terminal_growth_rate = param 0.065 } in
+  let s = Sensitivity.of_inputs steps (`Dcf tight) ~fair_value:fv in
+  let wacc = List.find (fun (e : Boundary_t.sensitivity_entry) -> e.input = "wacc") s.entries in
+  Alcotest.(check (option approx)) "the crossing side is null" None wacc.down.value;
+  check_mentions "with the reason" (Option.value wacc.down.reason ~default:"") [ "wacc 0.0600 does not exceed terminal growth 0.0650" ];
+  Alcotest.(check bool) "the other side stands" true (Option.is_some wacc.up.value);
+  Alcotest.(check (option approx)) "no swing across a guard" None wacc.swing;
+  let terminal = List.find (fun (e : Boundary_t.sensitivity_entry) -> e.input = "terminal_growth_rate") s.entries in
+  Alcotest.(check (option approx)) "terminal up reaches the wacc" None terminal.up.value;
+  Alcotest.(check bool) "a guarded input is not ranked" false (List.mem "wacc" s.ranking);
+  (* the residual-income path steps roe_0, lambda, cost of equity and book *)
+  let bank = get (Residual_income.value bank_assumptions ~country:"T" (bank_financials (bank_history ()))) in
+  let ri = Sensitivity.of_inputs steps (`Residual_income (fst bank)) ~fair_value:(snd bank) in
+  Alcotest.(check (list string)) "ri inputs" [ "roe_0"; "mean_reversion_lambda"; "cost_of_equity"; "book_equity" ]
+    (List.map (fun (e : Boundary_t.sensitivity_entry) -> e.input) ri.entries)
+
+(* The map's model on the same fixture: at zero growth every N gives the perpetuity, 12; at
+   g = 10% and N = 1, 770 / 1.07 + 770 / 0.07 / 1.07 = 11000 of enterprise value, 14 per share. *)
+let test_belief_map () =
+  let v, i, fv = dcf_ok () in
+  let f = Belief_map.fair_value ~base:700. ~rate:0.07 ~terminal:0. ~net_debt:4000. ~shares:500. in
+  check_float "N = 1, g = 0" 12. (f ~growth:0. ~years:1);
+  check_float "N = 40, g = 0" 12. (f ~growth:0. ~years:40);
+  check_float "N = 1, g = 10%" 14. (f ~growth:0.10 ~years:1);
+  (* a large N by hand: the explicit sum and the terminal on the last cash flow *)
+  let by_hand =
+    let rec go t acc cash = if t > 40 then (acc, cash) else let cash = cash *. 1.1 in go (t + 1) (acc +. (cash /. (1.07 ** float_of_int t))) cash in
+    let pv, last = go 1 0. 700. in
+    ((pv +. (last /. 0.07 /. (1.07 ** 40.))) -. 4000.) /. 500.
+  in
+  check_float "N = 40, g = 10%" by_hand (f ~growth:0.10 ~years:40);
+  let m = get (Belief_map.of_inputs (`Dcf i) ~price:14.) in
+  Alcotest.(check string) "the model is stated" "undecayed growth for N years, then terminal" m.map_model;
+  Alcotest.(check int) "forty contour points" 40 (List.length m.price_contour);
+  let at n = List.nth m.price_contour (n - 1) in
+  (match (at 1).growth.value with
+  | Some g -> Alcotest.(check bool) "the contour at N = 1 recovers g = 10%" true (Float.abs (g -. 0.10) < 1e-6)
+  | None -> Alcotest.fail "no contour at N = 1");
+  Alcotest.(check bool) "at N = 40 a smaller g reaches the same price"
+    true (match (at 40).growth.value with Some g -> g < 0.10 && g > 0. | None -> false);
+  let low = get (Belief_map.of_inputs (`Dcf i) ~price:5.) in
+  check_mentions "null with reason below" (Option.value (List.hd low.price_contour).growth.reason ~default:"") [ "the price is below fair value at zero growth for 1 years (12.00)" ];
+  let high = get (Belief_map.of_inputs (`Dcf i) ~price:1e6) in
+  check_mentions "null with reason above" (Option.value (List.hd high.price_contour).growth.reason ~default:"") [ "no growth in [0%, 50%] held for 1 years reaches the price" ];
+  (* the grid file's shape *)
+  let grid = Belief_map.grid m ~ticker:"TEST" ~price:14. in
+  Alcotest.(check int) "26 growth rows" 26 (List.length grid.fair_values);
+  Alcotest.(check int) "40 horizons per row" 40 (List.length (List.hd grid.fair_values));
+  check_float "grid corner (0, 1) is the perpetuity" 12. (List.hd (List.hd grid.fair_values));
+  check_float "grid row 5 (g = 10%), column 1" 14. (List.hd (List.nth grid.fair_values 5));
+  (* on the record: present on the dcf, absent with reason on the residual-income path *)
+  Alcotest.(check bool) "dcf record carries a map" true (Option.is_some v.belief_map);
+  Alcotest.(check (option approx)) "observed growth is g0" (Some i.g0) (Option.map (fun (b : Boundary_t.belief_map) -> b.observed_growth) v.belief_map);
+  let bank = get (Residual_income.value bank_assumptions ~country:"T" (bank_financials (bank_history ()))) in
+  (match Belief_map.of_inputs (`Residual_income (fst bank)) ~price:10. with
+  | Error r -> check_mentions "ri reason" r [ "no belief map: the residual-income path has no growth-then-terminal structure" ]
+  | Ok _ -> Alcotest.fail "a map on the residual-income path");
+  ignore fv;
+  (* pre-existing fields untouched: the record without the new blocks round-trips as before *)
+  let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
+  Alcotest.check valuation "json round trip" v again
+
 let test_flow_chart_names_every_reason () =
   let chart =
     In_channel.with_open_bin "../../docs/flow.md" In_channel.input_all
@@ -1401,7 +1505,7 @@ let test_minor_unit_guard () =
       "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-      "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
+      "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400}, "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
       "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400, "values": {"United States": 0.02, "United Kingdom": 0.0}},
       "unwired": {}}|} ]) } in
   let run_gbp fin = Valuation.run uk_rates ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) fin in
@@ -2333,7 +2437,7 @@ let test_wacc_below_terminal_growth () =
                "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
-               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
+               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
                "unwired": {}}|} }
@@ -2539,5 +2643,7 @@ let () =
           case "json round trip" test_json_round_trip;
           case "mid-cycle dcf arithmetic (22)" test_midcycle_arithmetic;
           case "mid-cycle dcf guards, window, vendor path, scope limits (22)" test_midcycle_guards;
+          case "sensitivity by hand, ranking, guard crossing (23)" test_sensitivity_by_hand;
+          case "belief map model, contour, grid, ri null (23)" test_belief_map;
         ] );
     ]

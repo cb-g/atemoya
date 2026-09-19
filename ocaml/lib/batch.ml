@@ -206,6 +206,17 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
       | Some m -> Printf.sprintf "median %.0f years (range %.0f to %.0f, %d solved)" m (List.hd horizons) (List.nth horizons (hn - 1)) hn
       | None -> "none solved")
       beyond_40 (level_guard + level_beyond) level_guard level_beyond;
+    let binding =
+      count_by (fun x -> x)
+        (List.filter_map
+           (fun (v : valuation) -> Option.bind v.sensitivity (fun (s : sensitivity) -> s.binding_input))
+           vs)
+    in
+    Printf.bprintf b "sensitivity (23), the binding input across %d Ok names for the declared steps: %s\n"
+      (List.length (List.filter (fun (v : valuation) -> Option.is_some v.sensitivity) vs))
+      (match binding with
+      | [] -> "none"
+      | xs -> String.concat ", " (List.map (fun (name, n) -> Printf.sprintf "%s %d" name n) xs));
     Printf.bprintf b "implied half-life, across %d Ok names: %s; beyond range: %d would need growth or roe that never decays, %d priced below the no-growth value; level is the meaningful readout for %d (start at or below its target)\n"
       (List.length implied)
       (match (median, half_lives) with

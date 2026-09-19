@@ -34,30 +34,30 @@ let bisect ~f ~target ~lo ~hi ~tolerance =
 
 let max_horizon = 40
 
-let dcf_fair_value ?projection_years (i : inputs) ~g0 ~lambda =
+let dcf_fair_value ?projection_years ?fcff ?wacc ?terminal_growth_rate (i : inputs) ~g0 ~lambda =
   let projection_years = Option.value projection_years ~default:i.projection_years.value in
-  let terminal_growth_rate = i.terminal_growth_rate.value in
+  let terminal_growth_rate = Option.value terminal_growth_rate ~default:i.terminal_growth_rate.value in
+  let fcff = Option.value fcff ~default:i.fcff and wacc = Option.value wacc ~default:i.wacc in
   let growth_path = Growth.path ~g0 ~terminal_growth_rate ~lambda ~projection_years in
-  let ev = Dcf.enterprise_value ~fcff:i.fcff ~wacc:i.wacc ~growth_path ~terminal_growth_rate in
+  let ev = Dcf.enterprise_value ~fcff ~wacc ~growth_path ~terminal_growth_rate in
   (ev -. i.net_debt) /. i.shares
 
-let residual_income_fair_value ?projection_years (i : residual_income_inputs) ~roe_0 ~lambda =
+let residual_income_fair_value ?projection_years ?book_equity ?cost_of_equity (i : residual_income_inputs) ~roe_0 ~lambda =
   let projection_years = Option.value projection_years ~default:i.projection_years.value in
-  let roe_path =
-    Residual_income.roe_path ~roe_0 ~cost_of_equity:i.cost_of_equity ~lambda ~projection_years
-  in
-  let s =
-    Residual_income.schedule ~book_equity:i.book_equity ~cost_of_equity:i.cost_of_equity
-      ~retention:i.retention ~roe_path
-  in
-  (i.book_equity +. s.pv_excess_returns) /. i.shares
+  let book_equity = Option.value book_equity ~default:i.book_equity in
+  let cost_of_equity = Option.value cost_of_equity ~default:i.cost_of_equity in
+  let roe_path = Residual_income.roe_path ~roe_0 ~cost_of_equity ~lambda ~projection_years in
+  let s = Residual_income.schedule ~book_equity ~cost_of_equity ~retention:i.retention ~roe_path in
+  (book_equity +. s.pv_excess_returns) /. i.shares
 
-let reit_fair_value ?projection_years (i : reit_inputs) ~g0 ~lambda =
+let reit_fair_value ?projection_years ?dividend_per_share ?cost_of_equity ?terminal_growth_rate (i : reit_inputs) ~g0 ~lambda =
   let projection_years = Option.value projection_years ~default:i.projection_years.value in
-  let terminal_growth_rate = i.terminal_growth_rate.value in
+  let terminal_growth_rate = Option.value terminal_growth_rate ~default:i.terminal_growth_rate.value in
+  let d0 = Option.value dividend_per_share ~default:i.dividend_per_share in
+  let cost_of_equity = Option.value cost_of_equity ~default:i.cost_of_equity in
   let growth_path = Growth.path ~g0 ~terminal_growth_rate ~lambda ~projection_years in
-  let dividend_path = Reit.dividend_path ~d0:i.dividend_per_share ~growth_path in
-  let pv, _, pv_terminal = Reit.present_value ~dividend_path ~cost_of_equity:i.cost_of_equity ~terminal_growth_rate in
+  let dividend_path = Reit.dividend_path ~d0 ~growth_path in
+  let pv, _, pv_terminal = Reit.present_value ~dividend_path ~cost_of_equity ~terminal_growth_rate in
   pv +. pv_terminal
 
 let readout value = { value = Some value; reason = None }

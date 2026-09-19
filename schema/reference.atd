@@ -81,6 +81,21 @@ type int_scalar = {
   ~notes : string list;
 }
 
+(* Sensitivity steps (23): one fixed symmetric readability step per input kind. Not
+   standard deviations and not derived from history; a step is changed by a decision,
+   never after seeing a result. *)
+type sensitivity_steps = {
+  growth : float;                     (* starting growth or ROE0, absolute (0.02 = 2 percentage points) *)
+  lambda : float;                     (* mean_reversion_lambda, absolute *)
+  terminal_growth : float;            (* absolute *)
+  discount_rate : float;              (* WACC or cost of equity, absolute *)
+  base_fraction : float;              (* the cash-flow base (fcff, fcff_mid, covered dividend, book equity), as a fraction of the recorded value *)
+  source : string;
+  as_of : string;
+  max_age_days : int;
+  ~notes : string list;
+}
+
 type params = {
   projection_years : int_scalar;      (* also selects the risk-free tenor: N years -> "Ny" *)
   debt_spread : scalar;               (* pre-tax cost of debt = risk-free + spread *)
@@ -90,6 +105,7 @@ type params = {
   mean_reversion_lambda : scalar;     (* growth, and a bank's ROE, decay toward their anchor at exp(-lambda * t) *)
   mature_market_erp : scalar;         (* the international CAPM's mature-market base; a domicile's total ERP less this is its country risk premium *)
   midcycle_window_years : int_scalar; (* the mid-cycle DCF's window (22): annual periods normalised over, and the period depth the fetch keeps for the class *)
+  sensitivity_steps : sensitivity_steps;   (* (23) *)
   terminal_growth_rate : country_table;
   unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
 }

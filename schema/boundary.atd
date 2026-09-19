@@ -587,6 +587,67 @@ type model_inputs = [
   | Reit_ffo_dividend <json name="reit_ffo_dividend"> of reit_inputs
 ]
 
+(* Sensitivity (23): the anchor re-evaluated at each held input stepped down and up by a
+   declared readability step, everything else at its recorded value. Deterministic; no
+   distribution, no sampling; the steps are not standard deviations. *)
+type sensitivity_entry = {
+  input : string;                     (* the held input's name *)
+  recorded : float;
+  step : float;                       (* the declared step: absolute for a rate, a fraction of the recorded value for the base *)
+  step_kind : string;                 (* absolute | relative *)
+  down : readout;                     (* fair value at recorded - step; null with reason when the step crosses a guard *)
+  up : readout;                       (* fair value at recorded + step *)
+  swing : float nullable;             (* |up - down| / fair_value; null iff a side is null *)
+}
+
+type sensitivity = {
+  fair_value : float;                 (* the anchor the swings are measured against *)
+  steps_source : string;              (* provenance of the steps, from reference/params.json *)
+  steps_as_of : string;
+  entries : sensitivity_entry list;   (* in the held order *)
+  ranking : string list;              (* inputs with a swing, largest first *)
+  binding_input : string nullable;    (* the first of ranking; null when no entry has a swing *)
+  note : string;                      (* what the block says and does not say *)
+}
+
+(* The belief map (23): the plain-language readout model, distinct from the headline's
+   decaying path and stated as such: growth held at g for N years with no decay, then the
+   settled terminal growth forever, everything else at its recorded value. *)
+type contour_point = {
+  years : int;
+  growth : readout;                   (* the g at which fair value equals price; null with reason when no g in the domain reaches it *)
+}
+
+type belief_map = {
+  map_model : string;                 (* "undecayed growth for N years, then terminal" *)
+  base_name : string;                 (* fcff | fcff_mid | dividend_per_share *)
+  base : float;                       (* the cash-flow base the growth compounds from *)
+  rate_name : string;                 (* wacc | cost_of_equity *)
+  rate : float;
+  terminal_growth_rate : float;
+  net_debt : float;                   (* 0 on a per-share base *)
+  shares : float;                     (* 1 on a per-share base *)
+  observed_growth : float;            (* the record's g0 *)
+  growth_domain : float list;         (* [0; 0.5] *)
+  growth_step : float;                (* 0.02: the grid's step *)
+  horizon_max : int;                  (* 40 *)
+  price_contour : contour_point list; (* one per N = 1..40 *)
+  solver : string;
+  tolerance : float;
+}
+
+(* The whole grid, written to output/maps/(ticker).json (23), never onto the record. *)
+type belief_grid = {
+  ticker : string;
+  map_model : string;
+  price : float;
+  observed_growth : float;
+  growth_grid : float list;           (* 0, 0.02 .. 0.5 *)
+  horizon_grid : int list;            (* 1 .. 40 *)
+  fair_values : float list list;      (* one row per growth, one column per horizon *)
+  price_contour : contour_point list;
+}
+
 type valuation = {
   ticker : string;
   as_of : string;                     (* the fetch timestamp, from financials *)
@@ -614,4 +675,7 @@ type valuation = {
   failed_reason : string nullable;
   inputs : model_inputs nullable;
   ?implied : implied option;              (* present iff status is Ok (12) *)
+  ?sensitivity : sensitivity option;      (* present iff status is Ok (23) *)
+  ?belief_map : belief_map option;        (* present on an Ok record with a growth-then-terminal structure: dcf, dcf_midcycle, reit_ffo_dividend (23) *)
+  ?belief_map_reason : string option;     (* present instead on an Ok record without one: the residual-income paths (23) *)
 }
