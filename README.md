@@ -34,21 +34,21 @@ git config core.hooksPath .githooks
 
 The U.S. risk-free curve is refreshed from FRED and needs an API key, free from
 <https://fred.stlouisfed.org/docs/api/api_key.html>. Copy `.env.example` to `.env` and put
-the key after `FRED_API_KEY=`. Insurers are fetched from SEC XBRL, which requires every
-request to identify its sender: put `"<name> <email>"` after `SEC_EDGAR_IDENTITY=`, quoted.
+the key after `FRED_API_KEY=`. Statements for U.S. filers come from SEC XBRL, which
+requires every request to identify its sender: put `"<name> <email>"` after
+`SEC_EDGAR_IDENTITY=`, quoted.
 `.env` is gitignored and the pre-commit hook refuses it.
 
 ## Run
 
 ```sh
-uv run python/fetch.py AAPL MSFT            # yfinance -> data/financials/<TICKER>.json
+uv run python/fetch.py AAPL MSFT            # statements from SEC XBRL (us-gaap 10-K filers) or yfinance -> data/financials/<TICKER>.json
 dune exec atemoya -- data/financials/*.json # one valuation record per line on stdout
 uv run python/refresh_rates.py --all        # sovereign curves per reference/rate_sources.json
 uv run python/refresh_fx.py --all           # FX via FRED H.10 -> reference/fx_rates.json
 
-uv run python/fetch_all.py                  # every ticker in reference/universe.json (insurers via SEC XBRL)
-uv run python/fetch_sec.py ALL MET PGR      # filed statements from SEC XBRL -> data/financials/<TICKER>.json
-dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl + summary.txt
+uv run python/fetch_all.py                  # every ticker in reference/universe.json
+dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt
 ```
 
 `dune exec atemoya` reads parameters from `reference/` (`--reference DIR` to override) and

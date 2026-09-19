@@ -14,3 +14,13 @@ val meets_expectation :
 
 val summary :
   ?universe:Reference_t.universe -> Boundary_t.valuation list -> string
+(** Includes a cross-check line: how many records with a cross-check had any
+    field beyond threshold, and which fields most often. *)
+
+val provider_diff : (Boundary_t.valuation * Boundary_t.valuation option) list -> string
+(** One block per record whose statements provider is not the vendor, given
+    the vendor-statement shadow valuation of the same name when there is one:
+    old fair value, new fair value, the delta, and the three fields whose
+    values differ most between the providers, with both numbers; every other
+    record is listed as unchanged. A moved number without a field-level
+    explanation here is a bug. *)

@@ -160,3 +160,25 @@ type fx_rates = {
   ~notes : string list;
   currencies : (string * fx_rate) list <json repr="object">;
 }
+
+(* Which us-gaap tags supply each canonical field from SEC XBRL companyfacts, chosen per
+   fiscal period because a filer's tag changes between years. The only place tag names live. *)
+type xbrl_field = {
+  kind : string;                        (* duration (a flow over the year) | instant (a balance at the year end) *)
+  tags : string list;                   (* first present per period wins *)
+}
+
+type xbrl_tags = {
+  source : string;
+  as_of : string;
+  ~notes : string list;
+  cross_check_threshold : float;        (* relative difference at or below which the two providers agree *)
+  max_filing_age_days : int;            (* a newest annual filing older than this fails the valuation *)
+  annual_forms : string list;           (* forms whose facts count as annual *)
+  annual_span_days : int list;          (* [min; max] days a duration fact must span *)
+  fields : (string * xbrl_field) list <json repr="object">;
+  depreciation_components : string list;    (* canonical fields summed when no aggregate d&a tag: the first required *)
+  debt_recipes : string list list;          (* canonical fields summed for total debt, first complete recipe wins *)
+  debt_optional_add : string list;          (* canonical fields added to the recipe when present *)
+  working_capital : (string * string) list <json repr="object">;   (* assets, liabilities, cash, debt_current -> canonical fields *)
+}

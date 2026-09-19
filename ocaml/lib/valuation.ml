@@ -58,6 +58,15 @@ let with_conversion conversion (inputs : model_inputs) : model_inputs =
 let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declaration
     (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
+  (* Age of the newest filing the statements come from, when they are filed ones. *)
+  let filing_age =
+    Option.map
+      (fun d -> Date.days_between ~from:d ~until:today)
+      original.latest_filing
+  in
+  let filing_age_days =
+    match filing_age with Some (Ok n) -> Some n | _ -> None
+  in
   let lens_note, scope_limits =
     match declaration with
     | Some d -> (d.lens_note, d.scope_limits)
@@ -81,6 +90,11 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
       floor;
       lens_note;
       scope_limits;
+      statements_provider = original.provider;
+      market_provider = original.market_provider;
+      provider_reason = original.provider_reason;
+      filing_age_days;
+      cross_check = original.cross_check;
       status;
       failed_reason;
       inputs;
@@ -148,18 +162,26 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
             | Ok (inputs, fair_value) ->
                 finish ~price:inputs.core.price (`Residual_income_insurer inputs) fair_value))
   in
-  (* The currency gate: the same-currency path untouched, else convert and re-source. *)
+  (* The filing-age gate, then the currency gate: the same-currency path untouched, else
+     convert and re-source. *)
   let value ~model ~class_check ~rule ~country =
     let failed = failed ~model ~class_check ~floor:(floor_of_rule rule) in
-    match (original.financial_currency, original.trading_currency) with
-    | None, _ -> failed "missing market data: financial_currency"
-    | _, None -> failed "missing market data: trading_currency"
-    | Some financial, Some trading when financial = trading -> (
+    let max_age = params.xbrl_tags.max_filing_age_days in
+    match (filing_age, original.financial_currency, original.trading_currency) with
+    | Some (Error msg), _, _ -> failed (Printf.sprintf "latest_filing: %s" msg)
+    | Some (Ok n), _, _ when n > max_age ->
+        failed
+          (Printf.sprintf
+             "latest annual filing is %d days old, older than its max_filing_age_days %d" n
+             max_age)
+    | _, None, _ -> failed "missing market data: financial_currency"
+    | _, _, None -> failed "missing market data: trading_currency"
+    | _, Some financial, Some trading when financial = trading -> (
         match Params.resolve params ~today ~country ~industry:original.industry with
         | Error reason -> failed reason
         | Ok assumptions ->
             run_model ~fin:original ~model ~class_check ~rule ~country assumptions)
-    | Some financial, Some trading -> (
+    | _, Some financial, Some trading -> (
         match Fx.rate params.fx_sources params.fx_rates ~today ~financial ~trading with
         | Error reason -> failed reason
         | Ok legs -> (

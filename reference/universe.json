@@ -31,10 +31,11 @@
     {
       "ticker": "JNJ",
       "entity_class": "OperatingCompany",
-      "note": "plain U.S. non-financial",
+      "note": "plain U.S. non-financial; statements are filed (SEC XBRL) and Johnson & Johnson last tagged OperatingIncomeLoss in FY2014, so the dcf's ebit is absent and there is no per-field fallback to the vendor",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Failed",
+      "expected_reason": "missing statement fields"
     },
     {
       "ticker": "KO",
@@ -63,10 +64,11 @@
     {
       "ticker": "CVX",
       "entity_class": "OperatingCompany",
-      "note": "oil & gas: no statement signature, stays Generic",
+      "note": "oil & gas, stays Generic; statements are filed (SEC XBRL) and Chevron tags no OperatingIncomeLoss, so the dcf's ebit is absent and there is no per-field fallback to the vendor",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Failed",
+      "expected_reason": "missing statement fields"
     },
     {
       "ticker": "JPM",
@@ -79,10 +81,11 @@
     {
       "ticker": "BAC",
       "entity_class": "Bank",
-      "note": "U.S. bank; valued by residual income",
+      "note": "U.S. bank; statements are filed (SEC XBRL) and Bank of America's companyfacts carry no annual common-dividend fact after 2013 (PaymentsOfDividends stops at FY2013, PaymentsOfDividendsCommonStock is not filed), so retention is not derivable",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok"
+      "expected_status": "Failed",
+      "expected_reason": "payout not derivable"
     },
     {
       "ticker": "NU",

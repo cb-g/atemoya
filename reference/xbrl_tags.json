@@ -1,0 +1,231 @@
+{
+  "source": "us-gaap tag candidates per canonical field, verified against the universe's SEC XBRL companyfacts on 2026-09-19; selection is per fiscal period because tags change between years (Apple's Revenues stops at FY2018, Microsoft's at FY2010, Allstate's IncurredClaimsPropertyCasualtyAndLiability at FY2023, Coca-Cola's LongTermDebt at FY2023)",
+  "as_of": "2026-09-19",
+  "notes": [
+    "Only annual facts: form in annual_forms with fp = FY; a duration fact must span annual_span_days because fp = FY also marks quarters; a balance must carry no start; the latest filing wins per fiscal year end.",
+    "A canonical field the map cannot supply for a period stays null and the valuation fails naming it; there is no per-field fallback to the vendor feed.",
+    "depreciation_amortization: the aggregate tags first; when none is filed, Depreciation plus AmortizationOfIntangibleAssets where filed (Microsoft and Alphabet file only these), labelled as the sum.",
+    "total_debt: the first complete recipe, plus DebtCurrent where filed; LongTermDebt already includes the current portion of long-term debt, and commercial paper is not included, so the vendor's total debt will usually read higher; the cross-check records it.",
+    "delta_nwc: year-over-year change in (current assets - cash) - (current liabilities - current debt where filed), from the balance sheets; filers rarely tag the aggregate working-capital line.",
+    "cash is cash and equivalents only; the vendor's canonical cash includes short-term investments, so the cross-check will flag cash-rich names.",
+    "cross_check_threshold 0.02 is an assumption: two providers reading the same filing should agree to within rounding; a larger gap is a definitional difference worth reading."
+  ],
+  "cross_check_threshold": 0.02,
+  "max_filing_age_days": 400,
+  "annual_forms": [
+    "10-K",
+    "10-K/A"
+  ],
+  "annual_span_days": [
+    350,
+    380
+  ],
+  "fields": {
+    "total_revenue": {
+      "kind": "duration",
+      "tags": [
+        "Revenues",
+        "RevenueFromContractWithCustomerExcludingAssessedTax",
+        "SalesRevenueNet"
+      ]
+    },
+    "ebit": {
+      "kind": "duration",
+      "tags": [
+        "OperatingIncomeLoss"
+      ]
+    },
+    "pretax_income": {
+      "kind": "duration",
+      "tags": [
+        "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+        "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments"
+      ]
+    },
+    "tax_provision": {
+      "kind": "duration",
+      "tags": [
+        "IncomeTaxExpenseBenefit"
+      ]
+    },
+    "depreciation_amortization": {
+      "kind": "duration",
+      "tags": [
+        "DepreciationDepletionAndAmortization",
+        "DepreciationAndAmortization",
+        "DepreciationAmortizationAndAccretionNet"
+      ]
+    },
+    "depreciation": {
+      "kind": "duration",
+      "tags": [
+        "Depreciation"
+      ]
+    },
+    "amortization_of_intangibles": {
+      "kind": "duration",
+      "tags": [
+        "AmortizationOfIntangibleAssets"
+      ]
+    },
+    "capex": {
+      "kind": "duration",
+      "tags": [
+        "PaymentsToAcquirePropertyPlantAndEquipment",
+        "PaymentsToAcquireProductiveAssets"
+      ]
+    },
+    "current_assets": {
+      "kind": "instant",
+      "tags": [
+        "AssetsCurrent"
+      ]
+    },
+    "current_liabilities": {
+      "kind": "instant",
+      "tags": [
+        "LiabilitiesCurrent"
+      ]
+    },
+    "cash": {
+      "kind": "instant",
+      "tags": [
+        "CashAndCashEquivalentsAtCarryingValue",
+        "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"
+      ]
+    },
+    "book_equity": {
+      "kind": "instant",
+      "tags": [
+        "StockholdersEquity",
+        "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"
+      ]
+    },
+    "long_term_debt": {
+      "kind": "instant",
+      "tags": [
+        "LongTermDebt"
+      ]
+    },
+    "long_term_debt_noncurrent": {
+      "kind": "instant",
+      "tags": [
+        "LongTermDebtNoncurrent"
+      ]
+    },
+    "long_term_debt_current": {
+      "kind": "instant",
+      "tags": [
+        "LongTermDebtCurrent"
+      ]
+    },
+    "long_term_debt_and_leases": {
+      "kind": "instant",
+      "tags": [
+        "LongTermDebtAndCapitalLeaseObligations"
+      ]
+    },
+    "debt_current": {
+      "kind": "instant",
+      "tags": [
+        "DebtCurrent"
+      ]
+    },
+    "net_income": {
+      "kind": "duration",
+      "tags": [
+        "NetIncomeLoss"
+      ]
+    },
+    "dividends_paid": {
+      "kind": "duration",
+      "tags": [
+        "PaymentsOfDividendsCommonStock",
+        "PaymentsOfDividends"
+      ]
+    },
+    "net_interest_income": {
+      "kind": "duration",
+      "tags": [
+        "InterestIncomeExpenseNet"
+      ]
+    },
+    "premiums_earned": {
+      "kind": "duration",
+      "tags": [
+        "PremiumsEarnedNet",
+        "PremiumsEarnedNetPropertyAndCasualty",
+        "PremiumsEarnedNetLife"
+      ]
+    },
+    "claims_incurred": {
+      "kind": "duration",
+      "tags": [
+        "PolicyholderBenefitsAndClaimsIncurredNet",
+        "IncurredClaimsPropertyCasualtyAndLiability"
+      ]
+    },
+    "benefits_losses_and_expenses": {
+      "kind": "duration",
+      "tags": [
+        "BenefitsLossesAndExpenses"
+      ]
+    },
+    "policy_acquisition_expense": {
+      "kind": "duration",
+      "tags": [
+        "DeferredPolicyAcquisitionCostAmortizationExpense"
+      ]
+    },
+    "operating_expense": {
+      "kind": "duration",
+      "tags": [
+        "OperatingExpenses",
+        "OtherCostAndExpenseOperating"
+      ]
+    },
+    "aoci": {
+      "kind": "instant",
+      "tags": [
+        "AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+      ]
+    },
+    "future_policy_benefits": {
+      "kind": "instant",
+      "tags": [
+        "LiabilityForFuturePolicyBenefits"
+      ]
+    },
+    "claims_liability": {
+      "kind": "instant",
+      "tags": [
+        "LiabilityForClaimsAndClaimsAdjustmentExpense"
+      ]
+    }
+  },
+  "depreciation_components": [
+    "depreciation",
+    "amortization_of_intangibles"
+  ],
+  "debt_recipes": [
+    [
+      "long_term_debt"
+    ],
+    [
+      "long_term_debt_noncurrent",
+      "long_term_debt_current"
+    ],
+    [
+      "long_term_debt_and_leases"
+    ]
+  ],
+  "debt_optional_add": [
+    "debt_current"
+  ],
+  "working_capital": {
+    "assets": "current_assets",
+    "liabilities": "current_liabilities",
+    "cash": "cash",
+    "debt_current": "debt_current"
+  }
+}

@@ -70,6 +70,36 @@ type fiscal_period = {
   ?future_policy_benefits_row : string option;
   ?claims_liability : float option;           (* >= 0; liability at period end *)
   ?claims_liability_row : string option;
+  (* The row (tag) that supplied each core field when the provider records one. *)
+  ?total_revenue_row : string option;
+  ?ebit_row : string option;
+  ?pretax_income_row : string option;
+  ?tax_provision_row : string option;
+  ?capex_row : string option;
+  ?delta_nwc_row : string option;
+  ?cash_row : string option;
+  ?book_equity_row : string option;
+  ?net_income_row : string option;
+  ?net_interest_income_row : string option;
+}
+
+(* One canonical field compared between the statements provider and the cross-check
+   provider for the latest common period. Recorded, never a gate, never resolved. *)
+type field_check = {
+  field : string;
+  primary : float nullable;
+  secondary : float nullable;
+  relative_difference : float nullable;   (* |primary - secondary| / max(|primary|, |secondary|); null unless both present *)
+  agree : bool nullable;                  (* relative_difference <= threshold; null unless both present *)
+}
+
+type cross_check = {
+  provider : string;                      (* the cross-check provider *)
+  period_end : string;                    (* the primary's period *)
+  secondary_period_end : string;          (* the cross-check provider's matching period *)
+  threshold : float;
+  fields : field_check list;
+  disagreements : int;                    (* fields with agree = false *)
 }
 
 (* Whether the vendor quoted the price in the currency's major unit or a minor one (pence,
@@ -90,8 +120,12 @@ type financials = {
   industry : string nullable;    (* industry as the vendor spells it, e.g. "Consumer Electronics" *)
   periods : fiscal_period list;
   notes : string list;           (* free-text provenance and data-quality notes; never branched on *)
-  ~provider : string;            (* where the statements came from, e.g. "yfinance" or "SEC XBRL companyfacts" *)
+  ~provider : string;            (* the statements provider, e.g. "yfinance" or "SEC XBRL companyfacts" *)
+  ~market_provider : string;     (* where price, market cap and currencies came from; always the vendor feed *)
+  ~provider_reason : string;     (* why this statements provider was chosen *)
   ~statements_unavailable : string;   (* why the provider had no statements for this ticker; empty when it had *)
+  ?latest_filing : string option;     (* ISO date of the newest annual filing the statements come from *)
+  ?cross_check : cross_check option;  (* the vendor's statements compared with the filed ones *)
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -370,6 +404,11 @@ type valuation = {
   floor : floor;
   lens_note : string;                     (* free text from the declaration; may be empty *)
   scope_limits : string list;             (* what the models cannot see for this name, verbatim from the declaration *)
+  statements_provider : string;           (* the provider decision, on every record *)
+  market_provider : string;
+  provider_reason : string;
+  ?filing_age_days : int option;          (* valued_on - latest_filing, when the statements are filed ones *)
+  ?cross_check : cross_check option;      (* carried verbatim from the record *)
   status : status;
   failed_reason : string nullable;
   inputs : model_inputs nullable;

@@ -1527,6 +1527,47 @@ class Floor:
 
 
 @dataclass
+class FieldCheck:
+    """Original type: field_check = { ... }
+    """
+
+    field: str
+    primary: Optional[float]
+    secondary: Optional[float]
+    relative_difference: Optional[float]
+    agree: Optional[bool]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FieldCheck':
+        if isinstance(x, dict):
+            return cls(
+                field=_atd_read_string(x['field']) if 'field' in x else _atd_missing_json_field('FieldCheck', 'field'),
+                primary=_atd_read_nullable(_atd_read_float)(x['primary']) if 'primary' in x else _atd_missing_json_field('FieldCheck', 'primary'),
+                secondary=_atd_read_nullable(_atd_read_float)(x['secondary']) if 'secondary' in x else _atd_missing_json_field('FieldCheck', 'secondary'),
+                relative_difference=_atd_read_nullable(_atd_read_float)(x['relative_difference']) if 'relative_difference' in x else _atd_missing_json_field('FieldCheck', 'relative_difference'),
+                agree=_atd_read_nullable(_atd_read_bool)(x['agree']) if 'agree' in x else _atd_missing_json_field('FieldCheck', 'agree'),
+            )
+        else:
+            _atd_bad_json('FieldCheck', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['field'] = _atd_write_string(self.field)
+        res['primary'] = _atd_write_nullable(_atd_write_float)(self.primary)
+        res['secondary'] = _atd_write_nullable(_atd_write_float)(self.secondary)
+        res['relative_difference'] = _atd_write_nullable(_atd_write_float)(self.relative_difference)
+        res['agree'] = _atd_write_nullable(_atd_write_bool)(self.agree)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FieldCheck':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class OperatingCompany:
     """Original type: entity_class = [ ... | OperatingCompany | ... ]
     """
@@ -1836,6 +1877,50 @@ class EntityClass:
 
 
 @dataclass
+class CrossCheck:
+    """Original type: cross_check = { ... }
+    """
+
+    provider: str
+    period_end: str
+    secondary_period_end: str
+    threshold: float
+    fields: List[FieldCheck]
+    disagreements: int
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'CrossCheck':
+        if isinstance(x, dict):
+            return cls(
+                provider=_atd_read_string(x['provider']) if 'provider' in x else _atd_missing_json_field('CrossCheck', 'provider'),
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('CrossCheck', 'period_end'),
+                secondary_period_end=_atd_read_string(x['secondary_period_end']) if 'secondary_period_end' in x else _atd_missing_json_field('CrossCheck', 'secondary_period_end'),
+                threshold=_atd_read_float(x['threshold']) if 'threshold' in x else _atd_missing_json_field('CrossCheck', 'threshold'),
+                fields=_atd_read_list(FieldCheck.from_json)(x['fields']) if 'fields' in x else _atd_missing_json_field('CrossCheck', 'fields'),
+                disagreements=_atd_read_int(x['disagreements']) if 'disagreements' in x else _atd_missing_json_field('CrossCheck', 'disagreements'),
+            )
+        else:
+            _atd_bad_json('CrossCheck', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['provider'] = _atd_write_string(self.provider)
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['secondary_period_end'] = _atd_write_string(self.secondary_period_end)
+        res['threshold'] = _atd_write_float(self.threshold)
+        res['fields'] = _atd_write_list((lambda x: x.to_json()))(self.fields)
+        res['disagreements'] = _atd_write_int(self.disagreements)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'CrossCheck':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Consistent:
     """Original type: class_check_outcome = [ ... | Consistent | ... ]
     """
@@ -2039,9 +2124,14 @@ class Valuation:
     floor: Floor
     lens_note: str
     scope_limits: List[str]
+    statements_provider: str
+    market_provider: str
+    provider_reason: str
     status: Status
     failed_reason: Optional[str]
     inputs: Optional[ModelInputs]
+    filing_age_days: Optional[int] = None
+    cross_check: Optional[CrossCheck] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -2061,9 +2151,14 @@ class Valuation:
                 floor=Floor.from_json(x['floor']) if 'floor' in x else _atd_missing_json_field('Valuation', 'floor'),
                 lens_note=_atd_read_string(x['lens_note']) if 'lens_note' in x else _atd_missing_json_field('Valuation', 'lens_note'),
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('Valuation', 'scope_limits'),
+                statements_provider=_atd_read_string(x['statements_provider']) if 'statements_provider' in x else _atd_missing_json_field('Valuation', 'statements_provider'),
+                market_provider=_atd_read_string(x['market_provider']) if 'market_provider' in x else _atd_missing_json_field('Valuation', 'market_provider'),
+                provider_reason=_atd_read_string(x['provider_reason']) if 'provider_reason' in x else _atd_missing_json_field('Valuation', 'provider_reason'),
                 status=Status.from_json(x['status']) if 'status' in x else _atd_missing_json_field('Valuation', 'status'),
                 failed_reason=_atd_read_nullable(_atd_read_string)(x['failed_reason']) if 'failed_reason' in x else _atd_missing_json_field('Valuation', 'failed_reason'),
                 inputs=_atd_read_nullable(ModelInputs.from_json)(x['inputs']) if 'inputs' in x else _atd_missing_json_field('Valuation', 'inputs'),
+                filing_age_days=_atd_read_int(x['filing_age_days']) if 'filing_age_days' in x else None,
+                cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -2084,9 +2179,16 @@ class Valuation:
         res['floor'] = (lambda x: x.to_json())(self.floor)
         res['lens_note'] = _atd_write_string(self.lens_note)
         res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        res['statements_provider'] = _atd_write_string(self.statements_provider)
+        res['market_provider'] = _atd_write_string(self.market_provider)
+        res['provider_reason'] = _atd_write_string(self.provider_reason)
         res['status'] = (lambda x: x.to_json())(self.status)
         res['failed_reason'] = _atd_write_nullable(_atd_write_string)(self.failed_reason)
         res['inputs'] = _atd_write_nullable((lambda x: x.to_json()))(self.inputs)
+        if self.filing_age_days is not None:
+            res['filing_age_days'] = _atd_write_int(self.filing_age_days)
+        if self.cross_check is not None:
+            res['cross_check'] = (lambda x: x.to_json())(self.cross_check)
         return res
 
     @classmethod
@@ -2141,6 +2243,16 @@ class FiscalPeriod:
     future_policy_benefits_row: Optional[str] = None
     claims_liability: Optional[float] = None
     claims_liability_row: Optional[str] = None
+    total_revenue_row: Optional[str] = None
+    ebit_row: Optional[str] = None
+    pretax_income_row: Optional[str] = None
+    tax_provision_row: Optional[str] = None
+    capex_row: Optional[str] = None
+    delta_nwc_row: Optional[str] = None
+    cash_row: Optional[str] = None
+    book_equity_row: Optional[str] = None
+    net_income_row: Optional[str] = None
+    net_interest_income_row: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'FiscalPeriod':
@@ -2185,6 +2297,16 @@ class FiscalPeriod:
                 future_policy_benefits_row=_atd_read_string(x['future_policy_benefits_row']) if 'future_policy_benefits_row' in x else None,
                 claims_liability=_atd_read_float(x['claims_liability']) if 'claims_liability' in x else None,
                 claims_liability_row=_atd_read_string(x['claims_liability_row']) if 'claims_liability_row' in x else None,
+                total_revenue_row=_atd_read_string(x['total_revenue_row']) if 'total_revenue_row' in x else None,
+                ebit_row=_atd_read_string(x['ebit_row']) if 'ebit_row' in x else None,
+                pretax_income_row=_atd_read_string(x['pretax_income_row']) if 'pretax_income_row' in x else None,
+                tax_provision_row=_atd_read_string(x['tax_provision_row']) if 'tax_provision_row' in x else None,
+                capex_row=_atd_read_string(x['capex_row']) if 'capex_row' in x else None,
+                delta_nwc_row=_atd_read_string(x['delta_nwc_row']) if 'delta_nwc_row' in x else None,
+                cash_row=_atd_read_string(x['cash_row']) if 'cash_row' in x else None,
+                book_equity_row=_atd_read_string(x['book_equity_row']) if 'book_equity_row' in x else None,
+                net_income_row=_atd_read_string(x['net_income_row']) if 'net_income_row' in x else None,
+                net_interest_income_row=_atd_read_string(x['net_interest_income_row']) if 'net_interest_income_row' in x else None,
             )
         else:
             _atd_bad_json('FiscalPeriod', x)
@@ -2246,6 +2368,26 @@ class FiscalPeriod:
             res['claims_liability'] = _atd_write_float(self.claims_liability)
         if self.claims_liability_row is not None:
             res['claims_liability_row'] = _atd_write_string(self.claims_liability_row)
+        if self.total_revenue_row is not None:
+            res['total_revenue_row'] = _atd_write_string(self.total_revenue_row)
+        if self.ebit_row is not None:
+            res['ebit_row'] = _atd_write_string(self.ebit_row)
+        if self.pretax_income_row is not None:
+            res['pretax_income_row'] = _atd_write_string(self.pretax_income_row)
+        if self.tax_provision_row is not None:
+            res['tax_provision_row'] = _atd_write_string(self.tax_provision_row)
+        if self.capex_row is not None:
+            res['capex_row'] = _atd_write_string(self.capex_row)
+        if self.delta_nwc_row is not None:
+            res['delta_nwc_row'] = _atd_write_string(self.delta_nwc_row)
+        if self.cash_row is not None:
+            res['cash_row'] = _atd_write_string(self.cash_row)
+        if self.book_equity_row is not None:
+            res['book_equity_row'] = _atd_write_string(self.book_equity_row)
+        if self.net_income_row is not None:
+            res['net_income_row'] = _atd_write_string(self.net_income_row)
+        if self.net_interest_income_row is not None:
+            res['net_interest_income_row'] = _atd_write_string(self.net_interest_income_row)
         return res
 
     @classmethod
@@ -2275,7 +2417,11 @@ class Financials:
     periods: List[FiscalPeriod]
     notes: List[str]
     provider: str = field(default_factory=lambda: "")
+    market_provider: str = field(default_factory=lambda: "")
+    provider_reason: str = field(default_factory=lambda: "")
     statements_unavailable: str = field(default_factory=lambda: "")
+    latest_filing: Optional[str] = None
+    cross_check: Optional[CrossCheck] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Financials':
@@ -2295,7 +2441,11 @@ class Financials:
                 periods=_atd_read_list(FiscalPeriod.from_json)(x['periods']) if 'periods' in x else _atd_missing_json_field('Financials', 'periods'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else _atd_missing_json_field('Financials', 'notes'),
                 provider=_atd_read_string(x['provider']) if 'provider' in x else "",
+                market_provider=_atd_read_string(x['market_provider']) if 'market_provider' in x else "",
+                provider_reason=_atd_read_string(x['provider_reason']) if 'provider_reason' in x else "",
                 statements_unavailable=_atd_read_string(x['statements_unavailable']) if 'statements_unavailable' in x else "",
+                latest_filing=_atd_read_string(x['latest_filing']) if 'latest_filing' in x else None,
+                cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
             )
         else:
             _atd_bad_json('Financials', x)
@@ -2316,7 +2466,13 @@ class Financials:
         res['periods'] = _atd_write_list((lambda x: x.to_json()))(self.periods)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         res['provider'] = _atd_write_string(self.provider)
+        res['market_provider'] = _atd_write_string(self.market_provider)
+        res['provider_reason'] = _atd_write_string(self.provider_reason)
         res['statements_unavailable'] = _atd_write_string(self.statements_unavailable)
+        if self.latest_filing is not None:
+            res['latest_filing'] = _atd_write_string(self.latest_filing)
+        if self.cross_check is not None:
+            res['cross_check'] = (lambda x: x.to_json())(self.cross_check)
         return res
 
     @classmethod

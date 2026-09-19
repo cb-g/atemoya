@@ -261,6 +261,100 @@ def _atd_write_option(write_elt: Callable[[Any], Any]) \
 
 
 @dataclass
+class XbrlField:
+    """Original type: xbrl_field = { ... }
+    """
+
+    kind: str
+    tags: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'XbrlField':
+        if isinstance(x, dict):
+            return cls(
+                kind=_atd_read_string(x['kind']) if 'kind' in x else _atd_missing_json_field('XbrlField', 'kind'),
+                tags=_atd_read_list(_atd_read_string)(x['tags']) if 'tags' in x else _atd_missing_json_field('XbrlField', 'tags'),
+            )
+        else:
+            _atd_bad_json('XbrlField', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['kind'] = _atd_write_string(self.kind)
+        res['tags'] = _atd_write_list(_atd_write_string)(self.tags)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'XbrlField':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class XbrlTags:
+    """Original type: xbrl_tags = { ... }
+    """
+
+    source: str
+    as_of: str
+    cross_check_threshold: float
+    max_filing_age_days: int
+    annual_forms: List[str]
+    annual_span_days: List[int]
+    fields: List[Tuple[str, XbrlField]]
+    depreciation_components: List[str]
+    debt_recipes: List[List[str]]
+    debt_optional_add: List[str]
+    working_capital: List[Tuple[str, str]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'XbrlTags':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('XbrlTags', 'source'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('XbrlTags', 'as_of'),
+                cross_check_threshold=_atd_read_float(x['cross_check_threshold']) if 'cross_check_threshold' in x else _atd_missing_json_field('XbrlTags', 'cross_check_threshold'),
+                max_filing_age_days=_atd_read_int(x['max_filing_age_days']) if 'max_filing_age_days' in x else _atd_missing_json_field('XbrlTags', 'max_filing_age_days'),
+                annual_forms=_atd_read_list(_atd_read_string)(x['annual_forms']) if 'annual_forms' in x else _atd_missing_json_field('XbrlTags', 'annual_forms'),
+                annual_span_days=_atd_read_list(_atd_read_int)(x['annual_span_days']) if 'annual_span_days' in x else _atd_missing_json_field('XbrlTags', 'annual_span_days'),
+                fields=_atd_read_assoc_object_into_list(XbrlField.from_json)(x['fields']) if 'fields' in x else _atd_missing_json_field('XbrlTags', 'fields'),
+                depreciation_components=_atd_read_list(_atd_read_string)(x['depreciation_components']) if 'depreciation_components' in x else _atd_missing_json_field('XbrlTags', 'depreciation_components'),
+                debt_recipes=_atd_read_list(_atd_read_list(_atd_read_string))(x['debt_recipes']) if 'debt_recipes' in x else _atd_missing_json_field('XbrlTags', 'debt_recipes'),
+                debt_optional_add=_atd_read_list(_atd_read_string)(x['debt_optional_add']) if 'debt_optional_add' in x else _atd_missing_json_field('XbrlTags', 'debt_optional_add'),
+                working_capital=_atd_read_assoc_object_into_list(_atd_read_string)(x['working_capital']) if 'working_capital' in x else _atd_missing_json_field('XbrlTags', 'working_capital'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('XbrlTags', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['cross_check_threshold'] = _atd_write_float(self.cross_check_threshold)
+        res['max_filing_age_days'] = _atd_write_int(self.max_filing_age_days)
+        res['annual_forms'] = _atd_write_list(_atd_write_string)(self.annual_forms)
+        res['annual_span_days'] = _atd_write_list(_atd_write_int)(self.annual_span_days)
+        res['fields'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.fields)
+        res['depreciation_components'] = _atd_write_list(_atd_write_string)(self.depreciation_components)
+        res['debt_recipes'] = _atd_write_list(_atd_write_list(_atd_write_string))(self.debt_recipes)
+        res['debt_optional_add'] = _atd_write_list(_atd_write_string)(self.debt_optional_add)
+        res['working_capital'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.working_capital)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'XbrlTags':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class UniverseEntry:
     """Original type: universe_entry = { ... }
     """

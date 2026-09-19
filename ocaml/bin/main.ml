@@ -40,11 +40,16 @@ let rec parse o paths = function
       usage_exit ()
   | p :: rest -> parse o (p :: paths) rest
 
+let is_shadow f =
+  let marker = ".shadow-" in
+  let rec go i = i + String.length marker <= String.length f && (String.sub f i (String.length marker) = marker || go (i + 1)) in
+  go 0
+
 let expand path =
   match Sys.is_directory path with
   | true ->
       Sys.readdir path |> Array.to_list
-      |> List.filter (fun f -> Filename.check_suffix f ".json")
+      |> List.filter (fun f -> Filename.check_suffix f ".json" && not (is_shadow f))
       |> List.sort compare
       |> List.map (Filename.concat path)
   | false -> [ path ]
@@ -147,15 +152,27 @@ let () =
   in
   let declaration = declarations universe o.entity_class in
   let files = List.concat_map expand paths in
-  let results =
+  (* Each record, and the valuation of its vendor-statement shadow when the fetch wrote one
+     (an XBRL-primary name): same declaration, same parameters, for the provider diff. *)
+  let paired =
     List.filter_map
       (fun path ->
         Option.map
           (fun (fin : Boundary_t.financials) ->
-            Valuation.run params ~today:o.today ~declaration:(declaration fin.ticker) fin)
+            let value = Valuation.run params ~today:o.today ~declaration:(declaration fin.ticker) in
+            let shadow_path =
+              Filename.concat (Filename.dirname path) (fin.ticker ^ ".shadow-yfinance.json")
+            in
+            let shadow =
+              if Sys.file_exists shadow_path then
+                Option.map value (read "shadow financials" Boundary_j.read_financials shadow_path)
+              else None
+            in
+            (value fin, shadow))
           (read "financials" Boundary_j.read_financials path))
       files
   in
+  let results = List.map fst paired in
   let unreadable = List.length files - List.length results in
   let jsonl =
     String.concat ""
@@ -168,5 +185,6 @@ let () =
       write_file (Filename.concat dir "valuations.jsonl") jsonl;
       let summary = Batch.summary ?universe results in
       write_file (Filename.concat dir "summary.txt") summary;
+      write_file (Filename.concat dir "provider_diff.txt") (Batch.provider_diff paired);
       print_string summary);
   exit (if unreadable > 0 then 1 else 0)

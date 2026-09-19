@@ -13,7 +13,9 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?claims_incurred_row ?benefits_losses_and_expenses ?benefits_losses_and_expenses_row
     ?policy_acquisition_expense ?policy_acquisition_expense_row ?operating_expense
     ?operating_expense_row ?future_policy_benefits ?future_policy_benefits_row
-    ?claims_liability ?claims_liability_row () : Boundary_t.fiscal_period =
+    ?claims_liability ?claims_liability_row ?total_revenue_row ?ebit_row ?pretax_income_row
+    ?tax_provision_row ?capex_row ?delta_nwc_row ?cash_row ?book_equity_row ?net_income_row
+    ?net_interest_income_row () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -54,13 +56,23 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     future_policy_benefits_row;
     claims_liability;
     claims_liability_row;
+    total_revenue_row;
+    ebit_row;
+    pretax_income_row;
+    tax_provision_row;
+    capex_row;
+    delta_nwc_row;
+    cash_row;
+    book_equity_row;
+    net_income_row;
+    net_interest_income_row;
   }
 
 let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     ?(price_unit = `Major) ?(price_unit_divisor = 1.0) ?(price = Some 10.)
     ?(market_cap = Some 5000.) ?(country = Some "United States")
     ?(industry = Some "Consumer Electronics") ?(provider = "yfinance")
-    ?(statements_unavailable = "") periods : Boundary_t.financials =
+    ?(statements_unavailable = "") ?latest_filing ?cross_check periods : Boundary_t.financials =
   {
     ticker = "TEST";
     as_of = "2026-09-10T00:00:00+00:00";
@@ -76,7 +88,11 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     periods;
     notes = [];
     provider;
+    market_provider = "yfinance";
+    provider_reason = "";
     statements_unavailable;
+    latest_filing;
+    cross_check;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -198,6 +214,11 @@ let params : Params.t =
            "currencies": {"BRL": {"series": "DEXBZUS", "direction": "units_per_usd"},
                           "EUR": {"series": "DEXUSEU", "direction": "usd_per_unit"},
                           "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit"}}}|};
+    xbrl_tags =
+      Reference_j.xbrl_tags_of_string
+        {|{"source": "test", "as_of": "2026-09-19", "cross_check_threshold": 0.02, "max_filing_age_days": 400,
+           "annual_forms": ["10-K"], "annual_span_days": [350, 380], "fields": {},
+           "depreciation_components": [], "debt_recipes": [], "debt_optional_add": [], "working_capital": {}}|};
     fx_rates =
       Reference_j.fx_rates_of_string
         {|{"source": "test", "currencies": {
@@ -1029,6 +1050,7 @@ let test_flow_chart_names_every_reason () =
       "exceeds sanity bound"; "likely structural break; check entity_class";
       "is not positive"; "roe not derivable"; "payout not derivable"; "cost of equity";
       "insurer model requires filed-statement data"; "fx not available for";
+      "latest annual filing is";
       "missing market data: financial_currency"; "missing market data: trading_currency";
       "fx for" ]
 
@@ -1289,6 +1311,65 @@ let test_same_currency_path_carries_no_conversion () =
       check_mentions "json omits them" (Boundary_j.string_of_valuation v) [ {|"cost_of_equity"|} ];
       if contains (Boundary_j.string_of_valuation v) "conversion" then Alcotest.fail "conversion leaked into a same-currency record"
   | _ -> Alcotest.fail "wrong inputs"
+
+(* --- filed statements as the primary source --- *)
+
+let a_cross_check : Boundary_t.cross_check =
+  {
+    provider = "yfinance"; period_end = "2025-09-27"; secondary_period_end = "2025-09-30"; threshold = 0.02;
+    fields =
+      [ { field = "cash"; primary = Some 36.; secondary = Some 54.7; relative_difference = Some 0.342; agree = Some false };
+        { field = "net_income"; primary = Some 112.; secondary = Some 112.; relative_difference = Some 0.; agree = Some true };
+        { field = "ebit"; primary = None; secondary = Some 133.; relative_difference = None; agree = None } ];
+    disagreements = 1;
+  }
+
+let filed ?(latest_filing = "2026-02-20") ?cross_check periods =
+  { (financials ~provider:"SEC XBRL companyfacts" ~latest_filing ?cross_check periods) with
+    provider_reason = "CIK 0000320193: us-gaap annual filer (10-K)" }
+
+let test_filing_age_gate () =
+  let v = run (filed (history ())) in
+  Alcotest.check status "fresh filing values" `Ok v.status;
+  Alcotest.(check (option int)) "age recorded" (Some 202) v.filing_age_days;
+  let v = run (filed ~latest_filing:"2025-01-01" (history ())) in
+  check_reason v [ "latest annual filing is 617 days old, older than its max_filing_age_days 400" ];
+  Alcotest.(check (option int)) "age recorded on the failure too" (Some 617) v.filing_age_days;
+  Alcotest.(check (option model)) "routed before the gate" (Some `Dcf) v.model;
+  Alcotest.(check bool) "nothing computed" true (Option.is_none v.inputs);
+  let v = run (filed ~latest_filing:"2026-02" (history ())) in
+  check_reason v [ "latest_filing"; "2026-02" ];
+  let v = run (financials (history ())) in
+  Alcotest.(check (option int)) "vendor records carry no filing age" None v.filing_age_days
+
+let test_provider_decision_on_every_record () =
+  let refused = run ~declared:(Some (declaration `Wrapper)) (filed ~cross_check:a_cross_check (history ())) in
+  check_reason refused [ "dcf not admissible for Wrapper" ];
+  Alcotest.(check string) "statements provider" "SEC XBRL companyfacts" refused.statements_provider;
+  Alcotest.(check string) "market provider" "yfinance" refused.market_provider;
+  check_mentions "reason" refused.provider_reason [ "us-gaap annual filer" ];
+  (match refused.cross_check with
+  | Some c -> Alcotest.(check int) "cross-check carried" 1 c.disagreements
+  | None -> Alcotest.fail "cross-check dropped");
+  let vendor = run (financials (history ())) in
+  Alcotest.(check string) "vendor statements" "yfinance" vendor.statements_provider;
+  Alcotest.(check bool) "no cross-check" true (Option.is_none vendor.cross_check);
+  check_mentions "json" (Boundary_j.string_of_valuation refused) [ {|"statements_provider":"SEC XBRL companyfacts"|}; {|"cross_check":{|} ];
+  if contains (Boundary_j.string_of_valuation vendor) "cross_check" then Alcotest.fail "cross_check leaked into a vendor record"
+
+let test_summary_cross_check_line_and_provider_diff () =
+  let primary = run (filed ~cross_check:a_cross_check (history ())) in
+  let shadow = run (financials (history ~capex:400. ())) in
+  let s = Batch.summary [ primary; shadow ] in
+  check_mentions "summary" s [ "cross-check: 1 of 1 filed-statement records disagree"; "most often: cash (1)" ];
+  let d = Batch.provider_diff [ (primary, Some shadow); (shadow, None) ] in
+  check_mentions "diff" d
+    [ "yfinance -> SEC XBRL companyfacts: old"; "delta";
+      "cash                       filed 36.00  vendor 54.70  differ 34.2%";
+      "absent from the filing, present at the vendor: ebit";
+      "TEST       unchanged (statements from yfinance)" ];
+  let quiet = Batch.summary [ shadow ] in
+  if contains quiet "cross-check:" then Alcotest.fail "cross-check line on a batch without checks"
 
 (* --- batch summary --- *)
 
@@ -1569,6 +1650,12 @@ let () =
           case "guards fail, never zero" test_ri_guards;
           case "loan-loss ratios recorded" test_ri_loan_loss_recorded;
           case "a bank routes to residual income, never the dcf" test_bank_routes_to_residual_income;
+        ] );
+      ( "filed statements",
+        [
+          case "filing-age gate" test_filing_age_gate;
+          case "provider decision on every record, cross-check carried" test_provider_decision_on_every_record;
+          case "summary cross-check line and provider diff" test_summary_cross_check_line_and_provider_diff;
         ] );
       ( "cross-currency",
         [

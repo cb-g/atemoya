@@ -20,10 +20,11 @@ type t = {
   admissibility : Reference_t.admissibility;
   fx_sources : Reference_t.fx_sources;
   fx_rates : Reference_t.fx_rates;
+  xbrl_tags : Reference_t.xbrl_tags;
 }
 
 val load : dir:string -> (t, string) result
-(** Reads the eight files under [dir]; the error names the file and the parse
+(** Reads the nine files under [dir]; the error names the file and the parse
     problem. *)
 
 val days_between : from:string -> until:string -> (int, string) result
