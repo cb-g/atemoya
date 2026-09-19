@@ -409,12 +409,26 @@ type dna_totals = {
   totals : string list;                 (* every total tag evaluated per period; the largest present wins *)
 }
 
+(* IFRS (32): depreciation and amortisation excluding impairment. The pure tag first; where
+   absent, the inclusive tag less the impairment filed (the total, else the sum of the
+   components) plus the reversal filed (the total, else its components); the plain
+   adjustment tag as a total only when neither is filed. Recorded as a recipe per period. *)
+type dna_ifrs = {
+  pure : string list;                   (* depreciation and amortisation without impairment *)
+  inclusive : string list;              (* depreciation, amortisation and impairment net of reversals *)
+  impairment : string list;             (* the impairment total *)
+  impairment_components : string list;
+  reversal : string list;               (* the reversal total *)
+  reversal_components : string list;
+  totals : string list;                 (* plain totals, largest wins, when neither pure nor inclusive is filed *)
+}
+
 type dna_definition = {
   name : string;
   why : string;
   rule : string;                        (* largest_filed_total *)
   xbrl : dna_totals;
-  ifrs : dna_totals;
+  ifrs : dna_ifrs;
   ~notes : string list;
 }
 

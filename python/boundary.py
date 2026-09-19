@@ -3338,6 +3338,8 @@ class FiscalPeriod:
     interest_expense: Optional[float] = None
     interest_expense_row: Optional[str] = None
     depreciation_amortization_candidates: Optional[List[Component]] = None
+    depreciation_amortization_recipe: Optional[str] = None
+    depreciation_amortization_composition: Optional[Composition] = None
     cash_composition: Optional[Composition] = None
     total_debt_composition: Optional[Composition] = None
     delta_nwc_composition: Optional[Composition] = None
@@ -3407,6 +3409,8 @@ class FiscalPeriod:
                 interest_expense=_atd_read_float(x['interest_expense']) if 'interest_expense' in x else None,
                 interest_expense_row=_atd_read_string(x['interest_expense_row']) if 'interest_expense_row' in x else None,
                 depreciation_amortization_candidates=_atd_read_list(Component.from_json)(x['depreciation_amortization_candidates']) if 'depreciation_amortization_candidates' in x else None,
+                depreciation_amortization_recipe=_atd_read_string(x['depreciation_amortization_recipe']) if 'depreciation_amortization_recipe' in x else None,
+                depreciation_amortization_composition=Composition.from_json(x['depreciation_amortization_composition']) if 'depreciation_amortization_composition' in x else None,
                 cash_composition=Composition.from_json(x['cash_composition']) if 'cash_composition' in x else None,
                 total_debt_composition=Composition.from_json(x['total_debt_composition']) if 'total_debt_composition' in x else None,
                 delta_nwc_composition=Composition.from_json(x['delta_nwc_composition']) if 'delta_nwc_composition' in x else None,
@@ -3515,6 +3519,10 @@ class FiscalPeriod:
             res['interest_expense_row'] = _atd_write_string(self.interest_expense_row)
         if self.depreciation_amortization_candidates is not None:
             res['depreciation_amortization_candidates'] = _atd_write_list((lambda x: x.to_json()))(self.depreciation_amortization_candidates)
+        if self.depreciation_amortization_recipe is not None:
+            res['depreciation_amortization_recipe'] = _atd_write_string(self.depreciation_amortization_recipe)
+        if self.depreciation_amortization_composition is not None:
+            res['depreciation_amortization_composition'] = (lambda x: x.to_json())(self.depreciation_amortization_composition)
         if self.cash_composition is not None:
             res['cash_composition'] = (lambda x: x.to_json())(self.cash_composition)
         if self.total_debt_composition is not None:

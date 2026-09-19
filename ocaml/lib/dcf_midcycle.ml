@@ -117,6 +117,13 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
               Error
                 (Printf.sprintf "through the cycle the business reinvested more than it earned (reinvestment rate %.4f)"
                    reinvestment_rate_mid)
+            else if reinvestment_rate_mid < 0. then
+              (* Disinvestment (32): the model cannot express liquidation cash flows and growth
+                 returning to the terminal rate at once. *)
+              Error
+                (Printf.sprintf
+                   "through the cycle the business disinvested (reinvestment rate %.4f); the mid-cycle model cannot express liquidation and growth together"
+                   reinvestment_rate_mid)
             else
               let fcff_mid = nopat_mid *. (1. -. reinvestment_rate_mid) in
               let g_fundamental = roic_mid *. reinvestment_rate_mid in

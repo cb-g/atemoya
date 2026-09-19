@@ -1761,6 +1761,53 @@ class DnaTotals:
 
 
 @dataclass
+class DnaIfrs:
+    """Original type: dna_ifrs = { ... }
+    """
+
+    pure: List[str]
+    inclusive: List[str]
+    impairment: List[str]
+    impairment_components: List[str]
+    reversal: List[str]
+    reversal_components: List[str]
+    totals: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DnaIfrs':
+        if isinstance(x, dict):
+            return cls(
+                pure=_atd_read_list(_atd_read_string)(x['pure']) if 'pure' in x else _atd_missing_json_field('DnaIfrs', 'pure'),
+                inclusive=_atd_read_list(_atd_read_string)(x['inclusive']) if 'inclusive' in x else _atd_missing_json_field('DnaIfrs', 'inclusive'),
+                impairment=_atd_read_list(_atd_read_string)(x['impairment']) if 'impairment' in x else _atd_missing_json_field('DnaIfrs', 'impairment'),
+                impairment_components=_atd_read_list(_atd_read_string)(x['impairment_components']) if 'impairment_components' in x else _atd_missing_json_field('DnaIfrs', 'impairment_components'),
+                reversal=_atd_read_list(_atd_read_string)(x['reversal']) if 'reversal' in x else _atd_missing_json_field('DnaIfrs', 'reversal'),
+                reversal_components=_atd_read_list(_atd_read_string)(x['reversal_components']) if 'reversal_components' in x else _atd_missing_json_field('DnaIfrs', 'reversal_components'),
+                totals=_atd_read_list(_atd_read_string)(x['totals']) if 'totals' in x else _atd_missing_json_field('DnaIfrs', 'totals'),
+            )
+        else:
+            _atd_bad_json('DnaIfrs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['pure'] = _atd_write_list(_atd_write_string)(self.pure)
+        res['inclusive'] = _atd_write_list(_atd_write_string)(self.inclusive)
+        res['impairment'] = _atd_write_list(_atd_write_string)(self.impairment)
+        res['impairment_components'] = _atd_write_list(_atd_write_string)(self.impairment_components)
+        res['reversal'] = _atd_write_list(_atd_write_string)(self.reversal)
+        res['reversal_components'] = _atd_write_list(_atd_write_string)(self.reversal_components)
+        res['totals'] = _atd_write_list(_atd_write_string)(self.totals)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DnaIfrs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class DnaDefinition:
     """Original type: dna_definition = { ... }
     """
@@ -1769,7 +1816,7 @@ class DnaDefinition:
     why: str
     rule: str
     xbrl: DnaTotals
-    ifrs: DnaTotals
+    ifrs: DnaIfrs
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -1780,7 +1827,7 @@ class DnaDefinition:
                 why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('DnaDefinition', 'why'),
                 rule=_atd_read_string(x['rule']) if 'rule' in x else _atd_missing_json_field('DnaDefinition', 'rule'),
                 xbrl=DnaTotals.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('DnaDefinition', 'xbrl'),
-                ifrs=DnaTotals.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('DnaDefinition', 'ifrs'),
+                ifrs=DnaIfrs.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('DnaDefinition', 'ifrs'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:

@@ -59,7 +59,7 @@
       "admissible_models": [
         "dcf_midcycle"
       ],
-      "never": "a DCF on one year's FCFF",
+      "never": "a DCF on one year's FCFF; the bottom-up NOPAT adds back all interest as financing, so a captive finance arm, whose interest is an operating cost of a lending business, overstates the through-cycle return by the arm's funding cost, a known limit declared as a scope limit on such names",
       "floor_basis_default": "a completed mid-cycle DCF",
       "scope_limits_default": [
         "the through-cycle average is backward-looking; reserve replacement, the energy transition, or a declared structural break are not assessed"

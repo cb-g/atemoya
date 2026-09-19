@@ -226,29 +226,67 @@ def value_of(selected: Selected, field: str, end: date) -> tuple[float | None, s
     return (hit[0].val, hit[1]) if hit else (None, None)
 
 
-def depreciation(facts: "Facts", selected: Selected, tags: reference.XbrlTags, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> tuple[float | None, str | None, list[boundary.Component] | None]:
+DnaResult = tuple[float | None, str | None, list[boundary.Component] | None, str | None, boundary.Composition | None]
+
+
+def depreciation_ifrs(facts: "Facts", defs: reference.FieldDefinitions, end: date) -> DnaResult:
+    """IFRS D&A excluding impairment (32): the pure tag; else the inclusive tag less the
+    impairment filed (total, else components) plus the reversal filed (total, else
+    components), recorded as a recipe with every tag; else the plain adjustment tag as a
+    total. (value, row, candidates, recipe, composition)."""
+    definition = defs.depreciation_amortization
+    assert definition is not None
+    d = definition.ifrs
+    pure = facts.first(d.pure, end, instant=False)
+    if pure is not None:
+        return pure[0], pure[1], [boundary.Component(name="total", value=pure[0], row=pure[1])], "pure", None
+    inclusive = facts.first(d.inclusive, end, instant=False)
+    if inclusive is not None:
+        parts = [boundary.Component(name="inclusive", value=inclusive[0], row=inclusive[1])]
+        impairment = facts.first(d.impairment, end, instant=False)
+        if impairment is not None:
+            parts.append(boundary.Component(name="impairment", value=-impairment[0], row=impairment[1]))
+        else:
+            parts += [boundary.Component(name="impairment_component", value=-v, row=tag) for tag in d.impairment_components if (v := facts.at(tag, end, instant=False)) is not None]
+        reversal = facts.first(d.reversal, end, instant=False)
+        if reversal is not None:
+            parts.append(boundary.Component(name="reversal", value=reversal[0], row=reversal[1]))
+        else:
+            parts += [boundary.Component(name="reversal_component", value=v, row=tag) for tag in d.reversal_components if (v := facts.at(tag, end, instant=False)) is not None]
+        return sum(p.value for p in parts), _label(parts), None, "inclusive_less_impairment", _composition(definition.name, parts)
+    candidates = [boundary.Component(name="total", value=v, row=tag) for tag in d.totals if (v := facts.at(tag, end, instant=False)) is not None]
+    if candidates:
+        taken = max(candidates, key=lambda c: c.value)
+        return taken.value, taken.row, candidates, "total", None
+    return None, None, None, None, None
+
+
+def depreciation(facts: "Facts", selected: Selected, tags: reference.XbrlTags, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> DnaResult:
     """D&A per the definition (27): every total tag present for the period is a candidate and
     the field is the largest, candidates recorded; the components fallback only when no
-    total is filed. (value, row, candidates)."""
+    total is filed; under IFRS the recipe excludes impairment (32). (value, row, candidates,
+    recipe, composition)."""
     definition = defs.depreciation_amortization
     if definition is None:
         raise ValueError("field_definitions.json carries no depreciation_amortization definition")
-    totals = definition.ifrs.totals if taxonomy == "ifrs-full" else definition.xbrl.totals
+    if taxonomy == "ifrs-full":
+        return depreciation_ifrs(facts, defs, end)
+    totals = definition.xbrl.totals
     candidates = [boundary.Component(name="total", value=v, row=tag) for tag in totals if (v := facts.at(tag, end, instant=False)) is not None]
     if candidates:
         taken = max(candidates, key=lambda c: c.value)
-        return taken.value, taken.row, candidates
+        return taken.value, taken.row, candidates, None, None
     parts: list[tuple[float, str]] = []
     for i, field in enumerate(tags.depreciation_components):
         v, r = value_of(selected, field, end)
         if v is None:
             if i == 0:
-                return None, None, None
+                return None, None, None, None, None
             continue
         parts.append((v, r or field))
     if not parts:
-        return None, None, None
-    return sum(v for v, _ in parts), " + ".join(r for _, r in parts), None
+        return None, None, None, None, None
+    return sum(v for v, _ in parts), " + ".join(r for _, r in parts), None, None, None
 
 
 class Facts:
@@ -579,7 +617,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         r: dict[str, str | None] = {}
         for field, _ in taxonomy_fields(tags, taxonomy):
             v[field], r[field] = value_of(selected, field, end)
-        dna, dna_row, dna_candidates = depreciation(facts, selected, tags, defs, end, taxonomy=taxonomy)
+        dna, dna_row, dna_candidates, dna_recipe, dna_composition = depreciation(facts, selected, tags, defs, end, taxonomy=taxonomy)
         if ifrs:
             cash_value, cash_row, cash_composition = cash_ifrs(facts, defs, end)
             debt, debt_row, debt_composition = total_debt_ifrs(facts, defs, end)
@@ -602,6 +640,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 total_revenue=v["total_revenue"], net_interest_income=v["net_interest_income"],
                 premiums_earned=v["premiums_earned"], premiums_earned_row=r["premiums_earned"],
                 depreciation_amortization=dna, depreciation_amortization_row=dna_row, depreciation_amortization_candidates=dna_candidates,
+                depreciation_amortization_recipe=dna_recipe, depreciation_amortization_composition=dna_composition,
                 capex=v["capex"], delta_nwc=nwc, cash=cash_value,
                 total_debt=debt, total_debt_source=debt_row,
                 book_equity=v["book_equity"], net_income=v["net_income"],

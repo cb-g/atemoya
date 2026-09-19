@@ -698,4 +698,47 @@ def test_depreciation_is_the_largest_filed_total_with_candidates_recorded() -> N
     definition = DEFS.depreciation_amortization
     assert definition is not None and definition.rule == "largest_filed_total"
     assert definition.xbrl.totals == dict(TAGS.fields)["depreciation_amortization"].tags
-    assert definition.ifrs.totals == dict(TAGS.ifrs_full_fields)["depreciation_amortization"].tags
+    assert definition.ifrs.pure + definition.ifrs.totals == dict(TAGS.ifrs_full_fields)["depreciation_amortization"].tags
+
+
+def ifrs_dna_period(facts: Mapping[str, object]) -> fetch.boundary.FiscalPeriod:
+    anchors = {"ProfitLossAttributableToOwnersOfParent": usd(fact("2025-12-31", 10e9, start="2025-01-01", form="20-F")),
+               "EquityAttributableToOwnersOfParent": usd(fact("2025-12-31", 50e9, form="20-F"))}
+    return fetch_sec.periods_from_facts({**anchors, **facts}, TAGS, DEFS, [], taxonomy="ifrs-full", unit="USD")[0]
+
+
+def twenty_f_fact(tag: str, v: float) -> dict[str, object]:
+    return {tag: usd(fact("2025-12-31", v, start="2025-01-01", form="20-F"))}
+
+
+def test_ifrs_depreciation_excludes_impairment_by_recipe() -> None:
+    """Shell FY2025 by hand (32): inclusive 25,299 less impairment 3,175 plus reversal 42;
+    the pure tag wins when filed (BP); components stand in for an absent total; the plain
+    adjustment tag is a total only when neither is filed (SAP)."""
+    f = twenty_f_fact
+    shell = {**f("DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss", 25299e6),
+             **f("AdjustmentsForDepreciationAndAmortisationExpense", 25299e6),
+             **f("ImpairmentLossRecognisedInProfitOrLoss", 3175e6), **f("ImpairmentLossRecognisedInProfitOrLossPropertyPlantAndEquipment", 2799e6),
+             **f("ReversalOfImpairmentLossRecognisedInProfitOrLoss", 42e6)}
+    p = ifrs_dna_period(shell)
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 22166e6)
+    assert p.depreciation_amortization_recipe == "inclusive_less_impairment" and p.depreciation_amortization_candidates is None
+    assert components(p.depreciation_amortization_composition) == [
+        ("inclusive", 25299e6, "DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss"),
+        ("impairment", -3175e6, "ImpairmentLossRecognisedInProfitOrLoss"), ("reversal", 42e6, "ReversalOfImpairmentLossRecognisedInProfitOrLoss")]
+    # components stand in when the totals are not filed; an untagged impairment is never subtracted
+    p = ifrs_dna_period({**f("DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss", 25299e6),
+                     **f("ImpairmentLossRecognisedInProfitOrLossPropertyPlantAndEquipment", 2799e6), **f("ImpairmentLossRecognisedInProfitOrLossGoodwill", 161e6),
+                     **f("ReversalOfImpairmentLossRecognisedInProfitOrLossPropertyPlantAndEquipment", 42e6)})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 25299e6 - 2799e6 - 161e6 + 42e6)
+    assert [c.name for c in (p.depreciation_amortization_composition.components if p.depreciation_amortization_composition else [])] == ["inclusive", "impairment_component", "impairment_component", "reversal_component"]
+    p = ifrs_dna_period(f("DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss", 25299e6))
+    assert p.depreciation_amortization == 25299e6 and p.depreciation_amortization_recipe == "inclusive_less_impairment"
+    # the pure tag first, whatever else is filed (BP)
+    p = ifrs_dna_period({**shell, **f("DepreciationAndAmortisationExpense", 17822e6)})
+    assert (p.depreciation_amortization, p.depreciation_amortization_row, p.depreciation_amortization_recipe) == (17822e6, "DepreciationAndAmortisationExpense", "pure")
+    assert p.depreciation_amortization_composition is None
+    # the plain adjustment tag stands as a total only when neither is filed (SAP)
+    p = ifrs_dna_period(f("AdjustmentsForDepreciationAndAmortisationExpense", 1311e6))
+    assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (1311e6, "total")
+    assert ifrs_dna_period({}).depreciation_amortization is None

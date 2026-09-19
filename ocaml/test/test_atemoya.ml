@@ -18,7 +18,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
     ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?weighted_shares
     ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates ?aoci_recipe ?aoci_composition
-    ?interest_recipe () : Boundary_t.fiscal_period =
+    ?interest_recipe ?depreciation_amortization_recipe ?depreciation_amortization_composition () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -78,6 +78,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     interest_expense;
     interest_expense_row;
     depreciation_amortization_candidates;
+    depreciation_amortization_recipe;
+    depreciation_amortization_composition;
     aoci_recipe;
     aoci_composition;
     interest_recipe;
@@ -1089,14 +1091,14 @@ let test_bank_routes_to_residual_income () =
    newest first: 1200, 900, -300, 600, 1500, 1800, 300, 1000, 1100, 600. The oldest year has
    no prior capital, so nine observations; their ebit sums to 8100, mean 900, so at the 21%
    statutory rate roic_mid = 0.79 * 900 / 9000 = 0.079 exactly; the sorted middle is 1000,
-   so the median is 0.79 * 1000 / 9000. Each year reinvests capex 50 - d&a 200 + delta_nwc
-   50 = -100, so the sums are -1000 over 0.79 * 8700. *)
+   so the median is 0.79 * 1000 / 9000. Each year reinvests capex 300 - d&a 200 + delta_nwc
+   50 = 150, so the sums are 1500 over 0.79 * 8700. *)
 let midcycle_ebits = [ 1200.; 900.; -300.; 600.; 1500.; 1800.; 300.; 1000.; 1100.; 600. ]
 
 (* Bottom-up NOPAT (25): each year files net income 0.79 x (ebit - 100) and interest expense
    100, so net income + 100 x 0.79 = 0.79 x ebit and every expectation below still reads on
    ebit; no ebit is filed at all, so the model cannot be reading one. *)
-let midcycle_periods ?(ebits = midcycle_ebits) ?(capex = 50.) ?(start_year = 2025) () =
+let midcycle_periods ?(ebits = midcycle_ebits) ?(capex = 300.) ?(start_year = 2025) () =
   List.mapi
     (fun i ebit ->
       { (full_period ~period_end:(Printf.sprintf "%d-12-31" (start_year - i)) ~ebit ~capex ()) with
@@ -1130,14 +1132,14 @@ let test_midcycle_arithmetic () =
   Alcotest.(check string) "on the prior period's capital" "2022-12-31" loss.prior_period_end;
   check_float "invested capital latest" 9000. m.invested_capital_latest;
   check_float "nopat_mid" 711. m.nopat_mid;
-  check_float "reinvestment sum" (-1000.) m.reinvestment_sum;
+  check_float "reinvestment sum" 1500. m.reinvestment_sum;
   check_float "nopat sum at the statutory rate, the loss year included" (0.79 *. 8700.) m.nopat_sum;
-  check_float "reinvestment rate is sum over sum, not a mean of ratios" (-1000. /. (0.79 *. 8700.)) m.reinvestment_rate_mid;
-  let mean_of_ratios = let xs = List.map (fun e -> -100. /. (0.79 *. e)) midcycle_ebits in List.fold_left ( +. ) 0. xs /. 10. in
+  check_float "reinvestment rate is sum over sum, not a mean of ratios" (1500. /. (0.79 *. 8700.)) m.reinvestment_rate_mid;
+  let mean_of_ratios = let xs = List.map (fun e -> 150. /. (0.79 *. e)) midcycle_ebits in List.fold_left ( +. ) 0. xs /. 10. in
   if Float.abs (mean_of_ratios -. m.reinvestment_rate_mid) < 1e-6 then Alcotest.fail "a mean of ratios";
   check_float "fcff_mid" (711. *. (1. -. m.reinvestment_rate_mid)) m.fcff_mid;
-  Alcotest.(check (option approx)) "spot fcff is the latest year's own flow" (Some 1048.) m.spot_fcff;
-  Alcotest.(check (option approx)) "spot to mid-cycle" (Some (1048. /. m.fcff_mid)) m.spot_to_midcycle;
+  Alcotest.(check (option approx)) "spot fcff is the latest year's own flow" (Some 798.) m.spot_fcff;
+  Alcotest.(check (option approx)) "spot to mid-cycle" (Some (798. /. m.fcff_mid)) m.spot_to_midcycle;
   Alcotest.(check (option string)) "no spot reason" None m.spot_reason;
   Alcotest.(check int) "no exclusions on a full window" 0 (List.length m.exclusions);
   check_float "g0 = roic_mid * r_mid, inside the clamp" (0.079 *. m.reinvestment_rate_mid) m.dcf.g0;
@@ -1169,6 +1171,9 @@ let test_midcycle_guards () =
   fail (midcycle_periods ~ebits:(List.map (fun e -> -.Float.abs e) midcycle_ebits) ())
     [ Printf.sprintf "through the cycle the business did not earn a positive return on its capital (mean roic %.4f over 9 observations)" (0.79 *. (-8700. /. 9.) /. 9000.) ];
   fail (midcycle_periods ~capex:2000. ()) [ "through the cycle the business reinvested more than it earned (reinvestment rate " ];
+  (* disinvestment (32): capex below d&a every year, so the reinvestment sum is negative *)
+  fail (midcycle_periods ~capex:20. ())
+    [ "through the cycle the business disinvested (reinvestment rate "; "the mid-cycle model cannot express liquidation and growth together" ];
   (* the window cap: twenty periods, a fifteen-year window *)
   let twenty = midcycle_periods ~ebits:(midcycle_ebits @ midcycle_ebits) () in
   (match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials twenty) with
@@ -1187,7 +1192,7 @@ let test_midcycle_guards () =
       Alcotest.(check (list string)) "the exclusion is named"
         [ "2022-12-31 reinvestment capex" ]
         (List.map (fun (e : Boundary_t.midcycle_exclusion) -> String.concat " " [ e.period_end; e.sum; e.missing ]) m.exclusions);
-      check_float "the sums skip it" (-900.) m.reinvestment_sum
+      check_float "the sums skip it" 1350. m.reinvestment_sum
   | Error e -> Alcotest.fail e);
   fail (without_capex [ 3; 5; 7 ])
     [ "mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat, have 7; the provider carries 10 periods" ];
@@ -1237,7 +1242,7 @@ let test_midcycle_guards () =
   Alcotest.check status "cyclical Ok" `Ok ok.status;
   Alcotest.(check (list string)) "scope limits: own, then the class default"
     [ "own limit"; "the through-cycle average is backward-looking" ] ok.scope_limits;
-  check_mentions "floor names the mid-cycle basis" ok.floor.basis [ "mid-cycle dcf: fcff_mid"; "spot fcff 1048" ];
+  check_mentions "floor names the mid-cycle basis" ok.floor.basis [ "mid-cycle dcf: fcff_mid"; "spot fcff 798" ];
   (match ok.inputs with
   | Some (`Dcf_midcycle _) -> ()
   | _ -> Alcotest.fail "inputs are not the mid-cycle block");
@@ -1471,6 +1476,7 @@ let test_flow_chart_names_every_reason () =
       "mid-cycle normalisation needs at least 8 annual return observations";
       "through the cycle the business did not earn a positive return on its capital";
       "through the cycle the business reinvested more than it earned";
+      "through the cycle the business disinvested";
       "mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat";
       "risk-free curve not fetched for"; "fx not fetched for";
       "non-positive free cash flow"; "the DCF is not applicable; declared";

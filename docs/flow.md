@@ -80,6 +80,7 @@ flowchart TD
     MID_GUARDS -- "horizon < 0" --> F_HORIZON
     MID_GUARDS -- "ROIC_mid <= 0, or the window's NOPAT sum <= 0" --> F_MIDROIC["through the cycle the business did not earn a positive return on its capital ((mean roic r over k observations) or (the sum of nopat over n periods, s, is not positive)) (22)"]:::failed
     MID_GUARDS -- "r_mid >= 1" --> F_MIDREINV["through the cycle the business reinvested more than it earned (reinvestment rate r) (22)"]:::failed
+    MID_GUARDS -- "r_mid < 0 (32): through the cycle the business returned more capital than it consumed, and liquidation cash flows cannot sit beside growth returning to the terminal rate" --> F_MIDDISINV["through the cycle the business disinvested (reinvestment rate r); the mid-cycle model cannot express liquidation and growth together (32)"]:::failed
     MID_GUARDS -- "wacc <= terminal growth" --> F_WACC
     MID_GUARDS -- ok --> MID_EV["ROIC_mid = arithmetic mean of the observations, the bad years included (median recorded, not used); NOPAT_mid = ROIC_mid x latest invested capital; r_mid = sum(capex - d&a + delta_nwc) / sum NOPAT_t over the window, sums not a mean of ratios; FCFF_mid = NOPAT_mid x (1 - r_mid); g0 = ROIC_mid x r_mid under the DCF's clamp and lambda; then the DCF engine unchanged (EV along the path + Gordon terminal, equity = EV - net debt, per effective share); the record carries the window, every ROIC_t, the aggregates, the latest year's spot FCFF and spot / mid-cycle; the implied readouts run unchanged on FCFF_mid and g0; no price deck anywhere"]:::new
     MID_EV -- "not finite" --> F_NAN
@@ -148,6 +149,7 @@ flowchart TD
     F_MIDREINVN --> FLOOR
     F_NOFETCH --> FLOOR
     F_NEGFCFF --> FLOOR
+    F_MIDDISINV --> FLOOR
     F_FXFETCH --> FLOOR
     F_ROE --> FLOOR
     F_PAYOUT --> FLOOR
@@ -220,7 +222,11 @@ at all (25):
    today's capital). Inside the mid-cycle window a period lacking a flow is excluded from
    the sum it cannot serve, named on the record, and the guards count what remains: at
    least 8 return observations and at least 8 periods in the reinvestment sums.
-5. **D&A is the largest filed total** (27), inside the FFO recipe too (31). When several D&A total tags are filed in one
+5. **D&A is the largest filed total** (27), inside the FFO recipe too (31). **Under IFRS
+   it excludes impairment** (32): the pure tag first; where absent, the inclusive tag less
+   the impairment filed (the total, else its components) plus the reversal filed, recorded
+   as `inclusive_less_impairment` with every tag; an impairment the filing does not tag is
+   never subtracted. When several D&A total tags are filed in one
    period the field is the largest, since a total is never smaller than any of its
    components; every candidate is recorded with the tag taken. The components fallback
    applies only when no total is filed.
@@ -346,3 +352,8 @@ in this order:
   the FFO depreciation list with the largest-total rule, interest stand-ins for the
   mid-cycle NOPAT, Shell's IFRS capex line; one new `Failed` string, the non-positive
   free-cash-flow guard on the dcf path.
+- IFRS depreciation, disinvestment, captive finance, ORCL (32): the IFRS D&A recipe
+  excludes impairment by filed totals or components; a negative through-cycle reinvestment
+  rate fails the mid-cycle model (one new `Failed` string); Caterpillar and Ford declare
+  the captive-finance scope limit and the Cyclical class text names it; Oracle is declared
+  Cyclical.

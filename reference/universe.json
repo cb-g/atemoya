@@ -257,8 +257,11 @@
     },
     {
       "ticker": "ORCL",
-      "entity_class": "OperatingCompany",
-      "why": "mature software carrying large debt; no longer high growth"
+      "entity_class": "Cyclical",
+      "why": "software and cloud infrastructure; a build-out inside the growth window makes the latest year's free cash flow negative; through-cycle return on today's capital is the question",
+      "scope_limits": [
+        "structural: a capacity build-out whose returns are not yet in the window"
+      ]
     },
     {
       "ticker": "CSCO",
@@ -306,12 +309,18 @@
     {
       "ticker": "CAT",
       "entity_class": "Cyclical",
-      "why": "heavy equipment: the industrial cycle rather than a commodity price"
+      "why": "heavy equipment: the industrial cycle rather than a commodity price",
+      "scope_limits": [
+        "captive finance arm: its interest is an operating cost that the bottom-up NOPAT adds back as financing; the through-cycle return is overstated by the arm's funding cost"
+      ]
     },
     {
       "ticker": "F",
       "entity_class": "Cyclical",
-      "why": "autos: cyclical with a captive finance arm, so finance debt sits beside industrial debt"
+      "why": "autos: cyclical with a captive finance arm, so finance debt sits beside industrial debt",
+      "scope_limits": [
+        "captive finance arm: its interest is an operating cost that the bottom-up NOPAT adds back as financing; the through-cycle return is overstated by the arm's funding cost"
+      ]
     },
     {
       "ticker": "NUE",

@@ -436,7 +436,7 @@
   },
   "depreciation_amortization": {
     "name": "largest_filed_total",
-    "why": "Filers tag their D&A total under different elements, and a tag that is the total on one filing is a sub-line on another: Valero files DepreciationAmortizationAndAccretionNet (3.158bn for FY2025, the cash-flow line) beside DepreciationAndAmortization (0.063bn, a sub-line), and a list ordered by preference took the 0.063bn because that tag came second. No order is right for every filer. Within one fiscal period every total tag present is evaluated and the field is the largest, on the ground that a total is never smaller than any of its components and all candidates are non-negative aggregates of the same kind; every candidate is recorded on the period with its value and the tag taken. The components fallback, depreciation plus amortisation of intangibles, applies only when no total tag is present (Intel, CrowdStrike's depreciation is not filed at all).",
+    "why": "Filers tag their D&A total under different elements, and a tag that is the total on one filing is a sub-line on another: Valero files DepreciationAmortizationAndAccretionNet (3.158bn for FY2025, the cash-flow line) beside DepreciationAndAmortization (0.063bn, a sub-line), and a list ordered by preference took the 0.063bn because that tag came second. No order is right for every filer. Within one fiscal period every total tag present is evaluated and the field is the largest, on the ground that a total is never smaller than any of its components and all candidates are non-negative aggregates of the same kind; every candidate is recorded on the period with its value and the tag taken. The components fallback, depreciation plus amortisation of intangibles, applies only when no total tag is present (Intel, CrowdStrike's depreciation is not filed at all). Under IFRS (32) the field is depreciation and amortisation excluding impairment: an impairment is a write-down, not consumption of capital that capex replaces, so an inclusive figure makes net reinvestment read too low across a window. The pure tag is preferred; where absent, the inclusive tag less the impairment filed (the total, else the sum of the filed components) plus the reversal filed (the total, else its components), recorded as the recipe inclusive_less_impairment with every tag and value; the plain adjustment tag stands as a total only when neither is filed.",
     "rule": "largest_filed_total",
     "xbrl": {
       "totals": [
@@ -446,13 +446,36 @@
       ]
     },
     "ifrs": {
+      "pure": [
+        "DepreciationAndAmortisationExpense"
+      ],
+      "inclusive": [
+        "DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss"
+      ],
+      "impairment": [
+        "ImpairmentLossRecognisedInProfitOrLoss"
+      ],
+      "impairment_components": [
+        "ImpairmentLossRecognisedInProfitOrLossPropertyPlantAndEquipment",
+        "ImpairmentLossRecognisedInProfitOrLossIntangibleAssetsOtherThanGoodwill",
+        "ImpairmentLossRecognisedInProfitOrLossGoodwill",
+        "ImpairmentLossRecognisedInProfitOrLossRightofuseAssets"
+      ],
+      "reversal": [
+        "ReversalOfImpairmentLossRecognisedInProfitOrLoss"
+      ],
+      "reversal_components": [
+        "ReversalOfImpairmentLossRecognisedInProfitOrLossPropertyPlantAndEquipment",
+        "ReversalOfImpairmentLossRecognisedInProfitOrLossIntangibleAssetsOtherThanGoodwill",
+        "ReversalOfImpairmentLossRecognisedInProfitOrLossRightofuseAssets"
+      ],
       "totals": [
-        "DepreciationAndAmortisationExpense",
         "AdjustmentsForDepreciationAndAmortisationExpense"
       ]
     },
     "notes": [
-      "Verified 2026-09-19 across the 43-name universe's snapshot: Valero is the only filer carrying two totals in one period where the first by list order was not the largest (FY2016 to FY2025, 0.043 to 0.063bn against 1.894 to 3.158bn); from FY2011 to FY2015 its two or three totals agree. Every other filer carries one total per period, so the rule changes nothing there. The total tags are the same list as xbrl_tags.json's depreciation_amortization field, which the per-period selection still reads; a test holds the two equal."
+      "Verified 2026-09-19 across the 43-name universe's snapshot: Valero is the only filer carrying two totals in one period where the first by list order was not the largest (FY2016 to FY2025, 0.043 to 0.063bn against 1.894 to 3.158bn); from FY2011 to FY2015 its two or three totals agree. Every other filer carries one total per period, so the rule changes nothing there. The total tags are the same list as xbrl_tags.json's depreciation_amortization field, which the per-period selection still reads; a test holds the two equal.",
+      "IFRS verified 2026-09-19 on Shell and BP against the vendor's D&A row, which excludes impairments net of reversals: Shell files the pure tag through FY2018 only and the inclusive one since, and inclusive 25.299 - impairment 3.175 + reversal 0.042 = 22.166bn for FY2025, FY2024 26.872 - 4.502 + 0.333 = 22.703bn, FY2022 18.529 - 2.313 + 6.177 = 22.393bn and FY2023 31.290 - 8.947 + 0.762 = 23.105bn, each matching the vendor's row within the threshold. Shell's AdjustmentsForDepreciationAndAmortisationExpense carries the inclusive amount, so it is a plain total only when neither the pure nor the inclusive tag is filed (TSMC, SAP, Sony, whose vendor rows it matched in brief 13). BP files the pure tag every year (FY2025 17.822bn), matching the vendor's row within the threshold, and does not move."
     ]
   },
   "required_on_latest_period": {

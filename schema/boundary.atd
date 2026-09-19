@@ -109,6 +109,8 @@ type fiscal_period = {
   ?interest_expense : float option;           (* the filed interest expense line, first present of the ebit definition's tags or vendor rows (25); the mid-cycle model's bottom-up NOPAT reads it *)
   ?interest_expense_row : string option;
   ?depreciation_amortization_candidates : component list option;   (* (27) every D&A total tag filed for the period with its value; depreciation_amortization_row names the largest, taken *)
+  ?depreciation_amortization_recipe : string option;               (* (32) ifrs: pure | inclusive_less_impairment | total *)
+  ?depreciation_amortization_composition : composition option;     (* (32) the inclusive figure, the impairment subtracted and the reversal added back, each with its tag *)
   ?cash_composition : composition option;
   ?total_debt_composition : composition option;
   ?delta_nwc_composition : composition option;
