@@ -226,21 +226,29 @@ def value_of(selected: Selected, field: str, end: date) -> tuple[float | None, s
     return (hit[0].val, hit[1]) if hit else (None, None)
 
 
-def depreciation(selected: Selected, tags: reference.XbrlTags, end: date) -> tuple[float | None, str | None]:
-    value, row = value_of(selected, "depreciation_amortization", end)
-    if value is not None:
-        return value, row
+def depreciation(facts: "Facts", selected: Selected, tags: reference.XbrlTags, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> tuple[float | None, str | None, list[boundary.Component] | None]:
+    """D&A per the definition (27): every total tag present for the period is a candidate and
+    the field is the largest, candidates recorded; the components fallback only when no
+    total is filed. (value, row, candidates)."""
+    definition = defs.depreciation_amortization
+    if definition is None:
+        raise ValueError("field_definitions.json carries no depreciation_amortization definition")
+    totals = definition.ifrs.totals if taxonomy == "ifrs-full" else definition.xbrl.totals
+    candidates = [boundary.Component(name="total", value=v, row=tag) for tag in totals if (v := facts.at(tag, end, instant=False)) is not None]
+    if candidates:
+        taken = max(candidates, key=lambda c: c.value)
+        return taken.value, taken.row, candidates
     parts: list[tuple[float, str]] = []
     for i, field in enumerate(tags.depreciation_components):
         v, r = value_of(selected, field, end)
         if v is None:
             if i == 0:
-                return None, None
+                return None, None, None
             continue
         parts.append((v, r or field))
     if not parts:
-        return None, None
-    return sum(v for v, _ in parts), " + ".join(r for _, r in parts)
+        return None, None, None
+    return sum(v for v, _ in parts), " + ".join(r for _, r in parts), None
 
 
 class Facts:
@@ -534,7 +542,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         r: dict[str, str | None] = {}
         for field, _ in taxonomy_fields(tags, taxonomy):
             v[field], r[field] = value_of(selected, field, end)
-        dna, dna_row = depreciation(selected, tags, end)
+        dna, dna_row, dna_candidates = depreciation(facts, selected, tags, defs, end, taxonomy=taxonomy)
         if ifrs:
             cash_value, cash_row, cash_composition = cash_ifrs(facts, defs, end)
             debt, debt_row, debt_composition = total_debt_ifrs(facts, defs, end)
@@ -555,7 +563,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 ebit=ebit_value, pretax_income=v["pretax_income"], tax_provision=v["tax_provision"],
                 total_revenue=v["total_revenue"], net_interest_income=v["net_interest_income"],
                 premiums_earned=v["premiums_earned"], premiums_earned_row=r["premiums_earned"],
-                depreciation_amortization=dna, depreciation_amortization_row=dna_row,
+                depreciation_amortization=dna, depreciation_amortization_row=dna_row, depreciation_amortization_candidates=dna_candidates,
                 capex=v["capex"], delta_nwc=nwc, cash=cash_value,
                 total_debt=debt, total_debt_source=debt_row,
                 book_equity=v["book_equity"], net_income=v["net_income"],

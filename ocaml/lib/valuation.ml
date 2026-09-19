@@ -47,11 +47,15 @@ let floor_verified ~currency (inputs : model_inputs) ~fair_value : floor =
     | `Dcf_midcycle (m : midcycle_inputs) ->
         Printf.sprintf
           "mid-cycle dcf: fcff_mid %.4g %s from a mean roic of %.4f over %d observations (%s to %s) on invested \
-           capital %.4g, reinvestment rate %.4f, spot fcff %.4g (%.2fx mid-cycle) for the fiscal period ending %s, \
+           capital %.4g, reinvestment rate %.4f, spot fcff %s for the fiscal period ending %s, \
            fair value %.2f %s per share against price %.2f"
           m.fcff_mid currency m.roic_mid (List.length m.observations)
           (List.nth m.window (List.length m.window - 1)) (List.hd m.window) m.invested_capital_latest
-          m.reinvestment_rate_mid m.spot_fcff m.spot_to_midcycle m.dcf.fiscal_period_end fair_value currency m.dcf.price
+          m.reinvestment_rate_mid
+          (match (m.spot_fcff, m.spot_to_midcycle) with
+          | Some s, Some r -> Printf.sprintf "%.4g (%.2fx mid-cycle)" s r
+          | _ -> "none (" ^ Option.value m.spot_reason ~default:"" ^ ")")
+          m.dcf.fiscal_period_end fair_value currency m.dcf.price
     | `Reit_ffo_dividend (i : reit_inputs) ->
         Printf.sprintf
           "reit ffo dividend: ffo %.2f %s per share (price/ffo %.1f) covering a dividend of %.2f per share \
@@ -359,9 +363,15 @@ let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~to
     | `Dcf_midcycle -> (
         (* No EBIT policy here (25): the model's NOPAT is bottom-up from net income and
            interest expense, so an operating-income line is not an input to it. *)
-        match Dcf_midcycle.value assumptions ~country fin with
-        | Error reason -> failed reason
-        | Ok (inputs, fair_value) -> finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value)
+        match
+          Option.bind params.field_definitions.required_on_latest_period (fun (r : Reference_t.required_on_latest_period) ->
+              List.assoc_opt "dcf_midcycle" r.models)
+        with
+        | None -> failed "field_definitions.json carries no required_on_latest_period for dcf_midcycle"
+        | Some required -> (
+            match Dcf_midcycle.value assumptions ~country ~required fin with
+            | Error reason -> failed reason
+            | Ok (inputs, fair_value) -> finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value))
   in
   (* The filing-age gate, then the currency gate: the same-currency path untouched, else
      convert and re-source. *)

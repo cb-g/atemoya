@@ -1427,6 +1427,41 @@ class PointInTime:
 
 
 @dataclass
+class MidcycleExclusion:
+    """Original type: midcycle_exclusion = { ... }
+    """
+
+    period_end: str
+    sum: str
+    missing: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'MidcycleExclusion':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('MidcycleExclusion', 'period_end'),
+                sum=_atd_read_string(x['sum']) if 'sum' in x else _atd_missing_json_field('MidcycleExclusion', 'sum'),
+                missing=_atd_read_string(x['missing']) if 'missing' in x else _atd_missing_json_field('MidcycleExclusion', 'missing'),
+            )
+        else:
+            _atd_bad_json('MidcycleExclusion', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['sum'] = _atd_write_string(self.sum)
+        res['missing'] = _atd_write_string(self.missing)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'MidcycleExclusion':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Fundamental:
     """Original type: growth_source = [ ... | Fundamental | ... ]
     """
@@ -1526,15 +1561,15 @@ class Inputs:
     price: float
     market_cap: float
     shares: float
-    ebit: float
+    ebit: Optional[float]
     tax_rate: float
     tax_rate_source: TaxRateSource
     statutory_tax_rate: Parameter
     nopat: float
-    depreciation_amortization: float
+    depreciation_amortization: Optional[float]
     depreciation_amortization_row: Optional[str]
-    capex: float
-    delta_nwc: float
+    capex: Optional[float]
+    delta_nwc: Optional[float]
     delta_nwc_periods: List[str]
     fcff: float
     cash: float
@@ -1586,15 +1621,15 @@ class Inputs:
                 price=_atd_read_float(x['price']) if 'price' in x else _atd_missing_json_field('Inputs', 'price'),
                 market_cap=_atd_read_float(x['market_cap']) if 'market_cap' in x else _atd_missing_json_field('Inputs', 'market_cap'),
                 shares=_atd_read_float(x['shares']) if 'shares' in x else _atd_missing_json_field('Inputs', 'shares'),
-                ebit=_atd_read_float(x['ebit']) if 'ebit' in x else _atd_missing_json_field('Inputs', 'ebit'),
+                ebit=_atd_read_nullable(_atd_read_float)(x['ebit']) if 'ebit' in x else _atd_missing_json_field('Inputs', 'ebit'),
                 tax_rate=_atd_read_float(x['tax_rate']) if 'tax_rate' in x else _atd_missing_json_field('Inputs', 'tax_rate'),
                 tax_rate_source=TaxRateSource.from_json(x['tax_rate_source']) if 'tax_rate_source' in x else _atd_missing_json_field('Inputs', 'tax_rate_source'),
                 statutory_tax_rate=Parameter.from_json(x['statutory_tax_rate']) if 'statutory_tax_rate' in x else _atd_missing_json_field('Inputs', 'statutory_tax_rate'),
                 nopat=_atd_read_float(x['nopat']) if 'nopat' in x else _atd_missing_json_field('Inputs', 'nopat'),
-                depreciation_amortization=_atd_read_float(x['depreciation_amortization']) if 'depreciation_amortization' in x else _atd_missing_json_field('Inputs', 'depreciation_amortization'),
+                depreciation_amortization=_atd_read_nullable(_atd_read_float)(x['depreciation_amortization']) if 'depreciation_amortization' in x else _atd_missing_json_field('Inputs', 'depreciation_amortization'),
                 depreciation_amortization_row=_atd_read_nullable(_atd_read_string)(x['depreciation_amortization_row']) if 'depreciation_amortization_row' in x else _atd_missing_json_field('Inputs', 'depreciation_amortization_row'),
-                capex=_atd_read_float(x['capex']) if 'capex' in x else _atd_missing_json_field('Inputs', 'capex'),
-                delta_nwc=_atd_read_float(x['delta_nwc']) if 'delta_nwc' in x else _atd_missing_json_field('Inputs', 'delta_nwc'),
+                capex=_atd_read_nullable(_atd_read_float)(x['capex']) if 'capex' in x else _atd_missing_json_field('Inputs', 'capex'),
+                delta_nwc=_atd_read_nullable(_atd_read_float)(x['delta_nwc']) if 'delta_nwc' in x else _atd_missing_json_field('Inputs', 'delta_nwc'),
                 delta_nwc_periods=_atd_read_list(_atd_read_string)(x['delta_nwc_periods']) if 'delta_nwc_periods' in x else _atd_missing_json_field('Inputs', 'delta_nwc_periods'),
                 fcff=_atd_read_float(x['fcff']) if 'fcff' in x else _atd_missing_json_field('Inputs', 'fcff'),
                 cash=_atd_read_float(x['cash']) if 'cash' in x else _atd_missing_json_field('Inputs', 'cash'),
@@ -1647,15 +1682,15 @@ class Inputs:
         res['price'] = _atd_write_float(self.price)
         res['market_cap'] = _atd_write_float(self.market_cap)
         res['shares'] = _atd_write_float(self.shares)
-        res['ebit'] = _atd_write_float(self.ebit)
+        res['ebit'] = _atd_write_nullable(_atd_write_float)(self.ebit)
         res['tax_rate'] = _atd_write_float(self.tax_rate)
         res['tax_rate_source'] = (lambda x: x.to_json())(self.tax_rate_source)
         res['statutory_tax_rate'] = (lambda x: x.to_json())(self.statutory_tax_rate)
         res['nopat'] = _atd_write_float(self.nopat)
-        res['depreciation_amortization'] = _atd_write_float(self.depreciation_amortization)
+        res['depreciation_amortization'] = _atd_write_nullable(_atd_write_float)(self.depreciation_amortization)
         res['depreciation_amortization_row'] = _atd_write_nullable(_atd_write_string)(self.depreciation_amortization_row)
-        res['capex'] = _atd_write_float(self.capex)
-        res['delta_nwc'] = _atd_write_float(self.delta_nwc)
+        res['capex'] = _atd_write_nullable(_atd_write_float)(self.capex)
+        res['delta_nwc'] = _atd_write_nullable(_atd_write_float)(self.delta_nwc)
         res['delta_nwc_periods'] = _atd_write_list(_atd_write_string)(self.delta_nwc_periods)
         res['fcff'] = _atd_write_float(self.fcff)
         res['cash'] = _atd_write_float(self.cash)
@@ -1731,8 +1766,10 @@ class MidcycleInputs:
     nopat_sum: float
     reinvestment_rate_mid: float
     fcff_mid: float
-    spot_fcff: float
-    spot_to_midcycle: float
+    spot_fcff: Optional[float]
+    spot_to_midcycle: Optional[float]
+    exclusions: List[MidcycleExclusion] = field(default_factory=lambda: [])
+    spot_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'MidcycleInputs':
@@ -1752,8 +1789,10 @@ class MidcycleInputs:
                 nopat_sum=_atd_read_float(x['nopat_sum']) if 'nopat_sum' in x else _atd_missing_json_field('MidcycleInputs', 'nopat_sum'),
                 reinvestment_rate_mid=_atd_read_float(x['reinvestment_rate_mid']) if 'reinvestment_rate_mid' in x else _atd_missing_json_field('MidcycleInputs', 'reinvestment_rate_mid'),
                 fcff_mid=_atd_read_float(x['fcff_mid']) if 'fcff_mid' in x else _atd_missing_json_field('MidcycleInputs', 'fcff_mid'),
-                spot_fcff=_atd_read_float(x['spot_fcff']) if 'spot_fcff' in x else _atd_missing_json_field('MidcycleInputs', 'spot_fcff'),
-                spot_to_midcycle=_atd_read_float(x['spot_to_midcycle']) if 'spot_to_midcycle' in x else _atd_missing_json_field('MidcycleInputs', 'spot_to_midcycle'),
+                spot_fcff=_atd_read_nullable(_atd_read_float)(x['spot_fcff']) if 'spot_fcff' in x else _atd_missing_json_field('MidcycleInputs', 'spot_fcff'),
+                spot_to_midcycle=_atd_read_nullable(_atd_read_float)(x['spot_to_midcycle']) if 'spot_to_midcycle' in x else _atd_missing_json_field('MidcycleInputs', 'spot_to_midcycle'),
+                exclusions=_atd_read_list(MidcycleExclusion.from_json)(x['exclusions']) if 'exclusions' in x else [],
+                spot_reason=_atd_read_string(x['spot_reason']) if 'spot_reason' in x else None,
             )
         else:
             _atd_bad_json('MidcycleInputs', x)
@@ -1774,8 +1813,11 @@ class MidcycleInputs:
         res['nopat_sum'] = _atd_write_float(self.nopat_sum)
         res['reinvestment_rate_mid'] = _atd_write_float(self.reinvestment_rate_mid)
         res['fcff_mid'] = _atd_write_float(self.fcff_mid)
-        res['spot_fcff'] = _atd_write_float(self.spot_fcff)
-        res['spot_to_midcycle'] = _atd_write_float(self.spot_to_midcycle)
+        res['spot_fcff'] = _atd_write_nullable(_atd_write_float)(self.spot_fcff)
+        res['spot_to_midcycle'] = _atd_write_nullable(_atd_write_float)(self.spot_to_midcycle)
+        res['exclusions'] = _atd_write_list((lambda x: x.to_json()))(self.exclusions)
+        if self.spot_reason is not None:
+            res['spot_reason'] = _atd_write_string(self.spot_reason)
         return res
 
     @classmethod
@@ -3289,6 +3331,7 @@ class FiscalPeriod:
     ebit_composition: Optional[Composition] = None
     interest_expense: Optional[float] = None
     interest_expense_row: Optional[str] = None
+    depreciation_amortization_candidates: Optional[List[Component]] = None
     cash_composition: Optional[Composition] = None
     total_debt_composition: Optional[Composition] = None
     delta_nwc_composition: Optional[Composition] = None
@@ -3354,6 +3397,7 @@ class FiscalPeriod:
                 ebit_composition=Composition.from_json(x['ebit_composition']) if 'ebit_composition' in x else None,
                 interest_expense=_atd_read_float(x['interest_expense']) if 'interest_expense' in x else None,
                 interest_expense_row=_atd_read_string(x['interest_expense_row']) if 'interest_expense_row' in x else None,
+                depreciation_amortization_candidates=_atd_read_list(Component.from_json)(x['depreciation_amortization_candidates']) if 'depreciation_amortization_candidates' in x else None,
                 cash_composition=Composition.from_json(x['cash_composition']) if 'cash_composition' in x else None,
                 total_debt_composition=Composition.from_json(x['total_debt_composition']) if 'total_debt_composition' in x else None,
                 delta_nwc_composition=Composition.from_json(x['delta_nwc_composition']) if 'delta_nwc_composition' in x else None,
@@ -3454,6 +3498,8 @@ class FiscalPeriod:
             res['interest_expense'] = _atd_write_float(self.interest_expense)
         if self.interest_expense_row is not None:
             res['interest_expense_row'] = _atd_write_string(self.interest_expense_row)
+        if self.depreciation_amortization_candidates is not None:
+            res['depreciation_amortization_candidates'] = _atd_write_list((lambda x: x.to_json()))(self.depreciation_amortization_candidates)
         if self.cash_composition is not None:
             res['cash_composition'] = (lambda x: x.to_json())(self.cash_composition)
         if self.total_debt_composition is not None:

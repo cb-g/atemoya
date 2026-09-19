@@ -71,7 +71,8 @@ flowchart TD
     WHICH -- "dcf_midcycle (22; 25: no EBIT policy on this path, an operating-income line is not an input to it)" --> MID_WINDOW{"window: every annual period the record carries, newest first, up to midcycle_window_years (15, a parameter); per consecutive pair, NOPAT_t = net_income_t + interest_expense_t x (1 - statutory tax rate), bottom-up from filed lines (nopat_bottom_up, 25: the through-cycle mean is what dampens one-offs), ROIC_t = NOPAT_t / (book_equity + total_debt - cash at the prior period end), on positive prior capital; at least 8 observations? (the fetch keeps 15 periods for the class; the vendor path's four or five can never serve the model)"}:::new
     MID_WINDOW -- "no periods" --> F_NOPERIOD
     MID_WINDOW -- "fewer than 8" --> F_MIDOBS["mid-cycle normalisation needs at least 8 annual return observations, have (k); the provider carries (n) periods (22)"]:::failed
-    MID_WINDOW -- "latest period fields present? (net_income, interest_expense, d&a, capex, delta_nwc, cash, total_debt, book_equity, price, market cap, currency)" --> MID_GUARDS{"guards (22)"}:::new
+    MID_WINDOW -- "a period lacking a flow is excluded from the sum it cannot serve and named on the record (27: roic needs net income, interest expense and a positive prior capital; the reinvestment sums need capex, d&a, delta_nwc and nopat); fewer than 8 periods left in the reinvestment sums" --> F_MIDREINVN["mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat, have (k); the provider carries (n) periods (27)"]:::failed
+    MID_WINDOW -- "latest period fields present? per required_on_latest_period in field_definitions.json (27): the balance sheet only, book_equity, total_debt and cash, because the model applies a through-cycle return to today's capital; plus price, market cap, currency. A missing latest flow leaves spot_fcff and spot_to_midcycle null with the reason" --> MID_GUARDS{"guards (22)"}:::new
     MID_WINDOW -- missing --> F_MISSING
     MID_GUARDS -- "price or market cap <= 0" --> F_PRICE
     MID_GUARDS -- "horizon < 0" --> F_HORIZON
@@ -141,6 +142,7 @@ flowchart TD
     F_MIDOBS --> FLOOR
     F_MIDROIC --> FLOOR
     F_MIDREINV --> FLOOR
+    F_MIDREINVN --> FLOOR
     F_ROE --> FLOOR
     F_PAYOUT --> FLOOR
     F_FILED --> FLOOR
@@ -195,6 +197,17 @@ at all (25):
    one minus the statutory rate, per period from filed lines, so no operating-income line
    is needed and the EBIT policy does not apply on that path; the through-cycle mean is
    what dampens one-offs.
+4. **The latest-period gate is the model's** (27). `required_on_latest_period` in the
+   definitions names, per model, what the latest fiscal period must carry: everything the
+   DCF reads (FCFF is that year), the balance sheet only for the mid-cycle model (its
+   reinvestment rate is a ratio of sums and its NOPAT applies a through-cycle return to
+   today's capital). Inside the mid-cycle window a period lacking a flow is excluded from
+   the sum it cannot serve, named on the record, and the guards count what remains: at
+   least 8 return observations and at least 8 periods in the reinvestment sums.
+5. **D&A is the largest filed total** (27). When several D&A total tags are filed in one
+   period the field is the largest, since a total is never smaller than any of its
+   components; every candidate is recorded with the tag taken. The components fallback
+   applies only when no total is filed.
 
 ## Beliefs
 
@@ -295,3 +308,7 @@ in this order:
   `reference/universe.json`; that list, its snapshot root and its output root are gone;
   per-name beliefs live under `names` in `reference/beliefs.json`; `--universe` and
   `--beliefs` stay as generic options. No new `Failed` string; no number moves.
+- mid-cycle window and D&A total (27): the latest-period gate per model in the
+  definitions, exclusions named inside the mid-cycle window with a guard on the
+  reinvestment sums, spot fcff a nullable readout; D&A the largest filed total with
+  candidates recorded. One new `Failed` string (the reinvestment guard).

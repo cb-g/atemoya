@@ -397,10 +397,37 @@ type shares_for_market_cap = {
   ~notes : string list;
 }
 
+(* Depreciation and amortisation (27): when a filer tags several D&A totals in one period,
+   the field is the largest, because a total is never smaller than any of its components
+   and every candidate is a non-negative aggregate of the same kind; the components fallback
+   (depreciation + amortisation of intangibles, tags in xbrl_tags.json) applies only when no
+   total is filed. *)
+type dna_totals = {
+  totals : string list;                 (* every total tag evaluated per period; the largest present wins *)
+}
+
+type dna_definition = {
+  name : string;
+  why : string;
+  rule : string;                        (* largest_filed_total *)
+  xbrl : dna_totals;
+  ifrs : dna_totals;
+  ~notes : string list;
+}
+
+(* Per model (27): the statement fields the latest fiscal period must carry; the mid-cycle
+   model needs only the balance sheet, every other model everything it reads. *)
+type required_on_latest_period = {
+  why : string;
+  models : (string * string list) list <json repr="object">;
+}
+
 type field_definitions = {
   source : string;
   as_of : string;
   ~notes : string list;
+  ?depreciation_amortization : dna_definition option;   (* (27) *)
+  ?required_on_latest_period : required_on_latest_period option;   (* (27) *)
   cash : cash_definition;
   total_debt : debt_definition;
   delta_nwc : nwc_definition;

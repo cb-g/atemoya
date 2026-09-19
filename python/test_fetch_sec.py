@@ -588,3 +588,32 @@ def test_weighted_average_shares_per_period_diluted_then_basic_recorded() -> Non
     assert p.weighted_shares is None and p.weighted_shares_tag is None  # a point count never stands in
     assert DEFS.shares_for_flows.xbrl == ["WeightedAverageNumberOfDilutedSharesOutstanding", "WeightedAverageNumberOfSharesOutstandingBasic"]
     assert "CommonStockSharesOutstanding" not in DEFS.shares_for_flows.xbrl and "EntityCommonStockSharesOutstanding" not in DEFS.shares_for_flows.xbrl
+
+
+def test_depreciation_is_the_largest_filed_total_with_candidates_recorded() -> None:
+    """Valero FY2025 (27): three tags present, the sub-line came second in list order."""
+    vlo = {
+        "DepreciationAndAmortization": usd(fact("2025-12-31", 63e6, start="2025-01-01")),
+        "DepreciationAmortizationAndAccretionNet": usd(fact("2025-12-31", 3158e6, start="2025-01-01")),
+        "DepreciationDepletionAndAmortization": usd(fact("2025-12-31", 2300e6, start="2025-01-01")),
+    }
+    p = period(vlo)
+    assert (p.depreciation_amortization, p.depreciation_amortization_row) == (3158e6, "DepreciationAmortizationAndAccretionNet")
+    assert p.depreciation_amortization_candidates is not None
+    assert [(c.name, c.value, c.row) for c in p.depreciation_amortization_candidates] == [
+        ("total", 2300e6, "DepreciationDepletionAndAmortization"), ("total", 63e6, "DepreciationAndAmortization"), ("total", 3158e6, "DepreciationAmortizationAndAccretionNet")]
+    # one total: taken as before, one candidate
+    p = period({"DepreciationDepletionAndAmortization": usd(fact("2025-12-31", 11.7e9, start="2025-01-01"))})
+    assert (p.depreciation_amortization, p.depreciation_amortization_row) == (11.7e9, "DepreciationDepletionAndAmortization")
+    assert p.depreciation_amortization_candidates is not None and len(p.depreciation_amortization_candidates) == 1
+    # the components fallback only when no total is filed, and no candidates then
+    p = period({"Depreciation": usd(fact("2025-12-31", 10.76e9, start="2025-01-01")), "AmortizationOfIntangibleAssets": usd(fact("2025-12-31", 0.95e9, start="2025-01-01"))})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 11.71e9)
+    assert p.depreciation_amortization_row == "Depreciation + AmortizationOfIntangibleAssets" and p.depreciation_amortization_candidates is None
+    p = period({"Depreciation": usd(fact("2025-12-31", 10.76e9, start="2025-01-01")), "DepreciationAndAmortization": usd(fact("2025-12-31", 63e6, start="2025-01-01"))})
+    assert p.depreciation_amortization == 63e6  # a filed total, however small, is the total; the fallback never competes
+    # one list of totals: the definition's and the per-period selection's
+    definition = DEFS.depreciation_amortization
+    assert definition is not None and definition.rule == "largest_filed_total"
+    assert definition.xbrl.totals == dict(TAGS.fields)["depreciation_amortization"].tags
+    assert definition.ifrs.totals == dict(TAGS.ifrs_full_fields)["depreciation_amortization"].tags

@@ -339,28 +339,27 @@ let rec drivers (inputs : model_inputs) =
             (List.nth m.window (List.length m.window - 1)) (List.hd m.window) );
         ("reinvestment_rate_mid", m.reinvestment_rate_mid, Printf.sprintf " (%.4g / %.4g over %d periods)" m.reinvestment_sum m.nopat_sum (List.length m.reinvestment_periods));
         ("invested_capital_latest", m.invested_capital_latest, "");
-        ("fcff_mid", m.fcff_mid, Printf.sprintf " (spot fcff %.4g, %.2fx)" m.spot_fcff m.spot_to_midcycle);
+        ( "fcff_mid",
+          m.fcff_mid,
+          match (m.spot_fcff, m.spot_to_midcycle) with
+          | Some s, Some r -> Printf.sprintf " (spot fcff %.4g, %.2fx)" s r
+          | _ -> " (no spot fcff: " ^ Option.value m.spot_reason ~default:"" ^ ")" );
       ]
       @ List.filter (fun (n, _, _) -> not (List.mem n [ "ebit"; "tax_rate"; "depreciation_amortization"; "capex"; "delta_nwc" ])) (drivers (`Dcf m.dcf))
       @ [ ("midcycle_window_years", float_of_int m.midcycle_window_years.value, "") ]
   | `Dcf (i : inputs) ->
-      [
-        ("price", i.price, "");
-        ("market_cap", i.market_cap, "");
-        ("shares", i.shares, "");
-        ( "ebit",
-          i.ebit,
-          (match i.ebit_recipe with Some r -> " recipe " ^ r | None -> "")
-          ^ composition_text i.ebit_composition );
-        ("tax_rate", i.tax_rate, "");
-        ( "depreciation_amortization",
-          i.depreciation_amortization,
-          match i.depreciation_amortization_row with Some r -> " (" ^ r ^ ")" | None -> "" );
-        ("capex", i.capex, "");
-        ( "delta_nwc",
-          i.delta_nwc,
-          Printf.sprintf " mean over %s" (String.concat ", " i.delta_nwc_periods)
-          ^ String.concat "" (List.map composition_text i.delta_nwc_compositions) );
+      let flow name value text = match value with Some v -> [ (name, v, text) ] | None -> [] in
+      [ ("price", i.price, ""); ("market_cap", i.market_cap, ""); ("shares", i.shares, "") ]
+      @ flow "ebit" i.ebit
+          ((match i.ebit_recipe with Some r -> " recipe " ^ r | None -> "") ^ composition_text i.ebit_composition)
+      @ [ ("tax_rate", i.tax_rate, "") ]
+      @ flow "depreciation_amortization" i.depreciation_amortization
+          (match i.depreciation_amortization_row with Some r -> " (" ^ r ^ ")" | None -> "")
+      @ flow "capex" i.capex ""
+      @ flow "delta_nwc" i.delta_nwc
+          (Printf.sprintf " mean over %s" (String.concat ", " i.delta_nwc_periods)
+          ^ String.concat "" (List.map composition_text i.delta_nwc_compositions))
+      @ [
         ("cash", i.cash, composition_text i.cash_composition);
         ( "total_debt",
           i.total_debt,
@@ -488,10 +487,13 @@ let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
           (match v.inputs with
           | Some (`Dcf_midcycle m) ->
               Printf.bprintf b
-                "           mid-cycle (22): spot fcff %s vs fcff_mid %s (%.2fx); roic_mid %.4f (median %.4f) over %d observations; window %s to %s (%d periods); fair value %s -> %s\n"
-                (money m.spot_fcff) (money m.fcff_mid) m.spot_to_midcycle m.roic_mid m.roic_median
+                "           mid-cycle (22): spot fcff %s vs fcff_mid %s; roic_mid %.4f (median %.4f) over %d observations; window %s to %s (%d periods, %d excluded from a sum); fair value %s -> %s\n"
+                (match (m.spot_fcff, m.spot_to_midcycle) with
+                | Some sp, Some r -> Printf.sprintf "%s (%.2fx)" (money sp) r
+                | _ -> "none (" ^ Option.value m.spot_reason ~default:"" ^ ")")
+                (money m.fcff_mid) m.roic_mid m.roic_median
                 (List.length m.observations) (List.nth m.window (List.length m.window - 1)) (List.hd m.window)
-                (List.length m.window) (fair_value_text o.fair_value) (fair_value_text v.fair_value)
+                (List.length m.window) (List.length m.exclusions) (fair_value_text o.fair_value) (fair_value_text v.fair_value)
           | _ -> ());
           let inputs_of (x : valuation) = Option.map drivers x.inputs in
           (match (inputs_of o, inputs_of v) with

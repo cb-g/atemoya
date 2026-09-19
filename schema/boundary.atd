@@ -105,6 +105,7 @@ type fiscal_period = {
   ?ebit_composition : composition option;
   ?interest_expense : float option;           (* the filed interest expense line, first present of the ebit definition's tags or vendor rows (25); the mid-cycle model's bottom-up NOPAT reads it *)
   ?interest_expense_row : string option;
+  ?depreciation_amortization_candidates : component list option;   (* (27) every D&A total tag filed for the period with its value; depreciation_amortization_row names the largest, taken *)
   ?cash_composition : composition option;
   ?total_debt_composition : composition option;
   ?delta_nwc_composition : composition option;
@@ -323,18 +324,18 @@ type inputs = {
   price : float;
   market_cap : float;
   shares : float;                     (* effective shares = market_cap / price *)
-  ebit : float;
+  ebit : float nullable;              (* null only on the mid-cycle path when the latest period lacks the lines its spot nopat needs (27) *)
   ?ebit_recipe : string option;       (* operating_income | pretax_plus_interest; omitted on a record fetched before the definitions *)
   ?ebit_composition : composition option;
   tax_rate : float;                   (* the rate applied *)
   tax_rate_source : tax_rate_source;
   statutory_tax_rate : parameter;     (* the country's rate, applied iff tax_rate_source = Statutory *)
   nopat : float;                      (* ebit * (1 - tax_rate) *)
-  depreciation_amortization : float;
+  depreciation_amortization : float nullable;   (* null only on the mid-cycle path when the latest period lacks the flow (27) *)
   depreciation_amortization_row : string nullable;
-  capex : float;
-  delta_nwc : float;                  (* mean over delta_nwc_periods *)
-  delta_nwc_periods : string list;    (* the fiscal periods averaged, at least 2 *)
+  capex : float nullable;             (* likewise *)
+  delta_nwc : float nullable;         (* mean over delta_nwc_periods; likewise *)
+  delta_nwc_periods : string list;    (* the fiscal periods averaged, at least 2 on the dcf *)
   ~delta_nwc_compositions : composition nullable list;   (* one per averaged period, in the same order; empty before the definitions *)
   fcff : float;                       (* nopat + d&a - capex - delta_nwc *)
   cash : float;
@@ -559,31 +560,43 @@ type roic_observation = {
   roic : float;                       (* nopat / invested_capital_prior *)
 }
 
+(* A period the mid-cycle window could not use in one of its sums (27): dropped from that
+   sum, named, and the guards count what remains. *)
+type midcycle_exclusion = {
+  period_end : string;
+  sum : string;                       (* roic | reinvestment *)
+  missing : string;                   (* the field the period lacks for that sum *)
+}
+
 (* The mid-cycle DCF (22): the DCF engine run on through-cycle earning power instead of
    the latest year's flow. [dcf] is the engine's own record on the mid-cycle flow: fcff =
    fcff_mid, g0 = roic_mid * reinvestment_rate_mid before the clamp, nopat = nopat_mid,
    roic and reinvestment_rate the mid-cycle ones, the tax rate statutory; ebit on it is the
    pre-tax equivalent of the latest period's bottom-up nopat (nopat / (1 - tax rate), recipe
    nopat_bottom_up), d&a, capex and delta_nwc the latest period's own (spot) values, recorded
-   for spot_fcff, and its delta_nwc_periods is that one period. Everything else on [dcf] (parameters,
+   for spot_fcff, each null when the latest period lacks it (27), and its delta_nwc_periods
+   is that one period when present. The latest period must carry the balance sheet only
+   (required_on_latest_period in field_definitions.json). Everything else on [dcf] (parameters,
    wacc, path, terminal, net debt, shares) is exactly the DCF's. *)
 type midcycle_inputs = {
   dcf : inputs;
   nopat_recipe : string;              (* nopat_bottom_up (25): net income + interest expense x (1 - statutory tax rate), per period *)
   midcycle_window_years : int_parameter;
   window : string list;               (* the fiscal period ends in the window, newest first: every annual period the record carries, up to midcycle_window_years *)
-  observations : roic_observation list;   (* one per consecutive pair in the window with ebit and a positive prior invested capital; at least 8 *)
+  observations : roic_observation list;   (* one per consecutive pair in the window with net income, interest expense and a positive prior invested capital; at least 8 *)
+  ~exclusions : midcycle_exclusion list;  (* (27) every period dropped from a sum, with the field it lacked *)
   roic_mid : float;                   (* arithmetic mean of the observations' roic, the bad years included *)
   roic_median : float;                (* a readout beside it, not used *)
   invested_capital_latest : float;    (* the newest period's book_equity + total_debt - cash *)
   nopat_mid : float;                  (* roic_mid * invested_capital_latest *)
-  reinvestment_periods : string list; (* the window periods with capex, d&a, delta_nwc and ebit, summed *)
+  reinvestment_periods : string list; (* the window periods with capex, d&a, delta_nwc, net income and interest expense, summed; at least 8 (27) *)
   reinvestment_sum : float;           (* sum over reinvestment_periods of capex - d&a + delta_nwc *)
   nopat_sum : float;                  (* sum over reinvestment_periods of nopat_t *)
   reinvestment_rate_mid : float;      (* reinvestment_sum / nopat_sum: sums, never a mean of ratios *)
   fcff_mid : float;                   (* nopat_mid * (1 - reinvestment_rate_mid) *)
-  spot_fcff : float;                  (* the latest period's own fcff at the same tax rate *)
-  spot_to_midcycle : float;           (* spot_fcff / fcff_mid: how far off-cycle the current year is *)
+  spot_fcff : float nullable;         (* the latest period's own fcff at the same tax rate; a readout, null with spot_reason when the latest period lacks a flow (27) *)
+  spot_to_midcycle : float nullable;  (* spot_fcff / fcff_mid: how far off-cycle the current year is *)
+  ?spot_reason : string option;
 }
 
 type model_inputs = [

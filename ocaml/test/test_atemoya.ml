@@ -17,7 +17,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?tax_provision_row ?capex_row ?delta_nwc_row ?cash_row ?book_equity_row ?net_income_row
     ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
     ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?weighted_shares
-    ?weighted_shares_tag ?interest_expense ?interest_expense_row () : Boundary_t.fiscal_period =
+    ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -76,6 +76,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ebit_composition;
     interest_expense;
     interest_expense_row;
+    depreciation_amortization_candidates;
     cash_composition;
     total_debt_composition;
     delta_nwc_composition;
@@ -474,7 +475,7 @@ let test_delta_nwc_is_averaged () =
       full_period ~period_end:"2023-09-30" ~delta_nwc:100. () ]
   in
   let inputs, _ = get (Dcf.value assumptions ~country:"T" (financials periods)) in
-  check_float "mean of 100, -50, 100" 50. inputs.delta_nwc;
+  Alcotest.(check (option approx)) "mean of 100, -50, 100" (Some 50.) inputs.delta_nwc;
   check_float "fcff on the mean" 700. inputs.fcff;
   check_error "one period only"
     (Dcf.value assumptions ~country:"T" (financials [ full_period () ]))
@@ -1104,8 +1105,10 @@ let midcycle_periods ?(ebits = midcycle_ebits) ?(capex = 50.) ?(start_year = 202
         interest_expense_row = Some "InterestExpense" })
     ebits
 
+let balance_sheet = [ "book_equity"; "total_debt"; "cash" ]
+
 let midcycle_ok () =
-  match Dcf_midcycle.value assumptions ~country:"United States" (financials (midcycle_periods ())) with
+  match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials (midcycle_periods ())) with
   | Ok (m, fv) -> (m, fv)
   | Error e -> Alcotest.failf "mid-cycle fixture failed: %s" e
 
@@ -1117,7 +1120,7 @@ let test_midcycle_arithmetic () =
   check_float "net income filed" (0.79 *. 1100.) first.net_income;
   check_float "interest expense filed" 100. first.interest_expense;
   check_float "nopat = net income + interest x (1 - t)" (0.79 *. 1200.) first.nopat;
-  check_float "spot nopat's pre-tax equivalent stands in for ebit" 1200. m.dcf.ebit;
+  Alcotest.(check (option approx)) "spot nopat's pre-tax equivalent stands in for ebit" (Some 1200.) m.dcf.ebit;
   Alcotest.(check (option string)) "and says so" (Some "nopat_bottom_up") m.dcf.ebit_recipe;
   Alcotest.(check (list string)) "window is every period, newest first"
     (List.map (fun (p : Boundary_t.fiscal_period) -> p.period_end) (midcycle_periods ())) m.window;
@@ -1134,8 +1137,10 @@ let test_midcycle_arithmetic () =
   let mean_of_ratios = let xs = List.map (fun e -> -100. /. (0.79 *. e)) midcycle_ebits in List.fold_left ( +. ) 0. xs /. 10. in
   if Float.abs (mean_of_ratios -. m.reinvestment_rate_mid) < 1e-6 then Alcotest.fail "a mean of ratios";
   check_float "fcff_mid" (711. *. (1. -. m.reinvestment_rate_mid)) m.fcff_mid;
-  check_float "spot fcff is the latest year's own flow" 1048. m.spot_fcff;
-  check_float "spot to mid-cycle" (1048. /. m.fcff_mid) m.spot_to_midcycle;
+  Alcotest.(check (option approx)) "spot fcff is the latest year's own flow" (Some 1048.) m.spot_fcff;
+  Alcotest.(check (option approx)) "spot to mid-cycle" (Some (1048. /. m.fcff_mid)) m.spot_to_midcycle;
+  Alcotest.(check (option string)) "no spot reason" None m.spot_reason;
+  Alcotest.(check int) "no exclusions on a full window" 0 (List.length m.exclusions);
   check_float "g0 = roic_mid * r_mid, inside the clamp" (0.079 *. m.reinvestment_rate_mid) m.dcf.g0;
   Alcotest.(check bool) "unclamped" false m.dcf.growth_clamped;
   Alcotest.check tax_rate_source "statutory rate" `Statutory m.dcf.tax_rate_source;
@@ -1156,7 +1161,7 @@ let test_midcycle_arithmetic () =
 
 let test_midcycle_guards () =
   let fail periods needles =
-    match Dcf_midcycle.value assumptions ~country:"United States" (financials periods) with
+    match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials periods) with
     | Ok _ -> Alcotest.fail "valued"
     | Error e -> check_mentions "guard" e needles
   in
@@ -1167,21 +1172,63 @@ let test_midcycle_guards () =
   fail (midcycle_periods ~capex:2000. ()) [ "through the cycle the business reinvested more than it earned (reinvestment rate " ];
   (* the window cap: twenty periods, a fifteen-year window *)
   let twenty = midcycle_periods ~ebits:(midcycle_ebits @ midcycle_ebits) () in
-  (match Dcf_midcycle.value assumptions ~country:"United States" (financials twenty) with
+  (match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials twenty) with
   | Ok (m, _) ->
       Alcotest.(check int) "window capped at the parameter" 15 (List.length m.window);
       Alcotest.(check int) "fourteen observations inside it" 14 (List.length m.observations);
       Alcotest.(check string) "oldest in the window" "2011-12-31" (List.nth m.window 14)
   | Error e -> Alcotest.fail e);
+  (* exclusions (27): a period lacking a flow drops out of the sums it cannot serve, named,
+     and the guards count what remains *)
+  let without_capex which = List.mapi (fun i (p : Boundary_t.fiscal_period) -> if List.mem i which then { p with capex = None } else p) (midcycle_periods ()) in
+  (match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials (without_capex [ 3 ])) with
+  | Ok (m, _) ->
+      Alcotest.(check int) "roic series untouched" 9 (List.length m.observations);
+      Alcotest.(check int) "nine periods in the reinvestment sums" 9 (List.length m.reinvestment_periods);
+      Alcotest.(check (list string)) "the exclusion is named"
+        [ "2022-12-31 reinvestment capex" ]
+        (List.map (fun (e : Boundary_t.midcycle_exclusion) -> String.concat " " [ e.period_end; e.sum; e.missing ]) m.exclusions);
+      check_float "the sums skip it" (-900.) m.reinvestment_sum
+  | Error e -> Alcotest.fail e);
+  fail (without_capex [ 3; 5; 7 ])
+    [ "mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat, have 7; the provider carries 10 periods" ];
+  (* the latest-period gate is the balance sheet only: a missing latest flow is a null spot readout *)
+  (match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials (without_capex [ 0 ])) with
+  | Ok (m, fv) ->
+      Alcotest.(check (option approx)) "no spot fcff" None m.spot_fcff;
+      Alcotest.(check (option string)) "with the reason" (Some "the latest period lacks capex: no spot fcff") m.spot_reason;
+      Alcotest.(check (option approx)) "the engine's capex is null too" None m.dcf.capex;
+      Alcotest.(check int) "the latest period left the reinvestment sums" 9 (List.length m.reinvestment_periods);
+      Alcotest.(check bool) "and still values" true (fv > 0.)
+  | Error e -> Alcotest.fail e);
+  fail (List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 0 then { p with cash = None } else p) (midcycle_periods ()))
+    [ "missing statement fields for fiscal period ending 2025-12-31: cash" ];
+  (* the tracked definitions say the same, and the dcf's list is the engine's *)
+  let tracked = get (Params.load ~dir:"../../reference") in
+  let required = Option.get tracked.field_definitions.required_on_latest_period in
+  Alcotest.(check (list string)) "mid-cycle: balance sheet only" balance_sheet (List.assoc "dcf_midcycle" required.models);
+  Alcotest.(check (list string)) "dcf: everything the engine reads"
+    [ "ebit"; "depreciation_amortization"; "capex"; "delta_nwc"; "cash"; "total_debt"; "book_equity" ]
+    (List.assoc "dcf" required.models);
+  List.iter (fun (_, names) -> List.iter (fun n -> ignore (Period.value (List.hd (midcycle_periods ())) n)) names) required.models;
   (* a period without an interest line yields no observation and is not in the sums *)
   let no_interest = List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 2 then { p with interest_expense = None } else p) (midcycle_periods ()) in
-  (match Dcf_midcycle.value assumptions ~country:"United States" (financials no_interest) with
+  (match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials no_interest) with
   | Ok (m, _) ->
       Alcotest.(check int) "eight observations" 8 (List.length m.observations);
       Alcotest.(check int) "nine periods in the sums" 9 (List.length m.reinvestment_periods)
   | Error e -> Alcotest.fail e);
+  (* the latest period without an interest line still values (27): the gate is the balance
+     sheet; the period leaves both sums and the spot readout says why *)
   let latest_silent = List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 0 then { p with interest_expense = None } else p) (midcycle_periods ()) in
-  fail latest_silent [ "missing statement fields for fiscal period ending 2025-12-31: interest_expense" ];
+  (match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials latest_silent) with
+  | Ok (m, _) ->
+      Alcotest.(check int) "eight observations" 8 (List.length m.observations);
+      Alcotest.(check int) "nine periods in the sums" 9 (List.length m.reinvestment_periods);
+      Alcotest.(check (option string)) "spot reason" (Some "the latest period lacks interest_expense: no spot fcff") m.spot_reason;
+      Alcotest.(check (list string)) "both exclusions named" [ "2025-12-31 roic interest_expense"; "2025-12-31 reinvestment interest_expense" ]
+        (List.map (fun (e : Boundary_t.midcycle_exclusion) -> String.concat " " [ e.period_end; e.sum; e.missing ]) m.exclusions)
+  | Error e -> Alcotest.fail e);
   (* the vendor path: three or five periods can never serve the model, and the record says so *)
   let v = run ~declared:(Some (declaration `Cyclical)) (financials (history ())) in
   check_reason v [ "mid-cycle normalisation needs at least 8 annual return observations, have 0; the provider carries 3 periods" ];
@@ -1425,6 +1472,7 @@ let test_flow_chart_names_every_reason () =
       "mid-cycle normalisation needs at least 8 annual return observations";
       "through the cycle the business did not earn a positive return on its capital";
       "through the cycle the business reinvested more than it earned";
+      "mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat";
       "missing market data: financial_currency"; "missing market data: trading_currency";
       "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
       "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";

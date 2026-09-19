@@ -754,6 +754,38 @@ class RiskFreeRates:
 
 
 @dataclass
+class RequiredOnLatestPeriod:
+    """Original type: required_on_latest_period = { ... }
+    """
+
+    why: str
+    models: List[Tuple[str, List[str]]]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'RequiredOnLatestPeriod':
+        if isinstance(x, dict):
+            return cls(
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('RequiredOnLatestPeriod', 'why'),
+                models=_atd_read_assoc_object_into_list(_atd_read_list(_atd_read_string))(x['models']) if 'models' in x else _atd_missing_json_field('RequiredOnLatestPeriod', 'models'),
+            )
+        else:
+            _atd_bad_json('RequiredOnLatestPeriod', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['why'] = _atd_write_string(self.why)
+        res['models'] = _atd_write_assoc_list_to_object(_atd_write_list(_atd_write_string))(self.models)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'RequiredOnLatestPeriod':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class RefinementPolicy:
     """Original type: refinement_policy = { ... }
     """
@@ -1618,6 +1650,79 @@ class EbitDefinition:
 
 
 @dataclass
+class DnaTotals:
+    """Original type: dna_totals = { ... }
+    """
+
+    totals: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DnaTotals':
+        if isinstance(x, dict):
+            return cls(
+                totals=_atd_read_list(_atd_read_string)(x['totals']) if 'totals' in x else _atd_missing_json_field('DnaTotals', 'totals'),
+            )
+        else:
+            _atd_bad_json('DnaTotals', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['totals'] = _atd_write_list(_atd_write_string)(self.totals)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DnaTotals':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class DnaDefinition:
+    """Original type: dna_definition = { ... }
+    """
+
+    name: str
+    why: str
+    rule: str
+    xbrl: DnaTotals
+    ifrs: DnaTotals
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DnaDefinition':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('DnaDefinition', 'name'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('DnaDefinition', 'why'),
+                rule=_atd_read_string(x['rule']) if 'rule' in x else _atd_missing_json_field('DnaDefinition', 'rule'),
+                xbrl=DnaTotals.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('DnaDefinition', 'xbrl'),
+                ifrs=DnaTotals.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('DnaDefinition', 'ifrs'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('DnaDefinition', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['why'] = _atd_write_string(self.why)
+        res['rule'] = _atd_write_string(self.rule)
+        res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['ifrs'] = (lambda x: x.to_json())(self.ifrs)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DnaDefinition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class DebtXbrl:
     """Original type: debt_xbrl = { ... }
     """
@@ -1976,6 +2081,8 @@ class FieldDefinitions:
     shares_for_market_cap: SharesForMarketCap
     refinement_policy: RefinementPolicy
     notes: List[str] = field(default_factory=lambda: [])
+    depreciation_amortization: Optional[DnaDefinition] = None
+    required_on_latest_period: Optional[RequiredOnLatestPeriod] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'FieldDefinitions':
@@ -1992,6 +2099,8 @@ class FieldDefinitions:
                 shares_for_market_cap=SharesForMarketCap.from_json(x['shares_for_market_cap']) if 'shares_for_market_cap' in x else _atd_missing_json_field('FieldDefinitions', 'shares_for_market_cap'),
                 refinement_policy=RefinementPolicy.from_json(x['refinement_policy']) if 'refinement_policy' in x else _atd_missing_json_field('FieldDefinitions', 'refinement_policy'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                depreciation_amortization=DnaDefinition.from_json(x['depreciation_amortization']) if 'depreciation_amortization' in x else None,
+                required_on_latest_period=RequiredOnLatestPeriod.from_json(x['required_on_latest_period']) if 'required_on_latest_period' in x else None,
             )
         else:
             _atd_bad_json('FieldDefinitions', x)
@@ -2009,6 +2118,10 @@ class FieldDefinitions:
         res['shares_for_market_cap'] = (lambda x: x.to_json())(self.shares_for_market_cap)
         res['refinement_policy'] = (lambda x: x.to_json())(self.refinement_policy)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        if self.depreciation_amortization is not None:
+            res['depreciation_amortization'] = (lambda x: x.to_json())(self.depreciation_amortization)
+        if self.required_on_latest_period is not None:
+            res['required_on_latest_period'] = (lambda x: x.to_json())(self.required_on_latest_period)
         return res
 
     @classmethod

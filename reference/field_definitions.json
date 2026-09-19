@@ -416,5 +416,59 @@
     "notes": [
       "The two definitions stay distinct: shares_for_flows is for a period's flow per share, this one for a point."
     ]
+  },
+  "depreciation_amortization": {
+    "name": "largest_filed_total",
+    "why": "Filers tag their D&A total under different elements, and a tag that is the total on one filing is a sub-line on another: Valero files DepreciationAmortizationAndAccretionNet (3.158bn for FY2025, the cash-flow line) beside DepreciationAndAmortization (0.063bn, a sub-line), and a list ordered by preference took the 0.063bn because that tag came second. No order is right for every filer. Within one fiscal period every total tag present is evaluated and the field is the largest, on the ground that a total is never smaller than any of its components and all candidates are non-negative aggregates of the same kind; every candidate is recorded on the period with its value and the tag taken. The components fallback, depreciation plus amortisation of intangibles, applies only when no total tag is present (Intel, CrowdStrike's depreciation is not filed at all).",
+    "rule": "largest_filed_total",
+    "xbrl": {
+      "totals": [
+        "DepreciationDepletionAndAmortization",
+        "DepreciationAndAmortization",
+        "DepreciationAmortizationAndAccretionNet"
+      ]
+    },
+    "ifrs": {
+      "totals": [
+        "DepreciationAndAmortisationExpense",
+        "AdjustmentsForDepreciationAndAmortisationExpense"
+      ]
+    },
+    "notes": [
+      "Verified 2026-09-19 across the 43-name universe's snapshot: Valero is the only filer carrying two totals in one period where the first by list order was not the largest (FY2016 to FY2025, 0.043 to 0.063bn against 1.894 to 3.158bn); from FY2011 to FY2015 its two or three totals agree. Every other filer carries one total per period, so the rule changes nothing there. The total tags are the same list as xbrl_tags.json's depreciation_amortization field, which the per-period selection still reads; a test holds the two equal."
+    ]
+  },
+  "required_on_latest_period": {
+    "why": "The DCF is right to fail on a missing latest-year flow: FCFF is that year. The mid-cycle model is different by construction: its reinvestment rate is a ratio of sums over up to fifteen years and its NOPAT applies a through-cycle return to the latest balance sheet, so one missing flow year shrinks the window, recorded as an exclusion, and only the balance sheet must be complete on the latest period. The DCF's list is the fields its engine reads (delta_nwc over at least two periods); the other models' lists name what they read and are unchanged.",
+    "models": {
+      "dcf": [
+        "ebit",
+        "depreciation_amortization",
+        "capex",
+        "delta_nwc",
+        "cash",
+        "total_debt",
+        "book_equity"
+      ],
+      "dcf_midcycle": [
+        "book_equity",
+        "total_debt",
+        "cash"
+      ],
+      "reit_ffo_dividend": [
+        "ffo",
+        "dividends_paid"
+      ],
+      "residual_income": [
+        "book_equity",
+        "net_income"
+      ],
+      "residual_income_insurer": [
+        "book_equity",
+        "net_income",
+        "aoci",
+        "premiums_earned"
+      ]
+    }
   }
 }

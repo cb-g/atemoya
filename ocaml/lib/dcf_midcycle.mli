@@ -23,11 +23,21 @@
 val minimum_observations : int
 (** 8 *)
 
+val minimum_reinvestment_periods : int
+(** 8: periods carrying every flow the reinvestment sums need (27). *)
+
 val invested_capital : Boundary_t.fiscal_period -> float option
 (** [book_equity + total_debt - cash] when all three are present. *)
 
 val value :
   Dcf.assumptions ->
   country:string ->
+  required:string list ->
   Boundary_t.financials ->
   (Boundary_t.midcycle_inputs * float, string) result
+(** [required] are the fields the latest period must carry for this model, from
+    [field_definitions.json]'s [required_on_latest_period] (the balance sheet: the model
+    applies a through-cycle return to today's capital). Inside the window a period
+    lacking a flow is excluded from the sum it cannot serve and named on the record
+    (27); the guards count what remains; the spot fcff is a readout, null with reason
+    when the latest period lacks a flow. *)
