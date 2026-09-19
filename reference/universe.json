@@ -32,11 +32,11 @@
     {
       "ticker": "JNJ",
       "entity_class": "OperatingCompany",
-      "note": "plain U.S. non-financial; statements are filed (SEC XBRL); Johnson & Johnson last tagged OperatingIncomeLoss in FY2014, so ebit follows the pretax_plus_interest recipe from filed tags (recorded as ebit_recipe), which carries FY2025's 7.2bn other non-operating income",
+      "note": "plain U.S. non-financial; statements are filed (SEC XBRL); Johnson & Johnson last tagged OperatingIncomeLoss in FY2014, so ebit follows the derived recipe (pretax plus interest less interest income and other non-operating income, recorded as ebit_recipe), validated within 2% of the vendor's operating income by the cross-check",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Ok",
-      "cross_check_note": "ebit is the pretax_plus_interest recipe, carrying the 7.209bn OtherNonoperatingIncomeExpense (largely the talc accrual reversal) and 1.056bn interest income the vendor's operating income excludes (the known approximation); capex: the vendor's row exceeds the filed PaymentsToAcquirePropertyPlantAndEquipment by 0.385bn and no filed fact carries it: unexplained"
+      "cross_check_note": "ebit passes after the refinement (25.29bn against the vendor's 25.60bn, 1.2%); capex: the vendor's row exceeds the filed PaymentsToAcquirePropertyPlantAndEquipment by 0.385bn and no filed fact carries it: unexplained"
     },
     {
       "ticker": "KO",
@@ -66,11 +66,12 @@
     {
       "ticker": "CVX",
       "entity_class": "OperatingCompany",
-      "note": "oil & gas, stays Generic; statements are filed (SEC XBRL); Chevron tags no OperatingIncomeLoss, so ebit follows the pretax_plus_interest recipe from filed tags (recorded as ebit_recipe), which carries its 3.0bn equity-affiliate earnings",
+      "note": "oil & gas, stays Generic; statements are filed (SEC XBRL); Chevron tags no OperatingIncomeLoss, so ebit follows the derived recipe (pretax plus interest less non-operating income); the refined value 17.96bn still sits 7.2% from the vendor's operating income because Chevron's 1.29bn interest and other income is tagged under no standard us-gaap element, so the refinement policy fails the name rather than valuing it on an overstated EBIT",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Ok",
-      "cross_check_note": "vendor error on debt: the filed DebtCurrent is 10.918bn (the balance sheet's short-term debt, 10-K filed 2026-02-24) against the vendor's 0.191bn Current Debt; ebit is the pretax_plus_interest recipe carrying 3.0bn equity-affiliate earnings and 1.3bn other income against the vendor's operating income (the known approximation); revenue: the filed Revenues tag (189.0bn, total revenues and other income) is taken before RevenueFromContractWithCustomerExcludingAssessedTax (184.4bn), which the vendor uses; a tag-order question for the revenue field, outside this file's four"
+      "expected_status": "Failed",
+      "cross_check_note": "vendor error on debt: the filed DebtCurrent is 10.918bn (the balance sheet's short-term debt, 10-K filed 2026-02-24) against the vendor's 0.191bn Current Debt; ebit is the refined recipe (pretax + interest - 3.0bn equity-affiliate earnings) and still misses by 7.2% because the 1.29bn interest and other income carries no standard tag, so the name fails per policy; revenue: the filed Revenues tag (189.0bn, total revenues and other income) is taken before RevenueFromContractWithCustomerExcludingAssessedTax (184.4bn), which the vendor uses; a tag-order question for the revenue field, outside this file's four",
+      "expected_reason": "operating income not filed; derived EBIT misses the cross-check"
     },
     {
       "ticker": "JPM",

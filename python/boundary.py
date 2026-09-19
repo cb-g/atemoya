@@ -939,6 +939,38 @@ class ResidualIncomeInputs:
 
 
 @dataclass
+class Readout:
+    """Original type: readout = { ... }
+    """
+
+    value: Optional[float]
+    reason: Optional[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Readout':
+        if isinstance(x, dict):
+            return cls(
+                value=_atd_read_nullable(_atd_read_float)(x['value']) if 'value' in x else _atd_missing_json_field('Readout', 'value'),
+                reason=_atd_read_nullable(_atd_read_string)(x['reason']) if 'reason' in x else _atd_missing_json_field('Readout', 'reason'),
+            )
+        else:
+            _atd_bad_json('Readout', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['value'] = _atd_write_nullable(_atd_write_float)(self.value)
+        res['reason'] = _atd_write_nullable(_atd_write_string)(self.reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Readout':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class InsurerInputs:
     """Original type: insurer_inputs = { ... }
     """
@@ -1574,6 +1606,94 @@ class Model:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'Model':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class HeldInput:
+    """Original type: held_input = { ... }
+    """
+
+    name: str
+    value: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'HeldInput':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('HeldInput', 'name'),
+                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('HeldInput', 'value'),
+            )
+        else:
+            _atd_bad_json('HeldInput', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['value'] = _atd_write_float(self.value)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'HeldInput':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Implied:
+    """Original type: implied = { ... }
+    """
+
+    level_name: str
+    level: Readout
+    level_domain: List[float]
+    half_life_years: Readout
+    lambda_domain: List[float]
+    meaningful_readout: str
+    meaningful_rule: str
+    solver: str
+    tolerance: float
+    held: List[HeldInput]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Implied':
+        if isinstance(x, dict):
+            return cls(
+                level_name=_atd_read_string(x['level_name']) if 'level_name' in x else _atd_missing_json_field('Implied', 'level_name'),
+                level=Readout.from_json(x['level']) if 'level' in x else _atd_missing_json_field('Implied', 'level'),
+                level_domain=_atd_read_list(_atd_read_float)(x['level_domain']) if 'level_domain' in x else _atd_missing_json_field('Implied', 'level_domain'),
+                half_life_years=Readout.from_json(x['half_life_years']) if 'half_life_years' in x else _atd_missing_json_field('Implied', 'half_life_years'),
+                lambda_domain=_atd_read_list(_atd_read_float)(x['lambda_domain']) if 'lambda_domain' in x else _atd_missing_json_field('Implied', 'lambda_domain'),
+                meaningful_readout=_atd_read_string(x['meaningful_readout']) if 'meaningful_readout' in x else _atd_missing_json_field('Implied', 'meaningful_readout'),
+                meaningful_rule=_atd_read_string(x['meaningful_rule']) if 'meaningful_rule' in x else _atd_missing_json_field('Implied', 'meaningful_rule'),
+                solver=_atd_read_string(x['solver']) if 'solver' in x else _atd_missing_json_field('Implied', 'solver'),
+                tolerance=_atd_read_float(x['tolerance']) if 'tolerance' in x else _atd_missing_json_field('Implied', 'tolerance'),
+                held=_atd_read_list(HeldInput.from_json)(x['held']) if 'held' in x else _atd_missing_json_field('Implied', 'held'),
+            )
+        else:
+            _atd_bad_json('Implied', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['level_name'] = _atd_write_string(self.level_name)
+        res['level'] = (lambda x: x.to_json())(self.level)
+        res['level_domain'] = _atd_write_list(_atd_write_float)(self.level_domain)
+        res['half_life_years'] = (lambda x: x.to_json())(self.half_life_years)
+        res['lambda_domain'] = _atd_write_list(_atd_write_float)(self.lambda_domain)
+        res['meaningful_readout'] = _atd_write_string(self.meaningful_readout)
+        res['meaningful_rule'] = _atd_write_string(self.meaningful_rule)
+        res['solver'] = _atd_write_string(self.solver)
+        res['tolerance'] = _atd_write_float(self.tolerance)
+        res['held'] = _atd_write_list((lambda x: x.to_json()))(self.held)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Implied':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -2218,6 +2338,7 @@ class Valuation:
     inputs: Optional[ModelInputs]
     filing_age_days: Optional[int] = None
     cross_check: Optional[CrossCheck] = None
+    implied: Optional[Implied] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -2245,6 +2366,7 @@ class Valuation:
                 inputs=_atd_read_nullable(ModelInputs.from_json)(x['inputs']) if 'inputs' in x else _atd_missing_json_field('Valuation', 'inputs'),
                 filing_age_days=_atd_read_int(x['filing_age_days']) if 'filing_age_days' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
+                implied=Implied.from_json(x['implied']) if 'implied' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -2275,6 +2397,8 @@ class Valuation:
             res['filing_age_days'] = _atd_write_int(self.filing_age_days)
         if self.cross_check is not None:
             res['cross_check'] = (lambda x: x.to_json())(self.cross_check)
+        if self.implied is not None:
+            res['implied'] = (lambda x: x.to_json())(self.implied)
         return res
 
     @classmethod

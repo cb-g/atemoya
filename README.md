@@ -73,7 +73,14 @@ to tune away.
 Both providers assemble cash, total debt, the change in working capital and ebit per
 `reference/field_definitions.json`, the one definition per field with its reasoning; every
 period records the components summed, and a record fetched under another definition fails
-rather than being valued under this one. With `--baseline`, `provider_diff.txt` opens with
+rather than being valued under this one. A derived
+ebit (no operating income filed) runs the DCF only when the cross-check finds it within
+threshold of the vendor's operating income; the refinement policy in that file allows one
+refinement of a recipe and names the `Failed` reason for a miss. Every `Ok` record also
+carries two implied readouts solved on its own inputs, headline untouched: the starting
+growth (or ROE) the price needs, and the reversion half-life the observed start would need,
+the second only where the start lies above its target; a rule on the record says which one
+to read, and every null carries its reason. With `--baseline`, `provider_diff.txt` opens with
 every record against the previous run and lists the inputs behind every moved fair value.
 Valuation never fetches, so running it twice on the same inputs with `--today` pinned gives
 byte-identical output. `data/` and `output/` are generated and gitignored; versioned inputs

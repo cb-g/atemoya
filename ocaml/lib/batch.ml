@@ -7,6 +7,11 @@ let class_label = function
   | Some c -> Admissibility.class_name c
   | None -> "undeclared"
 
+let contains haystack needle =
+  let n = String.length needle and h = String.length haystack in
+  let rec go i = i + n <= h && (String.sub haystack i n = needle || go (i + 1)) in
+  n = 0 || go 0
+
 let starts_with ~prefix s =
   String.length s >= String.length prefix
   && String.sub s 0 (String.length prefix) = prefix
@@ -171,6 +176,37 @@ let summary ?universe ?definitions (vs : valuation list) =
             in
             Printf.bprintf b "             %s\n" note)
       disagreeing
+  end;
+  (* What the market needs to be true, across the Ok names. *)
+  let implied = List.filter_map (fun (v : valuation) -> v.implied) vs in
+  if implied <> [] then begin
+    let half_lives =
+      List.filter_map (fun (i : implied) -> i.half_life_years.value) implied |> List.sort compare
+    in
+    let n = List.length half_lives in
+    let median =
+      if n = 0 then None
+      else if n mod 2 = 1 then Some (List.nth half_lives (n / 2))
+      else Some (0.5 *. (List.nth half_lives ((n / 2) - 1) +. List.nth half_lives (n / 2)))
+    in
+    let count_reason needle =
+      List.length
+        (List.filter
+           (fun (i : implied) ->
+             match i.half_life_years.reason with Some r -> contains r needle | None -> false)
+           implied)
+    in
+    let never_decay = count_reason "would have to never decay" in
+    let below_no_growth = count_reason "price is below the no-" in
+    let level = List.length (List.filter (fun (i : implied) -> i.meaningful_readout = "level") implied) in
+    Printf.bprintf b "\nimplied, across %d Ok names: half-life %s; beyond range: %d would need growth or roe that never decays, %d priced below the no-growth value; level is the meaningful readout for %d (start at or below its target)\n"
+      (List.length implied)
+      (match (median, half_lives) with
+      | Some m, _ :: _ ->
+          Printf.sprintf "median %.1f years (range %.1f to %.1f, %d solved)" m (List.hd half_lives)
+            (List.nth half_lives (n - 1)) n
+      | _ -> "none solved")
+      never_decay below_no_growth level
   end;
   Printf.bprintf b "\nper ticker%s:\n"
     (if Option.is_some universe then " (expected from the universe file)"

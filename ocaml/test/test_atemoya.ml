@@ -1061,7 +1061,7 @@ let test_flow_chart_names_every_reason () =
       "insurer model requires filed-statement data"; "fx not available for";
       "latest annual filing is";
       "missing market data: financial_currency"; "missing market data: trading_currency";
-      "fx for"; "field definition mismatch" ]
+      "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check" ]
 
 (* --- the insurer model --- *)
 
@@ -1428,7 +1428,7 @@ let test_definitions_gate () =
   Alcotest.(check (option model)) "routed before the gate" (Some `Dcf) v.model;
   Alcotest.(check bool) "nothing computed" true (Option.is_none v.inputs);
   let v = run (financials [ defined_period ~ebit_recipe:"vendor_ebit_row" "2025-09-30"; defined_period "2024-09-30" ]) in
-  check_reason v [ "field definition mismatch: ebit recipe follows \"vendor_ebit_row\", reference/field_definitions.json defines \"operating_income | pretax_plus_interest\"" ];
+  check_reason v [ "field definition mismatch: ebit recipe follows \"vendor_ebit_row\", reference/field_definitions.json defines \"operating_income | pretax_plus_interest_less_nonoperating\"" ];
   (* the gate sits before the filing-age gate *)
   let v = run (filed ~latest_filing:"2025-01-01" stale) in
   check_reason v [ "field definition mismatch" ];
@@ -1493,6 +1493,188 @@ let test_summary_definitions_and_cross_check_listing () =
     [ "             vendor lag: the vendor still shows the prior filing's cash" ];
   if contains (Batch.summary [ run (financials (history ())) ]) "field definitions" then
     Alcotest.fail "definitions line without definitions"
+
+(* --- implied readouts: what the price needs to be true --- *)
+
+let dcf_inputs (v : Boundary_t.valuation) =
+  match v.inputs with Some (`Dcf i) -> i | _ -> Alcotest.fail "no dcf inputs"
+
+let ri_inputs (v : Boundary_t.valuation) =
+  match v.inputs with Some (`Residual_income i) -> i | _ -> Alcotest.fail "no residual-income inputs"
+
+let implied_of (v : Boundary_t.valuation) =
+  match v.implied with Some i -> i | None -> Alcotest.fail "no implied block on an Ok record"
+
+(* A growing fixture: rising revenue and reinvestment, so the derived g0 sits above terminal. *)
+let growing () =
+  List.map2
+    (fun period_end revenue -> full_period ~period_end ~total_revenue:revenue ~capex:400. ~delta_nwc:100. ())
+    [ "2025-09-30"; "2024-09-30"; "2023-09-30" ] [ 12000.; 10500.; 9000. ]
+
+(* The block for the same inputs at another price: what the solver sees on a record is
+   exactly this (price enters the record's wacc through market cap, so a repriced record
+   would be a different function; the solver holds the recorded one). *)
+let implied_at (m : Boundary_t.model_inputs) price = Implied.of_inputs m ~price
+
+let test_bisect () =
+  (match Implied.bisect ~f:(fun x -> x *. x) ~target:2. ~lo:0. ~hi:3. ~tolerance:1e-9 with
+  | Implied.Root x -> check_float "sqrt 2" (sqrt 2.) x
+  | _ -> Alcotest.fail "no root");
+  (match Implied.bisect ~f:(fun x -> -.x) ~target:0.5 ~lo:0. ~hi:3. ~tolerance:1e-9 with
+  | Implied.Beyond_low -> ()
+  | _ -> Alcotest.fail "a decreasing f with the target above f lo lies beyond the bottom");
+  (match Implied.bisect ~f:(fun x -> x) ~target:5. ~lo:0. ~hi:3. ~tolerance:1e-9 with
+  | Implied.Beyond_high -> ()
+  | _ -> Alcotest.fail "beyond the top");
+  match Implied.bisect ~f:(fun _ -> 1.) ~target:5. ~lo:0. ~hi:3. ~tolerance:1e-9 with
+  | Implied.Flat -> ()
+  | _ -> Alcotest.fail "flat"
+
+let test_dcf_solver_recovers_known_g0_and_lambda () =
+  let v = run (financials (growing ())) in
+  Alcotest.check status "fixture values" `Ok v.status;
+  let i = dcf_inputs v in
+  let lambda = i.mean_reversion_lambda.value in
+  check_float "the fair-value function reproduces the headline at the recorded g0 and lambda"
+    (Option.get v.fair_value) (Implied.dcf_fair_value i ~g0:i.g0 ~lambda);
+  Alcotest.(check bool) "fixture grows above terminal" true (i.g0 > i.terminal_growth_rate.value);
+  (* at the fair value of another g0, the solver must find that g0 *)
+  let target_g0 = 0.08 in
+  let solved = implied_at (`Dcf i) (Implied.dcf_fair_value i ~g0:target_g0 ~lambda) in
+  Alcotest.(check string) "level name" "implied_g0" solved.level_name;
+  (match solved.level.value with
+  | Some g -> Alcotest.(check bool) "recovers g0 = 0.08" true (Float.abs (g -. target_g0) < 1e-5)
+  | None -> Alcotest.failf "level null: %s" (Option.value solved.level.reason ~default:""));
+  (* ... and a known lambda from the half-life *)
+  let target_lambda = 0.5 in
+  let solved = implied_at (`Dcf i) (Implied.dcf_fair_value i ~g0:i.g0 ~lambda:target_lambda) in
+  (match solved.half_life_years.value with
+  | Some h -> Alcotest.(check bool) "recovers lambda = 0.5 as its half-life" true (Float.abs (h -. (log 2. /. target_lambda)) < 1e-4)
+  | None -> Alcotest.failf "half-life null: %s" (Option.value solved.half_life_years.reason ~default:""));
+  Alcotest.(check string) "meaningful by rule" "half_life" solved.meaningful_readout;
+  check_mentions "rule" solved.meaningful_rule [ "g0 "; "> terminal growth" ];
+  Alcotest.(check (list approx)) "domains" [ -0.5; 3.0 ] solved.level_domain;
+  Alcotest.(check (list approx)) "lambda domain" [ 0.01; 5.0 ] solved.lambda_domain;
+  Alcotest.(check bool) "held inputs on the record" true
+    (List.exists (fun (h : Boundary_t.held_input) -> h.name = "fcff") solved.held);
+  (* the record's own block is the block at its own price: the level is its own g0 *)
+  let own = implied_of v in
+  (match own.level.value with
+  | Some g -> Alcotest.(check bool) "at the fair value itself the implied g0 is the recorded g0" true
+                (Float.abs (g -. i.g0) < 1e-5 || Float.abs (Option.get v.fair_value -. Option.get v.price) > 1e-9)
+  | None -> ());
+  check_mentions "json" (Boundary_j.string_of_valuation v) [ {|"implied":{"level_name":"implied_g0"|}; {|"solver":"bisection"|} ]
+
+let test_half_life_guard_and_level_rule () =
+  (* the flat fixture: g0 = 0 (historical), terminal 0.025 above it *)
+  let v = run (financials (history ())) in
+  let i = dcf_inputs v in
+  Alcotest.(check bool) "fixture below terminal" true (i.g0 <= i.terminal_growth_rate.value);
+  let s = implied_of v in
+  Alcotest.(check (option approx)) "half-life not solved" None s.half_life_years.value;
+  Alcotest.(check (option string)) "with the exact reason"
+    (Some "observed growth is below terminal; persistence is not the question") s.half_life_years.reason;
+  Alcotest.(check string) "level is the meaningful readout" "level" s.meaningful_readout;
+  check_mentions "rule" s.meaningful_rule [ "<= terminal growth" ];
+  Alcotest.(check bool) "level solved" true (Option.is_some s.level.value)
+
+let test_no_solution_in_range_both_ends () =
+  let i = dcf_inputs (run (financials (growing ()))) in
+  let above = implied_at (`Dcf i) 1e9 in
+  Alcotest.(check (option string)) "beyond the top of the growth domain"
+    (Some "the price needs a starting growth above 3.00, the top of the domain") above.level.reason;
+  Alcotest.(check (option string)) "growth would have to never decay"
+    (Some "growth would have to never decay and the price is still above the result") above.half_life_years.reason;
+  let below = implied_at (`Dcf i) (-1e9) in
+  Alcotest.(check (option string)) "below the bottom of the growth domain"
+    (Some "the price needs a starting growth below -0.50, the bottom of the domain") below.level.reason;
+  Alcotest.(check (option string)) "price below the no-growth value"
+    (Some "price is below the no-growth value") below.half_life_years.reason;
+  Alcotest.(check bool) "every null carries a reason" true
+    (List.for_all
+       (fun (r : Boundary_t.readout) -> (Option.is_some r.value) <> (Option.is_some r.reason))
+       [ above.level; above.half_life_years; below.level; below.half_life_years ])
+
+let test_bank_solver_recovers_known_roe () =
+  let fin = bank_financials (bank_history ()) in
+  let v = run ~declared:(Some (declaration `Bank)) fin in
+  Alcotest.check status "bank values" `Ok v.status;
+  let i = ri_inputs v in
+  let lambda = i.mean_reversion_lambda.value in
+  check_float "reproduces the headline" (Option.get v.fair_value)
+    (Implied.residual_income_fair_value i ~roe_0:i.roe_0 ~lambda);
+  let target = 0.15 in
+  let s = implied_at (`Residual_income i) (Implied.residual_income_fair_value i ~roe_0:target ~lambda) in
+  Alcotest.(check string) "level name" "implied_roe0" s.level_name;
+  (match s.level.value with
+  | Some r -> Alcotest.(check bool) "recovers roe 0.15" true (Float.abs (r -. target) < 1e-5)
+  | None -> Alcotest.failf "null: %s" (Option.value s.level.reason ~default:""));
+  Alcotest.(check (list approx)) "roe domain" [ -0.5; 1.0 ] s.level_domain;
+  (* the bank fixture's roe 0.2 sits above its cost of equity: the half-life is the question *)
+  Alcotest.(check string) "meaningful" "half_life" s.meaningful_readout;
+  check_mentions "rule" s.meaningful_rule [ "roe_0 "; "> cost of equity" ];
+  let s = implied_at (`Residual_income i) (Implied.residual_income_fair_value i ~roe_0:i.roe_0 ~lambda:1.0) in
+  (match s.half_life_years.value with
+  | Some h -> Alcotest.(check bool) "recovers lambda 1.0" true (Float.abs (h -. log 2.) < 1e-4)
+  | None -> Alcotest.failf "null: %s" (Option.value s.half_life_years.reason ~default:""));
+  (* an insurer carries the same block on its core *)
+  let ins = run ~declared:(Some (declaration `Insurer)) (insurer_financials (insurer_history ())) in
+  Alcotest.(check string) "insurer level name" "implied_roe0" (implied_of ins).level_name;
+  (* a bank whose roe sits below its cost of equity reads the level, with the roe wording *)
+  let s = implied_at (`Residual_income { i with roe_0 = i.cost_of_equity -. 0.01 }) 10. in
+  Alcotest.(check (option string)) "roe guard names the cost of equity"
+    (Some "observed roe is below the cost of equity; persistence is not the question") s.half_life_years.reason;
+  Alcotest.(check string) "level then" "level" s.meaningful_readout;
+  (* a Failed record carries none *)
+  Alcotest.(check bool) "no block on a failed record" true (Option.is_none (run (financials [])).implied)
+
+let test_headline_independent_of_the_readouts () =
+  let v = run (financials (growing ())) in
+  let stripped = { v with implied = None } in
+  Alcotest.(check (option approx)) "fair value" v.fair_value stripped.fair_value;
+  Alcotest.(check bool) "block is pure: same inputs, same block" true
+    (Boundary_j.string_of_implied (implied_of v) = Boundary_j.string_of_implied (implied_of (run (financials (growing ())))))
+
+let derived_ebit_period ?(recipe = "pretax_plus_interest_less_nonoperating") period_end =
+  { (full_period ~period_end ()) with ebit_recipe = Some recipe }
+
+let ebit_check ~agree : Boundary_t.cross_check =
+  { a_cross_check with
+    fields = [ { field = "ebit"; primary = Some 25287.; secondary = Some 25596.; relative_difference = Some 0.012; agree = Some agree } ];
+    disagreements = (if agree then 0 else 1) }
+
+let test_ebit_policy_gate () =
+  let periods = List.map derived_ebit_period [ "2025-09-30"; "2024-09-30"; "2023-09-30" ] in
+  let ok = run (filed ~cross_check:(ebit_check ~agree:true) periods) in
+  Alcotest.check status "a derived ebit within threshold runs" `Ok ok.status;
+  let miss = run (filed ~cross_check:(ebit_check ~agree:false) periods) in
+  check_reason miss
+    [ "operating income not filed; derived EBIT misses the cross-check (pretax_plus_interest_less_nonoperating: derived 2.529e+04 against the vendor's 2.56e+04, 1.2% beyond the 2% threshold)" ];
+  Alcotest.(check bool) "nothing computed" true (Option.is_none miss.inputs);
+  let unchecked = run (filed periods) in
+  check_reason unchecked [ "operating income not filed; derived EBIT misses the cross-check (pretax_plus_interest_less_nonoperating: no vendor operating income to check against)" ];
+  let reported = run (filed ~cross_check:(ebit_check ~agree:false) (List.map (derived_ebit_period ~recipe:"operating_income") [ "2025-09-30"; "2024-09-30"; "2023-09-30" ])) in
+  Alcotest.check status "filed operating income is never gated" `Ok reported.status;
+  let bank = run ~declared:(Some (declaration `Bank)) (filed ~cross_check:(ebit_check ~agree:false) [ { (bank_period ()) with ebit_recipe = Some "pretax_plus_interest_less_nonoperating" }; { (bank_period ()) with period_end = "2024-09-30"; ebit_recipe = Some "pretax_plus_interest_less_nonoperating" } ]) in
+  Alcotest.(check bool) "the gate is a dcf gate" true (bank.failed_reason = None || not (contains (Option.get bank.failed_reason) "derived EBIT"));
+  Alcotest.(check int) "policy allows one refinement" 1 params.field_definitions.refinement_policy.max_refinements_per_field;
+  Alcotest.(check int) "recipes: operating income plus one derived" 2 (List.length params.field_definitions.ebit.recipes)
+
+let test_summary_implied_line () =
+  let rename t (v : Boundary_t.valuation) = { v with ticker = t } in
+  let grow = run (financials (growing ())) in
+  let i = dcf_inputs grow in
+  let at t price = rename t { grow with implied = Some (implied_at (`Dcf i) price) } in
+  let vs =
+    [ at "SOLVED" (Implied.dcf_fair_value i ~g0:i.g0 ~lambda:0.5); rename "FLAT" (run (financials (history ())));
+      at "HIGH" 1e9; at "LOW" (-1e9); rename "NOPE" (run (financials [])) ]
+  in
+  check_mentions "summary" (Batch.summary vs)
+    [ "implied, across 4 Ok names: half-life median "; "years (range "; ", 1 solved)";
+      "beyond range: 1 would need growth or roe that never decays, 1 priced below the no-growth value";
+      "level is the meaningful readout for 1 (start at or below its target)" ];
+  if contains (Batch.summary [ rename "NOPE" (run (financials [])) ]) "implied, across" then
+    Alcotest.fail "implied line without Ok records"
 
 (* --- batch summary --- *)
 
@@ -1787,6 +1969,17 @@ let () =
           case "fx scales the components too" test_fx_scales_compositions;
           case "run diff lists every moved fair value's drivers" test_run_diff_lists_drivers;
           case "summary names the definitions and characterises each flag" test_summary_definitions_and_cross_check_listing;
+        ] );
+      ( "implied readouts",
+        [
+          case "bisection on a bounded domain, either direction" test_bisect;
+          case "dcf solver recovers a known g0 and a known lambda" test_dcf_solver_recovers_known_g0_and_lambda;
+          case "half-life guarded below terminal; level is then the readout" test_half_life_guard_and_level_rule;
+          case "no solution in range, both ends, with reasons" test_no_solution_in_range_both_ends;
+          case "bank solver recovers a known roe; insurer carries the block" test_bank_solver_recovers_known_roe;
+          case "the headline does not depend on the readouts" test_headline_independent_of_the_readouts;
+          case "derived ebit runs only within the cross-check, else the policy's failed" test_ebit_policy_gate;
+          case "summary carries the universe-level implied line" test_summary_implied_line;
         ] );
       ( "cross-currency",
         [

@@ -558,6 +558,38 @@ class RiskFreeRates:
 
 
 @dataclass
+class RefinementPolicy:
+    """Original type: refinement_policy = { ... }
+    """
+
+    max_refinements_per_field: int
+    on_miss: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'RefinementPolicy':
+        if isinstance(x, dict):
+            return cls(
+                max_refinements_per_field=_atd_read_int(x['max_refinements_per_field']) if 'max_refinements_per_field' in x else _atd_missing_json_field('RefinementPolicy', 'max_refinements_per_field'),
+                on_miss=_atd_read_string(x['on_miss']) if 'on_miss' in x else _atd_missing_json_field('RefinementPolicy', 'on_miss'),
+            )
+        else:
+            _atd_bad_json('RefinementPolicy', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['max_refinements_per_field'] = _atd_write_int(self.max_refinements_per_field)
+        res['on_miss'] = _atd_write_string(self.on_miss)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'RefinementPolicy':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class RateSource:
     """Original type: rate_source = { ... }
     """
@@ -1109,6 +1141,9 @@ class EbitRows:
 
     operating_income: List[str]
     interest_expense: List[str]
+    interest_income: List[str]
+    other_nonoperating: List[str]
+    equity_method: List[str]
 
     @classmethod
     def from_json(cls, x: Any) -> 'EbitRows':
@@ -1116,6 +1151,9 @@ class EbitRows:
             return cls(
                 operating_income=_atd_read_list(_atd_read_string)(x['operating_income']) if 'operating_income' in x else _atd_missing_json_field('EbitRows', 'operating_income'),
                 interest_expense=_atd_read_list(_atd_read_string)(x['interest_expense']) if 'interest_expense' in x else _atd_missing_json_field('EbitRows', 'interest_expense'),
+                interest_income=_atd_read_list(_atd_read_string)(x['interest_income']) if 'interest_income' in x else _atd_missing_json_field('EbitRows', 'interest_income'),
+                other_nonoperating=_atd_read_list(_atd_read_string)(x['other_nonoperating']) if 'other_nonoperating' in x else _atd_missing_json_field('EbitRows', 'other_nonoperating'),
+                equity_method=_atd_read_list(_atd_read_string)(x['equity_method']) if 'equity_method' in x else _atd_missing_json_field('EbitRows', 'equity_method'),
             )
         else:
             _atd_bad_json('EbitRows', x)
@@ -1124,6 +1162,9 @@ class EbitRows:
         res: Dict[str, Any] = {}
         res['operating_income'] = _atd_write_list(_atd_write_string)(self.operating_income)
         res['interest_expense'] = _atd_write_list(_atd_write_string)(self.interest_expense)
+        res['interest_income'] = _atd_write_list(_atd_write_string)(self.interest_income)
+        res['other_nonoperating'] = _atd_write_list(_atd_write_string)(self.other_nonoperating)
+        res['equity_method'] = _atd_write_list(_atd_write_string)(self.equity_method)
         return res
 
     @classmethod
@@ -1426,6 +1467,7 @@ class FieldDefinitions:
     total_debt: DebtDefinition
     delta_nwc: NwcDefinition
     ebit: EbitDefinition
+    refinement_policy: RefinementPolicy
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -1438,6 +1480,7 @@ class FieldDefinitions:
                 total_debt=DebtDefinition.from_json(x['total_debt']) if 'total_debt' in x else _atd_missing_json_field('FieldDefinitions', 'total_debt'),
                 delta_nwc=NwcDefinition.from_json(x['delta_nwc']) if 'delta_nwc' in x else _atd_missing_json_field('FieldDefinitions', 'delta_nwc'),
                 ebit=EbitDefinition.from_json(x['ebit']) if 'ebit' in x else _atd_missing_json_field('FieldDefinitions', 'ebit'),
+                refinement_policy=RefinementPolicy.from_json(x['refinement_policy']) if 'refinement_policy' in x else _atd_missing_json_field('FieldDefinitions', 'refinement_policy'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -1451,6 +1494,7 @@ class FieldDefinitions:
         res['total_debt'] = (lambda x: x.to_json())(self.total_debt)
         res['delta_nwc'] = (lambda x: x.to_json())(self.delta_nwc)
         res['ebit'] = (lambda x: x.to_json())(self.ebit)
+        res['refinement_policy'] = (lambda x: x.to_json())(self.refinement_policy)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 

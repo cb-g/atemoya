@@ -206,19 +206,35 @@ def test_debt_recipes_exclude_operating_leases_and_keep_folded_finance_leases() 
 
 
 def test_ebit_recipe_from_filed_tags_when_operating_income_is_absent() -> None:
+    """Pretax + interest expense - interest income - other non-operating - equity method,
+    each subtracted as filed (income-positive); Johnson & Johnson FY2025 by hand."""
     jnj = {"IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest": usd(fact("2025-12-31", 32.581e9, start="2025-01-01")),
-           "InterestExpenseNonoperating": usd(fact("2025-12-31", 0.971e9, start="2025-01-01"))}
+           "InterestExpenseNonoperating": usd(fact("2025-12-31", 0.971e9, start="2025-01-01")),
+           "InvestmentIncomeInterest": usd(fact("2025-12-31", 1.056e9, start="2025-01-01")),
+           "OtherNonoperatingIncomeExpense": usd(fact("2025-12-31", 7.209e9, start="2025-01-01")),
+           "IncomeLossFromEquityMethodInvestments": usd(fact("2025-12-31", 3.0e9, start="2025-01-01"))}
     p = period(jnj)
-    assert p.ebit is not None and math.isclose(p.ebit, 33.552e9)
-    assert p.ebit_recipe == "pretax_plus_interest" and p.ebit_recipe in DEFS.ebit.recipes
-    assert p.ebit_row == "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest + InterestExpenseNonoperating"
-    assert components(p.ebit_composition) == [("pretax_income", 32.581e9, "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"),
-                                              ("interest_expense", 0.971e9, "InterestExpenseNonoperating")]
+    assert p.ebit is not None and math.isclose(p.ebit, (32.581 + 0.971 - 1.056 - 7.209 - 3.0) * 1e9)
+    assert p.ebit_recipe == "pretax_plus_interest_less_nonoperating" and p.ebit_recipe in DEFS.ebit.recipes
+    assert p.ebit_row == ("IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest + InterestExpenseNonoperating"
+                          " - InvestmentIncomeInterest - OtherNonoperatingIncomeExpense - IncomeLossFromEquityMethodInvestments")
+    assert components(p.ebit_composition) == [
+        ("pretax_income", 32.581e9, "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"),
+        ("interest_expense", 0.971e9, "InterestExpenseNonoperating"), ("interest_income", -1.056e9, "InvestmentIncomeInterest"),
+        ("other_nonoperating", -7.209e9, "OtherNonoperatingIncomeExpense"), ("equity_method", -3.0e9, "IncomeLossFromEquityMethodInvestments")]
     assert p.ebit_composition is not None and p.ebit_composition.definition == DEFS.ebit.name
+    for absent in ("InvestmentIncomeInterest", "OtherNonoperatingIncomeExpense", "IncomeLossFromEquityMethodInvestments"):
+        q = period({k: v for k, v in jnj.items() if k != absent})
+        parts = components(q.ebit_composition)
+        assert q.ebit is not None and len(parts) == 4 and math.isclose(q.ebit, sum(v for _, v, _ in parts)) and absent not in [r for _, _, r in parts]
+    # a negative other non-operating figure (an expense) is subtracted as filed, so it adds back
+    q = period({**jnj, "OtherNonoperatingIncomeExpense": usd(fact("2025-12-31", -2.0e9, start="2025-01-01"))})
+    assert q.ebit is not None and math.isclose(q.ebit, (32.581 + 0.971 - 1.056 + 2.0 - 3.0) * 1e9)
     with_operating = period({**jnj, "OperatingIncomeLoss": usd(fact("2025-12-31", 25.6e9, start="2025-01-01"))})
     assert (with_operating.ebit, with_operating.ebit_recipe, with_operating.ebit_row) == (25.6e9, "operating_income", "OperatingIncomeLoss")
     no_interest = period({"IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest": usd(fact("2025-12-31", 1e9, start="2025-01-01"))})
     assert no_interest.ebit is None and no_interest.ebit_recipe is None and no_interest.ebit_composition is None
+    assert len(DEFS.ebit.recipes) == 1 + DEFS.refinement_policy.max_refinements_per_field
 
 
 def test_dividend_tag_order_reaches_bank_of_america() -> None:

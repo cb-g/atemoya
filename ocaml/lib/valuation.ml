@@ -132,6 +132,7 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
       status;
       failed_reason;
       inputs;
+      implied = None;
     }
   in
   let failed ?(fin = original) ?model ?class_check ?inputs ~floor reason =
@@ -160,11 +161,41 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
              margin_of_safety thresholds.sanity_bound)
       else
         let currency = Option.value fin.currency ~default:"" in
-        record ~fin ~model ~class_check ~inputs ~fair_value ~margin_of_safety
-          ~signal:(signal thresholds margin_of_safety)
-          ~price:(Some price) ~status:`Ok
-          ~floor:(floor_verified ~currency inputs ~fair_value)
-          ()
+        {
+          (record ~fin ~model ~class_check ~inputs ~fair_value ~margin_of_safety
+             ~signal:(signal thresholds margin_of_safety)
+             ~price:(Some price) ~status:`Ok
+             ~floor:(floor_verified ~currency inputs ~fair_value)
+             ())
+          with
+          implied = Some (Implied.of_inputs inputs ~price);
+        }
+  in
+  (* A derived ebit (any recipe but operating income) runs the dcf only when the record's
+     cross-check found it within threshold of the vendor's operating income; a miss, or no
+     figure to check against, is the policy's Failed. *)
+  let ebit_policy (fin : financials) =
+    let policy = params.field_definitions.refinement_policy in
+    match Period.latest fin with
+    | Some ({ ebit_recipe = Some recipe; _ } : fiscal_period) when recipe <> "operating_income" -> (
+        let check =
+          Option.bind original.cross_check (fun (c : cross_check) ->
+              List.find_opt (fun (f : field_check) -> f.field = "ebit") c.fields)
+        in
+        match check with
+        | Some { agree = Some true; _ } -> Ok ()
+        | Some ({ agree = Some false; _ } as f) ->
+            Error
+              (Printf.sprintf "%s (%s: derived %.4g against the vendor's %.4g, %.1f%% beyond the %g%% threshold)"
+                 policy.on_miss recipe
+                 (Option.value f.primary ~default:nan) (Option.value f.secondary ~default:nan)
+                 (Option.value f.relative_difference ~default:nan *. 100.)
+                 (match original.cross_check with Some c -> c.threshold *. 100. | None -> nan))
+        | _ ->
+            Error
+              (Printf.sprintf "%s (%s: no vendor operating income to check against)" policy.on_miss
+                 recipe))
+    | _ -> Ok ()
   in
   let run_model ~fin ?conversion ~model ~class_check ~rule ~country assumptions =
     let failed = failed ~fin ~model ~class_check ~floor:(floor_of_rule rule) in
@@ -176,9 +207,12 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
     in
     match model with
     | `Dcf -> (
-        match Dcf.value assumptions ~country fin with
+        match ebit_policy fin with
         | Error reason -> failed reason
-        | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Dcf inputs) fair_value)
+        | Ok () -> (
+            match Dcf.value assumptions ~country fin with
+            | Error reason -> failed reason
+            | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Dcf inputs) fair_value))
     | `Residual_income -> (
         match Params.bank_terminal_roe_spread params ~today with
         | Error reason -> failed reason

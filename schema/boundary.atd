@@ -407,6 +407,37 @@ type insurer_inputs = {
   solvency_basis : string;
 }
 
+(* What the price needs to be true (12): two readouts solved by bisection on the record's
+   own inputs with everything else held at its recorded value. [level] is the starting
+   growth (dcf: implied_g0) or starting ROE (residual income: implied_roe0) at which fair
+   value equals price; [half_life_years] is the reversion half-life (ln 2 / lambda) at
+   which it does, holding the observed g0 or ROE0, attempted only when that start lies
+   above its reversion target (fair value is monotone in lambda only there). A null carries
+   its reason. [meaningful_readout] is decided by rule, never by hand: half_life above the
+   target, level at or below it. The headline fair value does not depend on this block. *)
+type readout = {
+  value : float nullable;
+  reason : string nullable;                   (* non-null iff value is null *)
+}
+
+type held_input = {
+  name : string;
+  value : float;
+}
+
+type implied = {
+  level_name : string;                        (* implied_g0 | implied_roe0 *)
+  level : readout;
+  level_domain : float list;                  (* [low; high] *)
+  half_life_years : readout;
+  lambda_domain : float list;                 (* [low; high]; half-lives from ln 2 / high to ln 2 / low *)
+  meaningful_readout : string;                (* level | half_life *)
+  meaningful_rule : string;                   (* the comparison that decided it, with the numbers *)
+  solver : string;                            (* bisection *)
+  tolerance : float;                          (* on the solved variable *)
+  held : held_input list;                     (* every input held at its recorded value *)
+}
+
 (* The inputs of whichever model ran, tagged with it. *)
 type model_inputs = [
   | Dcf <json name="dcf"> of inputs
@@ -437,4 +468,5 @@ type valuation = {
   status : status;
   failed_reason : string nullable;
   inputs : model_inputs nullable;
+  ?implied : implied option;              (* present iff status is Ok (12) *)
 }

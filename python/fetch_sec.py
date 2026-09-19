@@ -234,7 +234,7 @@ def _composition(definition: str, parts: list[boundary.Component]) -> boundary.C
     return boundary.Composition(definition=definition, components=parts)
 
 
-SUBTRACTED = frozenset({"restricted_cash", "liability_components"})  # components summed with their sign flipped
+SUBTRACTED = frozenset({"restricted_cash", "liability_components", "interest_income", "other_nonoperating", "equity_method"})  # components summed with their sign flipped
 
 
 def _label(parts: list[boundary.Component]) -> str:
@@ -337,8 +337,10 @@ def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: 
 
 
 def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: float | None, pretax_row: str | None) -> tuple[float | None, str | None, str | None, boundary.Composition | None]:
-    """Operating income as filed; else pretax income plus interest expense, recorded as the
-    recipe pretax_plus_interest. (value, row, recipe, composition)."""
+    """Operating income as filed; else pretax income plus interest expense less the
+    non-operating income pretax carries (interest income, other non-operating income,
+    equity-method earnings: each first present, subtracted as filed), recorded as the
+    recipe pretax_plus_interest_less_nonoperating. (value, row, recipe, composition)."""
     d = defs.ebit.xbrl
     operating = facts.first(d.operating_income, end, instant=False)
     if operating is not None:
@@ -349,7 +351,11 @@ def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: floa
         return None, None, None, None
     parts = [boundary.Component(name="pretax_income", value=pretax, row=pretax_row),
              boundary.Component(name="interest_expense", value=interest[0], row=interest[1])]
-    return pretax + interest[0], _label(parts), "pretax_plus_interest", _composition(defs.ebit.name, parts)
+    for name, tags in (("interest_income", d.interest_income), ("other_nonoperating", d.other_nonoperating), ("equity_method", d.equity_method)):
+        hit = facts.first(tags, end, instant=False)
+        if hit is not None:
+            parts.append(boundary.Component(name=name, value=-hit[0], row=hit[1]))
+    return sum(p.value for p in parts), _label(parts), "pretax_plus_interest_less_nonoperating", _composition(defs.ebit.name, parts)
 
 
 def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str]) -> list[boundary.FiscalPeriod]:

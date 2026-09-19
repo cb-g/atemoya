@@ -4,7 +4,8 @@
   "notes": [
     "This file is the only place cash, total_debt, delta_nwc and ebit are defined. python/fetch.py reads the vendor rows from it, python/fetch_sec.py the us-gaap tags, and every record's fiscal periods carry a composition per field naming the definition and the components summed; the valuation refuses a record whose composition names a definition this file does not.",
     "Within each list the first present entry wins; 'first complete' means every entry of an alternative must be present. A component absent on both providers is absent, never a substituted zero; only the optional components (short-term investments, short-term borrowings, the current portion of debt on the vendor) may be missing without failing the field.",
-    "The cross-check (reference/xbrl_tags.json cross_check_threshold) compares the two providers on the same definitions, so what it still flags is a vendor row that is wrong, lagging or built from a different filed line, never a definitional gap."
+    "The cross-check (reference/xbrl_tags.json cross_check_threshold) compares the two providers on the same definitions, so what it still flags is a vendor row that is wrong, lagging or built from a different filed line, never a definitional gap.",
+    "refinement_policy: a derived recipe may be refined once per field; a name whose derived value still misses the cross-check threshold, or cannot be checked, is Failed with on_miss. A second refinement requires changing this file on purpose."
   ],
   "cash": {
     "name": "cash_and_short_term_investments",
@@ -176,9 +177,9 @@
     "name": "operating_income_else_pretax_plus_interest",
     "recipes": [
       "operating_income",
-      "pretax_plus_interest"
+      "pretax_plus_interest_less_nonoperating"
     ],
-    "why": "Operating income as filed or reported. When the filer tags no OperatingIncomeLoss (Chevron never has; Johnson & Johnson not since FY2014), EBIT is derived from filed tags, never from the vendor: pretax income (the record's canonical pretax_income) plus interest expense. Non-operating income remains inside the result, a known approximation recorded as ebit_recipe = pretax_plus_interest with both components: for FY2025 it carries Johnson & Johnson's 7.209bn other non-operating income (largely the reversal of the talc litigation accrual) and Chevron's 3.0bn equity-affiliate earnings, so the cross-check against the vendor's operating income flags both and the summary names them. The vendor path follows the same two recipes with its Operating Income, Pretax Income and Interest Expense rows.",
+    "why": "Operating income as filed or reported. When the filer tags no OperatingIncomeLoss (Chevron never has; Johnson & Johnson not since FY2014), EBIT is derived from filed tags, never from the vendor: pretax income (the record's canonical pretax_income) plus interest expense, less the non-operating income that pretax carries: the first present of each of interest income, other non-operating income and equity-method earnings, subtracted as filed (income-positive). This is the one refinement the policy allows; the first derived recipe (pretax plus interest) left FY2025's 7.2bn talc-accrual reversal inside Johnson & Johnson's EBIT (33.55bn against the vendor's 25.60bn operating income) and 3.0bn of equity-affiliate earnings inside Chevron's (20.96bn against 16.67bn). A derived EBIT is validated, not assumed: the DCF runs on it only when the record's cross-check finds it within the threshold of the vendor's operating income for the same period; a miss, or no vendor figure to check against, is Failed with refinement_policy.on_miss, and there is no third recipe. Refined: Johnson & Johnson 32.581 + 0.971 - 1.056 - 7.209 = 25.287bn, 1.2% from the vendor; Chevron 19.743 + 1.217 - 3.000 = 17.960bn, 7.7% from the vendor's 16.674bn because its 1.286bn interest and other income is tagged under no standard us-gaap element, so Chevron fails per policy. The vendor path follows the same two recipes with its own rows.",
     "xbrl": {
       "operating_income": [
         "OperatingIncomeLoss"
@@ -188,6 +189,16 @@
         "InterestExpenseNonoperating",
         "InterestExpenseDebt",
         "InterestAndDebtExpense"
+      ],
+      "interest_income": [
+        "InvestmentIncomeInterest",
+        "InterestIncome"
+      ],
+      "other_nonoperating": [
+        "OtherNonoperatingIncomeExpense"
+      ],
+      "equity_method": [
+        "IncomeLossFromEquityMethodInvestments"
       ]
     },
     "vendor": {
@@ -197,7 +208,21 @@
       "interest_expense": [
         "Interest Expense",
         "Interest Expense Non Operating"
+      ],
+      "interest_income": [
+        "Interest Income",
+        "Interest Income Non Operating"
+      ],
+      "other_nonoperating": [
+        "Other Non Operating Income Expenses"
+      ],
+      "equity_method": [
+        "Earnings From Equity Interest"
       ]
     }
+  },
+  "refinement_policy": {
+    "max_refinements_per_field": 1,
+    "on_miss": "operating income not filed; derived EBIT misses the cross-check"
   }
 }

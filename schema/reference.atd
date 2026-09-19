@@ -254,15 +254,28 @@ type nwc_definition = {
   vendor : nwc_vendor;
 }
 
-(* Pretax income is the record's canonical pretax_income on either provider. *)
+(* Pretax income is the record's canonical pretax_income on either provider. The derived
+   recipe is pretax + interest_expense - interest_income - other_nonoperating - equity_method,
+   each group first-present, subtracted as filed (income-positive). *)
 type ebit_rows = {
   operating_income : string list;
   interest_expense : string list;
+  interest_income : string list;
+  other_nonoperating : string list;
+  equity_method : string list;
+}
+
+(* How many times a derived recipe may be refined, and the Failed reason when the refined
+   value still misses the vendor cross-check (or cannot be checked). Data, so a second
+   refinement needs this file changed on purpose. *)
+type refinement_policy = {
+  max_refinements_per_field : int;
+  on_miss : string;
 }
 
 type ebit_definition = {
   name : string;
-  recipes : string list;                    (* the recipe names a record may carry as ebit_recipe *)
+  recipes : string list;                    (* the recipe names a record may carry as ebit_recipe: operating_income, then the one derived recipe *)
   why : string;
   xbrl : ebit_rows;
   vendor : ebit_rows;
@@ -276,4 +289,5 @@ type field_definitions = {
   total_debt : debt_definition;
   delta_nwc : nwc_definition;
   ebit : ebit_definition;
+  refinement_policy : refinement_policy;
 }

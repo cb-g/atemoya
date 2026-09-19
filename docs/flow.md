@@ -6,7 +6,7 @@ are the exact `failed_reason` strings, with variable parts in parentheses, so th
 checkable against `output/summary.txt`; a test asserts every reason string in the code
 appears here. **Every change that adds a branch updates this file in the same commit.**
 
-Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field.
+Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field, *(12)* by the implied readouts and the bounded EBIT.
 
 ```mermaid
 flowchart TD
@@ -56,7 +56,9 @@ flowchart TD
     PARAMS -- "future as_of" --> F_FUTURE["(parameter) for (key) has as_of (date), later than the valuation date (today)"]:::failed
     PARAMS -- "resolved" --> WHICH{"routed model"}
 
-    WHICH -- dcf --> DCF_PERIOD{"latest fiscal period, fields present? (ebit, d&a, capex, cash, total_debt, book_equity, delta_nwc over 2+ periods, price, market cap, currency)"}
+    WHICH -- dcf --> EBIT{"ebit on the latest period derived (ebit_recipe other than operating_income)? then the record's cross-check must find it within threshold of the vendor's operating income (12)"}:::new
+    EBIT -- "derived and the check misses, or no vendor figure to check against" --> F_EBIT["operating income not filed; derived EBIT misses the cross-check ((recipe): derived (x) against the vendor's (y), (d)% beyond the 2% threshold, or: no vendor operating income to check against) (12)"]:::failed
+    EBIT -- "filed operating income, or derived and within threshold" --> DCF_PERIOD{"latest fiscal period, fields present? (ebit, d&a, capex, cash, total_debt, book_equity, delta_nwc over 2+ periods, price, market cap, currency)"}
     DCF_PERIOD -- "no periods" --> F_NOPERIOD["no fiscal periods in statements"]:::failed
     DCF_PERIOD -- "missing" --> F_MISSING["missing market data: (fields); missing statement fields for fiscal period ending (date): (fields)"]:::failed
     DCF_PERIOD -- ok --> DCF_GUARDS{"guards"}
@@ -95,6 +97,7 @@ flowchart TD
     CONCLUDE -- yes --> BOUND{"margin of safety <= sanity bound 5.0?"}
     BOUND -- no --> F_BOUND["margin of safety (m) exceeds sanity bound 5.00: likely structural break; check entity_class"]:::failed
     BOUND -- yes --> OK["Ok: fair_value, margin_of_safety, signal (Buy >= +25%, Sell <= -25%, else Hold), inputs tagged by model, floor present = true with the model's basis"]:::ok
+    OK --> IMPLIED["implied readouts (12), headline untouched: level = the starting growth (dcf, domain -0.50 to 3.00) or starting ROE (residual income, -0.50 to 1.00) at which fair value equals price; half_life_years = the reversion half-life at which it does, holding the observed start, only when the start lies above its target (terminal growth / cost of equity), lambda domain 0.01 to 5.0; bisection; every null carries its reason; meaningful_readout by rule: half_life above the target, level otherwise"]:::new
 
     F_INADM --> FLOOR
     F_COUNTRY --> FLOOR
@@ -106,9 +109,10 @@ flowchart TD
     F_FILED --> FLOOR
     F_FILING --> FLOOR
     F_DEFS --> FLOOR
+    F_EBIT --> FLOOR
     F_NONPOS --> FLOOR
     F_BOUND --> FLOOR
-    OK --> RECORD
+    IMPLIED --> RECORD
     FLOOR["floor: present = true (verified), false (PreProfit, Ballast by definition), null (not assessable here), with basis from the admissibility row; scope_limits and lens_note verbatim from the declaration"] --> RECORD[/"record: one line in output/valuations.jsonl; summary groups Failed by reason and inadmissible by class"/]
 ```
 
@@ -138,3 +142,5 @@ into it.
 - field definitions (11): one definition per field on both providers (`reference/field_definitions.json`),
   the composition on every period and in the DCF inputs, the ebit recipe, and the
   field-definitions gate with its `Failed` string.
+- implied readouts and bounded EBIT (12): the implied readouts on every `Ok` record (headline untouched), the one EBIT
+  refinement with its refinement policy as data, and the policy's `Failed` string.

@@ -328,8 +328,9 @@ def _delta_nwc(rows: Mapping[str, object], defs: reference.FieldDefinitions) -> 
 
 
 def _ebit(rows: Mapping[str, object], defs: reference.FieldDefinitions) -> tuple[float | None, str | None, str | None, Components | None]:
-    """Operating income; else pretax income plus interest expense, recorded as the recipe
-    pretax_plus_interest. (value, row, recipe, components)."""
+    """Operating income; else pretax income plus interest expense less the non-operating
+    income rows (each first present), recorded as the recipe
+    pretax_plus_interest_less_nonoperating. (value, row, recipe, components)."""
     d = defs.ebit.vendor
     operating, row = _first_present(rows, tuple(d.operating_income))
     if operating is not None and row is not None:
@@ -338,7 +339,14 @@ def _ebit(rows: Mapping[str, object], defs: reference.FieldDefinitions) -> tuple
     interest, interest_row = _first_present(rows, tuple(d.interest_expense))
     if pretax is None or pretax_row is None or interest is None or interest_row is None:
         return None, None, None, None
-    return pretax + interest, f"{pretax_row} + {interest_row}", "pretax_plus_interest", [("pretax_income", pretax, pretax_row), ("interest_expense", interest, interest_row)]
+    parts: Components = [("pretax_income", pretax, pretax_row), ("interest_expense", interest, interest_row)]
+    label = f"{pretax_row} + {interest_row}"
+    for name, labels in (("interest_income", d.interest_income), ("other_nonoperating", d.other_nonoperating), ("equity_method", d.equity_method)):
+        value, value_row = _first_present(rows, tuple(labels))
+        if value is not None and value_row is not None:
+            parts.append((name, -value, value_row))
+            label += f" - {value_row}"
+    return sum(v for _, v, _ in parts), label, "pretax_plus_interest_less_nonoperating", parts
 
 
 def _income_values(rows: Mapping[str, object], defs: reference.FieldDefinitions = DEFINITIONS) -> dict[str, object]:

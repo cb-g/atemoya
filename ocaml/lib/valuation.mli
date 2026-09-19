@@ -14,8 +14,12 @@
     totals are converted at one recorded FX rate into the trading currency, the
     parameters come from [Params.resolve_cross], the same model runs on the
     converted record, and the conversion rides on its inputs. A missing currency
-    field or FX pair is [`Failed] naming it. Each model's arithmetic lives in its
-    own module. [floor] is always populated and gates nothing. *)
+    field or FX pair is [`Failed] naming it. On the dcf path a derived ebit (any
+    recipe but operating income) runs only when the record's cross-check found it
+    within threshold of the vendor's operating income; otherwise the
+    [refinement_policy.on_miss] [`Failed]. Each model's arithmetic lives in its own
+    module. [floor] is always populated and gates nothing. An [`Ok] record carries
+    the implied readouts ([Implied]); the headline never depends on them. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)

@@ -17,8 +17,10 @@ val summary :
   ?definitions:Reference_t.field_definitions ->
   Boundary_t.valuation list ->
   string
-(** Includes the field definitions in force when given, and a cross-check
-    section: how many records with a cross-check had any field beyond
+(** Includes the field definitions in force when given, the universe-level
+    implied line (median and range of the solved half-lives, the counts beyond
+    range each way, the count where level is the meaningful readout), and a
+    cross-check section: how many records with a cross-check had any field beyond
     threshold, which fields most often, then every such record with each
     disagreeing field's two values and the universe entry's characterisation
     of the gap when it has one. *)

@@ -64,14 +64,22 @@ def test_delta_nwc_is_the_cash_flow_line_with_the_sign_flipped() -> None:
     assert fetch._delta_nwc({}, DEFS) == (None, None, None)  # pyright: ignore[reportPrivateUsage]
 
 
-def test_ebit_recipe_operating_income_else_pretax_plus_interest() -> None:
+def test_ebit_recipe_operating_income_else_pretax_plus_interest_less_nonoperating() -> None:
     assert fetch._ebit({"Operating Income": 25.596, "Pretax Income": 32.581, "Interest Expense": 0.971}, DEFS) == (  # pyright: ignore[reportPrivateUsage]
         25.596, "Operating Income", "operating_income", [("operating_income", 25.596, "Operating Income")])
-    value, row, recipe, parts = fetch._ebit({"Pretax Income": 32.581, "Interest Expense": 0.971}, DEFS)  # pyright: ignore[reportPrivateUsage]
-    assert value is not None and math.isclose(value, 33.552) and row == "Pretax Income + Interest Expense" and recipe == "pretax_plus_interest"
-    assert parts == [("pretax_income", 32.581, "Pretax Income"), ("interest_expense", 0.971, "Interest Expense")]
-    assert recipe in DEFS.ebit.recipes
+    rows = {"Pretax Income": 32.581, "Interest Expense": 0.971, "Interest Income": 1.056, "Other Non Operating Income Expenses": 1.0, "Earnings From Equity Interest": 3.0}
+    value, row, recipe, parts = fetch._ebit(rows, DEFS)  # pyright: ignore[reportPrivateUsage]
+    assert value is not None and math.isclose(value, 32.581 + 0.971 - 1.056 - 1.0 - 3.0)
+    assert row == "Pretax Income + Interest Expense - Interest Income - Other Non Operating Income Expenses - Earnings From Equity Interest"
+    assert recipe == "pretax_plus_interest_less_nonoperating" and recipe in DEFS.ebit.recipes
+    assert parts == [("pretax_income", 32.581, "Pretax Income"), ("interest_expense", 0.971, "Interest Expense"), ("interest_income", -1.056, "Interest Income"),
+                     ("other_nonoperating", -1.0, "Other Non Operating Income Expenses"), ("equity_method", -3.0, "Earnings From Equity Interest")]
+    for absent in ("Interest Income", "Other Non Operating Income Expenses", "Earnings From Equity Interest"):
+        without = {k: v for k, v in rows.items() if k != absent}
+        value, _, _, parts = fetch._ebit(without, DEFS)  # pyright: ignore[reportPrivateUsage]
+        assert value is not None and parts is not None and math.isclose(value, sum(v for _, v, _ in parts)) and len(parts) == 4
     assert fetch._ebit({"Pretax Income": 32.581}, DEFS) == (None, None, None, None)  # pyright: ignore[reportPrivateUsage]
+    assert len(DEFS.ebit.recipes) <= 1 + DEFS.refinement_policy.max_refinements_per_field
 
 
 def test_depreciation_falls_back_across_rows_and_statements() -> None:
@@ -107,7 +115,7 @@ def test_period_carries_the_labels_and_compositions() -> None:
     assert [(c.name, c.value, c.row) for c in period.total_debt_composition.components] == [("long_term_debt", 27.93, "Long Term Debt"), ("current_debt", 9.3, "Current Debt")]
     assert period.cash == 1.0 and period.cash_row == "Cash And Cash Equivalents"
     assert period.cash_composition is not None and period.cash_composition.definition == DEFS.cash.name
-    assert period.ebit is not None and math.isclose(period.ebit, 41.871) and period.ebit_recipe == "pretax_plus_interest"
+    assert period.ebit is not None and math.isclose(period.ebit, 41.871) and period.ebit_recipe == "pretax_plus_interest_less_nonoperating"
     assert period.ebit_composition is not None and period.ebit_composition.definition == DEFS.ebit.name
     assert period.book_equity == 259.39
     assert period.depreciation_amortization is None and period.depreciation_amortization_row is None
