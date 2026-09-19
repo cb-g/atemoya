@@ -80,7 +80,7 @@ let entry_of universe ticker =
   Option.bind universe (fun (u : Reference_t.universe) ->
       List.find_opt (fun (e : Reference_t.universe_entry) -> e.ticker = ticker) u.tickers)
 
-let summary ?universe ?definitions (vs : valuation list) =
+let summary ?universe ?definitions ?stability_line (vs : valuation list) =
   let b = Buffer.create 4096 in
   let n = List.length vs in
   let ok = List.length (List.filter (fun v -> v.status = `Ok) vs) in
@@ -235,6 +235,7 @@ let summary ?universe ?definitions (vs : valuation list) =
       | _ -> "none solved")
       never_decay below_no_growth level_guard
   end;
+  (match stability_line with Some l -> Printf.bprintf b "\n%s\n" l | None -> ());
   Printf.bprintf b "\nper ticker%s:\n"
     (if Option.is_some universe then " (expected from the universe file)"
      else "");
@@ -280,6 +281,11 @@ let summary ?universe ?definitions (vs : valuation list) =
   Buffer.contents b
 
 let fair_value_text = function Some fv -> Printf.sprintf "%.2f" fv | None -> "none"
+
+(* The cross-currency rate is an input too. *)
+let conversion_driver = function
+  | Some (c : conversion) -> [ ("fx_rate", c.fx_rate, Printf.sprintf " (%s, as_of %s)" c.fx_source c.fx_as_of) ]
+  | None -> []
 
 let parameter_drivers (ps : (string * parameter) list) =
   List.map (fun (name, (p : parameter)) -> (name, p.value, "")) ps
@@ -348,10 +354,12 @@ let drivers (inputs : model_inputs) =
            ]
           @ match i.country_risk_premium with Some c -> [ ("country_risk_premium", c) ] | None -> [])
       @ [ ("projection_years", float_of_int i.projection_years.value, "") ]
-  | `Residual_income i -> residual_income_drivers i
+      @ conversion_driver i.conversion
+  | `Residual_income i -> residual_income_drivers i @ conversion_driver i.conversion
   | `Residual_income_insurer (i : insurer_inputs) ->
       residual_income_drivers i.core
       @ [ ("reported_book_equity", i.reported_book_equity, ""); ("aoci", i.aoci, "") ]
+      @ conversion_driver i.core.conversion
 
 let differs a b =
   let scale = Float.max (Float.abs a) (Float.abs b) in
@@ -519,3 +527,163 @@ let provider_diff pairs =
                   (String.concat ", " (List.map (fun (f : field_check) -> f.field) missing))))
     pairs;
   Buffer.contents b
+
+
+(* --- stability: the same name on two snapshots (16) --- *)
+
+(* Why an input moved between two fetches with nothing having happened. A report, never a
+   gate. *)
+type stability_class = Price | New_filing | Restated | Vendor_row | Rate_or_fx | Unexplained
+
+let class_name = function
+  | Price -> "price"
+  | New_filing -> "new_filing"
+  | Restated -> "restated"
+  | Vendor_row -> "vendor_row"
+  | Rate_or_fx -> "rate_or_fx"
+  | Unexplained -> "unexplained"
+
+let all_classes = [ Price; New_filing; Restated; Vendor_row; Rate_or_fx; Unexplained ]
+
+let market_inputs = [ "price"; "market_cap"; "shares" ]
+
+let parameter_inputs =
+  [ "statutory_tax_rate"; "risk_free_rate"; "equity_risk_premium"; "beta"; "debt_spread"; "growth_clamp_lower";
+    "growth_clamp_upper"; "mean_reversion_lambda"; "terminal_growth_rate"; "country_risk_premium";
+    "projection_years"; "fx_rate" ]
+
+(* What identifies the statements an input came from: the provider, the fiscal period and,
+   on filed statements, the accession of that period. *)
+type statements_identity = { provider : string; period_end : string option; accession : string option }
+
+let identity (v : valuation) (fin : financials option) =
+  let period_end =
+    match v.inputs with
+    | Some (`Dcf i) -> Some i.fiscal_period_end
+    | Some (`Residual_income i) -> Some i.fiscal_period_end
+    | Some (`Residual_income_insurer i) -> Some i.core.fiscal_period_end
+    | None -> None
+  in
+  let accession =
+    Option.bind fin (fun (f : financials) ->
+        Option.bind period_end (fun e ->
+            Option.bind
+              (List.find_opt (fun (p : fiscal_period) -> p.period_end = e) f.periods)
+              (fun (p : fiscal_period) -> p.accession)))
+  in
+  { provider = v.statements_provider; period_end; accession }
+
+let classify_input ~(old : statements_identity) ~(now : statements_identity) name =
+  if List.mem name market_inputs then Price
+  else if List.mem name parameter_inputs then Rate_or_fx
+  else if old.provider <> now.provider then Unexplained
+  else if now.provider = "yfinance" then Vendor_row
+  else
+    match (old.accession, now.accession) with
+    | Some a, Some b when a <> b -> New_filing
+    | Some a, Some b when a = b && old.period_end = now.period_end -> Restated
+    | _ -> Unexplained
+
+type moved_input = { name : string; old_value : float; new_value : float; klass : stability_class }
+
+(* Every input that moved between the two records, classified; a record whose model, status
+   or provider differs is one Unexplained item naming the difference. *)
+let moved_inputs ~(old : valuation * financials option) ~(now : valuation * financials option) =
+  let ov, ofin = old and nv, nfin = now in
+  let oi = identity ov ofin and ni = identity nv nfin in
+  match (ov.inputs, nv.inputs) with
+  | Some oinputs, Some ninputs ->
+      let od = drivers oinputs and nd = drivers ninputs in
+      let moved =
+        List.filter_map
+          (fun (name, value, _) ->
+            match List.find_opt (fun (n, _, _) -> n = name) od with
+            | Some (_, before, _) when differs before value ->
+                Some { name; old_value = before; new_value = value; klass = classify_input ~old:oi ~now:ni name }
+            | Some _ -> None
+            | None -> Some { name; old_value = nan; new_value = value; klass = Unexplained })
+          nd
+      in
+      let gone =
+        List.filter_map
+          (fun (name, before, _) ->
+            if List.exists (fun (n, _, _) -> n = name) nd then None
+            else Some { name; old_value = before; new_value = nan; klass = Unexplained })
+          od
+      in
+      let structural =
+        if oi.provider <> ni.provider then
+          [ { name = "statements_provider " ^ oi.provider ^ " -> " ^ ni.provider; old_value = nan; new_value = nan; klass = Unexplained } ]
+        else if oi.period_end <> ni.period_end && ni.provider <> "yfinance" && oi.accession = ni.accession then
+          [ { name = "fiscal period " ^ Option.value oi.period_end ~default:"-" ^ " -> " ^ Option.value ni.period_end ~default:"-"; old_value = nan; new_value = nan; klass = Unexplained } ]
+        else []
+      in
+      moved @ gone @ structural
+  | None, None ->
+      if ov.failed_reason = nv.failed_reason && ov.statements_provider = nv.statements_provider then []
+      else [ { name = Printf.sprintf "failed: %s -> %s" (Option.value ov.failed_reason ~default:"-") (Option.value nv.failed_reason ~default:"-"); old_value = nan; new_value = nan; klass = Unexplained } ]
+  | _ ->
+      [ { name = Printf.sprintf "status %s -> %s" (status_name ov.status) (status_name nv.status); old_value = nan; new_value = nan; klass = Unexplained } ]
+
+let value_text x = if Float.is_nan x then "-" else money x
+
+(* The report over two runs on two snapshots, and the counts per class. Rates refreshed
+   between the runs show as a differing parameter as_of on any record. *)
+let stability ~snapshot_old ~snapshot_new ~(old : (valuation * financials option) list)
+    ~(now : (valuation * financials option) list) =
+  let b = Buffer.create 8192 in
+  let counts = Hashtbl.create 8 in
+  List.iter (fun c -> Hashtbl.replace counts c 0) all_classes;
+  let bump c = Hashtbl.replace counts c (Hashtbl.find counts c + 1) in
+  let rf_as_of (v : valuation) =
+    match v.inputs with
+    | Some (`Dcf i) -> Some i.risk_free_rate.as_of
+    | Some (`Residual_income i) -> Some i.risk_free_rate.as_of
+    | Some (`Residual_income_insurer i) -> Some i.core.risk_free_rate.as_of
+    | None -> None
+  in
+  let as_of_pair =
+    List.find_map
+      (fun ((nv : valuation), _) ->
+        match List.find_opt (fun ((ov : valuation), _) -> ov.ticker = nv.ticker) old with
+        | Some (ov, _) -> ( match (rf_as_of ov, rf_as_of nv) with Some a, Some c -> Some (a, c) | _ -> None)
+        | None -> None)
+      now
+  in
+  Printf.bprintf b "stability: snapshot %s against snapshot %s, every input of every record classified; a report, never a gate\n" snapshot_new snapshot_old;
+  (match as_of_pair with
+  | Some (a, c) when a <> c -> Printf.bprintf b "rates or fx refreshed between the runs: yes (risk-free as_of %s -> %s)\n\n" a c
+  | Some (a, _) -> Printf.bprintf b "rates or fx refreshed between the runs: no (risk-free as_of %s on both)\n\n" a
+  | None -> Printf.bprintf b "rates or fx refreshed between the runs: not determinable (no valued record on both sides)\n\n");
+  List.iter
+    (fun ((nv : valuation), nfin) ->
+      match List.find_opt (fun ((ov : valuation), _) -> ov.ticker = nv.ticker) old with
+      | None -> Printf.bprintf b "%-10s not in snapshot %s\n" nv.ticker snapshot_old
+      | Some (ov, ofin) ->
+          let items = moved_inputs ~old:(ov, ofin) ~now:(nv, nfin) in
+          List.iter (fun (m : moved_input) -> bump m.klass) items;
+          let fv =
+            match (ov.fair_value, nv.fair_value) with
+            | Some p, Some n when differs p n -> Printf.sprintf "; fair value %.2f -> %.2f" p n
+            | _ -> ""
+          in
+          if items = [] then Printf.bprintf b "%-10s unchanged%s\n" nv.ticker fv
+          else begin
+            Printf.bprintf b "%-10s %d moved input(s)%s\n" nv.ticker (List.length items) fv;
+            List.iter
+              (fun (m : moved_input) ->
+                Printf.bprintf b "           %-12s %-26s %s -> %s\n" (class_name m.klass) m.name (value_text m.old_value) (value_text m.new_value))
+              items
+          end)
+    now;
+  List.iter
+    (fun ((ov : valuation), _) ->
+      if not (List.exists (fun ((nv : valuation), _) -> nv.ticker = ov.ticker) now) then
+        Printf.bprintf b "%-10s not in snapshot %s\n" ov.ticker snapshot_new)
+    old;
+  let line =
+    "stability against snapshot " ^ snapshot_old ^ ": "
+    ^ String.concat ", " (List.map (fun c -> Printf.sprintf "%s %d" (class_name c) (Hashtbl.find counts c)) all_classes)
+  in
+  Printf.bprintf b "\n%s\n" line;
+  (Buffer.contents b, line)

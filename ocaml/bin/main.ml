@@ -7,13 +7,17 @@
    stdout. With --out DIR, DIR/valuations.jsonl and DIR/summary.txt are written and the
    summary is printed. With --baseline FILE (a previous run's valuations.jsonl),
    provider_diff.txt opens with this run against that one, every record, every moved fair
-   value with the inputs that moved. Valuation never fetches. *)
+   value with the inputs that moved. With --baseline-snapshot DIR as well (the financials
+   the baseline run was valued from), DIR/stability_<old>_<new>.txt classifies every moved
+   input of every record and the summary gains the counts per class. Valuation never
+   fetches. *)
 
 open Atemoya
 
 let usage =
   "usage: atemoya [--reference DIR] [--today YYYY-MM-DD] [--out DIR] [--universe FILE] \
-   [--entity-class CLASS] [--baseline valuations.jsonl] <financials.json | directory>...\n"
+   [--entity-class CLASS] [--baseline valuations.jsonl] [--baseline-snapshot DIR] \
+   <financials.json | directory>...\n"
 
 type options = {
   reference : string;
@@ -22,6 +26,7 @@ type options = {
   universe : string option;
   entity_class : string option;
   baseline : string option;
+  baseline_snapshot : string option;
 }
 
 let usage_exit () =
@@ -40,7 +45,8 @@ let rec parse o paths = function
   | "--universe" :: v :: rest -> parse { o with universe = Some v } paths rest
   | "--entity-class" :: v :: rest -> parse { o with entity_class = Some v } paths rest
   | "--baseline" :: v :: rest -> parse { o with baseline = Some v } paths rest
-  | [ ("--reference" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline") ] ->
+  | "--baseline-snapshot" :: v :: rest -> parse { o with baseline_snapshot = Some v } paths rest
+  | [ ("--reference" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline" | "--baseline-snapshot") ] ->
       usage_exit ()
   | p :: rest -> parse o (p :: paths) rest
 
@@ -123,6 +129,7 @@ let () =
         universe = None;
         entity_class = None;
         baseline = None;
+        baseline_snapshot = None;
       }
       []
       (List.tl (Array.to_list Sys.argv))
@@ -210,8 +217,34 @@ let () =
   | Some dir ->
       mkdir_p dir;
       write_file (Filename.concat dir "valuations.jsonl") jsonl;
-      let summary = Batch.summary ?universe ~definitions:params.field_definitions results in
+      (* Stability (16): the baseline run's records paired with the financials they were
+         valued from, against this run's records and financials. *)
+      let stability =
+        match (baseline, o.baseline_snapshot) with
+        | Some b, Some snapshot ->
+            let financials_of dir (v : Boundary_t.valuation) =
+              let path = Filename.concat dir (v.ticker ^ ".json") in
+              if Sys.file_exists path then read "financials" Boundary_j.read_financials path else None
+            in
+            let old = List.map (fun (v, _) -> (v, financials_of snapshot v)) b in
+            let now =
+              List.map2
+                (fun path (v, _) -> (v, read "financials" Boundary_j.read_financials path))
+                (List.filter (fun p -> Option.is_some (read "financials" Boundary_j.read_financials p)) files)
+                paired
+            in
+            let name d = Filename.basename (if Filename.check_suffix d "/" then Filename.chop_suffix d "/" else d) in
+            let snapshot_new =
+              match paths with [ p ] when Sys.is_directory p -> name p | _ -> "this run"
+            in
+            let text, line = Batch.stability ~snapshot_old:(name snapshot) ~snapshot_new ~old ~now in
+            Some (Printf.sprintf "stability_%s_%s.txt" (name snapshot) snapshot_new, text, line)
+        | _ -> None
+      in
+      let stability_line = Option.map (fun (_, _, l) -> l) stability in
+      let summary = Batch.summary ?universe ~definitions:params.field_definitions ?stability_line results in
       write_file (Filename.concat dir "summary.txt") summary;
+      Option.iter (fun (file, text, _) -> write_file (Filename.concat dir file) text) stability;
       write_file (Filename.concat dir "provider_diff.txt")
         ((match baseline with
          | Some b -> Batch.run_diff ~baseline_raw:(List.map snd b) ~baseline:(List.map fst b) results ^ "\n"

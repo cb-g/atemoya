@@ -1832,6 +1832,65 @@ let test_summary_horizon_line () =
       "level is the meaningful readout for 2 (1 guard failed, 1 beyond 40)";
       "implied half-life, across 5 Ok names:" ]
 
+(* --- stability: the same name on two snapshots (16) --- *)
+
+let classes (items : Batch.moved_input list) = List.map (fun (m : Batch.moved_input) -> (m.name, Batch.class_name m.klass)) items
+
+let filed_at ~accession periods =
+  { (filed periods) with periods = List.map (fun (p : Boundary_t.fiscal_period) -> { p with accession = Some accession }) periods }
+
+let test_stability_classifier () =
+  let base = financials (history ()) in
+  let v0 = run base in
+  (* a price move on the same statements: price, market cap and shares, nothing else *)
+  let priced = { base with price = Some 12.; market_cap = Some 6000. } in
+  Alcotest.(check (list (pair string string))) "price only"
+    [ ("price", "price"); ("market_cap", "price") ]
+    (classes (Batch.moved_inputs ~old:(v0, Some base) ~now:(run priced, Some priced)));
+  (* a vendor row moved with no filing behind it *)
+  let vendor_moved = financials (history ~capex:400. ()) in
+  Alcotest.(check (list (pair string string))) "vendor row"
+    [ ("capex", "vendor_row") ]
+    (classes (Batch.moved_inputs ~old:(v0, Some base) ~now:(run vendor_moved, Some vendor_moved)));
+  (* filed statements: the same accession and period with a changed value is a restatement *)
+  let a = filed_at ~accession:"0001-26-1" (history ()) in
+  let restated = filed_at ~accession:"0001-26-1" (history ~capex:400. ()) in
+  Alcotest.(check (list (pair string string))) "restated"
+    [ ("capex", "restated") ]
+    (classes (Batch.moved_inputs ~old:(run a, Some a) ~now:(run restated, Some restated)));
+  (* ... and with a new accession it is a new filing *)
+  let newer = filed_at ~accession:"0001-27-1" (history ~capex:400. ()) in
+  Alcotest.(check (list (pair string string))) "new filing"
+    [ ("capex", "new_filing") ]
+    (classes (Batch.moved_inputs ~old:(run a, Some a) ~now:(run newer, Some newer)));
+  (* a parameter moved: rate or fx *)
+  let rf_moved = { params with risk_free = Reference_j.risk_free_rates_of_string (String.concat "" [ {|{"max_age_days": 45, "tenors": ["7y"], "countries": {"United States": {"source": "FRED", "tier": "official", "as_of": "2026-09-09", "rates": {"7y": 0.05}}}}|} ]) } in
+  let v_rf = Valuation.run rf_moved ~today ~declaration:(Some (declaration `OperatingCompany)) base in
+  Alcotest.(check (list (pair string string))) "rate"
+    [ ("risk_free_rate", "rate_or_fx") ]
+    (classes (Batch.moved_inputs ~old:(v0, Some base) ~now:(v_rf, Some base)));
+  (* a provider change, or a status change, is unexplained and named *)
+  let items = Batch.moved_inputs ~old:(v0, Some base) ~now:(run a, Some a) in
+  Alcotest.(check bool) "provider change unexplained" true
+    (List.exists (fun (m : Batch.moved_input) -> m.klass = Batch.Unexplained && m.name = "statements_provider yfinance -> SEC XBRL companyfacts") items);
+  let items = Batch.moved_inputs ~old:(v0, Some base) ~now:(run (financials []), None) in
+  Alcotest.(check (list (pair string string))) "status change unexplained" [ ("status Ok -> Failed", "unexplained") ] (classes items);
+  Alcotest.(check (list (pair string string))) "unchanged" [] (classes (Batch.moved_inputs ~old:(v0, Some base) ~now:(v0, Some base)))
+
+let test_stability_report () =
+  let base = financials (history ()) in
+  let priced = { base with price = Some 12.; market_cap = Some 6000. } in
+  let text, line =
+    Batch.stability ~snapshot_old:"2026-09-19" ~snapshot_new:"2026-09-19-2"
+      ~old:[ (run base, Some base) ]
+      ~now:[ (run priced, Some priced) ]
+  in
+  check_mentions "report" text
+    [ "stability: snapshot 2026-09-19-2 against snapshot 2026-09-19"; "rates or fx refreshed between the runs: no (risk-free as_of 2026-09-08 on both)";
+      "TEST       2 moved input(s); fair value 27.94 -> 25.58"; "price        price"; "10 -> 12" ];
+  Alcotest.(check string) "summary line" "stability against snapshot 2026-09-19: price 2, new_filing 0, restated 0, vendor_row 0, rate_or_fx 0, unexplained 0" line;
+  check_mentions "summary carries the line" (Batch.summary ~stability_line:line [ run base ]) [ line ]
+
 (* --- batch summary --- *)
 
 let test_batch_summary () =
@@ -2135,6 +2194,11 @@ let () =
           case "the headline does not depend on the readouts" test_headline_independent_of_the_readouts;
           case "derived ebit runs only within the cross-check, else the policy's failed" test_ebit_policy_gate;
           case "summary carries the universe-level implied line" test_summary_implied_line;
+        ] );
+      ( "stability",
+        [
+          case "classifier: price, vendor row, restated, new filing, rate, unexplained" test_stability_classifier;
+          case "report and summary line" test_stability_report;
         ] );
       ( "implied horizon",
         [

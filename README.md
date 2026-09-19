@@ -47,9 +47,10 @@ dune exec atemoya -- data/financials/*.json # one valuation record per line on s
 uv run python/refresh_rates.py --all        # sovereign curves per reference/rate_sources.json
 uv run python/refresh_fx.py --all           # FX via FRED H.10 -> reference/fx_rates.json
 
-uv run python/fetch_all.py                  # every ticker in reference/universe.json
+uv run python/fetch_all.py                  # every ticker in reference/universe.json -> data/snapshots/<date>/, data/financials -> the latest
 dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt
 dune exec atemoya -- data/financials --out output --baseline previous/valuations.jsonl   # plus this run against that one
+dune exec atemoya -- data/snapshots/<new> --out output --baseline previous/valuations.jsonl --baseline-snapshot data/snapshots/<old>   # plus stability_<old>_<new>.txt
 ```
 
 `dune exec atemoya` reads parameters from `reference/` (`--reference DIR` to override) and
@@ -90,7 +91,10 @@ and the whole number of explicit years the observed start would have to persist 
 integer scan to 40 years, the risk-free rate held at its recorded point), the last two only
 where the start lies above its target; a rule on the record says which one to read, and
 every null carries its reason. With `--baseline`, `provider_diff.txt` opens with
-every record against the previous run and lists the inputs behind every moved fair value.
+every record against the previous run and lists the inputs behind every moved fair value;
+with `--baseline-snapshot` as well, every moved input of every record is classified (price,
+new filing, restatement, vendor row, rate or FX, unexplained) in a stability report, so two
+fetches with nothing having happened can be shown to agree.
 Valuation never fetches, so running it twice on the same inputs with `--today` pinned gives
 byte-identical output. `data/` and `output/` are generated and gitignored; versioned inputs
 live in `reference/`.
