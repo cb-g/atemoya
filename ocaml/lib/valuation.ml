@@ -160,7 +160,7 @@ let point_in_time_gates (fin : financials) =
       | None, None, Some currency -> Error ("rate source has no history for " ^ currency)
       | None, None, None -> Ok ())
 
-let run ?(thresholds = default_thresholds) ?private_beliefs (params : Params.t) ~today ~model_version ~declaration
+let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~today ~model_version ~declaration
     (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
   let hold_vintage = Option.is_some original.point_in_time in
@@ -248,7 +248,7 @@ let run ?(thresholds = default_thresholds) ?private_beliefs (params : Params.t) 
     | Some (terminal_growth_rate, rate, f) -> (
         let entity_class = match declared with Some c -> Admissibility.class_name c | None -> "" in
         match
-          Beliefs.resolve ~classes:params.beliefs ?names:private_beliefs ~ticker:original.ticker ~entity_class
+          Beliefs.resolve ~classes:params.beliefs ?names:name_beliefs ~ticker:original.ticker ~entity_class
             ~terminal_growth_rate ()
         with
         | None ->

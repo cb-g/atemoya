@@ -429,8 +429,11 @@ type belief = {
 type class_beliefs = {
   ~notes : string list;
   classes : (string * belief) list <json repr="object">;   (* entity class -> offsets in percentage points *)
+  ~names : (string * belief) list <json repr="object">;    (* ticker -> absolute, in percentage points; overrides the class default (26) *)
 }
 
+(* A further file of per-name beliefs given as --beliefs FILE: the same six fields,
+   absolute in percentage points; its entries override the tracked ones. *)
 type name_beliefs = {
   ~notes : string list;
   tickers : (string * belief) list <json repr="object">;   (* ticker -> absolute, in percentage points *)

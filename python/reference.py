@@ -2070,6 +2070,7 @@ class ClassBeliefs:
 
     classes: List[Tuple[str, Belief]]
     notes: List[str] = field(default_factory=lambda: [])
+    names: List[Tuple[str, Belief]] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'ClassBeliefs':
@@ -2077,6 +2078,7 @@ class ClassBeliefs:
             return cls(
                 classes=_atd_read_assoc_object_into_list(Belief.from_json)(x['classes']) if 'classes' in x else _atd_missing_json_field('ClassBeliefs', 'classes'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                names=_atd_read_assoc_object_into_list(Belief.from_json)(x['names']) if 'names' in x else [],
             )
         else:
             _atd_bad_json('ClassBeliefs', x)
@@ -2085,6 +2087,7 @@ class ClassBeliefs:
         res: Dict[str, Any] = {}
         res['classes'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.classes)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        res['names'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.names)
         return res
 
     @classmethod

@@ -42,8 +42,14 @@ let check_table ~key text =
 let parse reader text =
   match reader text with v -> Ok v | exception Atdgen_runtime.Oj_run.Error msg -> Error ("beliefs: " ^ msg)
 
+let check_optional_table ~key text =
+  match Yojson.Safe.from_string text with
+  | `Assoc top when List.mem_assoc key top -> check_table ~key text
+  | _ -> Ok ()
+
 let load_classes_string text =
-  Result.bind (check_table ~key:"classes" text) (fun () -> parse Reference_j.class_beliefs_of_string text)
+  Result.bind (check_table ~key:"classes" text) (fun () ->
+      Result.bind (check_optional_table ~key:"names" text) (fun () -> parse Reference_j.class_beliefs_of_string text))
 
 let load_names_string text =
   Result.bind (check_table ~key:"tickers" text) (fun () -> parse Reference_j.name_beliefs_of_string text)
@@ -66,9 +72,11 @@ let resolve ~(classes : Reference_t.class_beliefs) ?(names : Reference_t.name_be
   let of_name (b : Reference_t.belief) : belief =
     { mean = pp b.mean; sd = pp b.sd; floor = pp b.floor; ceiling = pp b.ceiling; why = b.why; as_of = b.as_of }
   in
-  match Option.bind names (fun (n : Reference_t.name_beliefs) -> List.assoc_opt ticker n.tickers) with
-  | Some b -> Some (of_name b, Printf.sprintf "per-name entry for %s, absolute" ticker)
-  | None -> (
+  let extra = Option.bind names (fun (n : Reference_t.name_beliefs) -> List.assoc_opt ticker n.tickers) in
+  match (extra, List.assoc_opt ticker classes.names) with
+  | Some b, _ -> Some (of_name b, Printf.sprintf "per-name entry for %s from the --beliefs file, absolute" ticker)
+  | None, Some b -> Some (of_name b, Printf.sprintf "per-name entry for %s, absolute" ticker)
+  | None, None -> (
       match List.assoc_opt entity_class classes.classes with
       | Some b ->
           (* offsets applied in percentage points, so 3% - 2 pp is exactly 1% *)

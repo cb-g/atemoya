@@ -14,8 +14,8 @@
    model_version (git short hash, -dirty on an uncommitted tree, unversioned outside a
    checkout), and every --out run is also written, never overwritten, to
    DIR/runs/<valued_on>/ (-2, -3 on the same date); the belief map's grid per Ok name with a
-   growth-then-terminal path goes to DIR/maps/<ticker>.json (23). With --beliefs FILE, per-name
-   beliefs on long-run growth (24) override the class defaults in <reference>/beliefs.json.
+   growth-then-terminal path goes to DIR/maps/<ticker>.json (23). With --beliefs FILE, a further file of
+   per-name beliefs on long-run growth (24) overrides the entries in <reference>/beliefs.json.
    Valuation never fetches. *)
 
 open Atemoya
@@ -187,8 +187,8 @@ let () =
             exit 2)
   in
   let declaration = declarations universe o.entity_class in
-  (* Per-name beliefs (24), a private file, strictly. *)
-  let private_beliefs =
+  (* A further file of per-name beliefs (24, 26), strictly; it overrides the tracked ones. *)
+  let name_beliefs =
     Option.map
       (fun p ->
         match Beliefs.load_names p with
@@ -207,7 +207,7 @@ let () =
       (fun path ->
         Option.map
           (fun (fin : Boundary_t.financials) ->
-            let value = Valuation.run ?private_beliefs params ~today:o.today ~model_version ~declaration:(declaration fin.ticker) in
+            let value = Valuation.run ?name_beliefs params ~today:o.today ~model_version ~declaration:(declaration fin.ticker) in
             let shadow_path =
               Filename.concat (Filename.dirname path) (fin.ticker ^ ".shadow-yfinance.json")
             in

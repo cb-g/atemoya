@@ -17,7 +17,7 @@ def test_tracked_universe_is_a_declaration_only() -> None:
     text = (ROOT / "reference" / "universe.json").read_text()
     u = universe.load_text(text)
     raw = json.loads(text)["tickers"]
-    assert len(u.tickers) == len(raw) == 36
+    assert len(u.tickers) == len(raw) == 43
     for entry in raw:
         assert set(entry) <= set(universe.ALLOWED) and all(k in entry for k in universe.REQUIRED)
         # no number followed by a unit, no percentage or multiple, no four-digit year, in a why
@@ -40,7 +40,7 @@ def test_loader_rejects_anything_beyond_the_declaration() -> None:
 
 
 def test_a_second_universe_file_is_the_same_format() -> None:
-    """A private universe under data/ (21) goes through the same strict loader: the
+    """Any universe file given as --universe goes through the same strict loader: the
     four fields, and an unknown field is rejected the same way."""
     private = {"tickers": [
         {"ticker": "PRIV.A", "entity_class": "OperatingCompany", "why": "a plain operating company"},

@@ -37,5 +37,11 @@ def test_loader_is_strict() -> None:
         beliefs.load_classes_text(json.dumps({"classes": {"OperatingCompany": {**OK, "as_of": "last year"}}}))
     with pytest.raises(beliefs.BeliefError, match="no tickers object"):
         beliefs.load_names_text(json.dumps({"classes": {}}))
-    private = beliefs.load_names_text(json.dumps({"tickers": {"PRIV.A": {**OK, "mean": 3, "floor": 1, "ceiling": 5}}}))
-    assert private.tickers[0][0] == "PRIV.A" and private.tickers[0][1].mean == 3
+    further = beliefs.load_names_text(json.dumps({"tickers": {"X.A": {**OK, "mean": 3, "floor": 1, "ceiling": 5}}}))
+    assert further.tickers[0][0] == "X.A" and further.tickers[0][1].mean == 3
+    # the tracked file's names section (26) is checked the same way
+    with_names = beliefs.load_classes_text(json.dumps({"classes": {"OperatingCompany": OK}, "names": {"X.A": {**OK, "mean": 3, "floor": 1, "ceiling": 5}}}))
+    assert with_names.names[0][0] == "X.A"
+    with pytest.raises(beliefs.BeliefError, match="belief X.A carries unknown field"):
+        beliefs.load_classes_text(json.dumps({"classes": {"OperatingCompany": OK}, "names": {"X.A": {**OK, "seventh": 1}}}))
+    assert beliefs.load_classes(ROOT / "reference" / "beliefs.json").names == []

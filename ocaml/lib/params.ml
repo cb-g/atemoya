@@ -52,7 +52,7 @@ let load ~dir =
      point-in-time one) has none, which is recorded, not defaulted. *)
   let* beliefs =
     if Sys.file_exists (file "beliefs.json") then Beliefs.load_classes (file "beliefs.json")
-    else Ok ({ notes = [ "no beliefs.json in " ^ dir ]; classes = [] } : Reference_t.class_beliefs)
+    else Ok ({ notes = [ "no beliefs.json in " ^ dir ]; classes = []; names = [] } : Reference_t.class_beliefs)
   in
   Ok
     {

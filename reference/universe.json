@@ -1,6 +1,6 @@
 {
   "notes": [
-    "A declaration, nothing else: the ticker, the class a human declared for it (never inferred), why that class in words meant to hold for years, and what no model can see for the name. No outcome, number, date, tag or parameter lives here; the run records those per record, and whether anything changed since the last run is the baseline diff. The loader is strict: an unknown field is a load error. An entry may declare the SEC filer to read by cik when the ticker map points elsewhere, with the reason in why."
+    "The one universe, growing to every name anyone classifies. A declaration, nothing else: the ticker, the class a human declared for it (never inferred), why that class in words meant to hold for years, and what no model can see for the name. No outcome, number, date, tag or parameter lives here; the run records those per record, and whether anything changed since the last run is the baseline diff. The loader is strict: an unknown field is a load error. An entry may declare the SEC filer to read by cik when the ticker map points elsewhere, with the reason in why."
   ],
   "tickers": [
     {
@@ -186,6 +186,44 @@
       "ticker": "SPG",
       "entity_class": "Reit",
       "why": "a mall REIT, valued on the dividend FFO covers where its filings supply the dividend line"
+    },
+    {
+      "ticker": "NVDA",
+      "entity_class": "OperatingCompany",
+      "why": "accelerated computing; positive, growing free cash flow"
+    },
+    {
+      "ticker": "AVGO",
+      "entity_class": "OperatingCompany",
+      "why": "semiconductors and infrastructure software; a free-cash-flow business"
+    },
+    {
+      "ticker": "META",
+      "entity_class": "OperatingCompany",
+      "why": "an advertising platform; large positive free cash flow"
+    },
+    {
+      "ticker": "AMD",
+      "entity_class": "OperatingCompany",
+      "why": "semiconductors; positive free cash flow"
+    },
+    {
+      "ticker": "SMCI",
+      "entity_class": "OperatingCompany",
+      "why": "server hardware; an operating business on thin margins"
+    },
+    {
+      "ticker": "PLTR",
+      "entity_class": "HighGrowthSoftware",
+      "why": "software compounding revenue, profitable"
+    },
+    {
+      "ticker": "INTC",
+      "entity_class": "Cyclical",
+      "why": "a semiconductor manufacturer whose earnings follow the industry cycle and its own capex cycle: profitable for decades, loss-making through the build-out",
+      "scope_limits": [
+        "structural break: foundry build-out and the loss of process leadership; the through-cycle return may not recur"
+      ]
     }
   ]
 }

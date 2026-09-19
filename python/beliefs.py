@@ -1,7 +1,8 @@
 """Declared beliefs on long-run growth (24), loaded strictly: six fields per belief and
 nothing else (mean, sd, floor, ceiling, why, as_of), so no file can ask the tool to
 estimate one. The batch is the consumer; this loader keeps the Python side honest about
-the same files (a private per-name file under data/, the tracked class table)."""
+the same file (the tracked class defaults and per-name entries) and any further
+per-name file given as --beliefs."""
 
 from __future__ import annotations
 
@@ -59,6 +60,9 @@ def _table(text: str, key: str) -> None:
 
 def load_classes_text(text: str) -> reference.ClassBeliefs:
     _table(text, "classes")
+    raw: object = json.loads(text)
+    if isinstance(raw, dict) and "names" in cast(dict[Any, Any], raw):
+        _table(text, "names")
     return reference.ClassBeliefs.from_json_string(text)
 
 

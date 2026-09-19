@@ -54,8 +54,7 @@ dune exec atemoya -- data/financials --out output --baseline previous/valuations
 dune exec atemoya -- data/snapshots/<new> --out output --baseline previous/valuations.jsonl --baseline-snapshot data/snapshots/<old>   # plus stability_<old>_<new>.txt
 uv run python/fetch_all.py --as-of 2025-06-30   # point-in-time: data/pit/2025-06-30/ from what was known on that date, with its reference/
 dune exec atemoya -- data/pit/2025-06-30 --reference data/pit/2025-06-30/reference --today 2025-06-30 --out output/pit/2025-06-30
-uv run python/fetch_all.py --universe data/universe.private.json --snapshots data/snapshots-private   # a second universe file, same format, never tracked
-dune exec atemoya -- data/snapshots-private/<date> --universe data/universe.private.json --out output/private
+dune exec atemoya -- --entity-class OperatingCompany --out output data/financials/NEW.json   # a name not in the universe, declared on the command line
 uv run python/build_panel.py                    # every quarter-end 2022-03-31 .. 2026-06-30 -> output/pit/panel.jsonl, panel_summary.txt
 ```
 
@@ -160,14 +159,14 @@ form. The rules of use, in this order:
 5. **Every record stamps `belief_version`.** Two runs with different beliefs are
    different runs, and the run diff says so on every record whose version changed. A run
    without a belief for a name records no version and no probability, with the reason.
-6. **Class defaults are tracked and public; per-name beliefs are private.**
-   `reference/beliefs.json` holds one default per entity class as offsets around the
-   country's settled terminal growth. `data/beliefs.private.json`, never tracked and
-   loaded with `--beliefs`, holds per-name absolute beliefs that override the default.
-   Banks and insurers carry no belief: their model has no terminal growth.
+6. **Every belief is tracked.** `reference/beliefs.json` holds one default per entity
+   class as offsets around the country's settled terminal growth and, beside them under
+   `names`, per-name absolute beliefs that override the default. A further file of
+   per-name beliefs may be given as `--beliefs`; it overrides the tracked ones. Banks and
+   insurers carry no belief: their model has no terminal growth.
 
-Run with a private file:
+Run with a further beliefs file:
 
 ```sh
-dune exec atemoya -- data/financials --out output --beliefs data/beliefs.private.json
+dune exec atemoya -- data/financials --out output --beliefs my_beliefs.json
 ```

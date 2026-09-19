@@ -1388,7 +1388,7 @@ let test_beliefs_cdf_and_probability () =
       check_float "belief centre at the country's terminal growth" 0.02 r.declared.mean
   | None -> Alcotest.failf "no belief on the dcf record: %s" (Option.value v.belief_reason ~default:""));
   let named = get (Beliefs.load_names_string {|{"tickers": {"TEST": {"mean": 3, "sd": 1, "floor": 1, "ceiling": 5, "why": "a name I know", "as_of": "2026-09-01"}}}|}) in
-  let own = Valuation.run ~private_beliefs:named params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  let own = Valuation.run ~name_beliefs:named params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
   check_mentions "per-name beats the class default" (Option.get own.belief).source [ "per-name entry for TEST" ];
   Alcotest.(check bool) "different belief, different version" true (own.belief_version <> v.belief_version);
   let bank = run ~declared:(Some (declaration `Bank)) (bank_financials (bank_history ())) in

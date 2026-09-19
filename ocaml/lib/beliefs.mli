@@ -3,8 +3,9 @@
     (an unknown or missing field, a non-positive sd, a floor at or above the ceiling,
     an empty why or a malformed as_of is an [Error] naming the entry), and nothing here
     estimates a field from history. Values in the files are percentage points: the
-    tracked class table holds offsets around the country's settled terminal growth, a
-    per-name file holds the name's absolute long-run nominal growth; [resolve] turns
+    tracked table holds class offsets around the country's settled terminal growth and,
+    beside them, per-name absolute beliefs; a further per-name file (--beliefs) holds the
+    same absolute form and overrides them; [resolve] turns
     either into decimal fractions on the record.
 
     The belief parameter is terminal growth, fixed on the merits: starting growth is
@@ -25,8 +26,9 @@ val resolve :
   terminal_growth_rate:float ->
   unit ->
   (Boundary_t.belief * string) option
-(** The per-name entry when there is one (absolute), else the class default (offsets
-    around [terminal_growth_rate]), else [None]; with the source text. *)
+(** The per-name entry when there is one (absolute; a [names] file given as --beliefs
+    first, then the tracked names section), else the class default (offsets around
+    [terminal_growth_rate]), else [None]; with the source text. *)
 
 val version : Boundary_t.belief -> source_kind:string -> string
 (** [as_of-<7 hex of the six fields>-<class|name>]: changes when any field changes. *)
