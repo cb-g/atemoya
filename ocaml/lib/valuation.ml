@@ -225,21 +225,14 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
             | Error reason -> failed reason
             | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Dcf inputs) fair_value))
     | `Residual_income -> (
-        match Params.bank_terminal_roe_spread params ~today with
+        match Residual_income.value assumptions ~country fin with
         | Error reason -> failed reason
-        | Ok terminal_spread -> (
-            match Residual_income.value assumptions ~terminal_spread ~country fin with
-            | Error reason -> failed reason
-            | Ok (inputs, fair_value) ->
-                finish ~price:inputs.price (`Residual_income inputs) fair_value))
+        | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Residual_income inputs) fair_value)
     | `Residual_income_insurer -> (
-        match Params.insurer_terminal_roe_spread params ~today with
+        match Insurer.value assumptions ~country fin with
         | Error reason -> failed reason
-        | Ok terminal_spread -> (
-            match Insurer.value assumptions ~terminal_spread ~country fin with
-            | Error reason -> failed reason
-            | Ok (inputs, fair_value) ->
-                finish ~price:inputs.core.price (`Residual_income_insurer inputs) fair_value))
+        | Ok (inputs, fair_value) ->
+            finish ~price:inputs.core.price (`Residual_income_insurer inputs) fair_value)
   in
   (* The filing-age gate, then the currency gate: the same-currency path untouched, else
      convert and re-source. *)

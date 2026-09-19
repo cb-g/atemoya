@@ -50,14 +50,7 @@ let residual_income_fair_value ?projection_years (i : residual_income_inputs) ~r
     Residual_income.schedule ~book_equity:i.book_equity ~cost_of_equity:i.cost_of_equity
       ~retention:i.retention ~roe_path
   in
-  let terminal_value =
-    i.terminal_roe_spread.value *. s.ending_book
-    /. (i.cost_of_equity -. i.terminal_growth_rate.value)
-  in
-  let pv_terminal_value =
-    terminal_value /. ((1. +. i.cost_of_equity) ** float_of_int projection_years)
-  in
-  (i.book_equity +. s.pv_excess_returns +. pv_terminal_value) /. i.shares
+  (i.book_equity +. s.pv_excess_returns) /. i.shares
 
 let readout value = { value = Some value; reason = None }
 let null reason = { value = None; reason = Some reason }
@@ -186,6 +179,5 @@ let of_inputs (m : model_inputs) ~price =
         ~guard_rule:(Printf.sprintf "roe_0 %.4f %s cost of equity %.4f" i.roe_0 (if above then ">" else "<=") i.cost_of_equity)
         ~held:
           [ ("book_equity", i.book_equity); ("retention", i.retention); ("cost_of_equity", i.cost_of_equity);
-            ("terminal_growth_rate", i.terminal_growth_rate.value); ("terminal_roe_spread", i.terminal_roe_spread.value);
             ("projection_years", float_of_int i.projection_years.value); ("shares", i.shares);
             ("roe_0", i.roe_0); ("mean_reversion_lambda", lambda); ("risk_free_rate", i.risk_free_rate.value) ]

@@ -339,9 +339,11 @@ type inputs = {
 }
 
 (* Every value the residual-income model used, plus the intermediates. Fair equity value
-   = book value today + PV of excess returns (ROE_t - cost of equity) x start-of-year book,
-   with ROE mean-reverting toward the cost of equity and book compounding by retained
-   earnings, plus a terminal excess return at a provenanced spread. Never an earnings
+   = book value today + PV of excess returns (ROE_t - cost of equity) x start-of-year book
+   over the explicit years, with ROE mean-reverting toward the cost of equity and book
+   compounding by retained earnings. There is no terminal: ROE has reverted to the cost of
+   equity by then, and growth at the cost of equity is value neutral, so book growth beyond
+   the explicit years is worth nothing without an excess return (15). Never an earnings
    multiple, anywhere. The loan-loss ratios are recorded for the reader and gate nothing. *)
 type residual_income_inputs = {
   fiscal_period_end : string;
@@ -368,16 +370,12 @@ type residual_income_inputs = {
   cost_of_equity : float;             (* risk_free_rate + beta * equity_risk_premium (+ country_risk_premium) *)
   ?conversion : conversion option;    (* cross-currency only *)
   mean_reversion_lambda : parameter;
-  terminal_growth_rate : parameter;
-  terminal_roe_spread : parameter;    (* terminal excess return over cost of equity, on book; the class's own parameter *)
   projection_years : int_parameter;
   roe_path : float list;              (* ROE_1 .. ROE_N: ke + (roe_0 - ke) * exp(-lambda * t) *)
   book_value_path : float list;       (* start-of-year book for years 1 .. N *)
   excess_return_path : float list;    (* (ROE_t - ke) * book at start of t *)
   pv_excess_returns : float;
-  terminal_value : float;             (* spread * book at end of N / (ke - terminal growth), at N *)
-  pv_terminal_value : float;
-  equity_value : float;               (* book_equity + pv_excess_returns + pv_terminal_value *)
+  equity_value : float;               (* book_equity + pv_excess_returns *)
   justified_price_to_book : float;    (* equity_value / book_equity *)
   net_interest_income : float nullable;
   provision_for_credit_losses : float nullable;

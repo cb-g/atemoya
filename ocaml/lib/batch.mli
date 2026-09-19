@@ -33,12 +33,18 @@ val drivers : Boundary_t.model_inputs -> (string * float * string) list
     are functions of these. *)
 
 val run_diff :
-  baseline:Boundary_t.valuation list -> Boundary_t.valuation list -> string
+  ?baseline_raw:(string * Yojson.Safe.t) list ->
+  baseline:Boundary_t.valuation list ->
+  Boundary_t.valuation list ->
+  string
 (** This run against a baseline run, every record: status and fair value on
     both sides, the delta, and for a moved fair value every driver whose value
-    differs, old and new, with the composition behind it. A moved fair value
-    with no differing driver is printed as such: the arithmetic itself changed,
-    or it is a bug. Records only one side has are listed. *)
+    differs, old and new, with the composition behind it, and, given the
+    baseline's raw JSON per ticker, every input field the baseline carried that
+    the model no longer has, with its value (a removed term is a driver). A
+    moved fair value with no differing driver and nothing removed is printed
+    as such: the arithmetic itself changed, or it is a bug. Status lines carry
+    the signal. Records only one side has are listed. *)
 
 val provider_diff : (Boundary_t.valuation * Boundary_t.valuation option) list -> string
 (** One block per record whose statements provider is not the vendor, given

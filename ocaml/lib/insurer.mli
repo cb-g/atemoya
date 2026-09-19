@@ -20,7 +20,6 @@ val requires_filed : Boundary_t.financials -> string option
 
 val value :
   Dcf.assumptions ->
-  terminal_spread:Boundary_t.parameter ->
   country:string ->
   Boundary_t.financials ->
   (Boundary_t.insurer_inputs * float, string) result

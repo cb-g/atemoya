@@ -41,18 +41,6 @@
       "Mean reversion causes growth rates to decay toward terminal growth. lambda controls speed: 0.1=slow (reaches terminal ~year 10), 0.25=moderate (~year 4), 0.5=fast (~year 2). Set enabled=false for constant growth (legacy behavior)."
     ]
   },
-  "bank_terminal_roe_spread": {
-    "value": 0.02,
-    "source": "assumption: excess return over the cost of equity, on book value, that a bank earns in perpetuity after the explicit horizon; the previous implementation hardcoded ROE = cost of equity + 2%",
-    "as_of": "2026-09-18",
-    "max_age_days": 400
-  },
-  "insurer_terminal_roe_spread": {
-    "value": 0.02,
-    "source": "assumption: excess return over the cost of equity, on AOCI-adjusted book, that an insurer earns in perpetuity after the explicit horizon; its own entry so it can move independently of the bank's",
-    "as_of": "2026-09-18",
-    "max_age_days": 400
-  },
   "mature_market_erp": {
     "value": 0.0423,
     "source": "Damodaran, mature-market equity risk premium, January 2026 vintage (the base of the total-ERP table); a domicile's country risk premium is its total ERP less this",

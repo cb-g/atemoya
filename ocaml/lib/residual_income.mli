@@ -4,7 +4,10 @@
     Contract: [value] returns [Ok (inputs, fair_value)] with every field finite,
     or [Error reason]. Fair equity value is book value today plus the present
     value of [(ROE_t - cost of equity) x book at the start of t] over the
-    horizon, plus a terminal excess return at a provenanced spread. ROE starts
+    horizon, and nothing after it: ROE has reverted to the cost of equity by
+    then and growth at the cost of equity is value neutral, so there is no
+    terminal and no spread parameter (a bank whose ROE equals its cost of
+    equity is worth exactly book). ROE starts
     from the statements (mean net income over book, at least two periods) and
     mean-reverts toward the CAPM cost of equity at the shared [lambda]; book
     compounds by retained earnings, with retention derived from dividends paid
@@ -35,7 +38,6 @@ val mean_ratio :
 val value :
   ?book:(Boundary_t.fiscal_period -> float option) ->
   Dcf.assumptions ->
-  terminal_spread:Boundary_t.parameter ->
   country:string ->
   Boundary_t.financials ->
   (Boundary_t.residual_income_inputs * float, string) result

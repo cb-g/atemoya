@@ -24,11 +24,11 @@ let requires_filed (fin : financials) =
 let ratio num den =
   match (num, den) with Some n, Some d when d > 0. -> Some (n /. d) | _ -> None
 
-let value a ~terminal_spread ~country (fin : financials) =
+let value a ~country (fin : financials) =
   let ( let* ) = Result.bind in
   let* () = match requires_filed fin with Some reason -> Error reason | None -> Ok () in
   let* core, fair_value =
-    Residual_income.value ~book:adjusted_book a ~terminal_spread ~country fin
+    Residual_income.value ~book:adjusted_book a ~country fin
   in
   let p = Option.get (Period.latest fin) in
   let reported_book_equity = Option.get p.book_equity in

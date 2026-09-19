@@ -849,15 +849,11 @@ class ResidualIncomeInputs:
     beta_source: BetaSource
     cost_of_equity: float
     mean_reversion_lambda: Parameter
-    terminal_growth_rate: Parameter
-    terminal_roe_spread: Parameter
     projection_years: IntParameter
     roe_path: List[float]
     book_value_path: List[float]
     excess_return_path: List[float]
     pv_excess_returns: float
-    terminal_value: float
-    pv_terminal_value: float
     equity_value: float
     justified_price_to_book: float
     net_interest_income: Optional[float]
@@ -896,15 +892,11 @@ class ResidualIncomeInputs:
                 beta_source=BetaSource.from_json(x['beta_source']) if 'beta_source' in x else _atd_missing_json_field('ResidualIncomeInputs', 'beta_source'),
                 cost_of_equity=_atd_read_float(x['cost_of_equity']) if 'cost_of_equity' in x else _atd_missing_json_field('ResidualIncomeInputs', 'cost_of_equity'),
                 mean_reversion_lambda=Parameter.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('ResidualIncomeInputs', 'mean_reversion_lambda'),
-                terminal_growth_rate=Parameter.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('ResidualIncomeInputs', 'terminal_growth_rate'),
-                terminal_roe_spread=Parameter.from_json(x['terminal_roe_spread']) if 'terminal_roe_spread' in x else _atd_missing_json_field('ResidualIncomeInputs', 'terminal_roe_spread'),
                 projection_years=IntParameter.from_json(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('ResidualIncomeInputs', 'projection_years'),
                 roe_path=_atd_read_list(_atd_read_float)(x['roe_path']) if 'roe_path' in x else _atd_missing_json_field('ResidualIncomeInputs', 'roe_path'),
                 book_value_path=_atd_read_list(_atd_read_float)(x['book_value_path']) if 'book_value_path' in x else _atd_missing_json_field('ResidualIncomeInputs', 'book_value_path'),
                 excess_return_path=_atd_read_list(_atd_read_float)(x['excess_return_path']) if 'excess_return_path' in x else _atd_missing_json_field('ResidualIncomeInputs', 'excess_return_path'),
                 pv_excess_returns=_atd_read_float(x['pv_excess_returns']) if 'pv_excess_returns' in x else _atd_missing_json_field('ResidualIncomeInputs', 'pv_excess_returns'),
-                terminal_value=_atd_read_float(x['terminal_value']) if 'terminal_value' in x else _atd_missing_json_field('ResidualIncomeInputs', 'terminal_value'),
-                pv_terminal_value=_atd_read_float(x['pv_terminal_value']) if 'pv_terminal_value' in x else _atd_missing_json_field('ResidualIncomeInputs', 'pv_terminal_value'),
                 equity_value=_atd_read_float(x['equity_value']) if 'equity_value' in x else _atd_missing_json_field('ResidualIncomeInputs', 'equity_value'),
                 justified_price_to_book=_atd_read_float(x['justified_price_to_book']) if 'justified_price_to_book' in x else _atd_missing_json_field('ResidualIncomeInputs', 'justified_price_to_book'),
                 net_interest_income=_atd_read_nullable(_atd_read_float)(x['net_interest_income']) if 'net_interest_income' in x else _atd_missing_json_field('ResidualIncomeInputs', 'net_interest_income'),
@@ -944,15 +936,11 @@ class ResidualIncomeInputs:
         res['beta_source'] = (lambda x: x.to_json())(self.beta_source)
         res['cost_of_equity'] = _atd_write_float(self.cost_of_equity)
         res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
-        res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
-        res['terminal_roe_spread'] = (lambda x: x.to_json())(self.terminal_roe_spread)
         res['projection_years'] = (lambda x: x.to_json())(self.projection_years)
         res['roe_path'] = _atd_write_list(_atd_write_float)(self.roe_path)
         res['book_value_path'] = _atd_write_list(_atd_write_float)(self.book_value_path)
         res['excess_return_path'] = _atd_write_list(_atd_write_float)(self.excess_return_path)
         res['pv_excess_returns'] = _atd_write_float(self.pv_excess_returns)
-        res['terminal_value'] = _atd_write_float(self.terminal_value)
-        res['pv_terminal_value'] = _atd_write_float(self.pv_terminal_value)
         res['equity_value'] = _atd_write_float(self.equity_value)
         res['justified_price_to_book'] = _atd_write_float(self.justified_price_to_book)
         res['net_interest_income'] = _atd_write_nullable(_atd_write_float)(self.net_interest_income)

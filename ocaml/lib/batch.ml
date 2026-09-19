@@ -303,8 +303,6 @@ let residual_income_drivers (i : residual_income_inputs) =
          ("equity_risk_premium", i.equity_risk_premium);
          ("beta", i.beta);
          ("mean_reversion_lambda", i.mean_reversion_lambda);
-         ("terminal_growth_rate", i.terminal_growth_rate);
-         ("terminal_roe_spread", i.terminal_roe_spread);
        ]
       @ match i.country_risk_premium with Some c -> [ ("country_risk_premium", c) ] | None -> [])
   @ [ ("projection_years", float_of_int i.projection_years.value, "") ]
@@ -360,9 +358,34 @@ let differs a b =
   scale > 0. && Float.abs (a -. b) /. scale > 1e-9
 
 let status_value (v : valuation) =
-  Printf.sprintf "%s %s" (status_name v.status) (fair_value_text v.fair_value)
+  Printf.sprintf "%s %s%s" (status_name v.status) (fair_value_text v.fair_value)
+    (match v.signal with Some s -> " " ^ signal_name s | None -> "")
 
-let run_diff ~baseline (vs : valuation list) =
+(* The input fields a baseline record carried that the current record type no longer has:
+   a model that lost a term names it here, with the value it had. *)
+let removed_inputs ~(baseline_raw : (string * Yojson.Safe.t) list) (v : valuation) =
+  match (List.assoc_opt v.ticker baseline_raw, v.inputs) with
+  | Some (`Assoc old), Some inputs -> (
+      match (List.assoc_opt "inputs" old, Yojson.Safe.from_string (Boundary_j.string_of_model_inputs inputs)) with
+      | Some (`List [ _; `Assoc old_fields ]), `List [ _; `Assoc new_fields ] ->
+          List.filter_map
+            (fun (k, value) ->
+              if List.mem_assoc k new_fields then None
+              else
+                match value with
+                | `Float f -> Some (k, money f)
+                | `Int n -> Some (k, string_of_int n)
+                | `Assoc fields -> (
+                    (* a parameter: its value and source *)
+                    match (List.assoc_opt "value" fields, List.assoc_opt "source" fields) with
+                    | Some (`Float f), Some (`String src) -> Some (k, Printf.sprintf "%s (%s)" (money f) src)
+                    | _ -> Some (k, Yojson.Safe.to_string value))
+                | other -> Some (k, Yojson.Safe.to_string other))
+            old_fields
+      | _ -> [])
+  | _ -> []
+
+let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
   let b = Buffer.create 8192 in
   let base_on = match baseline with v :: _ -> v.valued_on | [] -> "-" in
   let this_on = match vs with v :: _ -> v.valued_on | [] -> "-" in
@@ -416,7 +439,11 @@ let run_diff ~baseline (vs : valuation list) =
                     (match old with Some (ov, otext) -> money ov ^ otext | None -> "absent")
                     (money nv) ntext)
                 changed;
-              if fv_moved && changed = [] then begin
+              let removed = removed_inputs ~baseline_raw v in
+              List.iter
+                (fun (k, value) -> Printf.bprintf b "           %-26s %s -> removed from the model\n" k value)
+                removed;
+              if fv_moved && changed = [] && removed = [] then begin
                 incr unexplained;
                 Printf.bprintf b
                   "           NO DRIVER: no input or parameter differs; the model arithmetic itself changed, or this is a bug\n"

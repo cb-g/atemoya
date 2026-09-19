@@ -185,8 +185,6 @@ let params_json =
   "growth_clamp_lower": {"value": -0.2, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "growth_clamp_upper": {"value": 0.5, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
-  "bank_terminal_roe_spread": {"value": 0.02, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
-  "insurer_terminal_roe_spread": {"value": 0.02, "source": "assumption", "as_of": "2026-09-01", "max_age_days": 400},
   "mature_market_erp": {"value": 0.0423, "source": "Damodaran mature base", "as_of": "2026-01-01", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
@@ -916,8 +914,6 @@ let bank_assumptions : Dcf.assumptions =
     terminal_growth_rate = param 0.02;
     projection_years = { value = 2; key = "global"; source = "test"; as_of = today; age_days = 0 } }
 
-let spread = param ~key:"global" ~source:"assumption" 0.02
-
 let bank_history ?(net_income = 200.) ?(dividends = Some 100.) ?(book_equity = 1000.) () =
   List.map
     (fun period_end ->
@@ -949,23 +945,40 @@ let test_ri_roe_path () =
 let test_ri_value_by_hand () =
   let inputs, fair_value =
     get
-      (Residual_income.value bank_assumptions ~terminal_spread:spread ~country:"T"
+      (Residual_income.value bank_assumptions ~country:"T"
          (bank_financials (bank_history ())))
   in
-  check_float "fair value" (1431.8181818181818 /. 100.) fair_value;
+  (* book 1000 + PV of excess 100/1.1 + 110/1.21 = 1181.818; nothing after the horizon *)
+  check_float "fair value" (1181.8181818181818 /. 100.) fair_value;
   check_float "roe_0" 0.2 inputs.roe_0;
   Alcotest.(check (list string)) "roe periods" [ "2025-12-31"; "2024-12-31" ] inputs.roe_periods;
   check_float "payout" 0.5 inputs.payout_ratio;
   check_float "retention" 0.5 inputs.retention;
   check_float "cost of equity" 0.10 inputs.cost_of_equity;
   check_float "pv excess" (100. /. 1.1 +. 110. /. 1.21) inputs.pv_excess_returns;
-  check_float "terminal value" 302.5 inputs.terminal_value;
-  check_float "pv terminal" 250. inputs.pv_terminal_value;
-  check_float "equity value" 1431.8181818181818 inputs.equity_value;
-  check_float "justified P/B" 1.4318181818181818 inputs.justified_price_to_book;
+  check_float "equity value is book plus the pv of excess" 1181.8181818181818 inputs.equity_value;
+  check_float "justified P/B" 1.1818181818181818 inputs.justified_price_to_book;
   check_float "book value per share" 10. inputs.book_value_per_share;
-  check_float "spread provenance value" 0.02 inputs.terminal_roe_spread.value;
-  Alcotest.(check string) "spread source" "assumption" inputs.terminal_roe_spread.source
+  (* a 3-year path by hand: book 1000, roe 0.2 held (lambda 0), retention 0.5, ke 0.10 *)
+  let three = { bank_assumptions with projection_years = { bank_assumptions.projection_years with value = 3 } } in
+  let inputs, fair_value = get (Residual_income.value three ~country:"T" (bank_financials (bank_history ()))) in
+  let pv = (100. /. 1.1) +. (110. /. 1.21) +. (121. /. 1.331) in
+  check_float "3-year value is book plus the hand-summed pv" ((1000. +. pv) /. 100.) fair_value;
+  check_float "3-year pv" pv inputs.pv_excess_returns;
+  if contains (Boundary_j.string_of_residual_income_inputs inputs) "terminal" then Alcotest.fail "a terminal field survives on the record"
+
+let test_ri_value_neutrality () =
+  (* ROE0 equal to the cost of equity: no excess return ever, so the value is exactly book,
+     whatever the horizon; the terminal spread used to violate this *)
+  let at_ke = bank_history ~net_income:100. () in
+  List.iter
+    (fun years ->
+      let a = { bank_assumptions with projection_years = { bank_assumptions.projection_years with value = years } } in
+      let inputs, fair_value = get (Residual_income.value a ~country:"T" (bank_financials at_ke)) in
+      check_float "roe_0 = ke" 0.10 inputs.roe_0;
+      check_float (Printf.sprintf "value is book at %d years" years) 10. fair_value;
+      check_float "justified P/B 1" 1. inputs.justified_price_to_book)
+    [ 1; 7; 40 ]
 
 let test_ri_retention_derivation () =
   (* payout 100/200 and 50/200 -> mean 0.375; a loss year is skipped; dividends above
@@ -976,37 +989,39 @@ let test_ri_retention_derivation () =
       period ~period_end:"2023-12-31" ~net_income:(-50.) ~dividends_paid:100. ~book_equity:1000. () ]
   in
   let inputs, _ =
-    get (Residual_income.value bank_assumptions ~terminal_spread:spread ~country:"T" (bank_financials periods))
+    get (Residual_income.value bank_assumptions ~country:"T" (bank_financials periods))
   in
   check_float "payout" 0.375 inputs.payout_ratio;
   Alcotest.(check (list string)) "loss year skipped" [ "2025-12-31"; "2024-12-31" ] inputs.payout_periods;
   let inputs, _ =
     get
-      (Residual_income.value bank_assumptions ~terminal_spread:spread ~country:"T"
+      (Residual_income.value bank_assumptions ~country:"T"
          (bank_financials (bank_history ~dividends:(Some 500.) ())))
   in
   check_float "clamped to 1" 1. inputs.payout_ratio;
   check_float "retention 0" 0. inputs.retention;
   check_error "one usable period"
-    (Residual_income.value bank_assumptions ~terminal_spread:spread ~country:"T"
+    (Residual_income.value bank_assumptions ~country:"T"
        (bank_financials [ List.hd (bank_history ()) ]))
     [ "roe not derivable"; "have 1" ];
   check_error "no dividends row"
-    (Residual_income.value bank_assumptions ~terminal_spread:spread ~country:"T"
+    (Residual_income.value bank_assumptions ~country:"T"
        (bank_financials (bank_history ~dividends:None ())))
     [ "payout not derivable"; "have 0" ]
 
 let test_ri_guards () =
-  check_error "cost of equity <= terminal growth"
-    (Residual_income.value { bank_assumptions with terminal_growth_rate = param 0.5 }
-       ~terminal_spread:spread ~country:"T" (bank_financials (bank_history ())))
-    [ "cost of equity"; "does not exceed terminal growth" ];
+  (* terminal growth is no input of this path: an absurd value changes nothing *)
+  let _, with_absurd_terminal =
+    get (Residual_income.value { bank_assumptions with terminal_growth_rate = param 0.5 } ~country:"T" (bank_financials (bank_history ())))
+  in
+  let _, plain = get (Residual_income.value bank_assumptions ~country:"T" (bank_financials (bank_history ()))) in
+  check_float "terminal growth does not enter" plain with_absurd_terminal;
   check_error "book equity not positive"
-    (Residual_income.value bank_assumptions ~terminal_spread:spread ~country:"T"
+    (Residual_income.value bank_assumptions ~country:"T"
        (bank_financials (bank_history ~book_equity:(-1.) ())))
     [ "book equity"; "not positive" ];
   check_error "missing net income"
-    (Residual_income.value bank_assumptions ~terminal_spread:spread ~country:"T"
+    (Residual_income.value bank_assumptions ~country:"T"
        (bank_financials
           (List.map (fun (p : Boundary_t.fiscal_period) -> { p with net_income = None }) (bank_history ()))))
     [ "missing statement fields"; "net_income" ]
@@ -1019,13 +1034,13 @@ let test_ri_loan_loss_recorded () =
       (bank_history ())
   in
   let inputs, _ =
-    get (Residual_income.value bank_assumptions ~terminal_spread:spread ~country:"T" (bank_financials with_provision))
+    get (Residual_income.value bank_assumptions ~country:"T" (bank_financials with_provision))
   in
   Alcotest.(check (option approx)) "provision / NII" (Some 0.1) inputs.provision_to_net_interest_income;
   Alcotest.(check (option approx)) "provision / net loans" (Some 0.012) inputs.provision_to_net_loans;
   Alcotest.(check (option string)) "row" (Some "Credit Losses Provision") inputs.provision_for_credit_losses_row;
   let inputs, _ =
-    get (Residual_income.value bank_assumptions ~terminal_spread:spread ~country:"T" (bank_financials (bank_history ())))
+    get (Residual_income.value bank_assumptions ~country:"T" (bank_financials (bank_history ())))
   in
   Alcotest.(check (option approx)) "absent provision, null ratio" None inputs.provision_to_net_interest_income;
   Alcotest.(check (option string)) "net loans row still recorded" (Some "Net Loan") inputs.net_loans_row
@@ -1039,7 +1054,7 @@ let test_bank_routes_to_residual_income () =
   (match v.inputs with
   | Some (`Residual_income i) ->
       Alcotest.(check int) "roe path spans the horizon" 7 (List.length i.roe_path);
-      Alcotest.(check string) "spread provenance" "assumption" i.terminal_roe_spread.source
+      Alcotest.(check bool) "no terminal on the record" false (contains (Boundary_j.string_of_residual_income_inputs i) "terminal")
   | Some (`Dcf _) -> Alcotest.fail "a bank reached the dcf"
   | Some (`Residual_income_insurer _) -> Alcotest.fail "a bank reached the insurer model"
   | None -> Alcotest.fail "no inputs");
@@ -1063,7 +1078,7 @@ let test_flow_chart_names_every_reason () =
       "must be positive"; "years is negative"; "does not exceed terminal growth";
       "growth not derivable"; "fair value is not finite"; "non-positive fair value";
       "exceeds sanity bound"; "likely structural break; check entity_class";
-      "is not positive"; "roe not derivable"; "payout not derivable"; "cost of equity";
+      "is not positive"; "roe not derivable"; "payout not derivable";
       "insurer model requires filed-statement data"; "fx not available for";
       "latest annual filing is";
       "missing market data: financial_currency"; "missing market data: trading_currency";
@@ -1092,9 +1107,9 @@ let insurer_financials ?(provider = "SEC XBRL companyfacts") ?statements_unavail
 
 let test_insurer_aoci_adjustment () =
   let inputs, fair_value =
-    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T" (insurer_financials (insurer_history ())))
+    get (Insurer.value bank_assumptions ~country:"T" (insurer_financials (insurer_history ())))
   in
-  check_float "fair value on adjusted book equals the bank case" (1431.8181818181818 /. 100.) fair_value;
+  check_float "fair value on adjusted book equals the bank case" (1181.8181818181818 /. 100.) fair_value;
   check_float "core book is adjusted" 1000. inputs.core.book_equity;
   check_float "reported book recorded" 1200. inputs.reported_book_equity;
   check_float "aoci recorded" 200. inputs.aoci;
@@ -1107,27 +1122,27 @@ let test_insurer_aoci_adjustment () =
   check_mentions "solvency basis" inputs.solvency_basis [ "not available from filed financial statements" ];
   (* a negative AOCI raises the adjusted book *)
   let inputs, _ =
-    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T"
+    get (Insurer.value bank_assumptions ~country:"T"
            (insurer_financials (insurer_history ~aoci:(-300.) ())))
   in
   check_float "negative aoci adds back" 1500. inputs.core.book_equity
 
 let test_insurer_underwriting_checks () =
   let inputs, _ =
-    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T" (insurer_financials (insurer_history ())))
+    get (Insurer.value bank_assumptions ~country:"T" (insurer_financials (insurer_history ())))
   in
   Alcotest.(check (option approx)) "combined via the filed total" (Some 0.9) inputs.combined_ratio_proxy;
   check_mentions "basis" inputs.combined_ratio_basis [ "filed total" ];
   Alcotest.(check (option approx)) "reserves over premiums" (Some 3.0) inputs.reserves_to_premiums;
   let inputs, _ =
-    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T"
+    get (Insurer.value bank_assumptions ~country:"T"
            (insurer_financials (insurer_history ~total:None ~claims:800. ~acq:50. ~opex:70. ~fpb:500. ())))
   in
   Alcotest.(check (option approx)) "combined via claims plus expenses" (Some 0.92) inputs.combined_ratio_proxy;
   check_mentions "basis" inputs.combined_ratio_basis [ "claims incurred plus" ];
   Alcotest.(check (option approx)) "reserves sum both liabilities" (Some 3.5) inputs.reserves_to_premiums;
   let inputs, _ =
-    get (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T"
+    get (Insurer.value bank_assumptions ~country:"T"
            (insurer_financials (insurer_history ~total:None ~claims_liability:None ())))
   in
   Alcotest.(check (option approx)) "no claims line, no ratio" None inputs.combined_ratio_proxy;
@@ -1135,14 +1150,14 @@ let test_insurer_underwriting_checks () =
 
 let test_insurer_requires_filed_statements () =
   check_error "vendor rows"
-    (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T" (financials (history ())))
+    (Insurer.value bank_assumptions ~country:"T" (financials (history ())))
     [ "insurer model requires filed-statement data"; "no AOCI or premiums earned"; "provider yfinance" ];
   check_error "provider had nothing"
-    (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T"
+    (Insurer.value bank_assumptions ~country:"T"
        (insurer_financials ~statements_unavailable:"no SEC filings for ALV.DE: not in company_tickers.json" []))
     [ "insurer model requires filed-statement data; no SEC filings for ALV.DE" ];
   check_error "no periods at all"
-    (Insurer.value bank_assumptions ~terminal_spread:spread ~country:"T" (insurer_financials []))
+    (Insurer.value bank_assumptions ~country:"T" (insurer_financials []))
     [ "insurer model requires filed-statement data; no filed statements for TEST" ]
 
 let test_insurer_routes_and_floors () =
@@ -1154,7 +1169,7 @@ let test_insurer_routes_and_floors () =
     [ "AOCI-adjusted book"; "reserve adequacy not assessed"; "justified price/book" ];
   (match v.inputs with
   | Some (`Residual_income_insurer i) ->
-      Alcotest.(check string) "spread provenance" "assumption" i.core.terminal_roe_spread.source;
+      Alcotest.(check bool) "no terminal on the insurer core" false (contains (Boundary_j.string_of_residual_income_inputs i.core) "terminal");
       Alcotest.(check int) "roe path spans the horizon" 7 (List.length i.core.roe_path)
   | Some _ -> Alcotest.fail "an insurer reached another model"
   | None -> Alcotest.fail "no inputs");
@@ -1222,12 +1237,12 @@ let test_international_capm () =
       Alcotest.(check string) "crp key is the domicile" "Brazil" crp.key;
       check_mentions "crp source" crp.source [ "less the mature-market base" ]);
   let inputs, _ =
-    get (Residual_income.value a ~terminal_spread:spread ~country:"Brazil" (Fx.convert ~rate:0.2 (brl_bank ())))
+    get (Residual_income.value a ~country:"Brazil" (Fx.convert ~rate:0.2 (brl_bank ())))
   in
   check_float "ke = rf + beta * mature + crp" (0.0468 +. (1.0 *. 0.0423) +. (0.0747 -. 0.0423)) inputs.cost_of_equity;
   let domestic = get (Params.resolve params ~today ~country:"United States" ~industry:None) in
   Alcotest.(check bool) "same-currency path has no crp" true (Option.is_none domestic.country_risk_premium);
-  let inputs, _ = get (Residual_income.value domestic ~terminal_spread:spread ~country:"United States" (bank_financials (bank_history ()))) in
+  let inputs, _ = get (Residual_income.value domestic ~country:"United States" (bank_financials (bank_history ()))) in
   check_float "domestic ke unchanged" (0.0468 +. (1.0 *. 0.0446)) inputs.cost_of_equity
 
 let test_adr_ratio_invariance () =
@@ -1275,8 +1290,6 @@ let test_minor_unit_guard () =
       "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-      "bank_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
-      "insurer_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
       "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
       "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400, "values": {"United States": 0.02, "United Kingdom": 0.0}},
       "unwired": {}}|} ]) } in
@@ -1465,20 +1478,36 @@ let test_run_diff_lists_drivers () =
   let fresh = rename "FRESH" base_ok in
   let d = Batch.run_diff ~baseline:[ base_ok; base_failed; base_gone; base_ghost; rename "SAME" base_ok ] [ moved; recovered; ghost; same; fresh ] in
   check_mentions "diff" d
-    [ "TEST       Ok 27.94 -> Ok 11.21 delta -16.73 (-59.9%); statements yfinance -> yfinance";
+    [ "TEST       Ok 27.94 Buy -> Ok 11.21 Hold delta -16.73 (-59.9%); statements yfinance -> yfinance";
       "capex                      50 -> 400";
-      "WAS_FAILED Failed none -> Ok 27.94; statements yfinance -> yfinance";
+      "WAS_FAILED Failed none -> Ok 27.94 Buy; statements yfinance -> yfinance";
       "was: no fiscal periods in statements"; "inputs now present (dcf)";
       "cash                       1000 [cash_and_short_term_investments: cash_equivalents 600 (Cash) + short_term_investments 400 (Other Short Term Investments)]";
-      "GHOST      Ok 27.94 -> Ok 28.94 delta +1.00 (+3.6%)";
+      "GHOST      Ok 27.94 Buy -> Ok 28.94 Buy delta +1.00 (+3.6%)";
       "NO DRIVER: no input or parameter differs";
-      "SAME       Ok 27.94 -> Ok 27.94 unchanged";
-      "FRESH      new: Ok 27.94; not in the baseline";
-      "GONE       in the baseline (Ok 27.94), not in this run";
+      "SAME       Ok 27.94 Buy -> Ok 27.94 Buy unchanged";
+      "FRESH      new: Ok 27.94 Buy; not in the baseline";
+      "GONE       in the baseline (Ok 27.94 Buy), not in this run";
       "3 of 5 fair values moved, 1 status changes, 1 moved without a driver" ];
-  if contains d "SAME       Ok 27.94 -> Ok 27.94 unchanged; statements yfinance -> yfinance\n           " then
+  if contains d "SAME       Ok 27.94 Buy -> Ok 27.94 Buy unchanged; statements yfinance -> yfinance\n           " then
     Alcotest.fail "an unchanged record listed drivers";
-  Alcotest.(check string) "deterministic" d (Batch.run_diff ~baseline:[ base_ok; base_failed; base_gone; base_ghost; rename "SAME" base_ok ] [ moved; recovered; ghost; same; fresh ])
+  Alcotest.(check string) "deterministic" d (Batch.run_diff ~baseline:[ base_ok; base_failed; base_gone; base_ghost; rename "SAME" base_ok ] [ moved; recovered; ghost; same; fresh ]);
+  (* a term the model lost is a driver: the baseline's raw record names it with its value *)
+  let raw = Yojson.Safe.from_string (Boundary_j.string_of_valuation base_ghost) in
+  let with_term =
+    match raw with
+    | `Assoc fields ->
+        `Assoc
+          (List.map
+             (fun (k, v) ->
+               match (k, v) with
+               | "inputs", `List [ tag; `Assoc inputs ] -> (k, `List [ tag; `Assoc (("pv_terminal_value", `Float 250.) :: inputs) ])
+               | _ -> (k, v))
+             fields)
+    | other -> other
+  in
+  let d = Batch.run_diff ~baseline_raw:[ ("GHOST", with_term) ] ~baseline:[ base_ghost ] [ ghost ] in
+  check_mentions "removed term" d [ Printf.sprintf "%-26s %s -> removed from the model" "pv_terminal_value" "250"; "0 moved without a driver" ]
 
 let test_summary_definitions_and_cross_check_listing () =
   let primary = run (filed ~cross_check:a_cross_check (history ())) in
@@ -1778,6 +1807,10 @@ let test_residual_income_horizon_recovers_known_n () =
   let lambda = i.mean_reversion_lambda.value in
   let fv n = Implied.residual_income_fair_value ~projection_years:n i ~roe_0:i.roe_0 ~lambda in
   check_float "headline reproduced" (Option.get v.fair_value) (fv i.projection_years.value);
+  (* without a terminal the horizon is monotone increasing and converging on this path too *)
+  let values = List.init 40 (fun k -> fv (k + 1)) in
+  List.iteri (fun k x -> if k > 0 && x < List.nth values (k - 1) then Alcotest.failf "bank fair value fell from %d to %d years" k (k + 1)) values;
+  Alcotest.(check bool) "converging" true (List.nth values 39 -. List.nth values 38 < List.nth values 1 -. List.nth values 0);
   let s = implied_at (`Residual_income i) (fv 9) in
   Alcotest.(check (option approx)) "recovers N = 9" (Some 9.) (horizon_of s).value;
   Alcotest.(check (list approx)) "bracket" [ fv 8; fv 9 ] s.horizon_bracket;
@@ -1957,8 +1990,6 @@ let test_wacc_below_terminal_growth () =
                "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-               "bank_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
-               "insurer_terminal_roe_spread": {"value": 0.02, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
                "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
@@ -2074,6 +2105,7 @@ let () =
           case "schedule by hand" test_ri_schedule;
           case "roe path" test_ri_roe_path;
           case "value by hand" test_ri_value_by_hand;
+          case "roe at the cost of equity is worth exactly book" test_ri_value_neutrality;
           case "retention derived, never assumed" test_ri_retention_derivation;
           case "guards fail, never zero" test_ri_guards;
           case "loan-loss ratios recorded" test_ri_loan_loss_recorded;

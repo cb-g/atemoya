@@ -45,8 +45,8 @@ let mean_ratio rows ~min_periods =
 
 let absent name opt = if Option.is_none opt then Some name else None
 
-let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumptions)
-    ~(terminal_spread : parameter) ~country (fin : financials) =
+let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumptions) ~country
+    (fin : financials) =
   let ( let* ) = Result.bind in
   let* p =
     match Period.latest fin with
@@ -134,12 +134,7 @@ let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumption
           | None -> domestic
           | Some crp -> domestic +. crp.value
         in
-        let terminal_growth_rate = a.terminal_growth_rate.value in
-        if cost_of_equity <= terminal_growth_rate then
-          Error
-            (Printf.sprintf "cost of equity %.4f does not exceed terminal growth %.4f"
-               cost_of_equity terminal_growth_rate)
-        else if a.projection_years.value < 0 then
+        if a.projection_years.value < 0 then
           Error
             (Printf.sprintf "projection horizon %d years is negative" a.projection_years.value)
         else
@@ -149,13 +144,9 @@ let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumption
               ~projection_years
           in
           let s = schedule ~book_equity ~cost_of_equity ~retention ~roe_path in
-          let terminal_value =
-            terminal_spread.value *. s.ending_book /. (cost_of_equity -. terminal_growth_rate)
-          in
-          let pv_terminal_value =
-            terminal_value /. ((1. +. cost_of_equity) ** float_of_int projection_years)
-          in
-          let equity_value = book_equity +. s.pv_excess_returns +. pv_terminal_value in
+          (* No terminal: ROE has reverted to the cost of equity, and growth at the cost of
+             equity is value neutral. *)
+          let equity_value = book_equity +. s.pv_excess_returns in
           let shares = market_cap /. price in
           let fair_value = equity_value /. shares in
           let ratio num den =
@@ -194,15 +185,11 @@ let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumption
                   cost_of_equity;
                   conversion = None;
                   mean_reversion_lambda = a.mean_reversion_lambda;
-                  terminal_growth_rate = a.terminal_growth_rate;
-                  terminal_roe_spread = terminal_spread;
                   projection_years = a.projection_years;
                   roe_path;
                   book_value_path = s.book_value_path;
                   excess_return_path = s.excess_return_path;
                   pv_excess_returns = s.pv_excess_returns;
-                  terminal_value;
-                  pv_terminal_value;
                   equity_value;
                   justified_price_to_book = equity_value /. book_equity;
                   net_interest_income = p.net_interest_income;

@@ -192,8 +192,8 @@ let () =
         in
         List.filter_map
           (fun line ->
-            match Boundary_j.valuation_of_string line with
-            | v -> Some v
+            match (Boundary_j.valuation_of_string line, Yojson.Safe.from_string line) with
+            | v, raw -> Some (v, (v.ticker, raw))
             | exception (Yojson.Json_error msg | Atdgen_runtime.Oj_run.Error msg) ->
                 Printf.eprintf "%s: skipping a baseline line: %s\n%!" path msg;
                 None)
@@ -213,7 +213,9 @@ let () =
       let summary = Batch.summary ?universe ~definitions:params.field_definitions results in
       write_file (Filename.concat dir "summary.txt") summary;
       write_file (Filename.concat dir "provider_diff.txt")
-        ((match baseline with Some b -> Batch.run_diff ~baseline:b results ^ "\n" | None -> "")
+        ((match baseline with
+         | Some b -> Batch.run_diff ~baseline_raw:(List.map snd b) ~baseline:(List.map fst b) results ^ "\n"
+         | None -> "")
         ^ Batch.provider_diff paired);
       print_string summary);
   exit (if unreadable > 0 then 1 else 0)

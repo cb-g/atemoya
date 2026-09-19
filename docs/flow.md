@@ -6,7 +6,7 @@ are the exact `failed_reason` strings, with variable parts in parentheses, so th
 checkable against `output/summary.txt`; a test asserts every reason string in the code
 appears here. **Every change that adds a branch updates this file in the same commit.**
 
-Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field, *(12)* by the implied readouts and the bounded EBIT, *(13)* by the IFRS filers, *(14)* by the companyfacts-lag decision and the implied horizon.
+Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field, *(12)* by the implied readouts and the bounded EBIT, *(13)* by the IFRS filers, *(14)* by the companyfacts-lag decision and the implied horizon, *(15)* by the residual-income model losing its terminal.
 
 ```mermaid
 flowchart TD
@@ -81,18 +81,16 @@ flowchart TD
     RI_GUARDS -- "book equity <= 0" --> F_BOOK["book equity (b) is not positive (06)"]:::failed
     RI_GUARDS -- "fewer than 2 periods of net income over positive book" --> F_ROE["roe not derivable: need 2 fiscal periods with net income and positive book equity, have (n) (06)"]:::failed
     RI_GUARDS -- "fewer than 2 periods of dividends over positive net income" --> F_PAYOUT["payout not derivable: need 2 fiscal periods with positive net income and dividends paid, have (n) (06)"]:::failed
-    RI_GUARDS -- "cost of equity <= terminal growth" --> F_KE["cost of equity (ke) does not exceed terminal growth (g) (06)"]:::failed
     RI_GUARDS -- "horizon < 0" --> F_HORIZON
-    RI_GUARDS -- ok --> RI_EV["ROE_0 = mean net income / book; ROE_t reverts to CAPM cost of equity at lambda; book compounds by retained earnings (retention = 1 - mean payout); equity = book + PV excess returns + PV terminal (spread x ending book / (ke - g)); fair value = equity / shares; loan-loss ratios recorded, never a gate (06)"]:::new
+    RI_GUARDS -- ok --> RI_EV["ROE_0 = mean net income / book; ROE_t reverts to CAPM cost of equity at lambda; book compounds by retained earnings (retention = 1 - mean payout); equity = book + PV of (ROE_t - ke) x start-of-year book over the explicit years, and nothing after them (15): ROE has reverted to the cost of equity by then and growth at the cost of equity is value neutral, so a bank earning its cost of equity is worth exactly book and franchise value is something the price must ask for through implied_roe0, not something the model grants; fair value = equity / shares; loan-loss ratios recorded, never a gate (06)"]:::new
     RI_EV -- "not finite" --> F_RINAN["fair value is not finite (equity value (e), shares (n)) (06)"]:::failed
     RI_EV --> CONCLUDE
 
     WHICH -- "residual_income_insurer (08)" --> INS_FILED{"filed statements with AOCI and premiums earned? (08)"}:::new
     INS_FILED -- "provider had none, or no AOCI / premiums on the latest period" --> F_FILED["insurer model requires filed-statement data; (why: no SEC filings for (ticker), or the period carries no AOCI or premiums earned) (08)"]:::failed
-    INS_FILED -- yes --> INS_CORE["book per period = reported stockholders' equity - AOCI; then the residual-income core above (same guards: roe, payout, cost of equity vs terminal growth); underwriting checks recorded, never gates: combined-ratio proxy, reserves over premiums, AOCI over reported book; solvency null, basis stated (08)"]:::new
+    INS_FILED -- yes --> INS_CORE["book per period = reported stockholders' equity - AOCI; then the residual-income core above (same guards: roe, payout), no terminal (15); underwriting checks recorded, never gates: combined-ratio proxy, reserves over premiums, AOCI over reported book; solvency null, basis stated (08)"]:::new
     INS_CORE -- "core guard fails" --> F_ROE
     INS_CORE -- "core guard fails" --> F_PAYOUT
-    INS_CORE -- "core guard fails" --> F_KE
     INS_CORE --> CONCLUDE
 
     CONCLUDE{"fair value > 0?"} -- no --> F_NONPOS["non-positive fair value (v): model not applicable"]:::failed
@@ -151,3 +149,5 @@ into it.
   from the facts' unit, and the currency-agreement `Failed` string.
 - companyfacts lag and implied horizon (14): the companyfacts-lag routing decision from SEC's submissions index (a new
   `provider_reason`, no new `Failed` string) and the implied horizon. 
+- residual income without a terminal (15): the residual-income model loses its terminal spread; the cost-of-equity-versus-
+  terminal-growth `Failed` string leaves with it.
