@@ -526,6 +526,50 @@ class Signal:
 
 
 @dataclass
+class RoicObservation:
+    """Original type: roic_observation = { ... }
+    """
+
+    period_end: str
+    prior_period_end: str
+    ebit: float
+    nopat: float
+    invested_capital_prior: float
+    roic: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'RoicObservation':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('RoicObservation', 'period_end'),
+                prior_period_end=_atd_read_string(x['prior_period_end']) if 'prior_period_end' in x else _atd_missing_json_field('RoicObservation', 'prior_period_end'),
+                ebit=_atd_read_float(x['ebit']) if 'ebit' in x else _atd_missing_json_field('RoicObservation', 'ebit'),
+                nopat=_atd_read_float(x['nopat']) if 'nopat' in x else _atd_missing_json_field('RoicObservation', 'nopat'),
+                invested_capital_prior=_atd_read_float(x['invested_capital_prior']) if 'invested_capital_prior' in x else _atd_missing_json_field('RoicObservation', 'invested_capital_prior'),
+                roic=_atd_read_float(x['roic']) if 'roic' in x else _atd_missing_json_field('RoicObservation', 'roic'),
+            )
+        else:
+            _atd_bad_json('RoicObservation', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['prior_period_end'] = _atd_write_string(self.prior_period_end)
+        res['ebit'] = _atd_write_float(self.ebit)
+        res['nopat'] = _atd_write_float(self.nopat)
+        res['invested_capital_prior'] = _atd_write_float(self.invested_capital_prior)
+        res['roic'] = _atd_write_float(self.roic)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'RoicObservation':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Major:
     """Original type: price_unit = [ ... | Major | ... ]
     """
@@ -1286,113 +1330,6 @@ class PointInTime:
 
 
 @dataclass
-class InsurerInputs:
-    """Original type: insurer_inputs = { ... }
-    """
-
-    core: ResidualIncomeInputs
-    provider: str
-    filed: Optional[str]
-    accession: Optional[str]
-    reported_book_equity: float
-    aoci: float
-    aoci_row: Optional[str]
-    aoci_to_reported_book: float
-    premiums_earned: float
-    premiums_earned_row: Optional[str]
-    claims_incurred: Optional[float]
-    claims_incurred_row: Optional[str]
-    benefits_losses_and_expenses: Optional[float]
-    benefits_losses_and_expenses_row: Optional[str]
-    policy_acquisition_expense: Optional[float]
-    policy_acquisition_expense_row: Optional[str]
-    operating_expense: Optional[float]
-    operating_expense_row: Optional[str]
-    combined_ratio_proxy: Optional[float]
-    combined_ratio_basis: str
-    future_policy_benefits: Optional[float]
-    future_policy_benefits_row: Optional[str]
-    claims_liability: Optional[float]
-    claims_liability_row: Optional[str]
-    reserves_to_premiums: Optional[float]
-    solvency: Optional[float]
-    solvency_basis: str
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'InsurerInputs':
-        if isinstance(x, dict):
-            return cls(
-                core=ResidualIncomeInputs.from_json(x['core']) if 'core' in x else _atd_missing_json_field('InsurerInputs', 'core'),
-                provider=_atd_read_string(x['provider']) if 'provider' in x else _atd_missing_json_field('InsurerInputs', 'provider'),
-                filed=_atd_read_nullable(_atd_read_string)(x['filed']) if 'filed' in x else _atd_missing_json_field('InsurerInputs', 'filed'),
-                accession=_atd_read_nullable(_atd_read_string)(x['accession']) if 'accession' in x else _atd_missing_json_field('InsurerInputs', 'accession'),
-                reported_book_equity=_atd_read_float(x['reported_book_equity']) if 'reported_book_equity' in x else _atd_missing_json_field('InsurerInputs', 'reported_book_equity'),
-                aoci=_atd_read_float(x['aoci']) if 'aoci' in x else _atd_missing_json_field('InsurerInputs', 'aoci'),
-                aoci_row=_atd_read_nullable(_atd_read_string)(x['aoci_row']) if 'aoci_row' in x else _atd_missing_json_field('InsurerInputs', 'aoci_row'),
-                aoci_to_reported_book=_atd_read_float(x['aoci_to_reported_book']) if 'aoci_to_reported_book' in x else _atd_missing_json_field('InsurerInputs', 'aoci_to_reported_book'),
-                premiums_earned=_atd_read_float(x['premiums_earned']) if 'premiums_earned' in x else _atd_missing_json_field('InsurerInputs', 'premiums_earned'),
-                premiums_earned_row=_atd_read_nullable(_atd_read_string)(x['premiums_earned_row']) if 'premiums_earned_row' in x else _atd_missing_json_field('InsurerInputs', 'premiums_earned_row'),
-                claims_incurred=_atd_read_nullable(_atd_read_float)(x['claims_incurred']) if 'claims_incurred' in x else _atd_missing_json_field('InsurerInputs', 'claims_incurred'),
-                claims_incurred_row=_atd_read_nullable(_atd_read_string)(x['claims_incurred_row']) if 'claims_incurred_row' in x else _atd_missing_json_field('InsurerInputs', 'claims_incurred_row'),
-                benefits_losses_and_expenses=_atd_read_nullable(_atd_read_float)(x['benefits_losses_and_expenses']) if 'benefits_losses_and_expenses' in x else _atd_missing_json_field('InsurerInputs', 'benefits_losses_and_expenses'),
-                benefits_losses_and_expenses_row=_atd_read_nullable(_atd_read_string)(x['benefits_losses_and_expenses_row']) if 'benefits_losses_and_expenses_row' in x else _atd_missing_json_field('InsurerInputs', 'benefits_losses_and_expenses_row'),
-                policy_acquisition_expense=_atd_read_nullable(_atd_read_float)(x['policy_acquisition_expense']) if 'policy_acquisition_expense' in x else _atd_missing_json_field('InsurerInputs', 'policy_acquisition_expense'),
-                policy_acquisition_expense_row=_atd_read_nullable(_atd_read_string)(x['policy_acquisition_expense_row']) if 'policy_acquisition_expense_row' in x else _atd_missing_json_field('InsurerInputs', 'policy_acquisition_expense_row'),
-                operating_expense=_atd_read_nullable(_atd_read_float)(x['operating_expense']) if 'operating_expense' in x else _atd_missing_json_field('InsurerInputs', 'operating_expense'),
-                operating_expense_row=_atd_read_nullable(_atd_read_string)(x['operating_expense_row']) if 'operating_expense_row' in x else _atd_missing_json_field('InsurerInputs', 'operating_expense_row'),
-                combined_ratio_proxy=_atd_read_nullable(_atd_read_float)(x['combined_ratio_proxy']) if 'combined_ratio_proxy' in x else _atd_missing_json_field('InsurerInputs', 'combined_ratio_proxy'),
-                combined_ratio_basis=_atd_read_string(x['combined_ratio_basis']) if 'combined_ratio_basis' in x else _atd_missing_json_field('InsurerInputs', 'combined_ratio_basis'),
-                future_policy_benefits=_atd_read_nullable(_atd_read_float)(x['future_policy_benefits']) if 'future_policy_benefits' in x else _atd_missing_json_field('InsurerInputs', 'future_policy_benefits'),
-                future_policy_benefits_row=_atd_read_nullable(_atd_read_string)(x['future_policy_benefits_row']) if 'future_policy_benefits_row' in x else _atd_missing_json_field('InsurerInputs', 'future_policy_benefits_row'),
-                claims_liability=_atd_read_nullable(_atd_read_float)(x['claims_liability']) if 'claims_liability' in x else _atd_missing_json_field('InsurerInputs', 'claims_liability'),
-                claims_liability_row=_atd_read_nullable(_atd_read_string)(x['claims_liability_row']) if 'claims_liability_row' in x else _atd_missing_json_field('InsurerInputs', 'claims_liability_row'),
-                reserves_to_premiums=_atd_read_nullable(_atd_read_float)(x['reserves_to_premiums']) if 'reserves_to_premiums' in x else _atd_missing_json_field('InsurerInputs', 'reserves_to_premiums'),
-                solvency=_atd_read_nullable(_atd_read_float)(x['solvency']) if 'solvency' in x else _atd_missing_json_field('InsurerInputs', 'solvency'),
-                solvency_basis=_atd_read_string(x['solvency_basis']) if 'solvency_basis' in x else _atd_missing_json_field('InsurerInputs', 'solvency_basis'),
-            )
-        else:
-            _atd_bad_json('InsurerInputs', x)
-
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['core'] = (lambda x: x.to_json())(self.core)
-        res['provider'] = _atd_write_string(self.provider)
-        res['filed'] = _atd_write_nullable(_atd_write_string)(self.filed)
-        res['accession'] = _atd_write_nullable(_atd_write_string)(self.accession)
-        res['reported_book_equity'] = _atd_write_float(self.reported_book_equity)
-        res['aoci'] = _atd_write_float(self.aoci)
-        res['aoci_row'] = _atd_write_nullable(_atd_write_string)(self.aoci_row)
-        res['aoci_to_reported_book'] = _atd_write_float(self.aoci_to_reported_book)
-        res['premiums_earned'] = _atd_write_float(self.premiums_earned)
-        res['premiums_earned_row'] = _atd_write_nullable(_atd_write_string)(self.premiums_earned_row)
-        res['claims_incurred'] = _atd_write_nullable(_atd_write_float)(self.claims_incurred)
-        res['claims_incurred_row'] = _atd_write_nullable(_atd_write_string)(self.claims_incurred_row)
-        res['benefits_losses_and_expenses'] = _atd_write_nullable(_atd_write_float)(self.benefits_losses_and_expenses)
-        res['benefits_losses_and_expenses_row'] = _atd_write_nullable(_atd_write_string)(self.benefits_losses_and_expenses_row)
-        res['policy_acquisition_expense'] = _atd_write_nullable(_atd_write_float)(self.policy_acquisition_expense)
-        res['policy_acquisition_expense_row'] = _atd_write_nullable(_atd_write_string)(self.policy_acquisition_expense_row)
-        res['operating_expense'] = _atd_write_nullable(_atd_write_float)(self.operating_expense)
-        res['operating_expense_row'] = _atd_write_nullable(_atd_write_string)(self.operating_expense_row)
-        res['combined_ratio_proxy'] = _atd_write_nullable(_atd_write_float)(self.combined_ratio_proxy)
-        res['combined_ratio_basis'] = _atd_write_string(self.combined_ratio_basis)
-        res['future_policy_benefits'] = _atd_write_nullable(_atd_write_float)(self.future_policy_benefits)
-        res['future_policy_benefits_row'] = _atd_write_nullable(_atd_write_string)(self.future_policy_benefits_row)
-        res['claims_liability'] = _atd_write_nullable(_atd_write_float)(self.claims_liability)
-        res['claims_liability_row'] = _atd_write_nullable(_atd_write_string)(self.claims_liability_row)
-        res['reserves_to_premiums'] = _atd_write_nullable(_atd_write_float)(self.reserves_to_premiums)
-        res['solvency'] = _atd_write_nullable(_atd_write_float)(self.solvency)
-        res['solvency_basis'] = _atd_write_string(self.solvency_basis)
-        return res
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'InsurerInputs':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
 class Fundamental:
     """Original type: growth_source = [ ... | Fundamental | ... ]
     """
@@ -1679,6 +1616,184 @@ class Inputs:
 
 
 @dataclass
+class MidcycleInputs:
+    """Original type: midcycle_inputs = { ... }
+    """
+
+    dcf: Inputs
+    midcycle_window_years: IntParameter
+    window: List[str]
+    observations: List[RoicObservation]
+    roic_mid: float
+    roic_median: float
+    invested_capital_latest: float
+    nopat_mid: float
+    reinvestment_periods: List[str]
+    reinvestment_sum: float
+    nopat_sum: float
+    reinvestment_rate_mid: float
+    fcff_mid: float
+    spot_fcff: float
+    spot_to_midcycle: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'MidcycleInputs':
+        if isinstance(x, dict):
+            return cls(
+                dcf=Inputs.from_json(x['dcf']) if 'dcf' in x else _atd_missing_json_field('MidcycleInputs', 'dcf'),
+                midcycle_window_years=IntParameter.from_json(x['midcycle_window_years']) if 'midcycle_window_years' in x else _atd_missing_json_field('MidcycleInputs', 'midcycle_window_years'),
+                window=_atd_read_list(_atd_read_string)(x['window']) if 'window' in x else _atd_missing_json_field('MidcycleInputs', 'window'),
+                observations=_atd_read_list(RoicObservation.from_json)(x['observations']) if 'observations' in x else _atd_missing_json_field('MidcycleInputs', 'observations'),
+                roic_mid=_atd_read_float(x['roic_mid']) if 'roic_mid' in x else _atd_missing_json_field('MidcycleInputs', 'roic_mid'),
+                roic_median=_atd_read_float(x['roic_median']) if 'roic_median' in x else _atd_missing_json_field('MidcycleInputs', 'roic_median'),
+                invested_capital_latest=_atd_read_float(x['invested_capital_latest']) if 'invested_capital_latest' in x else _atd_missing_json_field('MidcycleInputs', 'invested_capital_latest'),
+                nopat_mid=_atd_read_float(x['nopat_mid']) if 'nopat_mid' in x else _atd_missing_json_field('MidcycleInputs', 'nopat_mid'),
+                reinvestment_periods=_atd_read_list(_atd_read_string)(x['reinvestment_periods']) if 'reinvestment_periods' in x else _atd_missing_json_field('MidcycleInputs', 'reinvestment_periods'),
+                reinvestment_sum=_atd_read_float(x['reinvestment_sum']) if 'reinvestment_sum' in x else _atd_missing_json_field('MidcycleInputs', 'reinvestment_sum'),
+                nopat_sum=_atd_read_float(x['nopat_sum']) if 'nopat_sum' in x else _atd_missing_json_field('MidcycleInputs', 'nopat_sum'),
+                reinvestment_rate_mid=_atd_read_float(x['reinvestment_rate_mid']) if 'reinvestment_rate_mid' in x else _atd_missing_json_field('MidcycleInputs', 'reinvestment_rate_mid'),
+                fcff_mid=_atd_read_float(x['fcff_mid']) if 'fcff_mid' in x else _atd_missing_json_field('MidcycleInputs', 'fcff_mid'),
+                spot_fcff=_atd_read_float(x['spot_fcff']) if 'spot_fcff' in x else _atd_missing_json_field('MidcycleInputs', 'spot_fcff'),
+                spot_to_midcycle=_atd_read_float(x['spot_to_midcycle']) if 'spot_to_midcycle' in x else _atd_missing_json_field('MidcycleInputs', 'spot_to_midcycle'),
+            )
+        else:
+            _atd_bad_json('MidcycleInputs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['dcf'] = (lambda x: x.to_json())(self.dcf)
+        res['midcycle_window_years'] = (lambda x: x.to_json())(self.midcycle_window_years)
+        res['window'] = _atd_write_list(_atd_write_string)(self.window)
+        res['observations'] = _atd_write_list((lambda x: x.to_json()))(self.observations)
+        res['roic_mid'] = _atd_write_float(self.roic_mid)
+        res['roic_median'] = _atd_write_float(self.roic_median)
+        res['invested_capital_latest'] = _atd_write_float(self.invested_capital_latest)
+        res['nopat_mid'] = _atd_write_float(self.nopat_mid)
+        res['reinvestment_periods'] = _atd_write_list(_atd_write_string)(self.reinvestment_periods)
+        res['reinvestment_sum'] = _atd_write_float(self.reinvestment_sum)
+        res['nopat_sum'] = _atd_write_float(self.nopat_sum)
+        res['reinvestment_rate_mid'] = _atd_write_float(self.reinvestment_rate_mid)
+        res['fcff_mid'] = _atd_write_float(self.fcff_mid)
+        res['spot_fcff'] = _atd_write_float(self.spot_fcff)
+        res['spot_to_midcycle'] = _atd_write_float(self.spot_to_midcycle)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'MidcycleInputs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class InsurerInputs:
+    """Original type: insurer_inputs = { ... }
+    """
+
+    core: ResidualIncomeInputs
+    provider: str
+    filed: Optional[str]
+    accession: Optional[str]
+    reported_book_equity: float
+    aoci: float
+    aoci_row: Optional[str]
+    aoci_to_reported_book: float
+    premiums_earned: float
+    premiums_earned_row: Optional[str]
+    claims_incurred: Optional[float]
+    claims_incurred_row: Optional[str]
+    benefits_losses_and_expenses: Optional[float]
+    benefits_losses_and_expenses_row: Optional[str]
+    policy_acquisition_expense: Optional[float]
+    policy_acquisition_expense_row: Optional[str]
+    operating_expense: Optional[float]
+    operating_expense_row: Optional[str]
+    combined_ratio_proxy: Optional[float]
+    combined_ratio_basis: str
+    future_policy_benefits: Optional[float]
+    future_policy_benefits_row: Optional[str]
+    claims_liability: Optional[float]
+    claims_liability_row: Optional[str]
+    reserves_to_premiums: Optional[float]
+    solvency: Optional[float]
+    solvency_basis: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'InsurerInputs':
+        if isinstance(x, dict):
+            return cls(
+                core=ResidualIncomeInputs.from_json(x['core']) if 'core' in x else _atd_missing_json_field('InsurerInputs', 'core'),
+                provider=_atd_read_string(x['provider']) if 'provider' in x else _atd_missing_json_field('InsurerInputs', 'provider'),
+                filed=_atd_read_nullable(_atd_read_string)(x['filed']) if 'filed' in x else _atd_missing_json_field('InsurerInputs', 'filed'),
+                accession=_atd_read_nullable(_atd_read_string)(x['accession']) if 'accession' in x else _atd_missing_json_field('InsurerInputs', 'accession'),
+                reported_book_equity=_atd_read_float(x['reported_book_equity']) if 'reported_book_equity' in x else _atd_missing_json_field('InsurerInputs', 'reported_book_equity'),
+                aoci=_atd_read_float(x['aoci']) if 'aoci' in x else _atd_missing_json_field('InsurerInputs', 'aoci'),
+                aoci_row=_atd_read_nullable(_atd_read_string)(x['aoci_row']) if 'aoci_row' in x else _atd_missing_json_field('InsurerInputs', 'aoci_row'),
+                aoci_to_reported_book=_atd_read_float(x['aoci_to_reported_book']) if 'aoci_to_reported_book' in x else _atd_missing_json_field('InsurerInputs', 'aoci_to_reported_book'),
+                premiums_earned=_atd_read_float(x['premiums_earned']) if 'premiums_earned' in x else _atd_missing_json_field('InsurerInputs', 'premiums_earned'),
+                premiums_earned_row=_atd_read_nullable(_atd_read_string)(x['premiums_earned_row']) if 'premiums_earned_row' in x else _atd_missing_json_field('InsurerInputs', 'premiums_earned_row'),
+                claims_incurred=_atd_read_nullable(_atd_read_float)(x['claims_incurred']) if 'claims_incurred' in x else _atd_missing_json_field('InsurerInputs', 'claims_incurred'),
+                claims_incurred_row=_atd_read_nullable(_atd_read_string)(x['claims_incurred_row']) if 'claims_incurred_row' in x else _atd_missing_json_field('InsurerInputs', 'claims_incurred_row'),
+                benefits_losses_and_expenses=_atd_read_nullable(_atd_read_float)(x['benefits_losses_and_expenses']) if 'benefits_losses_and_expenses' in x else _atd_missing_json_field('InsurerInputs', 'benefits_losses_and_expenses'),
+                benefits_losses_and_expenses_row=_atd_read_nullable(_atd_read_string)(x['benefits_losses_and_expenses_row']) if 'benefits_losses_and_expenses_row' in x else _atd_missing_json_field('InsurerInputs', 'benefits_losses_and_expenses_row'),
+                policy_acquisition_expense=_atd_read_nullable(_atd_read_float)(x['policy_acquisition_expense']) if 'policy_acquisition_expense' in x else _atd_missing_json_field('InsurerInputs', 'policy_acquisition_expense'),
+                policy_acquisition_expense_row=_atd_read_nullable(_atd_read_string)(x['policy_acquisition_expense_row']) if 'policy_acquisition_expense_row' in x else _atd_missing_json_field('InsurerInputs', 'policy_acquisition_expense_row'),
+                operating_expense=_atd_read_nullable(_atd_read_float)(x['operating_expense']) if 'operating_expense' in x else _atd_missing_json_field('InsurerInputs', 'operating_expense'),
+                operating_expense_row=_atd_read_nullable(_atd_read_string)(x['operating_expense_row']) if 'operating_expense_row' in x else _atd_missing_json_field('InsurerInputs', 'operating_expense_row'),
+                combined_ratio_proxy=_atd_read_nullable(_atd_read_float)(x['combined_ratio_proxy']) if 'combined_ratio_proxy' in x else _atd_missing_json_field('InsurerInputs', 'combined_ratio_proxy'),
+                combined_ratio_basis=_atd_read_string(x['combined_ratio_basis']) if 'combined_ratio_basis' in x else _atd_missing_json_field('InsurerInputs', 'combined_ratio_basis'),
+                future_policy_benefits=_atd_read_nullable(_atd_read_float)(x['future_policy_benefits']) if 'future_policy_benefits' in x else _atd_missing_json_field('InsurerInputs', 'future_policy_benefits'),
+                future_policy_benefits_row=_atd_read_nullable(_atd_read_string)(x['future_policy_benefits_row']) if 'future_policy_benefits_row' in x else _atd_missing_json_field('InsurerInputs', 'future_policy_benefits_row'),
+                claims_liability=_atd_read_nullable(_atd_read_float)(x['claims_liability']) if 'claims_liability' in x else _atd_missing_json_field('InsurerInputs', 'claims_liability'),
+                claims_liability_row=_atd_read_nullable(_atd_read_string)(x['claims_liability_row']) if 'claims_liability_row' in x else _atd_missing_json_field('InsurerInputs', 'claims_liability_row'),
+                reserves_to_premiums=_atd_read_nullable(_atd_read_float)(x['reserves_to_premiums']) if 'reserves_to_premiums' in x else _atd_missing_json_field('InsurerInputs', 'reserves_to_premiums'),
+                solvency=_atd_read_nullable(_atd_read_float)(x['solvency']) if 'solvency' in x else _atd_missing_json_field('InsurerInputs', 'solvency'),
+                solvency_basis=_atd_read_string(x['solvency_basis']) if 'solvency_basis' in x else _atd_missing_json_field('InsurerInputs', 'solvency_basis'),
+            )
+        else:
+            _atd_bad_json('InsurerInputs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['core'] = (lambda x: x.to_json())(self.core)
+        res['provider'] = _atd_write_string(self.provider)
+        res['filed'] = _atd_write_nullable(_atd_write_string)(self.filed)
+        res['accession'] = _atd_write_nullable(_atd_write_string)(self.accession)
+        res['reported_book_equity'] = _atd_write_float(self.reported_book_equity)
+        res['aoci'] = _atd_write_float(self.aoci)
+        res['aoci_row'] = _atd_write_nullable(_atd_write_string)(self.aoci_row)
+        res['aoci_to_reported_book'] = _atd_write_float(self.aoci_to_reported_book)
+        res['premiums_earned'] = _atd_write_float(self.premiums_earned)
+        res['premiums_earned_row'] = _atd_write_nullable(_atd_write_string)(self.premiums_earned_row)
+        res['claims_incurred'] = _atd_write_nullable(_atd_write_float)(self.claims_incurred)
+        res['claims_incurred_row'] = _atd_write_nullable(_atd_write_string)(self.claims_incurred_row)
+        res['benefits_losses_and_expenses'] = _atd_write_nullable(_atd_write_float)(self.benefits_losses_and_expenses)
+        res['benefits_losses_and_expenses_row'] = _atd_write_nullable(_atd_write_string)(self.benefits_losses_and_expenses_row)
+        res['policy_acquisition_expense'] = _atd_write_nullable(_atd_write_float)(self.policy_acquisition_expense)
+        res['policy_acquisition_expense_row'] = _atd_write_nullable(_atd_write_string)(self.policy_acquisition_expense_row)
+        res['operating_expense'] = _atd_write_nullable(_atd_write_float)(self.operating_expense)
+        res['operating_expense_row'] = _atd_write_nullable(_atd_write_string)(self.operating_expense_row)
+        res['combined_ratio_proxy'] = _atd_write_nullable(_atd_write_float)(self.combined_ratio_proxy)
+        res['combined_ratio_basis'] = _atd_write_string(self.combined_ratio_basis)
+        res['future_policy_benefits'] = _atd_write_nullable(_atd_write_float)(self.future_policy_benefits)
+        res['future_policy_benefits_row'] = _atd_write_nullable(_atd_write_string)(self.future_policy_benefits_row)
+        res['claims_liability'] = _atd_write_nullable(_atd_write_float)(self.claims_liability)
+        res['claims_liability_row'] = _atd_write_nullable(_atd_write_string)(self.claims_liability_row)
+        res['reserves_to_premiums'] = _atd_write_nullable(_atd_write_float)(self.reserves_to_premiums)
+        res['solvency'] = _atd_write_nullable(_atd_write_float)(self.solvency)
+        res['solvency_basis'] = _atd_write_string(self.solvency_basis)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'InsurerInputs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Dcf:
     """Original type: model_inputs = [ ... | Dcf of ... | ... ]
     """
@@ -1692,6 +1807,25 @@ class Dcf:
 
     def to_json(self) -> Any:
         return ['dcf', (lambda x: x.to_json())(self.value)]
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class DcfMidcycle:
+    """Original type: model_inputs = [ ... | Dcf_midcycle of ... | ... ]
+    """
+
+    value: MidcycleInputs
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'DcfMidcycle'
+
+    def to_json(self) -> Any:
+        return ['dcf_midcycle', (lambda x: x.to_json())(self.value)]
 
     def to_json_string(self, **kw: Any) -> str:
         return json.dumps(self.to_json(), **kw)
@@ -1759,7 +1893,7 @@ class ModelInputs:
     """Original type: model_inputs = [ ... ]
     """
 
-    value: Union[Dcf, ResidualIncome, ResidualIncomeInsurer, ReitFfoDividend]
+    value: Union[Dcf, DcfMidcycle, ResidualIncome, ResidualIncomeInsurer, ReitFfoDividend]
 
     @property
     def kind(self) -> str:
@@ -1772,6 +1906,8 @@ class ModelInputs:
             cons = x[0]
             if cons == 'dcf':
                 return cls(Dcf(Inputs.from_json(x[1])))
+            if cons == 'dcf_midcycle':
+                return cls(DcfMidcycle(MidcycleInputs.from_json(x[1])))
             if cons == 'residual_income':
                 return cls(ResidualIncome(ResidualIncomeInputs.from_json(x[1])))
             if cons == 'residual_income_insurer':
@@ -1865,11 +2001,29 @@ class ReitFfoDividend_:
 
 
 @dataclass
+class DcfMidcycle_:
+    """Original type: model = [ ... | Dcf_midcycle | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'DcfMidcycle_'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'dcf_midcycle'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Model:
     """Original type: model = [ ... ]
     """
 
-    value: Union[Dcf_, ResidualIncome_, ResidualIncomeInsurer_, ReitFfoDividend_]
+    value: Union[Dcf_, ResidualIncome_, ResidualIncomeInsurer_, ReitFfoDividend_, DcfMidcycle_]
 
     @property
     def kind(self) -> str:
@@ -1887,6 +2041,8 @@ class Model:
                 return cls(ResidualIncomeInsurer_())
             if x == 'reit_ffo_dividend':
                 return cls(ReitFfoDividend_())
+            if x == 'dcf_midcycle':
+                return cls(DcfMidcycle_())
             _atd_bad_json('Model', x)
         _atd_bad_json('Model', x)
 
@@ -2239,18 +2395,36 @@ class HighGrowthSoftware:
 
 
 @dataclass
-class PreProfit:
-    """Original type: entity_class = [ ... | PreProfit | ... ]
+class Unprofitable:
+    """Original type: entity_class = [ ... | Unprofitable | ... ]
     """
 
     @property
     def kind(self) -> str:
         """Name of the class representing this variant."""
-        return 'PreProfit'
+        return 'Unprofitable'
 
     @staticmethod
     def to_json() -> Any:
-        return 'PreProfit'
+        return 'Unprofitable'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Cyclical:
+    """Original type: entity_class = [ ... | Cyclical | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Cyclical'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Cyclical'
 
     def to_json_string(self, **kw: Any) -> str:
         return json.dumps(self.to_json(), **kw)
@@ -2333,7 +2507,7 @@ class EntityClass:
     """Original type: entity_class = [ ... ]
     """
 
-    value: Union[OperatingCompany, Bank, Insurer, RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, PreProfit, Wrapper, ConstructionStage, UnderBid, Ballast]
+    value: Union[OperatingCompany, Bank, Insurer, RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, Unprofitable, Cyclical, Wrapper, ConstructionStage, UnderBid, Ballast]
 
     @property
     def kind(self) -> str:
@@ -2361,8 +2535,10 @@ class EntityClass:
                 return cls(Royalty())
             if x == 'HighGrowthSoftware':
                 return cls(HighGrowthSoftware())
-            if x == 'PreProfit':
-                return cls(PreProfit())
+            if x == 'Unprofitable':
+                return cls(Unprofitable())
+            if x == 'Cyclical':
+                return cls(Cyclical())
             if x == 'Wrapper':
                 return cls(Wrapper())
             if x == 'ConstructionStage':

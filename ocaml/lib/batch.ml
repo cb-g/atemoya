@@ -56,6 +56,7 @@ let model_reads (m : model option) =
   | Some `Dcf ->
       [ "total_revenue"; "ebit"; "pretax_income"; "tax_provision"; "depreciation_amortization"; "capex";
         "delta_nwc"; "cash"; "total_debt"; "book_equity" ]
+  | Some `Dcf_midcycle -> [ "ebit"; "depreciation_amortization"; "capex"; "delta_nwc"; "cash"; "total_debt"; "book_equity" ]
   | Some `Residual_income | Some `Residual_income_insurer -> [ "book_equity"; "net_income"; "dividends_paid" ]
   | Some `Reit_ffo_dividend -> [ "net_income"; "depreciation_amortization"; "dividends_paid" ]
   | None -> []
@@ -294,8 +295,22 @@ let residual_income_drivers (i : residual_income_inputs) =
       @ match i.country_risk_premium with Some c -> [ ("country_risk_premium", c) ] | None -> [])
   @ [ ("projection_years", float_of_int i.projection_years.value, "") ]
 
-let drivers (inputs : model_inputs) =
+let rec drivers (inputs : model_inputs) =
   match inputs with
+  | `Dcf_midcycle (m : midcycle_inputs) ->
+      (* The through-cycle aggregates are what the fair value moves with; the window's
+         period fields sit behind them on the record. *)
+      [
+        ( "roic_mid",
+          m.roic_mid,
+          Printf.sprintf " mean over %d observations, window %s to %s" (List.length m.observations)
+            (List.nth m.window (List.length m.window - 1)) (List.hd m.window) );
+        ("reinvestment_rate_mid", m.reinvestment_rate_mid, Printf.sprintf " (%.4g / %.4g over %d periods)" m.reinvestment_sum m.nopat_sum (List.length m.reinvestment_periods));
+        ("invested_capital_latest", m.invested_capital_latest, "");
+        ("fcff_mid", m.fcff_mid, Printf.sprintf " (spot fcff %.4g, %.2fx)" m.spot_fcff m.spot_to_midcycle);
+      ]
+      @ List.filter (fun (n, _, _) -> not (List.mem n [ "ebit"; "tax_rate"; "depreciation_amortization"; "capex"; "delta_nwc" ])) (drivers (`Dcf m.dcf))
+      @ [ ("midcycle_window_years", float_of_int m.midcycle_window_years.value, "") ]
   | `Dcf (i : inputs) ->
       [
         ("price", i.price, "");
@@ -434,6 +449,14 @@ let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
           (match (v.status, v.failed_reason) with
           | `Failed, Some r -> Printf.bprintf b "           now: %s\n" r
           | _ -> ());
+          (match v.inputs with
+          | Some (`Dcf_midcycle m) ->
+              Printf.bprintf b
+                "           mid-cycle (22): spot fcff %s vs fcff_mid %s (%.2fx); roic_mid %.4f (median %.4f) over %d observations; window %s to %s (%d periods); fair value %s -> %s\n"
+                (money m.spot_fcff) (money m.fcff_mid) m.spot_to_midcycle m.roic_mid m.roic_median
+                (List.length m.observations) (List.nth m.window (List.length m.window - 1)) (List.hd m.window)
+                (List.length m.window) (fair_value_text o.fair_value) (fair_value_text v.fair_value)
+          | _ -> ());
           let inputs_of (x : valuation) = Option.map drivers x.inputs in
           (match (inputs_of o, inputs_of v) with
           | Some od, Some nd ->
@@ -469,6 +492,7 @@ let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
                 | Some (`Residual_income _) -> "residual_income"
                 | Some (`Residual_income_insurer _) -> "residual_income_insurer"
                 | Some (`Reit_ffo_dividend _) -> "reit_ffo_dividend"
+                | Some (`Dcf_midcycle _) -> "dcf_midcycle"
                 | None -> "-");
               List.iter
                 (fun (name, nv, ntext) ->
@@ -557,7 +581,7 @@ let market_inputs = [ "price"; "market_cap"; "shares" ]
 let parameter_inputs =
   [ "statutory_tax_rate"; "risk_free_rate"; "equity_risk_premium"; "beta"; "debt_spread"; "growth_clamp_lower";
     "growth_clamp_upper"; "mean_reversion_lambda"; "terminal_growth_rate"; "country_risk_premium";
-    "projection_years"; "fx_rate" ]
+    "projection_years"; "midcycle_window_years"; "fx_rate" ]
 
 (* What identifies the statements an input came from: the provider, the fiscal period and,
    on filed statements, the accession of that period. *)
@@ -570,6 +594,7 @@ let identity (v : valuation) (fin : financials option) =
     | Some (`Residual_income i) -> Some i.fiscal_period_end
     | Some (`Residual_income_insurer i) -> Some i.core.fiscal_period_end
     | Some (`Reit_ffo_dividend i) -> Some i.fiscal_period_end
+    | Some (`Dcf_midcycle m) -> Some m.dcf.fiscal_period_end
     | None -> None
   in
   let accession =
@@ -649,6 +674,7 @@ let stability ~snapshot_old ~snapshot_new ~(old : (valuation * financials option
     | Some (`Residual_income i) -> Some i.risk_free_rate.as_of
     | Some (`Residual_income_insurer i) -> Some i.core.risk_free_rate.as_of
     | Some (`Reit_ffo_dividend i) -> Some i.risk_free_rate.as_of
+    | Some (`Dcf_midcycle m) -> Some m.dcf.risk_free_rate.as_of
     | None -> None
   in
   let as_of_pair =

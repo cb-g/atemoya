@@ -13,6 +13,7 @@ type assumptions = {
   terminal_growth_rate : parameter;
   projection_years : int_parameter;
   statutory_tax_rate : parameter;
+  midcycle_window_years : int_parameter;
 }
 
 let max_effective_tax_rate = 0.5
@@ -49,6 +50,10 @@ let tax_rate ~statutory ~pretax_income ~tax_provision =
         (effective, `Effective)
       else (statutory, `Statutory)
   | _ -> (statutory, `Statutory)
+
+let cost_of_equity a =
+  let domestic = a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value) in
+  match a.country_risk_premium with None -> domestic | Some crp -> domestic +. crp.value
 
 let latest_period fin =
   match Period.latest fin with
@@ -155,14 +160,7 @@ let value a ~country (fin : financials) =
           tax_rate ~statutory:a.statutory_tax_rate.value
             ~pretax_income:p.pretax_income ~tax_provision:p.tax_provision
         in
-        let cost_of_equity =
-          let domestic =
-            a.risk_free_rate.value +. (a.beta.value *. a.equity_risk_premium.value)
-          in
-          match a.country_risk_premium with
-          | None -> domestic
-          | Some crp -> domestic +. crp.value
-        in
+        let cost_of_equity = cost_of_equity a in
         let cost_of_debt = a.risk_free_rate.value +. a.debt_spread.value in
         let wacc =
           wacc ~cost_of_equity ~cost_of_debt ~tax_rate ~market_cap ~total_debt

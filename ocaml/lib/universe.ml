@@ -1,4 +1,4 @@
-let allowed_fields = [ "ticker"; "entity_class"; "why"; "scope_limits" ]
+let allowed_fields = [ "ticker"; "entity_class"; "why"; "scope_limits"; "cik" ]
 let required_fields = [ "ticker"; "entity_class"; "why" ]
 
 let check_entry index (entry : Yojson.Safe.t) =
@@ -27,10 +27,11 @@ let check_entry index (entry : Yojson.Safe.t) =
               (Printf.sprintf "universe entry %s declares unknown class %S; one of: %s" name class_name
                  (String.concat ", " (List.map Admissibility.class_name Admissibility.all_classes)))
           else (
-            match List.assoc_opt "scope_limits" fields with
-            | None | Some (`List []) -> Ok ()
-            | Some (`List items) when List.for_all (function `String _ -> true | _ -> false) items -> Ok ()
-            | Some _ -> Error (Printf.sprintf "universe entry %s: scope_limits must be a list of strings" name))
+            match (List.assoc_opt "scope_limits" fields, List.assoc_opt "cik" fields) with
+            | (None | Some (`List [])), (None | Some (`String _)) -> Ok ()
+            | Some (`List items), (None | Some (`String _)) when List.for_all (function `String _ -> true | _ -> false) items -> Ok ()
+            | _, Some _ -> Error (Printf.sprintf "universe entry %s: cik must be a string" name)
+            | _ -> Error (Printf.sprintf "universe entry %s: scope_limits must be a list of strings" name))
   | _ -> Error (Printf.sprintf "universe entry %d is not an object" index)
 
 let load_string text =

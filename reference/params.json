@@ -47,6 +47,15 @@
     "as_of": "2026-01-01",
     "max_age_days": 400
   },
+  "midcycle_window_years": {
+    "value": 15,
+    "source": "long enough to hold two oil cycles (the 2014-16 downturn, 2020, the 2022 spike); a shorter window measures one phase",
+    "as_of": "2026-09-19",
+    "max_age_days": 400,
+    "notes": [
+      "The mid-cycle DCF's window: every annual period the record carries, newest first, up to this many; the fetch keeps this many periods for a class whose first admissible model is dcf_midcycle, five for every other model."
+    ]
+  },
   "terminal_growth_rate": {
     "source": "per-country long-run nominal growth estimates, June 2026 vintage",
     "as_of": "2026-06-01",

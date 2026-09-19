@@ -29,6 +29,8 @@ type assumptions = {
   projection_years : Boundary_t.int_parameter;
   statutory_tax_rate : Boundary_t.parameter;
       (** used when no effective rate in [0, max_effective_tax_rate] is derivable *)
+  midcycle_window_years : Boundary_t.int_parameter;
+      (** the mid-cycle DCF's window (22); unused by this module *)
 }
 
 val max_effective_tax_rate : float
@@ -68,6 +70,12 @@ val tax_rate :
   float * Boundary_t.tax_rate_source
 (** Effective rate [tax_provision / pretax_income] when [pretax_income > 0] and the
     result lies in [0, max_effective_tax_rate]; otherwise [statutory]. *)
+
+val cost_of_equity : assumptions -> float
+(** [risk_free_rate + beta * equity_risk_premium (+ country_risk_premium)]. *)
+
+val missing_report : Boundary_t.financials -> Boundary_t.fiscal_period -> nwc_periods:int -> string
+(** "missing market data: ...; missing statement fields for fiscal period ending D: ...". *)
 
 val value :
   assumptions ->

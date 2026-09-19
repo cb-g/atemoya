@@ -44,9 +44,11 @@ from pydantic import BaseModel, ConfigDict, ValidationError, ValidationInfo, fie
 import boundary
 import fetch_sec
 import reference
+import universe as universe_file
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = REPO_ROOT / "data" / "financials"
+REFERENCE = REPO_ROOT / "reference"
 DEFINITIONS: reference.FieldDefinitions = fetch_sec.load_definitions()
 
 # (component name in the definition, value as summed, vendor row label): a composed
@@ -586,13 +588,31 @@ def cross_check(primary: boundary.FiscalPeriod, secondary: boundary.FiscalPeriod
 
 
 class SecContext:
-    """What routing to filed statements needs: the identity, the ticker map, the tag map, the definitions."""
+    """What routing to filed statements needs: the identity, the ticker map, the tag map, the definitions,
+    and the admissibility table and parameters that say how many periods a class's model needs (22)."""
 
     def __init__(self) -> None:
         self.user_agent = fetch_sec.identity()
         self.tickers = fetch_sec.tickers_table(self.user_agent)
         self.tags: reference.XbrlTags = fetch_sec.load_tags()
         self.definitions: reference.FieldDefinitions = DEFINITIONS
+        self.admissibility: reference.Admissibility = reference.Admissibility.from_json_string((REFERENCE / "admissibility.json").read_text())
+        self.params: reference.Params = reference.Params.from_json_string((REFERENCE / "params.json").read_text())
+
+
+def periods_needed(entity_class: str | None, admissibility: reference.Admissibility, params: reference.Params) -> int:
+    """Period depth is a property of the model (22): the mid-cycle window for a class whose
+    first admissible model is dcf_midcycle, five for every other model or no class."""
+    rule = dict(admissibility.classes).get(entity_class) if entity_class else None
+    model = rule.admissible_models[0] if rule is not None and rule.admissible_models else None
+    return params.midcycle_window_years.value if model == "dcf_midcycle" else fetch_sec.PERIODS_DEFAULT
+
+
+def cik_of(symbol: str, table: Mapping[str, object], declared: str | None) -> tuple[str | None, str]:
+    """The declared CIK (22) when the entry has one, else the ticker map's; and where it came from."""
+    if declared:
+        return declared, "declared in the universe entry, not the ticker map"
+    return fetch_sec.cik_for(symbol, table), "SEC's ticker map"
 
 
 def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile | None, periods: list[boundary.FiscalPeriod],
@@ -664,14 +684,17 @@ def vendor_is_fresh(vendor: list[boundary.FiscalPeriod], submission: boundary.Su
     return (date.fromisoformat(submission.report_date) - newest).days <= VENDOR_FRESHNESS_DAYS
 
 
-def fetch(symbol: str, as_of: datetime, sec: SecContext) -> tuple[boundary.Financials, boundary.Financials | None]:
-    """The record, and for an XBRL-primary name the vendor's shadow record beside it."""
+def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_sec.PERIODS_DEFAULT,
+          declared_cik: str | None = None) -> tuple[boundary.Financials, boundary.Financials | None]:
+    """The record, and for an XBRL-primary name the vendor's shadow record beside it. [depth] is
+    the number of annual periods the routed model needs (periods_needed); [declared_cik] the
+    universe entry's cik (22)."""
     notes: list[str] = []
     ticker = yf.Ticker(symbol)
     quote, profile = _info(ticker, notes)
     vendor = vendor_periods(ticker, notes)
 
-    cik = fetch_sec.cik_for(symbol, sec.tickers)
+    cik, cik_source = cik_of(symbol, sec.tickers, declared_cik)
     if cik is None:
         return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
                        provider_reason=f"no SEC filings for {symbol}: not in company_tickers.json"), None
@@ -683,9 +706,9 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext) -> tuple[boundary.Finan
                        provider_reason=f"CIK {cik}: {decision.reason}", submission=submission, submissions_unavailable=submissions_unavailable), None
 
     filed_notes = list(notes)
-    periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, filed_notes, taxonomy=decision.taxonomy, unit=decision.currency)
-    filed_notes.append(f"CIK {cik}: {len(decision.facts)} {decision.taxonomy} tags; {len(periods)} annual periods in {decision.currency}")
-    reason = f"CIK {cik}: {decision.reason}"
+    periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, filed_notes, taxonomy=decision.taxonomy, unit=decision.currency, depth=depth)
+    filed_notes.append(f"CIK {cik} ({cik_source}): {len(decision.facts)} {decision.taxonomy} tags; {len(periods)} annual periods in {decision.currency}, {depth} asked for")
+    reason = f"CIK {cik} ({cik_source}): {decision.reason}" if declared_cik else f"CIK {cik}: {decision.reason}"
     lag = lag_of(submission, periods)
     if lag is not None:
         facts_age = (as_of.date() - date.fromisoformat(lag.facts_filed)).days
@@ -729,15 +752,21 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument("tickers", nargs="+", help="symbols as the vendor spells them, e.g. AAPL BRK-B")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"output directory (default: {DEFAULT_OUT})")
+    parser.add_argument("--universe", type=Path, default=None, help="the universe file the tickers are declared in: its class sets the period depth, its cik the filer (22)")
     args = parser.parse_args(argv)
     tickers: list[str] = [str(t).upper() for t in args.tickers]
     out: Path = args.out
+    universe_path: Path | None = args.universe
     out.mkdir(parents=True, exist_ok=True)
     as_of = datetime.now(timezone.utc)
     sec = SecContext()
+    entries = {e.ticker.upper(): e for e in universe_file.load(universe_path).tickers} if universe_path else {}
 
     for symbol in tickers:
-        financials, shadow = fetch(symbol, as_of, sec)
+        entry = entries.get(symbol)
+        financials, shadow = fetch(symbol, as_of, sec,
+                                   depth=periods_needed(entry.entity_class if entry else None, sec.admissibility, sec.params),
+                                   declared_cik=entry.cik if entry else None)
         # allow_nan=False: a NaN that slipped through is a bug here, not invalid JSON
         # for the other side to choke on.
         text = financials.to_json_string(indent=2, allow_nan=False)

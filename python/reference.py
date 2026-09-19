@@ -392,6 +392,7 @@ class UniverseEntry:
     entity_class: str
     why: str
     scope_limits: List[str] = field(default_factory=lambda: [])
+    cik: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'UniverseEntry':
@@ -401,6 +402,7 @@ class UniverseEntry:
                 entity_class=_atd_read_string(x['entity_class']) if 'entity_class' in x else _atd_missing_json_field('UniverseEntry', 'entity_class'),
                 why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('UniverseEntry', 'why'),
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
+                cik=_atd_read_string(x['cik']) if 'cik' in x else None,
             )
         else:
             _atd_bad_json('UniverseEntry', x)
@@ -411,6 +413,8 @@ class UniverseEntry:
         res['entity_class'] = _atd_write_string(self.entity_class)
         res['why'] = _atd_write_string(self.why)
         res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        if self.cik is not None:
+            res['cik'] = _atd_write_string(self.cik)
         return res
 
     @classmethod
@@ -916,6 +920,7 @@ class Params:
     growth_clamp_upper: Scalar
     mean_reversion_lambda: Scalar
     mature_market_erp: Scalar
+    midcycle_window_years: IntScalar
     terminal_growth_rate: CountryTable
     unwired: Any
 
@@ -930,6 +935,7 @@ class Params:
                 growth_clamp_upper=Scalar.from_json(x['growth_clamp_upper']) if 'growth_clamp_upper' in x else _atd_missing_json_field('Params', 'growth_clamp_upper'),
                 mean_reversion_lambda=Scalar.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('Params', 'mean_reversion_lambda'),
                 mature_market_erp=Scalar.from_json(x['mature_market_erp']) if 'mature_market_erp' in x else _atd_missing_json_field('Params', 'mature_market_erp'),
+                midcycle_window_years=IntScalar.from_json(x['midcycle_window_years']) if 'midcycle_window_years' in x else _atd_missing_json_field('Params', 'midcycle_window_years'),
                 terminal_growth_rate=CountryTable.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Params', 'terminal_growth_rate'),
                 unwired=(lambda x: x)(x['unwired']) if 'unwired' in x else _atd_missing_json_field('Params', 'unwired'),
             )
@@ -945,6 +951,7 @@ class Params:
         res['growth_clamp_upper'] = (lambda x: x.to_json())(self.growth_clamp_upper)
         res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
         res['mature_market_erp'] = (lambda x: x.to_json())(self.mature_market_erp)
+        res['midcycle_window_years'] = (lambda x: x.to_json())(self.midcycle_window_years)
         res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
         res['unwired'] = (lambda x: x)(self.unwired)
         return res
@@ -1877,6 +1884,7 @@ class ClassRule:
     admissible_models: List[str]
     never: str
     floor_basis_default: str
+    scope_limits_default: List[str] = field(default_factory=lambda: [])
     floor_present_default: Optional[bool] = field(default_factory=lambda: None)
 
     @classmethod
@@ -1887,6 +1895,7 @@ class ClassRule:
                 admissible_models=_atd_read_list(_atd_read_string)(x['admissible_models']) if 'admissible_models' in x else _atd_missing_json_field('ClassRule', 'admissible_models'),
                 never=_atd_read_string(x['never']) if 'never' in x else _atd_missing_json_field('ClassRule', 'never'),
                 floor_basis_default=_atd_read_string(x['floor_basis_default']) if 'floor_basis_default' in x else _atd_missing_json_field('ClassRule', 'floor_basis_default'),
+                scope_limits_default=_atd_read_list(_atd_read_string)(x['scope_limits_default']) if 'scope_limits_default' in x else [],
                 floor_present_default=_atd_read_nullable(_atd_read_bool)(x['floor_present_default']) if 'floor_present_default' in x else None,
             )
         else:
@@ -1898,6 +1907,7 @@ class ClassRule:
         res['admissible_models'] = _atd_write_list(_atd_write_string)(self.admissible_models)
         res['never'] = _atd_write_string(self.never)
         res['floor_basis_default'] = _atd_write_string(self.floor_basis_default)
+        res['scope_limits_default'] = _atd_write_list(_atd_write_string)(self.scope_limits_default)
         res['floor_present_default'] = _atd_write_nullable(_atd_write_bool)(self.floor_present_default)
         return res
 

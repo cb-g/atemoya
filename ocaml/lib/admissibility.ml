@@ -11,7 +11,8 @@ let class_name : Boundary_t.entity_class -> string = function
   | `Miner -> "Miner"
   | `Royalty -> "Royalty"
   | `HighGrowthSoftware -> "HighGrowthSoftware"
-  | `PreProfit -> "PreProfit"
+  | `Unprofitable -> "Unprofitable"
+  | `Cyclical -> "Cyclical"
   | `Wrapper -> "Wrapper"
   | `ConstructionStage -> "ConstructionStage"
   | `UnderBid -> "UnderBid"
@@ -28,7 +29,8 @@ let all_classes : Boundary_t.entity_class list =
     `Miner;
     `Royalty;
     `HighGrowthSoftware;
-    `PreProfit;
+    `Unprofitable;
+    `Cyclical;
     `Wrapper;
     `ConstructionStage;
     `UnderBid;
@@ -45,6 +47,7 @@ let model_name : Boundary_t.model -> string = function
   | `Residual_income -> "residual_income"
   | `Residual_income_insurer -> "residual_income_insurer"
   | `Reit_ffo_dividend -> "reit_ffo_dividend"
+  | `Dcf_midcycle -> "dcf_midcycle"
 
 let model_of_string s =
   match Boundary_j.model_of_string (Yojson.Safe.to_string (`String s)) with

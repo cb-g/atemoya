@@ -17,7 +17,7 @@ def test_tracked_universe_is_a_declaration_only() -> None:
     text = (ROOT / "reference" / "universe.json").read_text()
     u = universe.load_text(text)
     raw = json.loads(text)["tickers"]
-    assert len(u.tickers) == len(raw) == 34
+    assert len(u.tickers) == len(raw) == 36
     for entry in raw:
         assert set(entry) <= set(universe.ALLOWED) and all(k in entry for k in universe.REQUIRED)
         # no number followed by a unit, no percentage or multiple, no four-digit year, in a why
@@ -52,3 +52,25 @@ def test_a_second_universe_file_is_the_same_format() -> None:
     private["tickers"][0]["position"] = "held"
     with pytest.raises(universe.UniverseError, match="universe entry PRIV.A carries unknown field\\(s\\) position"):
         universe.load_text(json.dumps(private))
+
+
+def test_periods_needed_and_the_declared_cik() -> None:
+    """Period depth is the model's (22): the mid-cycle window for a class routed to
+    dcf_midcycle, five otherwise; a declared cik wins over the ticker map."""
+    import fetch
+    import reference
+
+    admissibility = reference.Admissibility.from_json_string((ROOT / "reference" / "admissibility.json").read_text())
+    params = reference.Params.from_json_string((ROOT / "reference" / "params.json").read_text())
+    assert fetch.periods_needed("Cyclical", admissibility, params) == params.midcycle_window_years.value == 15
+    assert fetch.periods_needed("OperatingCompany", admissibility, params) == 5
+    assert fetch.periods_needed("Wrapper", admissibility, params) == 5
+    assert fetch.periods_needed(None, admissibility, params) == 5
+    table = {"0": {"cik_str": 34088, "ticker": "XOM", "title": "x"}}
+    assert fetch.cik_of("XOM", table, None) == ("0000034088", "SEC's ticker map")
+    assert fetch.cik_of("XOM", table, "0000000001") == ("0000000001", "declared in the universe entry, not the ticker map")
+    assert fetch.cik_of("NOPE", table, None) == (None, "SEC's ticker map")
+    entry = universe.load_text(json.dumps({"tickers": [{"ticker": "X", "entity_class": "Cyclical", "why": "cyclical", "cik": "0000000001"}]})).tickers[0]
+    assert entry.cik == "0000000001"
+    with pytest.raises(universe.UniverseError, match="unknown field"):
+        universe.load_text(json.dumps({"tickers": [{"ticker": "X", "entity_class": "Cyclical", "why": "cyclical", "CIK": "1"}]}))

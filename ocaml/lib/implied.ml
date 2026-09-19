@@ -143,31 +143,36 @@ let block ~level_name ~level ~level_domain:(lo, hi) ~half_life_years ~horizon ~g
     held = List.map (fun (name, value) -> { name; value }) held;
   }
 
+(* The dcf readouts on the engine's inputs: the same arithmetic for the mid-cycle model (22),
+   whose fcff and g0 are the through-cycle ones. *)
+let dcf_block (i : inputs) ~price =
+  let terminal = i.terminal_growth_rate.value in
+  let lambda = i.mean_reversion_lambda.value in
+  let level =
+    solve_level ~what:"starting growth" ~price ~domain:level_domain
+      ~f:(fun g0 -> dcf_fair_value i ~g0 ~lambda)
+  in
+  let half_life_years =
+    solve_half_life ~driver:"growth" ~target_name:"terminal" ~start:i.g0 ~target:terminal ~price
+      ~f:(fun lambda -> dcf_fair_value i ~g0:i.g0 ~lambda)
+  in
+  let above = i.g0 > terminal in
+  let horizon =
+    solve_horizon ~driver:"growth" ~target_name:"terminal" ~start:i.g0 ~target:terminal ~price
+      ~f:(fun n -> dcf_fair_value ~projection_years:n i ~g0:i.g0 ~lambda)
+  in
+  block ~level_name:"implied_g0" ~level ~level_domain ~half_life_years ~horizon ~guard:above
+    ~guard_rule:(Printf.sprintf "g0 %.4f %s terminal growth %.4f" i.g0 (if above then ">" else "<=") terminal)
+    ~held:
+      [ ("fcff", i.fcff); ("wacc", i.wacc); ("terminal_growth_rate", terminal);
+        ("projection_years", float_of_int i.projection_years.value); ("net_debt", i.net_debt);
+        ("shares", i.shares); ("g0", i.g0); ("mean_reversion_lambda", lambda);
+        ("risk_free_rate", i.risk_free_rate.value) ]
+
 let of_inputs (m : model_inputs) ~price =
   match m with
-  | `Dcf (i : inputs) ->
-      let terminal = i.terminal_growth_rate.value in
-      let lambda = i.mean_reversion_lambda.value in
-      let level =
-        solve_level ~what:"starting growth" ~price ~domain:level_domain
-          ~f:(fun g0 -> dcf_fair_value i ~g0 ~lambda)
-      in
-      let half_life_years =
-        solve_half_life ~driver:"growth" ~target_name:"terminal" ~start:i.g0 ~target:terminal ~price
-          ~f:(fun lambda -> dcf_fair_value i ~g0:i.g0 ~lambda)
-      in
-      let above = i.g0 > terminal in
-      let horizon =
-        solve_horizon ~driver:"growth" ~target_name:"terminal" ~start:i.g0 ~target:terminal ~price
-          ~f:(fun n -> dcf_fair_value ~projection_years:n i ~g0:i.g0 ~lambda)
-      in
-      block ~level_name:"implied_g0" ~level ~level_domain ~half_life_years ~horizon ~guard:above
-        ~guard_rule:(Printf.sprintf "g0 %.4f %s terminal growth %.4f" i.g0 (if above then ">" else "<=") terminal)
-        ~held:
-          [ ("fcff", i.fcff); ("wacc", i.wacc); ("terminal_growth_rate", terminal);
-            ("projection_years", float_of_int i.projection_years.value); ("net_debt", i.net_debt);
-            ("shares", i.shares); ("g0", i.g0); ("mean_reversion_lambda", lambda);
-            ("risk_free_rate", i.risk_free_rate.value) ]
+  | `Dcf i -> dcf_block i ~price
+  | `Dcf_midcycle m -> dcf_block m.dcf ~price
   | `Reit_ffo_dividend (i : reit_inputs) ->
       let terminal = i.terminal_growth_rate.value in
       let lambda = i.mean_reversion_lambda.value in

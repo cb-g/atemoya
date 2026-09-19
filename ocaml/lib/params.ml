@@ -148,20 +148,20 @@ let scalar ?hold_vintage (s : scalar) ~today ~name =
   in
   Ok (parameter ~value:s.value ~key:"global" ~source:s.source ~as_of:s.as_of ~age_days ())
 
+let int_scalar ?hold_vintage (p : int_scalar) ~today ~name =
+  let* age_days =
+    age ?hold_vintage ~today ~name ~key:"global" ~as_of:p.as_of ~max_age_days:p.max_age_days ()
+  in
+  Ok ({ value = p.value; key = "global"; source = p.source; as_of = p.as_of; age_days } : Boundary_t.int_parameter)
+
 let classification_threshold ?hold_vintage t ~today =
   scalar ?hold_vintage t.params.bank_nii_ratio_threshold ~today ~name:"bank_nii_ratio_threshold"
 
 
 let resolve ?hold_vintage t ~today ~country ~industry =
-  let* projection_years =
-    let p = t.params.projection_years in
-    let* age_days =
-      age ?hold_vintage ~today ~name:"projection_years" ~key:"global" ~as_of:p.as_of
-        ~max_age_days:p.max_age_days ()
-    in
-    Ok
-      ({ value = p.value; key = "global"; source = p.source; as_of = p.as_of; age_days }
-        : Boundary_t.int_parameter)
+  let* projection_years = int_scalar ?hold_vintage t.params.projection_years ~today ~name:"projection_years" in
+  let* midcycle_window_years =
+    int_scalar ?hold_vintage t.params.midcycle_window_years ~today ~name:"midcycle_window_years"
   in
   let tenor = Printf.sprintf "%dy" projection_years.value in
   let* risk_free_rate = risk_free ?hold_vintage t.risk_free ~today ~country ~tenor in
@@ -201,18 +201,13 @@ let resolve ?hold_vintage t ~today ~country ~industry =
       terminal_growth_rate;
       projection_years;
       statutory_tax_rate;
+      midcycle_window_years;
     }
 
 let resolve_cross ?hold_vintage t ~today ~domicile ~rate_country ~industry =
-  let* projection_years =
-    let p = t.params.projection_years in
-    let* age_days =
-      age ?hold_vintage ~today ~name:"projection_years" ~key:"global" ~as_of:p.as_of
-        ~max_age_days:p.max_age_days ()
-    in
-    Ok
-      ({ value = p.value; key = "global"; source = p.source; as_of = p.as_of; age_days }
-        : Boundary_t.int_parameter)
+  let* projection_years = int_scalar ?hold_vintage t.params.projection_years ~today ~name:"projection_years" in
+  let* midcycle_window_years =
+    int_scalar ?hold_vintage t.params.midcycle_window_years ~today ~name:"midcycle_window_years"
   in
   let tenor = Printf.sprintf "%dy" projection_years.value in
   let* risk_free_rate = risk_free ?hold_vintage t.risk_free ~today ~country:rate_country ~tenor in
@@ -261,4 +256,5 @@ let resolve_cross ?hold_vintage t ~today ~domicile ~rate_country ~industry =
       terminal_growth_rate;
       projection_years;
       statutory_tax_rate;
+      midcycle_window_years;
     }

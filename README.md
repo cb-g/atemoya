@@ -63,10 +63,13 @@ measures their age against today's UTC date (`--today YYYY-MM-DD` to override). 
 be files or directories. Every ticker needs a declared `entity_class`, from its entry in
 `reference/universe.json` or from `--entity-class CLASS` for an ad-hoc run; without one the
 record fails as undeclared. `reference/admissibility.json` says which models may run on
-which class (today the FCFF DCF on `OperatingCompany`, residual income on `Bank`, and
-residual income on AOCI-adjusted book from filed statements on `Insurer`) and
-what each other class is judged on instead; an inadmissible class fails with that lens
-named. `docs/flow.md` charts every branch from ticker to record. A record is either
+which class (today the FCFF DCF on `OperatingCompany` and `HighGrowthSoftware`, the same
+engine on through-cycle earning power for `Cyclical`, residual income on `Bank`, residual
+income on AOCI-adjusted book from filed statements on `Insurer`, and the FFO-covered
+dividend on `Reit`) and what each other class is judged on instead; an inadmissible class
+fails with that lens named. A universe entry may declare the SEC filer to read by `cik`
+when the ticker map points elsewhere; the fetch keeps as many annual periods as the
+class's model needs. `docs/flow.md` charts every branch from ticker to record. A record is either
 `Ok` with a fair value, or `Failed` with a reason; it never carries a guessed number.
 Every record carries a `floor` (present, absent by definition, or not assessable here,
 with its basis) that gates nothing. A name whose statements and price are in different

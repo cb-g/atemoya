@@ -89,6 +89,7 @@ type params = {
   growth_clamp_upper : scalar;
   mean_reversion_lambda : scalar;     (* growth, and a bank's ROE, decay toward their anchor at exp(-lambda * t) *)
   mature_market_erp : scalar;         (* the international CAPM's mature-market base; a domicile's total ERP less this is its country risk premium *)
+  midcycle_window_years : int_scalar; (* the mid-cycle DCF's window (22): annual periods normalised over, and the period depth the fetch keeps for the class *)
   terminal_growth_rate : country_table;
   unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
 }
@@ -104,6 +105,7 @@ type universe_entry = {
   entity_class : string;                (* a constructor of the boundary's entity_class; validated at load *)
   why : string;                         (* why this class *)
   ~scope_limits : string list;          (* durable: what the models cannot see for this name; carried verbatim *)
+  ?cik : string option;                 (* an identifier, not a number (22): the SEC filer to read instead of the ticker map's, with the reason in why *)
 }
 
 type universe = {
@@ -119,6 +121,7 @@ type class_rule = {
   admissible_models : string list;      (* JSON names of boundary model constructors, e.g. "dcf" *)
   never : string;                       (* what must not be used on this class *)
   floor_basis_default : string;         (* what establishes a floor for this class when no model here has *)
+  ~scope_limits_default : string list;  (* carried onto every record of the class beside the entry's own (22) *)
   ~floor_present_default : bool nullable;   (* false when the class has no floor by definition; null (absent) when not assessable here *)
 }
 

@@ -10,7 +10,7 @@ from typing import Any, cast
 
 import reference
 
-ALLOWED = ("ticker", "entity_class", "why", "scope_limits")
+ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "cik")
 REQUIRED = ("ticker", "entity_class", "why")
 
 

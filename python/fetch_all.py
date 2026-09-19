@@ -78,14 +78,14 @@ def main(argv: list[str]) -> int:
         return 0
     if out is None:
         out = snapshot_dir(datetime.now(timezone.utc).strftime("%Y-%m-%d"), snapshots)
-        code = fetch.main([*tickers, "--out", str(out)])
+        code = fetch.main([*tickers, "--out", str(out), "--universe", str(universe_path)])
         if code == 0 and snapshots == SNAPSHOTS:
             point_latest(out)
             print(f"snapshot {out}; data/financials -> {os.readlink(LATEST) if LATEST.is_symlink() else LATEST}")
         elif code == 0:
             print(f"snapshot {out}; data/financials left alone (not the default snapshot root)")
         return code
-    return fetch.main([*tickers, "--out", str(out)])
+    return fetch.main([*tickers, "--out", str(out), "--universe", str(universe_path)])
 
 
 if __name__ == "__main__":

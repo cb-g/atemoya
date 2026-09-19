@@ -48,7 +48,7 @@ PROVIDER = "SEC XBRL companyfacts"
 TAXONOMIES = ("us-gaap", "ifrs-full")  # in order of preference when a filer carries both
 CACHE_SECONDS = 86400
 MIN_SPACING_SECONDS = 0.25  # 4 requests per second, under SEC's 10/s guidance
-PERIODS = 5
+PERIODS_DEFAULT = 5  # annual periods kept for every model but the mid-cycle DCF (22), whose window is a parameter
 
 _last_request = 0.0
 
@@ -503,11 +503,12 @@ def weighted_shares(facts: Facts, defs: reference.FieldDefinitions, end: date, *
     return facts.first(tags, end, instant=False, unit="shares")
 
 
-def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD") -> list[boundary.FiscalPeriod]:
+def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD", depth: int = PERIODS_DEFAULT) -> list[boundary.FiscalPeriod]:
+    """[depth] is the number of annual periods kept, newest first: the model's need (periods_needed), never a constant."""
     ifrs = taxonomy == "ifrs-full"
     selected = select(gaap, tags, notes, taxonomy=taxonomy, unit=unit)
     facts = Facts(gaap, tags, notes, unit=unit)
-    ends = sorted(set(selected["net_income"]) & set(selected["book_equity"]), reverse=True)[:PERIODS]
+    ends = sorted(set(selected["net_income"]) & set(selected["book_equity"]), reverse=True)[:depth]
     periods: list[boundary.FiscalPeriod] = []
     for end in ends:
         anchor = selected["net_income"][end][0]

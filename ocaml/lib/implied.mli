@@ -41,6 +41,10 @@ val reit_fair_value : ?projection_years:int -> Boundary_t.reit_inputs -> g0:floa
 
 val rf_tenor_note : string
 
+val dcf_block : Boundary_t.inputs -> price:float -> Boundary_t.implied
+(** The dcf readouts on the engine's inputs; the mid-cycle model (22) reads the same
+    block on its own fcff and g0. *)
+
 val of_inputs : Boundary_t.model_inputs -> price:float -> Boundary_t.implied
 (** The three readouts for an Ok record (level and half-life by bisection, the horizon by
     an integer scan over 1..40 under the same guard), every null with its reason, the

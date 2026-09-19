@@ -2,11 +2,12 @@
   "source": "two field reports from a project that ran the previous implementation daily for about 14 months on about 215 names (a DCF on a bank, a DCF on a regulated utility mid capex cycle, an AISC screen on a royalty company, an insurer pinned at +571.9% upside), plus that implementation's own findings",
   "as_of": "2026-09-19",
   "notes": [
-    "Models today: dcf (OperatingCompany, HighGrowthSoftware), residual_income (Bank), residual_income_insurer (Insurer, needs filed statements), reit_ffo_dividend (Reit). A class with [] has no admissible model yet and is refused with its lens named.",
+    "Models today: dcf (OperatingCompany, HighGrowthSoftware), dcf_midcycle (Cyclical), residual_income (Bank), residual_income_insurer (Insurer, needs filed statements), reit_ffo_dividend (Reit). A class with [] has no admissible model yet and is refused with its lens named.",
     "Inadmissible is Failed with the lens named: the reader learns what the right measurement is.",
     "Anything that fits no class gets a class added to the boundary variant and a row here, never a place in OperatingCompany.",
     "Reit (18): the FFO-covered dividend discounted at the CAPM cost of equity with the REIT industry beta, FFO per NAREIT from filed tags; the lens is on FFO, not AFFO, because AFFO's adjustments are not reliably tagged, and every record says so. The distribution rule (a U.S. REIT distributes at least 90% of its REIT taxable income excluding net capital gain; jurisdiction-specific) is recorded here and not used: the payout is observed. A mortgage REIT is not this lens; none is classed Reit today.",
-    "HighGrowthSoftware (21): the DCF is admissible. A growth path that reverts inside the explicit horizon is the anchor at conservative persistence, and the implied readouts say what the price needs and for how long; stock compensation stays inside EBIT as the filed expense, no add-back. PreProfit stays refused: negative free cash flow makes the DCF meaningless, not conservative, and the solvers have nothing to invert."
+    "HighGrowthSoftware (21): the DCF is admissible. A growth path that reverts inside the explicit horizon is the anchor at conservative persistence, and the implied readouts say what the price needs and for how long; stock compensation stays inside EBIT as the filed expense, no add-back. Unprofitable stays refused: negative free cash flow makes the DCF meaningless, not conservative, and the solvers have nothing to invert.",
+    "Cyclical (22): earnings set by a commodity price or an industry cycle the company does not control. The DCF runs on the through-cycle return on invested capital applied to today's capital, from filed data only: no price deck. Unprofitable (renamed from PreProfit, 22) is a state, not a forecast: no history of profit to normalise from, valued on runway against the catalyst calendar. A company that was profitable and is through a break is Cyclical with a declared scope limit, never Unprofitable."
   ],
   "classes": {
     "OperatingCompany": {
@@ -53,6 +54,17 @@
       "never": "accounting EPS or an FCFF DCF: depreciation dominates both; a P/FFO, cap rate or NAV premium from a table",
       "floor_basis_default": "FFO per share and the dividend it covers"
     },
+    "Cyclical": {
+      "lens": "through-cycle return on invested capital applied to today's capital; never a single year's free cash flow",
+      "admissible_models": [
+        "dcf_midcycle"
+      ],
+      "never": "a DCF on one year's FCFF",
+      "floor_basis_default": "a completed mid-cycle DCF",
+      "scope_limits_default": [
+        "the through-cycle average is backward-looking; reserve replacement, the energy transition, or a declared structural break are not assessed"
+      ]
+    },
     "Miner": {
       "lens": "NAV and reserve life; never spot FCF",
       "admissible_models": [],
@@ -73,10 +85,10 @@
       "never": "P/E or FCF yield: the value is the growth path, which a single year's earnings or cash flow cannot carry",
       "floor_basis_default": "a completed FCFF DCF: the discounted free cash flow per share"
     },
-    "PreProfit": {
+    "Unprofitable": {
       "lens": "cash runway against the catalyst calendar; no multiple applies",
       "admissible_models": [],
-      "never": "any multiple or DCF",
+      "never": "any multiple or DCF: there is no history of profit to normalise from",
       "floor_basis_default": "no floor: nothing under the price until the catalyst; runway is a clock, not a floor",
       "floor_present_default": false
     },

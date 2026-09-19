@@ -203,6 +203,7 @@ type model = [
   | Residual_income <json name="residual_income">     (* excess returns over book; Bank *)
   | Residual_income_insurer <json name="residual_income_insurer">   (* excess returns over AOCI-adjusted book; Insurer *)
   | Reit_ffo_dividend <json name="reit_ffo_dividend">   (* the FFO-covered dividend discounted at the cost of equity; Reit (18) *)
+  | Dcf_midcycle <json name="dcf_midcycle">           (* the FCFF DCF on through-cycle earning power; Cyclical (22) *)
 ]
 
 (* What a company is judged on: a controlled vocabulary of economic drivers, not sectors.
@@ -218,7 +219,8 @@ type entity_class = [
   | Miner                (* NAV and reserve life; never spot FCF *)
   | Royalty              (* NAV of the royalty book; AISC is inverted for this class *)
   | HighGrowthSoftware   (* recurring revenue growth, retention, margin path *)
-  | PreProfit            (* cash runway vs the catalyst calendar; no multiple applies *)
+  | Unprofitable         (* no history of profit to normalise from: cash runway vs the catalyst calendar; no multiple applies (was PreProfit, renamed 22) *)
+  | Cyclical             (* earnings set by a commodity price or an industry cycle the company does not control: through-cycle return on today's capital (22) *)
   | Wrapper              (* NAV premium/discount plus distribution by source *)
   | ConstructionStage    (* percent complete, distance to first production, debt paydown *)
   | UnderBid             (* the announced offer price; all other valuation suspended *)
@@ -541,8 +543,45 @@ type reit_inputs = {
 }
 
 (* The inputs of whichever model ran, tagged with it. *)
+(* One through-cycle return observation (22): the period's NOPAT at the statutory rate over
+   the invested capital (book equity + total debt - cash) at the end of the previous period. *)
+type roic_observation = {
+  period_end : string;
+  prior_period_end : string;
+  ebit : float;
+  nopat : float;                      (* ebit * (1 - statutory tax rate) *)
+  invested_capital_prior : float;     (* book_equity + total_debt - cash at prior_period_end *)
+  roic : float;                       (* nopat / invested_capital_prior *)
+}
+
+(* The mid-cycle DCF (22): the DCF engine run on through-cycle earning power instead of
+   the latest year's flow. [dcf] is the engine's own record on the mid-cycle flow: fcff =
+   fcff_mid, g0 = roic_mid * reinvestment_rate_mid before the clamp, nopat = nopat_mid,
+   roic and reinvestment_rate the mid-cycle ones, the tax rate statutory; ebit, d&a, capex
+   and delta_nwc on it are the latest period's own (spot) values, recorded for spot_fcff,
+   and its delta_nwc_periods is that one period. Everything else on [dcf] (parameters,
+   wacc, path, terminal, net debt, shares) is exactly the DCF's. *)
+type midcycle_inputs = {
+  dcf : inputs;
+  midcycle_window_years : int_parameter;
+  window : string list;               (* the fiscal period ends in the window, newest first: every annual period the record carries, up to midcycle_window_years *)
+  observations : roic_observation list;   (* one per consecutive pair in the window with ebit and a positive prior invested capital; at least 8 *)
+  roic_mid : float;                   (* arithmetic mean of the observations' roic, the bad years included *)
+  roic_median : float;                (* a readout beside it, not used *)
+  invested_capital_latest : float;    (* the newest period's book_equity + total_debt - cash *)
+  nopat_mid : float;                  (* roic_mid * invested_capital_latest *)
+  reinvestment_periods : string list; (* the window periods with capex, d&a, delta_nwc and ebit, summed *)
+  reinvestment_sum : float;           (* sum over reinvestment_periods of capex - d&a + delta_nwc *)
+  nopat_sum : float;                  (* sum over reinvestment_periods of nopat_t *)
+  reinvestment_rate_mid : float;      (* reinvestment_sum / nopat_sum: sums, never a mean of ratios *)
+  fcff_mid : float;                   (* nopat_mid * (1 - reinvestment_rate_mid) *)
+  spot_fcff : float;                  (* the latest period's own fcff at the same tax rate *)
+  spot_to_midcycle : float;           (* spot_fcff / fcff_mid: how far off-cycle the current year is *)
+}
+
 type model_inputs = [
   | Dcf <json name="dcf"> of inputs
+  | Dcf_midcycle <json name="dcf_midcycle"> of midcycle_inputs
   | Residual_income <json name="residual_income"> of residual_income_inputs
   | Residual_income_insurer <json name="residual_income_insurer"> of insurer_inputs
   | Reit_ffo_dividend <json name="reit_ffo_dividend"> of reit_inputs

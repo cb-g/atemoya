@@ -44,6 +44,14 @@ let floor_verified ~currency (inputs : model_inputs) ~fair_value : floor =
           i.core.book_value_per_share currency i.reported_book_equity i.aoci
           i.core.fiscal_period_end fair_value currency i.core.price
           i.core.justified_price_to_book
+    | `Dcf_midcycle (m : midcycle_inputs) ->
+        Printf.sprintf
+          "mid-cycle dcf: fcff_mid %.4g %s from a mean roic of %.4f over %d observations (%s to %s) on invested \
+           capital %.4g, reinvestment rate %.4f, spot fcff %.4g (%.2fx mid-cycle) for the fiscal period ending %s, \
+           fair value %.2f %s per share against price %.2f"
+          m.fcff_mid currency m.roic_mid (List.length m.observations)
+          (List.nth m.window (List.length m.window - 1)) (List.hd m.window) m.invested_capital_latest
+          m.reinvestment_rate_mid m.spot_fcff m.spot_to_midcycle m.dcf.fiscal_period_end fair_value currency m.dcf.price
     | `Reit_ffo_dividend (i : reit_inputs) ->
         Printf.sprintf
           "reit ffo dividend: ffo %.2f %s per share (price/ffo %.1f) covering a dividend of %.2f per share \
@@ -61,6 +69,7 @@ let with_conversion conversion (inputs : model_inputs) : model_inputs =
   | `Residual_income_insurer i ->
       `Residual_income_insurer { i with core = { i.core with conversion = Some conversion } }
   | `Reit_ffo_dividend i -> `Reit_ffo_dividend { i with conversion = Some conversion }
+  | `Dcf_midcycle m -> `Dcf_midcycle { m with dcf = { m.dcf with conversion = Some conversion } }
 
 (* A record's compositions must follow the reference's definitions on every period: a
    data file fetched under another definition is refused, never valued as if it were the
@@ -106,7 +115,7 @@ let currency_agreement (fin : financials) =
   | _ -> Ok ()
 
 (* Every named parameter a model's inputs carry, for the anachronism declaration. *)
-let parameters_of (inputs : model_inputs) : (string * parameter) list =
+let rec parameters_of (inputs : model_inputs) : (string * parameter) list =
   let core (i : residual_income_inputs) =
     [ ("risk_free_rate", i.risk_free_rate); ("equity_risk_premium", i.equity_risk_premium); ("beta", i.beta);
       ("mean_reversion_lambda", i.mean_reversion_lambda) ]
@@ -119,6 +128,7 @@ let parameters_of (inputs : model_inputs) : (string * parameter) list =
         ("growth_clamp_lower", i.growth_clamp_lower); ("growth_clamp_upper", i.growth_clamp_upper);
         ("mean_reversion_lambda", i.mean_reversion_lambda); ("terminal_growth_rate", i.terminal_growth_rate) ]
       @ (match i.country_risk_premium with Some c -> [ ("country_risk_premium", c) ] | None -> [])
+  | `Dcf_midcycle m -> parameters_of (`Dcf m.dcf)
   | `Residual_income i -> core i
   | `Residual_income_insurer i -> core i.core
   | `Reit_ffo_dividend i ->
@@ -163,7 +173,17 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~model_ver
   let filing_age_days =
     match filing_age with Some (Ok n) -> Some n | _ -> None
   in
-  let scope_limits = match declaration with Some d -> d.scope_limits | None -> [] in
+  (* The entry's own scope limits, then the class's defaults from the admissibility row
+     (22), each once. *)
+  let scope_limits =
+    let own = match declaration with Some d -> d.scope_limits | None -> [] in
+    let defaults =
+      match Option.map (Admissibility.rule params.admissibility) declared with
+      | Some (Ok r) -> r.scope_limits_default
+      | _ -> []
+    in
+    own @ List.filter (fun l -> not (List.mem l own)) defaults
+  in
   (* [fin] is the record the model saw: the original, or its converted copy. *)
   let record ~(fin : financials) ?model ?class_check ?inputs ?fair_value ?margin_of_safety
       ?signal ?failed_reason ~price ~status ~floor () =
@@ -290,6 +310,13 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~model_ver
         match Reit.value assumptions ~country fin with
         | Error reason -> failed reason
         | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Reit_ffo_dividend inputs) fair_value)
+    | `Dcf_midcycle -> (
+        match ebit_policy fin with
+        | Error reason -> failed reason
+        | Ok () -> (
+            match Dcf_midcycle.value assumptions ~country fin with
+            | Error reason -> failed reason
+            | Ok (inputs, fair_value) -> finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value))
   in
   (* The filing-age gate, then the currency gate: the same-currency path untouched, else
      convert and re-source. *)

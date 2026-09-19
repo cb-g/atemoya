@@ -155,6 +155,8 @@ let assumptions : Dcf.assumptions =
     projection_years =
       { value = 5; key = "global"; source = "test"; as_of = today; age_days = 0 };
     statutory_tax_rate = param 0.21;
+    midcycle_window_years =
+      { value = 15; key = "global"; source = "test"; as_of = today; age_days = 0 };
   }
 
 (* A reference set as JSON, exercising aliases, estimated cells and staleness.
@@ -192,6 +194,7 @@ let params_json =
   "growth_clamp_upper": {"value": 0.5, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mature_market_erp": {"value": 0.0423, "source": "Damodaran mature base", "as_of": "2026-01-01", "max_age_days": 400},
+  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
     "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03, "Brazil": 0.035}},
@@ -221,7 +224,8 @@ let params : Params.t =
             "Bank": {"lens": "price/book against ROE", "admissible_models": ["residual_income"], "never": "an FCFF DCF", "floor_basis_default": "tangible book value per share"},
             "Insurer": {"lens": "operating-profit multiple with the solvency ratio", "admissible_models": ["residual_income_insurer"], "never": "an FCFF DCF", "floor_basis_default": "adjusted book value per share"},
             "Reit": {"lens": "price/FFO and dividend coverage by FFO; never accounting EPS", "admissible_models": ["reit_ffo_dividend"], "never": "accounting EPS", "floor_basis_default": "FFO per share and the dividend it covers"},
-            "PreProfit": {"lens": "cash runway vs the catalyst calendar", "admissible_models": [], "never": "any multiple", "floor_basis_default": "no floor until the catalyst", "floor_present_default": false},
+            "Unprofitable": {"lens": "cash runway vs the catalyst calendar", "admissible_models": [], "never": "any multiple", "floor_basis_default": "no floor until the catalyst", "floor_present_default": false},
+            "Cyclical": {"lens": "through-cycle return on invested capital applied to today's capital", "admissible_models": ["dcf_midcycle"], "never": "a DCF on one year's FCFF", "floor_basis_default": "a completed mid-cycle DCF", "scope_limits_default": ["the through-cycle average is backward-looking"]},
             "Wrapper": {"lens": "NAV premium or discount", "admissible_models": [], "never": "headline yield", "floor_basis_default": "NAV per unit"},
             "HighGrowthSoftware": {"lens": "the DCF at the settled reversion is the anchor", "admissible_models": ["dcf"], "never": "P/E or FCF yield", "floor_basis_default": "a completed FCFF DCF"}}}|};
     fx_sources =
@@ -837,9 +841,9 @@ let test_floor_three_valued () =
   Alcotest.check status "ok" `Ok ok.status;
   check_floor "verified" ok (Some true);
   check_mentions "verified basis" ok.floor.basis [ "dcf"; "fcff"; "fair value" ];
-  let none_by_definition = run ~declared:(Some (declaration `PreProfit)) (financials (history ())) in
-  check_reason none_by_definition [ "dcf not admissible for PreProfit" ];
-  check_floor "pre-profit" none_by_definition (Some false);
+  let none_by_definition = run ~declared:(Some (declaration `Unprofitable)) (financials (history ())) in
+  check_reason none_by_definition [ "dcf not admissible for Unprofitable" ];
+  check_floor "unprofitable" none_by_definition (Some false);
   let not_assessed = run (financials ~country:(Some "Atlantis") (history ())) in
   check_reason not_assessed [ "Atlantis" ];
   check_floor "operating company that failed before the dcf" not_assessed None;
@@ -1064,10 +1068,106 @@ let test_bank_routes_to_residual_income () =
   | Some (`Dcf _) -> Alcotest.fail "a bank reached the dcf"
   | Some (`Residual_income_insurer _) -> Alcotest.fail "a bank reached the insurer model"
   | Some (`Reit_ffo_dividend _) -> Alcotest.fail "a bank reached the reit model"
+  | Some (`Dcf_midcycle _) -> Alcotest.fail "a bank reached the mid-cycle dcf"
   | None -> Alcotest.fail "no inputs");
   match v.class_check with
   | Some e -> Alcotest.check class_check_outcome "signature consistent" `Consistent e.outcome
   | None -> Alcotest.fail "no evidence"
+
+
+(* --- the mid-cycle dcf (22) --- *)
+
+(* Ten December years on constant capital (book 5000 + debt 5000 - cash 1000 = 9000), ebit
+   newest first: 1200, 900, -300, 600, 1500, 1800, 300, 1000, 1100, 600. The oldest year has
+   no prior capital, so nine observations; their ebit sums to 8100, mean 900, so at the 21%
+   statutory rate roic_mid = 0.79 * 900 / 9000 = 0.079 exactly; the sorted middle is 1000,
+   so the median is 0.79 * 1000 / 9000. Each year reinvests capex 50 - d&a 200 + delta_nwc
+   50 = -100, so the sums are -1000 over 0.79 * 8700. *)
+let midcycle_ebits = [ 1200.; 900.; -300.; 600.; 1500.; 1800.; 300.; 1000.; 1100.; 600. ]
+
+let midcycle_periods ?(ebits = midcycle_ebits) ?(capex = 50.) ?(start_year = 2025) () =
+  List.mapi
+    (fun i ebit -> full_period ~period_end:(Printf.sprintf "%d-12-31" (start_year - i)) ~ebit ~capex ())
+    ebits
+
+let midcycle_ok () =
+  match Dcf_midcycle.value assumptions ~country:"United States" (financials (midcycle_periods ())) with
+  | Ok (m, fv) -> (m, fv)
+  | Error e -> Alcotest.failf "mid-cycle fixture failed: %s" e
+
+let test_midcycle_arithmetic () =
+  let m, fair_value = midcycle_ok () in
+  Alcotest.(check int) "nine observations from ten periods" 9 (List.length m.observations);
+  Alcotest.(check (list string)) "window is every period, newest first"
+    (List.map (fun (p : Boundary_t.fiscal_period) -> p.period_end) (midcycle_periods ())) m.window;
+  check_float "roic_mid is the arithmetic mean, the loss year included" 0.079 m.roic_mid;
+  check_float "the median is recorded beside it" (0.79 *. 1000. /. 9000.) m.roic_median;
+  let loss = List.find (fun (o : Boundary_t.roic_observation) -> o.period_end = "2023-12-31") m.observations in
+  check_float "the negative year is a negative observation on the prior capital" (0.79 *. -300. /. 9000.) loss.roic;
+  Alcotest.(check string) "on the prior period's capital" "2022-12-31" loss.prior_period_end;
+  check_float "invested capital latest" 9000. m.invested_capital_latest;
+  check_float "nopat_mid" 711. m.nopat_mid;
+  check_float "reinvestment sum" (-1000.) m.reinvestment_sum;
+  check_float "nopat sum at the statutory rate, the loss year included" (0.79 *. 8700.) m.nopat_sum;
+  check_float "reinvestment rate is sum over sum, not a mean of ratios" (-1000. /. (0.79 *. 8700.)) m.reinvestment_rate_mid;
+  let mean_of_ratios = let xs = List.map (fun e -> -100. /. (0.79 *. e)) midcycle_ebits in List.fold_left ( +. ) 0. xs /. 10. in
+  if Float.abs (mean_of_ratios -. m.reinvestment_rate_mid) < 1e-6 then Alcotest.fail "a mean of ratios";
+  check_float "fcff_mid" (711. *. (1. -. m.reinvestment_rate_mid)) m.fcff_mid;
+  check_float "spot fcff is the latest year's own flow" 1048. m.spot_fcff;
+  check_float "spot to mid-cycle" (1048. /. m.fcff_mid) m.spot_to_midcycle;
+  check_float "g0 = roic_mid * r_mid, inside the clamp" (0.079 *. m.reinvestment_rate_mid) m.dcf.g0;
+  Alcotest.(check bool) "unclamped" false m.dcf.growth_clamped;
+  Alcotest.check tax_rate_source "statutory rate" `Statutory m.dcf.tax_rate_source;
+  check_float "the engine's inputs carry the mid-cycle flow" m.fcff_mid m.dcf.fcff;
+  (* the DCF engine on the mid-cycle flow: ke 0.12, kd 0.04 after tax at 21%, E = D = 5000 *)
+  let wacc = (0.5 *. 0.12) +. (0.5 *. 0.04 *. 0.79) in
+  check_float "wacc" wacc m.dcf.wacc;
+  let path = Growth.path ~g0:m.dcf.g0 ~terminal_growth_rate:0. ~lambda:0.25 ~projection_years:5 in
+  let ev = Dcf.enterprise_value ~fcff:m.fcff_mid ~wacc ~growth_path:path ~terminal_growth_rate:0. in
+  check_float "fair value = (EV - net debt) / shares" ((ev -. 4000.) /. 500.) fair_value;
+  (* the implied solvers on the same inputs *)
+  check_float "dcf_fair_value reproduces it" fair_value (Implied.dcf_fair_value m.dcf ~g0:m.dcf.g0 ~lambda:0.25);
+  let readouts = Implied.of_inputs (`Dcf_midcycle m) ~price:fair_value in
+  (match readouts.level.value with
+  | Some g -> Alcotest.(check bool) "implied_g0 at the fair value recovers g0" true (Float.abs (g -. m.dcf.g0) < 1e-4)
+  | None -> Alcotest.failf "no level: %s" (Option.value readouts.level.reason ~default:""));
+  Alcotest.(check string) "the readout is the dcf's" "implied_g0" readouts.level_name
+
+let test_midcycle_guards () =
+  let fail periods needles =
+    match Dcf_midcycle.value assumptions ~country:"United States" (financials periods) with
+    | Ok _ -> Alcotest.fail "valued"
+    | Error e -> check_mentions "guard" e needles
+  in
+  fail (midcycle_periods ~ebits:[ 1200.; 900.; 600.; 1500.; 300. ] ())
+    [ "mid-cycle normalisation needs at least 8 annual return observations, have 4; the provider carries 5 periods" ];
+  fail (midcycle_periods ~ebits:(List.map (fun e -> -.Float.abs e) midcycle_ebits) ())
+    [ Printf.sprintf "through the cycle the business did not earn a positive return on its capital (mean roic %.4f over 9 observations)" (0.79 *. (-8700. /. 9.) /. 9000.) ];
+  fail (midcycle_periods ~capex:2000. ()) [ "through the cycle the business reinvested more than it earned (reinvestment rate " ];
+  (* the window cap: twenty periods, a fifteen-year window *)
+  let twenty = midcycle_periods ~ebits:(midcycle_ebits @ midcycle_ebits) () in
+  (match Dcf_midcycle.value assumptions ~country:"United States" (financials twenty) with
+  | Ok (m, _) ->
+      Alcotest.(check int) "window capped at the parameter" 15 (List.length m.window);
+      Alcotest.(check int) "fourteen observations inside it" 14 (List.length m.observations);
+      Alcotest.(check string) "oldest in the window" "2011-12-31" (List.nth m.window 14)
+  | Error e -> Alcotest.fail e);
+  (* the vendor path: three or five periods can never serve the model, and the record says so *)
+  let v = run ~declared:(Some (declaration `Cyclical)) (financials (history ())) in
+  check_reason v [ "mid-cycle normalisation needs at least 8 annual return observations, have 2; the provider carries 3 periods" ];
+  Alcotest.(check (option model)) "routed to the mid-cycle dcf" (Some `Dcf_midcycle) v.model;
+  (* a valued Cyclical record: the class's default scope limit follows the entry's own *)
+  let ok = run ~declared:(Some (declaration ~scope_limits:[ "own limit" ] `Cyclical)) (financials (midcycle_periods ())) in
+  Alcotest.check status "cyclical Ok" `Ok ok.status;
+  Alcotest.(check (list string)) "scope limits: own, then the class default"
+    [ "own limit"; "the through-cycle average is backward-looking" ] ok.scope_limits;
+  check_mentions "floor names the mid-cycle basis" ok.floor.basis [ "mid-cycle dcf: fcff_mid"; "spot fcff 1048" ];
+  (match ok.inputs with
+  | Some (`Dcf_midcycle _) -> ()
+  | _ -> Alcotest.fail "inputs are not the mid-cycle block");
+  (* the round trip through the record's JSON *)
+  let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation ok) in
+  Alcotest.check valuation "json round trip" ok again
 
 let test_flow_chart_names_every_reason () =
   let chart =
@@ -1088,6 +1188,9 @@ let test_flow_chart_names_every_reason () =
       "is not positive"; "roe not derivable"; "payout not derivable";
       "insurer model requires filed-statement data"; "fx not available for";
       "latest annual filing is";
+      "mid-cycle normalisation needs at least 8 annual return observations";
+      "through the cycle the business did not earn a positive return on its capital";
+      "through the cycle the business reinvested more than it earned";
       "missing market data: financial_currency"; "missing market data: trading_currency";
       "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
       "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";
@@ -1298,7 +1401,7 @@ let test_minor_unit_guard () =
       "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-      "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
+      "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
       "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400, "values": {"United States": 0.02, "United Kingdom": 0.0}},
       "unwired": {}}|} ]) } in
   let run_gbp fin = Valuation.run uk_rates ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) fin in
@@ -2091,11 +2194,12 @@ let test_batch_summary () =
   Alcotest.(check (option model)) "routed to the dcf" (Some `Dcf) software.model;
   Alcotest.(check (option approx)) "same number as the operating company" ok.fair_value software.fair_value;
   Alcotest.(check string) "stamped" "test" software.model_version;
-  (* and in the tracked table the software class admits the dcf while PreProfit still refuses *)
+  (* and in the tracked table the software class admits the dcf while Unprofitable still refuses *)
   let tracked = get (Params.load ~dir:"../../reference") in
   let admits c = match Admissibility.rule tracked.admissibility c with Ok r -> r.admissible_models | Error e -> Alcotest.fail e in
   Alcotest.(check (list string)) "tracked: software admits the dcf" [ "dcf" ] (admits `HighGrowthSoftware);
-  Alcotest.(check (list string)) "tracked: pre-profit admits nothing" [] (admits `PreProfit);
+  Alcotest.(check (list string)) "tracked: unprofitable admits nothing" [] (admits `Unprofitable);
+  Alcotest.(check (list string)) "tracked: cyclical admits the mid-cycle dcf" [ "dcf_midcycle" ] (admits `Cyclical);
   Alcotest.(check string) "reason key drops specifics" "risk_free_rate for Germany/7y"
     (Batch.reason_key "risk_free_rate for Germany/7y (as_of 2026-06-05) is 97 days old");
   Alcotest.(check string) "reason key groups refusals by class" "dcf not admissible for Bank"
@@ -2113,7 +2217,7 @@ let test_ok () =
   Alcotest.(check bool) "signal present" true (Option.is_some v.signal);
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
-  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _) -> Alcotest.fail "routed to the wrong model"
+  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _ | `Dcf_midcycle _) -> Alcotest.fail "routed to the wrong model"
   | Some (`Dcf i) ->
       Alcotest.(check string) "country" "United States" i.country;
       Alcotest.(check (option string)) "industry" (Some "Consumer Electronics") i.industry;
@@ -2171,7 +2275,7 @@ let test_no_industry () =
   Alcotest.check status "status" `Ok v.status;
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
-  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _) -> Alcotest.fail "routed to the wrong model"
+  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _ | `Dcf_midcycle _) -> Alcotest.fail "routed to the wrong model"
   | Some (`Dcf i) ->
       check_float "beta" 1.0 i.beta.value;
       Alcotest.check beta_source "beta_source" `Default_no_industry i.beta_source;
@@ -2229,6 +2333,7 @@ let test_wacc_below_terminal_growth () =
                "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
+               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
                "unwired": {}}|} }
@@ -2432,5 +2537,7 @@ let () =
           case "failed: non-positive fair value" test_non_positive_fair_value;
           case "failed: sanity bound" test_sanity_bound;
           case "json round trip" test_json_round_trip;
+          case "mid-cycle dcf arithmetic (22)" test_midcycle_arithmetic;
+          case "mid-cycle dcf guards, window, vendor path, scope limits (22)" test_midcycle_guards;
         ] );
     ]
