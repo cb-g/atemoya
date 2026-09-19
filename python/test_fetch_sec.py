@@ -430,3 +430,35 @@ def test_cik_lookup_is_exact() -> None:
     assert fetch_sec.cik_for("MET", table) == "0001099219"
     assert fetch_sec.cik_for("met", table) == "0001099219"
     assert fetch_sec.cik_for("ALV.DE", table) is None
+
+
+def submission(filed: str, report: str, form: str = "20-F") -> fetch.boundary.Submission:
+    return fetch.boundary.Submission(form=form, filing_date=filed, accession=f"acc-{filed}", report_date=report)
+
+
+def test_latest_annual_submission_reads_the_newest_10k_or_20f() -> None:
+    index = {"filings": {"recent": {"form": ["6-K", "20-F/A", "20-F", "40-F", "20-F"], "filingDate": ["2026-08-01", "2026-07-01", "2026-06-18", "2026-05-01", "2025-06-20"],
+                                    "accessionNumber": ["a", "b", "c", "d", "e"], "reportDate": ["2026-06-30", "2025-03-31", "2026-03-31", "2025-12-31", "2025-03-31"]}}}
+    got, why = fetch_sec.latest_annual_submission(index)
+    assert why is None and got is not None
+    assert (got.form, got.filing_date, got.accession, got.report_date) == ("20-F", "2026-06-18", "c", "2026-03-31")
+    assert fetch_sec.latest_annual_submission(None) == (None, "submissions: not found (HTTP 404)")
+    forty_f = {"filings": {"recent": {"form": ["40-F"], "filingDate": ["2026-03-01"], "accessionNumber": ["x"], "reportDate": ["2025-12-31"]}}}
+    assert fetch_sec.latest_annual_submission(forty_f) == (None, "submissions: no 10-K or 20-F in filings.recent")
+    assert fetch_sec.latest_annual_submission({"filings": {}})[0] is None
+
+
+def test_lag_and_vendor_freshness() -> None:
+    notes: list[str] = []
+    periods = fetch_sec.periods_from_facts(sap_like(), TAGS, DEFS, notes, taxonomy="ifrs-full", unit="EUR")  # facts end 2025-12-31, filed 2026-02-26
+    assert fetch.lag_of(submission("2026-02-26", "2025-12-31"), periods) is None  # facts current
+    assert fetch.lag_of(submission("2025-02-27", "2024-12-31"), periods) is None  # submissions older: nothing to say
+    lag = fetch.lag_of(submission("2027-02-25", "2026-12-31"), periods)
+    assert lag is not None and lag.text == "companyfacts lags submissions: 20-F filed 2027-02-25 (period 2026-12-31) not yet in facts; facts end 2025-12-31"
+    assert fetch.lag_of(submission("2027-02-25", "2026-12-31"), []) is None and fetch.lag_of(None, periods) is None
+    vendor_2026 = [fetch._period(date(2026, 12, 31), None, None, None)]  # pyright: ignore[reportPrivateUsage]
+    vendor_2025 = [fetch._period(date(2025, 12, 31), None, None, None)]  # pyright: ignore[reportPrivateUsage]
+    assert fetch.vendor_is_fresh(vendor_2026, submission("2027-02-25", "2026-12-31"))
+    assert fetch.vendor_is_fresh([fetch._period(date(2026, 11, 30), None, None, None)], submission("2027-02-25", "2026-12-31"))  # pyright: ignore[reportPrivateUsage]
+    assert not fetch.vendor_is_fresh(vendor_2025, submission("2027-02-25", "2026-12-31"))
+    assert not fetch.vendor_is_fresh([], submission("2027-02-25", "2026-12-31"))

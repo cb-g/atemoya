@@ -139,6 +139,7 @@ let run ?(thresholds = default_thresholds) (params : Params.t) ~today ~declarati
       provider_reason = original.provider_reason;
       filing_age_days;
       cross_check = original.cross_check;
+      submissions_latest_annual = original.submissions_latest_annual;
       status;
       failed_reason;
       inputs;

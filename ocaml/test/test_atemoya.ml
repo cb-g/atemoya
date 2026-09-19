@@ -102,6 +102,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     statements_unavailable;
     latest_filing;
     cross_check;
+    submissions_latest_annual = None;
+    submissions_unavailable = None;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -1510,6 +1512,9 @@ let ri_inputs (v : Boundary_t.valuation) =
 let implied_of (v : Boundary_t.valuation) =
   match v.implied with Some i -> i | None -> Alcotest.fail "no implied block on an Ok record"
 
+let horizon_of (s : Boundary_t.implied) =
+  match s.horizon_years with Some r -> r | None -> Alcotest.fail "no horizon readout"
+
 (* A growing fixture: rising revenue and reinvestment, so the derived g0 sits above terminal. *)
 let growing () =
   List.map2
@@ -1556,7 +1561,7 @@ let test_dcf_solver_recovers_known_g0_and_lambda () =
   (match solved.half_life_years.value with
   | Some h -> Alcotest.(check bool) "recovers lambda = 0.5 as its half-life" true (Float.abs (h -. (log 2. /. target_lambda)) < 1e-4)
   | None -> Alcotest.failf "half-life null: %s" (Option.value solved.half_life_years.reason ~default:""));
-  Alcotest.(check string) "meaningful by rule" "half_life" solved.meaningful_readout;
+  Alcotest.(check string) "meaningful by the three-way rule" (if Option.is_some (horizon_of solved).value then "horizon" else "level") solved.meaningful_readout;
   check_mentions "rule" solved.meaningful_rule [ "g0 "; "> terminal growth" ];
   Alcotest.(check (list approx)) "domains" [ -0.5; 3.0 ] solved.level_domain;
   Alcotest.(check (list approx)) "lambda domain" [ 0.01; 5.0 ] solved.lambda_domain;
@@ -1615,8 +1620,8 @@ let test_bank_solver_recovers_known_roe () =
   | Some r -> Alcotest.(check bool) "recovers roe 0.15" true (Float.abs (r -. target) < 1e-5)
   | None -> Alcotest.failf "null: %s" (Option.value s.level.reason ~default:""));
   Alcotest.(check (list approx)) "roe domain" [ -0.5; 1.0 ] s.level_domain;
-  (* the bank fixture's roe 0.2 sits above its cost of equity: the half-life is the question *)
-  Alcotest.(check string) "meaningful" "half_life" s.meaningful_readout;
+  (* the bank fixture's roe 0.2 sits above its cost of equity: persistence is the question *)
+  Alcotest.(check string) "meaningful by the three-way rule" (if Option.is_some (horizon_of s).value then "horizon" else "level") s.meaningful_readout;
   check_mentions "rule" s.meaningful_rule [ "roe_0 "; "> cost of equity" ];
   let s = implied_at (`Residual_income i) (Implied.residual_income_fair_value i ~roe_0:i.roe_0 ~lambda:1.0) in
   (match s.half_life_years.value with
@@ -1675,10 +1680,10 @@ let test_summary_implied_line () =
       at "HIGH" 1e9; at "LOW" (-1e9); rename "NOPE" (run (financials [])) ]
   in
   check_mentions "summary" (Batch.summary vs)
-    [ "implied, across 4 Ok names: half-life median "; "years (range "; ", 1 solved)";
+    [ "implied half-life, across 4 Ok names: median "; "years (range "; ", 1 solved)";
       "beyond range: 1 would need growth or roe that never decays, 1 priced below the no-growth value";
       "level is the meaningful readout for 1 (start at or below its target)" ];
-  if contains (Batch.summary [ rename "NOPE" (run (financials [])) ]) "implied, across" then
+  if contains (Batch.summary [ rename "NOPE" (run (financials [])) ]) "implied half-life, across" then
     Alcotest.fail "implied line without Ok records"
 
 (* --- ifrs filers: the currency agreement gate, taxonomy carried, zero dividends --- *)
@@ -1714,6 +1719,85 @@ let test_zero_dividends_is_a_payout_absent_is_not () =
   (* an absent dividends tag cannot be told from none: refused *)
   let absent = run ~declared:(Some (declaration `Bank)) (bank_financials (bank_history ~dividends:None ())) in
   check_reason absent [ "payout not derivable: need 2 fiscal periods with positive net income and dividends paid, have 0" ]
+
+(* --- the implied horizon (14) --- *)
+
+let test_horizon_recovers_known_n_and_is_monotone () =
+  let v = run (financials (growing ())) in
+  let i = dcf_inputs v in
+  let lambda = i.mean_reversion_lambda.value in
+  let fv n = Implied.dcf_fair_value ~projection_years:n i ~g0:i.g0 ~lambda in
+  check_float "at the recorded horizon the function is the headline" (Option.get v.fair_value) (fv i.projection_years.value);
+  (* monotone increasing in the horizon under the guard, converging *)
+  let values = List.init 40 (fun k -> fv (k + 1)) in
+  List.iteri (fun k x -> if k > 0 && x < List.nth values (k - 1) then Alcotest.failf "fair value fell from %d to %d years" k (k + 1)) values;
+  Alcotest.(check bool) "converging: the last step is smaller than the first" true
+    (List.nth values 39 -. List.nth values 38 < List.nth values 1 -. List.nth values 0);
+  (* priced exactly at the 14-year value: the scan lands on 14 with its bracket *)
+  let s = implied_at (`Dcf i) (fv 14) in
+  let h = horizon_of s in
+  Alcotest.(check (option approx)) "recovers N = 14" (Some 14.) h.value;
+  Alcotest.(check (list approx)) "bracket is fair value at 13 and 14" [ fv 13; fv 14 ] s.horizon_bracket;
+  Alcotest.(check (option approx)) "fair value at 40 recorded" (Some (fv 40)) s.fair_value_at_40;
+  Alcotest.(check string) "meaningful: horizon" "horizon" s.meaningful_readout;
+  check_mentions "rule" s.meaningful_rule [ "> terminal growth"; "a horizon solves at 14 years: horizon" ];
+  Alcotest.(check string) "rf tenor stated" "held at the recorded 7y point, not re-selected per horizon" s.rf_tenor;
+  Alcotest.(check bool) "rf held" true (List.exists (fun (h : Boundary_t.held_input) -> h.name = "risk_free_rate" && h.value = i.risk_free_rate.value) s.held);
+  (* a price between two integer years lands on the first year that reaches it *)
+  let between = implied_at (`Dcf i) (0.5 *. (fv 9 +. fv 10)) in
+  Alcotest.(check (option approx)) "N = 10" (Some 10.) (horizon_of between).value;
+  check_mentions "json" (Boundary_j.string_of_valuation v) [ {|"horizon_years":{"value":|}; {|"fair_value_at_40":|}; {|"rf_tenor":"held at the recorded 7y point|} ]
+
+let test_horizon_guard_beyond_40_and_below_one_year () =
+  let i = dcf_inputs (run (financials (growing ()))) in
+  let lambda = i.mean_reversion_lambda.value in
+  let fv n = Implied.dcf_fair_value ~projection_years:n i ~g0:i.g0 ~lambda in
+  let beyond = implied_at (`Dcf i) (fv 40 +. 1.) in
+  Alcotest.(check (option string)) "beyond 40 names the 40-year value and the price"
+    (Some (Printf.sprintf "even indefinite persistence of the decaying growth path does not reach the price: fair value at 40 years %.2f against price %.2f" (fv 40) (fv 40 +. 1.)))
+    (horizon_of beyond).reason;
+  Alcotest.(check (option approx)) "fair value at 40 on the record" (Some (fv 40)) beyond.fair_value_at_40;
+  Alcotest.(check string) "then level is the readout" "level" beyond.meaningful_readout;
+  check_mentions "rule" beyond.meaningful_rule [ "no horizon at or below 40 years reaches the price: level" ];
+  let below = implied_at (`Dcf i) (fv 1 -. 1.) in
+  Alcotest.(check (option string)) "below one year" (Some "price is at or below the one-year value") (horizon_of below).reason;
+  Alcotest.(check bool) "bracket empty" true (below.horizon_bracket = []);
+  (* the guard: the flat fixture sits below terminal *)
+  let flat = implied_of (run (financials (history ()))) in
+  Alcotest.(check (option string)) "guard reason" (Some "observed growth is below terminal; persistence is not the question") (horizon_of flat).reason;
+  Alcotest.(check (option approx)) "no 40-year value without the guard" None flat.fair_value_at_40;
+  Alcotest.(check string) "level" "level" flat.meaningful_readout;
+  check_mentions "rule" flat.meaningful_rule [ "<= terminal growth"; ": level" ];
+  Alcotest.(check bool) "every null carries a reason" true
+    (List.for_all (fun (r : Boundary_t.readout) -> Option.is_some r.value <> Option.is_some r.reason)
+       [ horizon_of beyond; horizon_of below; horizon_of flat ])
+
+let test_residual_income_horizon_recovers_known_n () =
+  let v = run ~declared:(Some (declaration `Bank)) (bank_financials (bank_history ())) in
+  let i = ri_inputs v in
+  let lambda = i.mean_reversion_lambda.value in
+  let fv n = Implied.residual_income_fair_value ~projection_years:n i ~roe_0:i.roe_0 ~lambda in
+  check_float "headline reproduced" (Option.get v.fair_value) (fv i.projection_years.value);
+  let s = implied_at (`Residual_income i) (fv 9) in
+  Alcotest.(check (option approx)) "recovers N = 9" (Some 9.) (horizon_of s).value;
+  Alcotest.(check (list approx)) "bracket" [ fv 8; fv 9 ] s.horizon_bracket;
+  Alcotest.(check string) "horizon" "horizon" s.meaningful_readout;
+  check_mentions "rule" s.meaningful_rule [ "> cost of equity"; "a horizon solves at 9 years" ];
+  let guard = implied_at (`Residual_income { i with roe_0 = i.cost_of_equity -. 0.01 }) 10. in
+  Alcotest.(check (option string)) "roe guard" (Some "observed roe is below the cost of equity; persistence is not the question") (horizon_of guard).reason;
+  Alcotest.(check string) "level under a failed guard" "level" guard.meaningful_readout
+
+let test_summary_horizon_line () =
+  let rename t (v : Boundary_t.valuation) = { v with ticker = t } in
+  let grow = run (financials (growing ())) in
+  let i = dcf_inputs grow in
+  let fv n = Implied.dcf_fair_value ~projection_years:n i ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value in
+  let at t price = rename t { grow with implied = Some (implied_at (`Dcf i) price) } in
+  let vs = [ at "H14" (fv 14); at "H10" (fv 10); at "H20" (fv 20); at "FAR" (fv 40 +. 1.); rename "FLAT" (run (financials (history ()))) ] in
+  check_mentions "summary" (Batch.summary vs)
+    [ "implied horizon, across 4 Ok names under the guard (start above its target): median 14 years (range 10 to 20, 3 solved); 1 beyond 40 years";
+      "level is the meaningful readout for 2 (1 guard failed, 1 beyond 40)";
+      "implied half-life, across 5 Ok names:" ]
 
 (* --- batch summary --- *)
 
@@ -2019,6 +2103,13 @@ let () =
           case "the headline does not depend on the readouts" test_headline_independent_of_the_readouts;
           case "derived ebit runs only within the cross-check, else the policy's failed" test_ebit_policy_gate;
           case "summary carries the universe-level implied line" test_summary_implied_line;
+        ] );
+      ( "implied horizon",
+        [
+          case "recovers a known N; monotone and converging under the guard" test_horizon_recovers_known_n_and_is_monotone;
+          case "guard, beyond 40 with the 40-year value, below one year" test_horizon_guard_beyond_40_and_below_one_year;
+          case "residual-income horizon recovers a known N" test_residual_income_horizon_recovers_known_n;
+          case "summary carries the horizon line" test_summary_horizon_line;
         ] );
       ( "ifrs filers",
         [

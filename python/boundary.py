@@ -330,6 +330,44 @@ class TaxRateSource:
 
 
 @dataclass
+class Submission:
+    """Original type: submission = { ... }
+    """
+
+    form: str
+    filing_date: str
+    accession: str
+    report_date: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Submission':
+        if isinstance(x, dict):
+            return cls(
+                form=_atd_read_string(x['form']) if 'form' in x else _atd_missing_json_field('Submission', 'form'),
+                filing_date=_atd_read_string(x['filing_date']) if 'filing_date' in x else _atd_missing_json_field('Submission', 'filing_date'),
+                accession=_atd_read_string(x['accession']) if 'accession' in x else _atd_missing_json_field('Submission', 'accession'),
+                report_date=_atd_read_string(x['report_date']) if 'report_date' in x else _atd_missing_json_field('Submission', 'report_date'),
+            )
+        else:
+            _atd_bad_json('Submission', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['form'] = _atd_write_string(self.form)
+        res['filing_date'] = _atd_write_string(self.filing_date)
+        res['accession'] = _atd_write_string(self.accession)
+        res['report_date'] = _atd_write_string(self.report_date)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Submission':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Ok:
     """Original type: status = [ ... | Ok | ... ]
     """
@@ -1659,6 +1697,10 @@ class Implied:
     solver: str
     tolerance: float
     held: List[HeldInput]
+    horizon_years: Optional[Readout] = None
+    horizon_bracket: List[float] = field(default_factory=lambda: [])
+    fair_value_at_40: Optional[float] = None
+    rf_tenor: str = field(default_factory=lambda: "")
 
     @classmethod
     def from_json(cls, x: Any) -> 'Implied':
@@ -1674,6 +1716,10 @@ class Implied:
                 solver=_atd_read_string(x['solver']) if 'solver' in x else _atd_missing_json_field('Implied', 'solver'),
                 tolerance=_atd_read_float(x['tolerance']) if 'tolerance' in x else _atd_missing_json_field('Implied', 'tolerance'),
                 held=_atd_read_list(HeldInput.from_json)(x['held']) if 'held' in x else _atd_missing_json_field('Implied', 'held'),
+                horizon_years=Readout.from_json(x['horizon_years']) if 'horizon_years' in x else None,
+                horizon_bracket=_atd_read_list(_atd_read_float)(x['horizon_bracket']) if 'horizon_bracket' in x else [],
+                fair_value_at_40=_atd_read_float(x['fair_value_at_40']) if 'fair_value_at_40' in x else None,
+                rf_tenor=_atd_read_string(x['rf_tenor']) if 'rf_tenor' in x else "",
             )
         else:
             _atd_bad_json('Implied', x)
@@ -1690,6 +1736,12 @@ class Implied:
         res['solver'] = _atd_write_string(self.solver)
         res['tolerance'] = _atd_write_float(self.tolerance)
         res['held'] = _atd_write_list((lambda x: x.to_json()))(self.held)
+        if self.horizon_years is not None:
+            res['horizon_years'] = (lambda x: x.to_json())(self.horizon_years)
+        res['horizon_bracket'] = _atd_write_list(_atd_write_float)(self.horizon_bracket)
+        if self.fair_value_at_40 is not None:
+            res['fair_value_at_40'] = _atd_write_float(self.fair_value_at_40)
+        res['rf_tenor'] = _atd_write_string(self.rf_tenor)
         return res
 
     @classmethod
@@ -2339,6 +2391,7 @@ class Valuation:
     taxonomy: str = field(default_factory=lambda: "")
     filing_age_days: Optional[int] = None
     cross_check: Optional[CrossCheck] = None
+    submissions_latest_annual: Optional[Submission] = None
     implied: Optional[Implied] = None
 
     @classmethod
@@ -2368,6 +2421,7 @@ class Valuation:
                 taxonomy=_atd_read_string(x['taxonomy']) if 'taxonomy' in x else "",
                 filing_age_days=_atd_read_int(x['filing_age_days']) if 'filing_age_days' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
+                submissions_latest_annual=Submission.from_json(x['submissions_latest_annual']) if 'submissions_latest_annual' in x else None,
                 implied=Implied.from_json(x['implied']) if 'implied' in x else None,
             )
         else:
@@ -2400,6 +2454,8 @@ class Valuation:
             res['filing_age_days'] = _atd_write_int(self.filing_age_days)
         if self.cross_check is not None:
             res['cross_check'] = (lambda x: x.to_json())(self.cross_check)
+        if self.submissions_latest_annual is not None:
+            res['submissions_latest_annual'] = (lambda x: x.to_json())(self.submissions_latest_annual)
         if self.implied is not None:
             res['implied'] = (lambda x: x.to_json())(self.implied)
         return res
@@ -2657,6 +2713,8 @@ class Financials:
     statements_unavailable: str = field(default_factory=lambda: "")
     latest_filing: Optional[str] = None
     cross_check: Optional[CrossCheck] = None
+    submissions_latest_annual: Optional[Submission] = None
+    submissions_unavailable: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Financials':
@@ -2683,6 +2741,8 @@ class Financials:
                 statements_unavailable=_atd_read_string(x['statements_unavailable']) if 'statements_unavailable' in x else "",
                 latest_filing=_atd_read_string(x['latest_filing']) if 'latest_filing' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
+                submissions_latest_annual=Submission.from_json(x['submissions_latest_annual']) if 'submissions_latest_annual' in x else None,
+                submissions_unavailable=_atd_read_string(x['submissions_unavailable']) if 'submissions_unavailable' in x else None,
             )
         else:
             _atd_bad_json('Financials', x)
@@ -2713,6 +2773,10 @@ class Financials:
             res['latest_filing'] = _atd_write_string(self.latest_filing)
         if self.cross_check is not None:
             res['cross_check'] = (lambda x: x.to_json())(self.cross_check)
+        if self.submissions_latest_annual is not None:
+            res['submissions_latest_annual'] = (lambda x: x.to_json())(self.submissions_latest_annual)
+        if self.submissions_unavailable is not None:
+            res['submissions_unavailable'] = _atd_write_string(self.submissions_unavailable)
         return res
 
     @classmethod

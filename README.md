@@ -73,7 +73,11 @@ to tune away.
 Filed statements come in the taxonomy the filer uses (us-gaap or ifrs-full, each a
 section of `reference/xbrl_tags.json`) and in the currency the facts carry, which the
 record names as its statement currency and which must agree with the vendor's, else the
-record fails. Both providers assemble cash, total debt, the change in working capital and ebit per
+record fails. SEC's submissions index is read for every CIK-resolved name and its newest 10-K or 20-F
+recorded; when that filing is newer than the newest annual facts and those facts are past
+the filing-age gate, the vendor's statements are used by a decision written into the
+record's provider reason (companyfacts lags submissions), never as a fallback from the
+gate. Both providers assemble cash, total debt, the change in working capital and ebit per
 `reference/field_definitions.json`, the one definition per field with its reasoning; every
 period records the components summed, and a record fetched under another definition fails
 rather than being valued under this one. A derived
@@ -82,8 +86,10 @@ threshold of the vendor's operating income; the refinement policy in that file a
 refinement of a recipe and names the `Failed` reason for a miss. Every `Ok` record also
 carries two implied readouts solved on its own inputs, headline untouched: the starting
 growth (or ROE) the price needs, and the reversion half-life the observed start would need,
-the second only where the start lies above its target; a rule on the record says which one
-to read, and every null carries its reason. With `--baseline`, `provider_diff.txt` opens with
+and the whole number of explicit years the observed start would have to persist (an
+integer scan to 40 years, the risk-free rate held at its recorded point), the last two only
+where the start lies above its target; a rule on the record says which one to read, and
+every null carries its reason. With `--baseline`, `provider_diff.txt` opens with
 every record against the previous run and lists the inputs behind every moved fair value.
 Valuation never fetches, so running it twice on the same inputs with `--today` pinned gives
 byte-identical output. `data/` and `output/` are generated and gitignored; versioned inputs

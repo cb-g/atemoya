@@ -28,9 +28,17 @@ val lambda_domain : float * float
 
 val tolerance : float
 
-val dcf_fair_value : Boundary_t.inputs -> g0:float -> lambda:float -> float
-val residual_income_fair_value : Boundary_t.residual_income_inputs -> roe_0:float -> lambda:float -> float
+val max_horizon : int
+(** 40: the longest explicit period the horizon scan tries. *)
+
+val dcf_fair_value : ?projection_years:int -> Boundary_t.inputs -> g0:float -> lambda:float -> float
+val residual_income_fair_value : ?projection_years:int -> Boundary_t.residual_income_inputs -> roe_0:float -> lambda:float -> float
+(** [projection_years] defaults to the recorded horizon; the risk-free rate stays the
+    recorded one whatever the horizon. *)
+
+val rf_tenor_note : string
 
 val of_inputs : Boundary_t.model_inputs -> price:float -> Boundary_t.implied
-(** Both readouts for an Ok record, every null with its reason, the rule that picked the
-    meaningful one, and the inputs held fixed. *)
+(** The three readouts for an Ok record (level and half-life by bisection, the horizon by
+    an integer scan over 1..40 under the same guard), every null with its reason, the
+    three-way rule that picked the meaningful one, and the inputs held fixed. *)

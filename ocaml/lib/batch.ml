@@ -198,15 +198,42 @@ let summary ?universe ?definitions (vs : valuation list) =
     in
     let never_decay = count_reason "would have to never decay" in
     let below_no_growth = count_reason "price is below the no-" in
-    let level = List.length (List.filter (fun (i : implied) -> i.meaningful_readout = "level") implied) in
-    Printf.bprintf b "\nimplied, across %d Ok names: half-life %s; beyond range: %d would need growth or roe that never decays, %d priced below the no-growth value; level is the meaningful readout for %d (start at or below its target)\n"
+    let horizons =
+      List.filter_map (fun (i : implied) -> Option.bind i.horizon_years (fun (r : readout) -> r.value)) implied
+      |> List.sort compare
+    in
+    let hn = List.length horizons in
+    let hmedian =
+      if hn = 0 then None
+      else if hn mod 2 = 1 then Some (List.nth horizons (hn / 2))
+      else Some (0.5 *. (List.nth horizons ((hn / 2) - 1) +. List.nth horizons (hn / 2)))
+    in
+    let under_guard = List.length (List.filter (fun (i : implied) -> Option.is_some i.fair_value_at_40) implied) in
+    let beyond_40 =
+      List.length
+        (List.filter
+           (fun (i : implied) ->
+             match Option.bind i.horizon_years (fun (r : readout) -> r.reason) with
+             | Some r -> contains r "even indefinite persistence"
+             | None -> false)
+           implied)
+    in
+    let level_guard = List.length (List.filter (fun (i : implied) -> i.meaningful_readout = "level" && Option.is_none i.fair_value_at_40) implied) in
+    let level_beyond = List.length (List.filter (fun (i : implied) -> i.meaningful_readout = "level" && Option.is_some i.fair_value_at_40) implied) in
+    Printf.bprintf b "\nimplied horizon, across %d Ok names under the guard (start above its target): %s; %d beyond 40 years (even indefinite persistence of the decaying path does not reach the price); level is the meaningful readout for %d (%d guard failed, %d beyond 40)\n"
+      under_guard
+      (match hmedian with
+      | Some m -> Printf.sprintf "median %.0f years (range %.0f to %.0f, %d solved)" m (List.hd horizons) (List.nth horizons (hn - 1)) hn
+      | None -> "none solved")
+      beyond_40 (level_guard + level_beyond) level_guard level_beyond;
+    Printf.bprintf b "implied half-life, across %d Ok names: %s; beyond range: %d would need growth or roe that never decays, %d priced below the no-growth value; level is the meaningful readout for %d (start at or below its target)\n"
       (List.length implied)
       (match (median, half_lives) with
       | Some m, _ :: _ ->
           Printf.sprintf "median %.1f years (range %.1f to %.1f, %d solved)" m (List.hd half_lives)
             (List.nth half_lives (n - 1)) n
       | _ -> "none solved")
-      never_decay below_no_growth level
+      never_decay below_no_growth level_guard
   end;
   Printf.bprintf b "\nper ticker%s:\n"
     (if Option.is_some universe then " (expected from the universe file)"

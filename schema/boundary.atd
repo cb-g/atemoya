@@ -126,6 +126,17 @@ type cross_check = {
    cents, agorot). The fetch converts to the major unit and records the divisor. *)
 type price_unit = [ Major <json name="major"> | Minor <json name="minor"> ]
 
+(* The newest annual filing SEC's submissions index lists for the filer (14): an
+   observable independent of companyfacts. When it is newer than the newest annual facts
+   and those facts are past the filing-age gate, the vendor's statements are used and the
+   provider_reason says so; the decision is on the record, never a fallback from the gate. *)
+type submission = {
+  form : string;                 (* 10-K | 20-F *)
+  filing_date : string;
+  accession : string;
+  report_date : string;          (* the fiscal period end the filing reports *)
+}
+
 type financials = {
   ticker : string;
   as_of : string;                (* ISO 8601 UTC timestamp of the fetch *)
@@ -148,6 +159,8 @@ type financials = {
   ~statements_unavailable : string;   (* why the provider had no statements for this ticker; empty when it had *)
   ?latest_filing : string option;     (* ISO date of the newest annual filing the statements come from *)
   ?cross_check : cross_check option;  (* the vendor's statements compared with the filed ones *)
+  ?submissions_latest_annual : submission option;   (* every CIK-resolved record (14); absent with the reason below *)
+  ?submissions_unavailable : string option;         (* why submissions_latest_annual is absent (14) *)
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -433,7 +446,11 @@ type implied = {
   level_domain : float list;                  (* [low; high] *)
   half_life_years : readout;
   lambda_domain : float list;                 (* [low; high]; half-lives from ln 2 / high to ln 2 / low *)
-  meaningful_readout : string;                (* level | half_life *)
+  ?horizon_years : readout option;            (* (14) the smallest whole number of explicit years, holding the observed start, at which fair value reaches the price; integer scan over 1..40, only under the guard; absent on records from before it *)
+  ~horizon_bracket : float list;              (* (14) fair value at N-1 and at N when solved; empty otherwise *)
+  ?fair_value_at_40 : float option;           (* (14) fair value at a 40-year explicit period, under the guard; absent otherwise *)
+  ~rf_tenor : string;                         (* (14) how the risk-free rate is treated across horizons *)
+  meaningful_readout : string;                (* level | half_life | horizon (14) *)
   meaningful_rule : string;                   (* the comparison that decided it, with the numbers *)
   solver : string;                            (* bisection *)
   tolerance : float;                          (* on the solved variable *)
@@ -468,6 +485,7 @@ type valuation = {
   provider_reason : string;
   ?filing_age_days : int option;          (* valued_on - latest_filing, when the statements are filed ones *)
   ?cross_check : cross_check option;      (* carried verbatim from the record *)
+  ?submissions_latest_annual : submission option;   (* carried verbatim from the record (14) *)
   status : status;
   failed_reason : string nullable;
   inputs : model_inputs nullable;

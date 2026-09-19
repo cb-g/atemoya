@@ -94,12 +94,12 @@
     {
       "ticker": "NU",
       "entity_class": "Bank",
-      "note": "Brazilian digital bank filing IFRS (ifrs-full, USD) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026), so the newest annual facts are from the FY2024 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age. Even when fresh it would fail payout: it tags no dividends at all, so the model cannot tell none from not filed (an absent tag is never zero), and no interest-revenue tag, so net interest income is null and the bank signature reads as absent.",
+      "note": "Brazilian digital bank filing IFRS (ifrs-full, USD) on a 20-F; companyfacts lags its 2026 20-F, so the lag decision routes it to the vendor, where it fails as before the IFRS routing: the vendor has no dividends row for it, and on filed statements it tags no dividends either (an absent tag is never zero)",
       "lens_note": "",
       "scope_limits": [],
       "expected_status": "Failed",
-      "expected_reason": "latest annual filing is",
-      "cross_check_note": "not valued (filing age); ebit: the filed ProfitLossFromOperatingActivities 5.63bn against the vendor's -3.99bn operating income, a vendor construction that nets interest expense; revenue, cash and debt are the vendor's bank-row bundles"
+      "expected_reason": "payout not derivable",
+      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (FY2024), not valued (payout): the vendor's -3.99bn operating income against the filed ProfitLossFromOperatingActivities 5.63bn is a construction netting interest expense; revenue, cash and debt are the vendor's bank-row bundles"
     },
     {
       "ticker": "IBN",
@@ -112,12 +112,11 @@
     {
       "ticker": "ITUB",
       "entity_class": "Bank",
-      "note": "Brazilian bank ADR filing IFRS (ifrs-full, BRL) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026-04-30), so the newest annual facts are from the FY2024 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age. Its legacy us-gaap facts stop at FY2010 and are not taken. Even when fresh it would fail payout: its DividendsPaid tag stops at FY2022 and no other dividend amount is tagged, so dividends_paid is null (an absent tag is never zero).",
+      "note": "Brazilian bank ADR filing IFRS (ifrs-full, BRL) on a 20-F; companyfacts carries no facts from its 2026 20-F while SEC's submissions index lists it, so by the recorded lag decision the vendor's statements are used (provider_reason names the filing and the facts' end) and the record is Ok on the vendor path as before the IFRS routing; on filed statements it would also fail payout, its DividendsPaid tag stopping at FY2022",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "latest annual filing is",
-      "cross_check_note": "not valued (filing age); tax_provision: the filed IncomeTaxExpenseContinuingOperations is -5.428bn (a benefit, as filed) where the vendor shows +5.428bn: a vendor sign error the definitions expose; cash and capex are the bank's investment and intangible lines the vendor bundles"
+      "expected_status": "Ok",
+      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (FY2024); not model inputs (bank) except none: tax_provision +5.428bn where the filing shows -5.428bn (a benefit, as filed), a vendor sign error the definitions expose; cash and capex are the bank's investment and intangible lines the vendor bundles"
     },
     {
       "ticker": "ALL",
@@ -158,12 +157,11 @@
     {
       "ticker": "HDB",
       "entity_class": "Bank",
-      "note": "Indian bank ADR filing US GAAP (us-gaap, INR with USD convenience translations) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026-07-29), so the newest annual facts are from the FY2025 (March 2025) 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age.",
+      "note": "Indian bank ADR filing US GAAP (us-gaap, INR) on a 20-F; companyfacts carries no facts from its 2026 20-F while SEC's submissions index lists it, so by the recorded lag decision the vendor's statements are used (provider_reason names the filing and the facts' end) and the record is Ok on the vendor path as before the IFRS routing",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "latest annual filing is",
-      "cross_check_note": "not valued (filing age); not model inputs (bank): the vendor's cash row bundles balances with banks and investments (9196bn INR) against the filed cash and equivalents; revenue: the filed Revenues 2190bn against the vendor's 1839bn total revenue construction"
+      "expected_status": "Ok",
+      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (March 2025); not model inputs (bank): the vendor's cash row bundles balances with banks and investments (9196bn INR) against the filed cash and equivalents; revenue: the vendor's 1839bn total revenue construction against the filed Revenues 2190bn"
     },
     {
       "ticker": "GS",
@@ -196,12 +194,11 @@
     {
       "ticker": "TSM",
       "entity_class": "OperatingCompany",
-      "note": "Taiwanese foundry filing IFRS (ifrs-full, TWD) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026-04-16, two dei facts only), so the newest annual facts are from the FY2024 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age.",
+      "note": "Taiwanese foundry filing IFRS (ifrs-full, TWD) on a 20-F; companyfacts carries no facts from its 2026 20-F while SEC's submissions index lists it, so by the recorded lag decision the vendor's statements are used (provider_reason names the filing and the facts' end) and the record is Ok on the vendor path as before the IFRS routing",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "latest annual filing is",
-      "cross_check_note": "not valued (filing age); working capital: the family carries inventories, receivables and payables (108.6bn absorbed) while the vendor's line adds an accrued-expenses movement of 94.8bn TSMC tags outside the family; debt: bonds plus borrowings by group 1075.4bn against the vendor's 1018.3bn split; cash 2.5% on the category alternative"
+      "expected_status": "Ok",
+      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (FY2024): working capital -13.4bn against the filed family's 108.6bn absorbed (the vendor's line adds an accrued-expenses movement of 94.8bn TSMC tags outside the family), debt 1018.3bn against bonds plus borrowings by group 1075.4bn, cash 2.5%; read by the model: delta_nwc, cash, total_debt"
     },
     {
       "ticker": "005930.KS",
@@ -231,12 +228,11 @@
     {
       "ticker": "SONY",
       "entity_class": "OperatingCompany",
-      "note": "Japanese conglomerate filing IFRS (ifrs-full, JPY) on a 20-F; SEC's companyfacts carries no facts from its 2026 20-F (listed in the submissions index, filed 2026-06-18), so the newest annual facts are from the FY2025 (March 2025) 20-F and fail max_filing_age_days 400; the vendor had it Ok. A recorded provider decision, never a silent fallback: the gate names the age. Its legacy us-gaap facts stop at FY2021 and are not taken: the taxonomy with the newest anchors decides. Its FY2025 filing still consolidates Sony Bank's deposits in the working-capital family, so delta_nwc would be null with a note even when fresh.",
+      "note": "Japanese conglomerate filing IFRS (ifrs-full, JPY) on a 20-F; companyfacts carries no facts from its 2026 20-F while SEC's submissions index lists it, so by the recorded lag decision the vendor's statements are used (provider_reason names the filing and the facts' end) and the record is Ok on the vendor path as before the IFRS routing; its legacy us-gaap facts stop at FY2021 and are not taken",
       "lens_note": "",
       "scope_limits": [],
-      "expected_status": "Failed",
-      "expected_reason": "latest annual filing is",
-      "cross_check_note": "not valued (filing age); the vendor's rows for the March 2025 year differ from the filed ones on eight fields (revenue 12957bn against 12035bn, debt 2354bn against 3599bn): Sony Financial's deconsolidation in October 2025 restated the comparatives the vendor carries; the filing is as originally reported"
+      "expected_status": "Ok",
+      "cross_check_note": "vendor statements by the lag decision, checked against the facts' newest period (March 2025): eight fields differ (revenue 12035bn against the filed 12957bn, debt 3599bn against 2354bn) because Sony Financial's deconsolidation in October 2025 restated the comparatives the vendor carries while the filing is as originally reported; the model reads the vendor's restated figures for the March 2026 year"
     },
     {
       "ticker": "AZN.L",

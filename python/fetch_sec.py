@@ -42,6 +42,8 @@ TAGS_PATH = REPO_ROOT / "reference" / "xbrl_tags.json"
 DEFINITIONS_PATH = REPO_ROOT / "reference" / "field_definitions.json"
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
+ANNUAL_SUBMISSION_FORMS = ("10-K", "20-F")  # the original annual filings; amendments and 40-Fs are not
 PROVIDER = "SEC XBRL companyfacts"
 TAXONOMIES = ("us-gaap", "ifrs-full")  # in order of preference when a filer carries both
 CACHE_SECONDS = 86400
@@ -131,6 +133,40 @@ def companyfacts(cik: str, user_agent: str) -> dict[str, object] | None:
         if e.code == 404:
             return None
         raise
+
+
+def submissions(cik: str, user_agent: str) -> dict[str, object] | None:
+    """The filer's submissions index, cached for a day; None when SEC has none for the CIK."""
+    try:
+        return json.loads(_cached(CACHE_DIR / f"submissions-CIK{cik}.json", SUBMISSIONS_URL.format(cik=cik), user_agent))
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise
+
+
+def latest_annual_submission(index: Mapping[str, object] | None) -> tuple[boundary.Submission | None, str | None]:
+    """The newest 10-K or 20-F in filings.recent, or None with the reason."""
+    if index is None:
+        return None, "submissions: not found (HTTP 404)"
+    recent = _as_dict(_as_dict(index.get("filings")).get("recent"))
+    columns = {name: cast(list[object], recent[name]) for name in ("form", "filingDate", "accessionNumber", "reportDate") if isinstance(recent.get(name), list)}
+    if len(columns) < 4:
+        return None, "submissions: filings.recent carries no form, filingDate, accessionNumber and reportDate columns"
+    best: boundary.Submission | None = None
+    for form, filed, accession, report in zip(columns["form"], columns["filingDate"], columns["accessionNumber"], columns["reportDate"]):
+        if str(form) not in ANNUAL_SUBMISSION_FORMS:
+            continue
+        try:
+            _ = (date.fromisoformat(str(filed)), date.fromisoformat(str(report)))
+        except ValueError:
+            continue
+        candidate = boundary.Submission(form=str(form), filing_date=str(filed), accession=str(accession), report_date=str(report))
+        if best is None or candidate.filing_date > best.filing_date:
+            best = candidate
+    if best is None:
+        return None, f"submissions: no {' or '.join(ANNUAL_SUBMISSION_FORMS)} in filings.recent"
+    return best, None
 
 
 # --- annual facts and per-period tag selection ------------------------------------------
