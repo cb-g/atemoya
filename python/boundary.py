@@ -663,6 +663,7 @@ class RoicObservation:
     nopat: float
     invested_capital_prior: float
     roic: float
+    interest_recipe: str = field(default_factory=lambda: "")
 
     @classmethod
     def from_json(cls, x: Any) -> 'RoicObservation':
@@ -675,6 +676,7 @@ class RoicObservation:
                 nopat=_atd_read_float(x['nopat']) if 'nopat' in x else _atd_missing_json_field('RoicObservation', 'nopat'),
                 invested_capital_prior=_atd_read_float(x['invested_capital_prior']) if 'invested_capital_prior' in x else _atd_missing_json_field('RoicObservation', 'invested_capital_prior'),
                 roic=_atd_read_float(x['roic']) if 'roic' in x else _atd_missing_json_field('RoicObservation', 'roic'),
+                interest_recipe=_atd_read_string(x['interest_recipe']) if 'interest_recipe' in x else "",
             )
         else:
             _atd_bad_json('RoicObservation', x)
@@ -688,6 +690,7 @@ class RoicObservation:
         res['nopat'] = _atd_write_float(self.nopat)
         res['invested_capital_prior'] = _atd_write_float(self.invested_capital_prior)
         res['roic'] = _atd_write_float(self.roic)
+        res['interest_recipe'] = _atd_write_string(self.interest_recipe)
         return res
 
     @classmethod
@@ -3301,6 +3304,9 @@ class FiscalPeriod:
     accession: Optional[str] = None
     aoci: Optional[float] = None
     aoci_row: Optional[str] = None
+    aoci_recipe: Optional[str] = None
+    aoci_composition: Optional[Composition] = None
+    interest_recipe: Optional[str] = None
     claims_incurred: Optional[float] = None
     claims_incurred_row: Optional[str] = None
     benefits_losses_and_expenses: Optional[float] = None
@@ -3367,6 +3373,9 @@ class FiscalPeriod:
                 accession=_atd_read_string(x['accession']) if 'accession' in x else None,
                 aoci=_atd_read_float(x['aoci']) if 'aoci' in x else None,
                 aoci_row=_atd_read_string(x['aoci_row']) if 'aoci_row' in x else None,
+                aoci_recipe=_atd_read_string(x['aoci_recipe']) if 'aoci_recipe' in x else None,
+                aoci_composition=Composition.from_json(x['aoci_composition']) if 'aoci_composition' in x else None,
+                interest_recipe=_atd_read_string(x['interest_recipe']) if 'interest_recipe' in x else None,
                 claims_incurred=_atd_read_float(x['claims_incurred']) if 'claims_incurred' in x else None,
                 claims_incurred_row=_atd_read_string(x['claims_incurred_row']) if 'claims_incurred_row' in x else None,
                 benefits_losses_and_expenses=_atd_read_float(x['benefits_losses_and_expenses']) if 'benefits_losses_and_expenses' in x else None,
@@ -3438,6 +3447,12 @@ class FiscalPeriod:
             res['aoci'] = _atd_write_float(self.aoci)
         if self.aoci_row is not None:
             res['aoci_row'] = _atd_write_string(self.aoci_row)
+        if self.aoci_recipe is not None:
+            res['aoci_recipe'] = _atd_write_string(self.aoci_recipe)
+        if self.aoci_composition is not None:
+            res['aoci_composition'] = (lambda x: x.to_json())(self.aoci_composition)
+        if self.interest_recipe is not None:
+            res['interest_recipe'] = _atd_write_string(self.interest_recipe)
         if self.claims_incurred is not None:
             res['claims_incurred'] = _atd_write_float(self.claims_incurred)
         if self.claims_incurred_row is not None:

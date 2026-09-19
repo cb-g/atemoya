@@ -249,7 +249,7 @@ type cash_definition = {
 
 type debt_xbrl = {
   ~aggregate : string list;                 (* the filer's own long-and-short-term debt aggregate; first choice when filed (25) *)
-  ~convertible : string list;               (* convertible notes a filer carries beside the aggregate, summed with it (25) *)
+  ~convertible : string list;               (* convertible notes: beside the aggregate (25), or one component among the others (31) *)
   noncurrent : string list;
   current_total : string list;              (* all debt due within a year as one tag; recipe 1 with noncurrent *)
   current_long_term : string list;          (* the current portion of long-term debt; recipe 2 with noncurrent *)
@@ -425,11 +425,45 @@ type required_on_latest_period = {
   models : (string * string list) list <json repr="object">;
 }
 
+(* AOCI (31): the filed aggregate, else the sum of the filed components, recorded as a
+   recipe with every component. *)
+type aoci_xbrl = {
+  aggregate : string list;
+  components : string list;
+}
+
+type aoci_definition = {
+  name : string;
+  why : string;
+  recipes : string list;                (* filed | sum_of_components *)
+  xbrl : aoci_xbrl;
+  ~notes : string list;
+}
+
+(* Interest expense for the mid-cycle model's bottom-up NOPAT (31): the filed expense line
+   (the ebit definition's tags), else a net non-operating interest figure negated, else
+   cash interest paid, each recorded as a recipe on the period. The DCF path never reads
+   these stand-ins. *)
+type interest_xbrl = {
+  net_nonoperating : string list;       (* net income (expense): negated into an expense *)
+  paid : string list;                   (* cash paid, standing in *)
+}
+
+type interest_definition = {
+  name : string;
+  why : string;
+  recipes : string list;                (* filed | net_nonoperating_interest | interest_paid_stands_in *)
+  xbrl : interest_xbrl;
+  ~notes : string list;
+}
+
 type field_definitions = {
   source : string;
   as_of : string;
   ~notes : string list;
   ?depreciation_amortization : dna_definition option;   (* (27) *)
+  ?aoci : aoci_definition option;                       (* (31) *)
+  ?interest_expense : interest_definition option;       (* (31) *)
   ?required_on_latest_period : required_on_latest_period option;   (* (27) *)
   cash : cash_definition;
   total_debt : debt_definition;

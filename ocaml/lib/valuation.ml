@@ -103,6 +103,11 @@ let definitions_check (defs : Reference_t.field_definitions) (fin : financials) 
       let* () = check "total_debt" p.total_debt_composition debt_name in
       let* () = check "delta_nwc" p.delta_nwc_composition nwc_name in
       let* () = check "ebit" p.ebit_composition ebit.name in
+      let* () =
+        match defs.aoci with
+        | Some (a : Reference_t.aoci_definition) -> check "aoci" p.aoci_composition a.name
+        | None -> Ok ()
+      in
       match p.ebit_recipe with
       | Some r when not (List.mem r ebit.recipes) ->
           mismatch "ebit recipe" r (String.concat " | " ebit.recipes)
@@ -344,7 +349,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs (params : Params.t) ~to
         match ebit_policy fin with
         | Error reason -> failed reason
         | Ok () -> (
-            match Dcf.value assumptions ~country fin with
+            match Dcf.value ~declared:(match declared with Some c -> Admissibility.class_name c | None -> "") assumptions ~country fin with
             | Error reason -> failed reason
             | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Dcf inputs) fair_value))
     | `Residual_income -> (

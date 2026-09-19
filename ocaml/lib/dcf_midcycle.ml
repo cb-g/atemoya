@@ -32,6 +32,7 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
     | Some ni, Some ie -> Some (ni, ie, ni +. (ie *. (1. -. tax_rate)))
     | _ -> None
   in
+  let recipe_of (p : fiscal_period) = Option.value p.interest_recipe ~default:"" in
   let exclude period_end sum missing = { period_end; sum; missing } in
   (* Consecutive pairs in the window: the period's nopat over the previous period's capital;
      a pair that lacks either is excluded from the roic series and named (27). *)
@@ -40,8 +41,8 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
         let obs, excl = pairs rest in
         match (nopat_of t, invested_capital prior) with
         | Some (net_income, interest_expense, nopat), Some ic when ic > 0. ->
-            ( { period_end = t.period_end; prior_period_end = prior.period_end; net_income; interest_expense; nopat;
-                invested_capital_prior = ic; roic = nopat /. ic }
+            ( { period_end = t.period_end; prior_period_end = prior.period_end; net_income; interest_expense;
+                interest_recipe = recipe_of t; nopat; invested_capital_prior = ic; roic = nopat /. ic }
               :: obs,
               excl )
         | None, _ ->

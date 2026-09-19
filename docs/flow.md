@@ -91,6 +91,7 @@ flowchart TD
     DCF_GUARDS -- "price or market cap <= 0" --> F_PRICE["price (p) and market cap (m) must be positive"]:::failed
     DCF_GUARDS -- "horizon < 0" --> F_HORIZON["projection horizon (N) years is negative"]:::failed
     DCF_GUARDS -- "wacc <= terminal growth" --> F_WACC["wacc (w) does not exceed terminal growth (g)"]:::failed
+    DCF_GUARDS -- "base fcff <= 0 (31): net cash minus a stream of small negative flows, falling as long-run growth rises, is meaningless, not conservative" --> F_NEGFCFF["non-positive free cash flow (v): the DCF is not applicable; declared (class) (31)"]:::failed
     DCF_GUARDS -- ok --> GROWTH["growth: fundamental (roic x reinvestment rate) if nopat > 0 and net reinvestment > 0, else revenue CAGR (3+ periods) capped at roic; clamp; mean-revert toward terminal at lambda"]
     GROWTH -- "neither computable" --> F_GROWTH["growth not derivable: (why)"]:::failed
     GROWTH --> DCF_EV["fcff = nopat + d&a - capex - mean delta_nwc; EV along the growth path + Gordon terminal; equity = EV - net debt; fair value = equity / (market cap / price)"]
@@ -146,6 +147,7 @@ flowchart TD
     F_MIDREINV --> FLOOR
     F_MIDREINVN --> FLOOR
     F_NOFETCH --> FLOOR
+    F_NEGFCFF --> FLOOR
     F_FXFETCH --> FLOOR
     F_ROE --> FLOOR
     F_PAYOUT --> FLOOR
@@ -218,10 +220,19 @@ at all (25):
    today's capital). Inside the mid-cycle window a period lacking a flow is excluded from
    the sum it cannot serve, named on the record, and the guards count what remains: at
    least 8 return observations and at least 8 periods in the reinvestment sums.
-5. **D&A is the largest filed total** (27). When several D&A total tags are filed in one
+5. **D&A is the largest filed total** (27), inside the FFO recipe too (31). When several D&A total tags are filed in one
    period the field is the largest, since a total is never smaller than any of its
    components; every candidate is recorded with the tag taken. The components fallback
    applies only when no total is filed.
+6. **Debt components are summed when no aggregate or complete pair is filed** (31). A
+   filer with fewer instruments is not missing data: one component per kind, recorded;
+   absent-is-zero applies only when no component and no interest tag is present.
+7. **AOCI by components** (31). When the aggregate is absent the filed components are
+   summed, recorded as `sum_of_components` with each component.
+8. **Interest stand-ins on the mid-cycle path only** (31). When no interest-expense line
+   is filed, a net non-operating interest figure negated, else cash interest paid, stands
+   in, recorded as `net_nonoperating_interest` or `interest_paid_stands_in` on the period
+   and on every observation; the DCF path's EBIT policy never reads a stand-in.
 
 ## Beliefs
 
@@ -330,3 +341,8 @@ in this order:
   `reference/` to gitignored `data/reference/`, written by the refreshers and read with
   `--fetched`; the registry seeds the curve file; two new `Failed` strings name the
   refresher to run when a file was never fetched.
+- gaps from the first growth batch (31): thirteen working-capital tags verified into the
+  three kinds and the excluded list, the component-sum debt recipe, AOCI by components,
+  the FFO depreciation list with the largest-total rule, interest stand-ins for the
+  mid-cycle NOPAT, Shell's IFRS capex line; one new `Failed` string, the non-positive
+  free-cash-flow guard on the dcf path.

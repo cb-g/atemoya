@@ -406,11 +406,11 @@ DEBT_FREE = "no debt line filed and no interest expense filed; taken as 0"
 
 
 def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
-    """Financial debt, first complete recipe: noncurrent + all current debt as one tag;
-    noncurrent + the current portion of long-term debt (+ short-term borrowings when
-    tagged); long-term debt filed with its current portion (+ short-term borrowings);
-    noncurrent alone when the filer tags nothing current at all. Operating lease tags are
-    never read."""
+    """Financial debt, first complete recipe: the filer's aggregate (+ convertible notes
+    beside it); noncurrent + all current debt as one tag; noncurrent + the current portion
+    of long-term debt (+ short-term borrowings when tagged); long-term debt filed with its
+    current portion (+ short-term borrowings); else the sum of every component present,
+    one per kind (31). Operating lease tags are never read."""
     d = defs.total_debt.xbrl
     aggregate = facts.first(d.aggregate, end, instant=True)
     convertible = facts.first(d.convertible, end, instant=True)
@@ -439,10 +439,12 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Der
         parts = [part("total_including_current", total_including_current)]
         if short_term is not None:
             parts.append(part("short_term_borrowings", short_term))
-    elif noncurrent is not None and short_term is None:
-        parts = [part("noncurrent", noncurrent)]
-    elif all(x is None for x in (convertible, noncurrent, current_total, current_long_term, short_term, total_including_current)) \
-            and facts.first(d.interest_evidence, end, instant=False) is None:
+    elif any(x is not None for x in (noncurrent, current_long_term, short_term, convertible)):
+        # (4) component sum (31): no aggregate and no complete pair, so every component the
+        # filer tags, one per kind; a filer with fewer instruments is not missing data
+        parts = [part(name, hit) for name, hit in (("noncurrent", noncurrent), ("current_long_term", current_long_term),
+                                                   ("short_term_borrowings", short_term), ("convertible", convertible)) if hit is not None]
+    elif all(x is None for x in (current_total, total_including_current)) and facts.first(d.interest_evidence, end, instant=False) is None:
         # absent is zero only when the filing says so twice (25): no debt line and no interest
         return 0.0, DEBT_FREE, _composition(defs.total_debt.name, [])
     else:
@@ -510,7 +512,9 @@ def ffo(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: 
     sales; the first two required, the last two taken as 0 when not filed and recorded so."""
     d = defs.ffo.ifrs if taxonomy == "ifrs-full" else defs.ffo.xbrl
     net_income = facts.first(d.net_income, end, instant=False)
-    depreciation = facts.first(d.depreciation, end, instant=False)
+    # the largest filed total (27), inside the recipe as on the dcf path (31)
+    candidates = [(v, tag) for tag in d.depreciation if (v := facts.at(tag, end, instant=False)) is not None]
+    depreciation = max(candidates, key=lambda c: c[0]) if candidates else None
     if net_income is None or depreciation is None:
         return None, None, None
     parts = [boundary.Component(name="net_income", value=net_income[0], row=net_income[1]),
@@ -520,6 +524,39 @@ def ffo(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: 
     gains = facts.first(d.gains, end, instant=False)
     parts.append(boundary.Component(name="gain_on_property_sales", value=-gains[0] if gains else 0.0, row=gains[1] if gains else "not filed, taken as 0"))
     return sum(p.value for p in parts), _label(parts), _composition(defs.ffo.name, parts)
+
+
+def aoci(facts: Facts, defs: reference.FieldDefinitions, end: date, filed: tuple[float | None, str | None]) -> tuple[float | None, str | None, str | None, boundary.Composition | None]:
+    """AOCI (31): the filed aggregate, else the sum of the filed components with the recipe
+    recorded. (value, row, recipe, composition)."""
+    if filed[0] is not None:
+        return filed[0], filed[1], "filed", None
+    definition = defs.aoci
+    if definition is None:
+        return None, None, None, None
+    parts = [boundary.Component(name="component", value=v, row=tag) for tag in definition.xbrl.components if (v := facts.at(tag, end, instant=True)) is not None]
+    if not parts:
+        return None, None, None, None
+    return sum(p.value for p in parts), _label(parts), "sum_of_components", _composition(definition.name, parts)
+
+
+def interest_expense(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> tuple[float | None, str | None, str | None]:
+    """Interest expense per period (25, 31): the ebit definition's filed line, else a net
+    non-operating interest figure negated into an expense, else cash interest paid; the
+    recipe recorded. (value, row, recipe)."""
+    filed = facts.first(defs.ebit.ifrs.interest_expense if taxonomy == "ifrs-full" else defs.ebit.xbrl.interest_expense, end, instant=False)
+    if filed is not None:
+        return filed[0], filed[1], "filed"
+    definition = defs.interest_expense
+    if definition is None or taxonomy == "ifrs-full":
+        return None, None, None
+    net = facts.first(definition.xbrl.net_nonoperating, end, instant=False)
+    if net is not None:
+        return -net[0], net[1], "net_nonoperating_interest"
+    paid = facts.first(definition.xbrl.paid, end, instant=False)
+    if paid is not None:
+        return paid[0], paid[1], "interest_paid_stands_in"
+    return None, None, None
 
 
 def weighted_shares(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> tuple[float, str] | None:
@@ -556,7 +593,8 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
         ffo_value, _, ffo_composition = ffo(facts, defs, end, taxonomy=taxonomy)
         shares = weighted_shares(facts, defs, end, taxonomy=taxonomy)
-        interest = facts.first(defs.ebit.ifrs.interest_expense if ifrs else defs.ebit.xbrl.interest_expense, end, instant=False)
+        interest_value, interest_row, interest_recipe = interest_expense(facts, defs, end, taxonomy=taxonomy)
+        aoci_value, aoci_row, aoci_recipe, aoci_composition = aoci(facts, defs, end, (v["aoci"], r["aoci"]))
         periods.append(
             boundary.FiscalPeriod(
                 period_end=end.isoformat(),
@@ -571,7 +609,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 provision_for_credit_losses=None, provision_for_credit_losses_row=None,
                 net_loans=None, net_loans_row=None,
                 filed=anchor.filed.isoformat(), accession=anchor.accn,
-                aoci=v["aoci"], aoci_row=r["aoci"],
+                aoci=aoci_value, aoci_row=aoci_row, aoci_recipe=aoci_recipe, aoci_composition=aoci_composition,
                 claims_incurred=v["claims_incurred"], claims_incurred_row=r["claims_incurred"],
                 benefits_losses_and_expenses=v["benefits_losses_and_expenses"], benefits_losses_and_expenses_row=r["benefits_losses_and_expenses"],
                 policy_acquisition_expense=v["policy_acquisition_expense"], policy_acquisition_expense_row=r["policy_acquisition_expense"],
@@ -583,7 +621,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 cash_row=cash_row, book_equity_row=r["book_equity"], net_income_row=r["net_income"],
                 net_interest_income_row=r["net_interest_income"],
                 ebit_recipe=ebit_recipe, ebit_composition=ebit_composition,
-                interest_expense=None if interest is None else interest[0], interest_expense_row=None if interest is None else interest[1],
+                interest_expense=interest_value, interest_expense_row=interest_row, interest_recipe=interest_recipe,
                 cash_composition=cash_composition,
                 total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,
                 ffo=ffo_value, ffo_composition=ffo_composition,

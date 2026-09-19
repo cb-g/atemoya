@@ -1299,6 +1299,79 @@ class NameBeliefs:
 
 
 @dataclass
+class InterestXbrl:
+    """Original type: interest_xbrl = { ... }
+    """
+
+    net_nonoperating: List[str]
+    paid: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'InterestXbrl':
+        if isinstance(x, dict):
+            return cls(
+                net_nonoperating=_atd_read_list(_atd_read_string)(x['net_nonoperating']) if 'net_nonoperating' in x else _atd_missing_json_field('InterestXbrl', 'net_nonoperating'),
+                paid=_atd_read_list(_atd_read_string)(x['paid']) if 'paid' in x else _atd_missing_json_field('InterestXbrl', 'paid'),
+            )
+        else:
+            _atd_bad_json('InterestXbrl', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['net_nonoperating'] = _atd_write_list(_atd_write_string)(self.net_nonoperating)
+        res['paid'] = _atd_write_list(_atd_write_string)(self.paid)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'InterestXbrl':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class InterestDefinition:
+    """Original type: interest_definition = { ... }
+    """
+
+    name: str
+    why: str
+    recipes: List[str]
+    xbrl: InterestXbrl
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'InterestDefinition':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('InterestDefinition', 'name'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('InterestDefinition', 'why'),
+                recipes=_atd_read_list(_atd_read_string)(x['recipes']) if 'recipes' in x else _atd_missing_json_field('InterestDefinition', 'recipes'),
+                xbrl=InterestXbrl.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('InterestDefinition', 'xbrl'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('InterestDefinition', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['why'] = _atd_write_string(self.why)
+        res['recipes'] = _atd_write_list(_atd_write_string)(self.recipes)
+        res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'InterestDefinition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class IndustryTable:
     """Original type: industry_table = { ... }
     """
@@ -2075,6 +2148,79 @@ class CashDefinition:
 
 
 @dataclass
+class AociXbrl:
+    """Original type: aoci_xbrl = { ... }
+    """
+
+    aggregate: List[str]
+    components: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'AociXbrl':
+        if isinstance(x, dict):
+            return cls(
+                aggregate=_atd_read_list(_atd_read_string)(x['aggregate']) if 'aggregate' in x else _atd_missing_json_field('AociXbrl', 'aggregate'),
+                components=_atd_read_list(_atd_read_string)(x['components']) if 'components' in x else _atd_missing_json_field('AociXbrl', 'components'),
+            )
+        else:
+            _atd_bad_json('AociXbrl', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['aggregate'] = _atd_write_list(_atd_write_string)(self.aggregate)
+        res['components'] = _atd_write_list(_atd_write_string)(self.components)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'AociXbrl':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class AociDefinition:
+    """Original type: aoci_definition = { ... }
+    """
+
+    name: str
+    why: str
+    recipes: List[str]
+    xbrl: AociXbrl
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'AociDefinition':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('AociDefinition', 'name'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('AociDefinition', 'why'),
+                recipes=_atd_read_list(_atd_read_string)(x['recipes']) if 'recipes' in x else _atd_missing_json_field('AociDefinition', 'recipes'),
+                xbrl=AociXbrl.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('AociDefinition', 'xbrl'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('AociDefinition', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['why'] = _atd_write_string(self.why)
+        res['recipes'] = _atd_write_list(_atd_write_string)(self.recipes)
+        res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'AociDefinition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class FieldDefinitions:
     """Original type: field_definitions = { ... }
     """
@@ -2091,6 +2237,8 @@ class FieldDefinitions:
     refinement_policy: RefinementPolicy
     notes: List[str] = field(default_factory=lambda: [])
     depreciation_amortization: Optional[DnaDefinition] = None
+    aoci: Optional[AociDefinition] = None
+    interest_expense: Optional[InterestDefinition] = None
     required_on_latest_period: Optional[RequiredOnLatestPeriod] = None
 
     @classmethod
@@ -2109,6 +2257,8 @@ class FieldDefinitions:
                 refinement_policy=RefinementPolicy.from_json(x['refinement_policy']) if 'refinement_policy' in x else _atd_missing_json_field('FieldDefinitions', 'refinement_policy'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
                 depreciation_amortization=DnaDefinition.from_json(x['depreciation_amortization']) if 'depreciation_amortization' in x else None,
+                aoci=AociDefinition.from_json(x['aoci']) if 'aoci' in x else None,
+                interest_expense=InterestDefinition.from_json(x['interest_expense']) if 'interest_expense' in x else None,
                 required_on_latest_period=RequiredOnLatestPeriod.from_json(x['required_on_latest_period']) if 'required_on_latest_period' in x else None,
             )
         else:
@@ -2129,6 +2279,10 @@ class FieldDefinitions:
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         if self.depreciation_amortization is not None:
             res['depreciation_amortization'] = (lambda x: x.to_json())(self.depreciation_amortization)
+        if self.aoci is not None:
+            res['aoci'] = (lambda x: x.to_json())(self.aoci)
+        if self.interest_expense is not None:
+            res['interest_expense'] = (lambda x: x.to_json())(self.interest_expense)
         if self.required_on_latest_period is not None:
             res['required_on_latest_period'] = (lambda x: x.to_json())(self.required_on_latest_period)
         return res

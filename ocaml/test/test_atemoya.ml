@@ -17,7 +17,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?tax_provision_row ?capex_row ?delta_nwc_row ?cash_row ?book_equity_row ?net_income_row
     ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
     ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?weighted_shares
-    ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates () : Boundary_t.fiscal_period =
+    ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates ?aoci_recipe ?aoci_composition
+    ?interest_recipe () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -77,6 +78,9 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     interest_expense;
     interest_expense_row;
     depreciation_amortization_candidates;
+    aoci_recipe;
+    aoci_composition;
+    interest_recipe;
     cash_composition;
     total_debt_composition;
     delta_nwc_composition;
@@ -1469,6 +1473,7 @@ let test_flow_chart_names_every_reason () =
       "through the cycle the business reinvested more than it earned";
       "mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat";
       "risk-free curve not fetched for"; "fx not fetched for";
+      "non-positive free cash flow"; "the DCF is not applicable; declared";
       "missing market data: financial_currency"; "missing market data: trading_currency";
       "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
       "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";
@@ -2626,14 +2631,35 @@ let test_wacc_below_terminal_growth () =
   check_nulls v;
   Alcotest.(check bool) "inputs" true (Option.is_none v.inputs)
 
-let test_non_positive_fair_value () =
-  (* Loss-making every year: nopat < 0 so fundamental growth is unusable, flat revenue
-     gives zero historical growth, roic is negative so the cap pulls g0 down to it, and
-     the clamp holds it at -0.2. The cash flows shrink from a negative base. *)
-  let v =
-    run
-      (financials (history ~ebit:(-5000.) ~pretax_income:(-5000.) ()))
+(* The base flow itself (31): with ebit -1200 the fixture's fcff is -1200 x 0.5 + 200 - 50 - 50
+   = -500; with capex 800 it is 600 + 200 - 800 - 50 = -50; at capex 750 it is exactly 0. *)
+let test_non_positive_fcff_guard () =
+  let refused fin needles =
+    let v = run fin in
+    check_reason v needles;
+    Alcotest.(check (option approx)) "no fair value" None v.fair_value
   in
+  refused (financials (history ~ebit:(-1200.) ())) [ "non-positive free cash flow (-500): the DCF is not applicable; declared OperatingCompany" ];
+  refused (financials (history ~capex:800. ())) [ "non-positive free cash flow (-50)" ];
+  refused (financials (history ~capex:750. ())) [ "non-positive free cash flow (0)" ];
+  (* the class is named, whichever it is; a positive flow is untouched *)
+  let software = run ~declared:(Some (declaration `HighGrowthSoftware)) (financials (history ~capex:800. ())) in
+  check_reason software [ "declared HighGrowthSoftware" ];
+  Alcotest.check status "positive flow still values" `Ok (run (financials (history ()))).status;
+  (match Dcf.value assumptions ~country:"United States" (financials (history ~capex:800. ())) with
+  | Error e -> check_mentions "engine names no class when none is given" e [ "declared no class" ]
+  | Ok _ -> Alcotest.fail "valued");
+  (* the mid-cycle path keeps its own guard: a negative through-cycle return *)
+  let v = run ~declared:(Some (declaration `Cyclical)) (financials (midcycle_periods ~ebits:(List.map (fun e -> -.Float.abs e) midcycle_ebits) ())) in
+  check_reason v [ "did not earn a positive return on its capital" ]
+
+let test_non_positive_fair_value () =
+  (* A positive base flow under a mountain of debt: the base fcff stands, the enterprise
+     value is a few years of it, and net debt exceeds it, so equity per share is negative. *)
+  let drowned =
+    List.map (fun (p : Boundary_t.fiscal_period) -> { p with total_debt = Some 500000. }) (history ())
+  in
+  let v = run (financials drowned) in
   check_reason v [ "non-positive fair value" ];
   check_nulls v;
   Alcotest.(check bool) "inputs kept for audit" true (Option.is_some v.inputs)
@@ -2818,6 +2844,7 @@ let () =
           case "failed: missing market data" test_missing_market_data;
           case "failed: wacc below terminal growth" test_wacc_below_terminal_growth;
           case "failed: non-positive fair value" test_non_positive_fair_value;
+          case "failed: non-positive free cash flow (31)" test_non_positive_fcff_guard;
           case "failed: sanity bound" test_sanity_bound;
           case "json round trip" test_json_round_trip;
           case "mid-cycle dcf arithmetic (22)" test_midcycle_arithmetic;

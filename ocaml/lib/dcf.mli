@@ -78,9 +78,12 @@ val missing_report : Boundary_t.financials -> Boundary_t.fiscal_period -> nwc_pe
 (** "missing market data: ...; missing statement fields for fiscal period ending D: ...". *)
 
 val value :
+  ?declared:string ->
   assumptions ->
   country:string ->
   Boundary_t.financials ->
   (Boundary_t.inputs * float, string) result
 (** Values the most recent fiscal period. [country] is the fetched string,
-    recorded in [inputs] as is. See the module contract. *)
+    recorded in [inputs] as is; [declared] names the class in the non-positive
+    free-cash-flow refusal (31): a base FCFF at or below zero is an [Error], since
+    the DCF is meaningless on it, not conservative. See the module contract. *)

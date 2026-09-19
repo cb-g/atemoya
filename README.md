@@ -9,7 +9,7 @@ Requires git, [opam](https://opam.ocaml.org) 2.1+, [uv](https://docs.astral.sh/u
 optionally [direnv](https://direnv.net).
 
 ```sh
-git clone <this repo> && cd atemoya_new_paradigm
+git clone <this repo> && cd atemoya
 
 # OCaml: a local switch in ./_opam, pinned by atemoya.opam.locked (compiler included)
 opam switch create . --deps-only --locked

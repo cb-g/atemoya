@@ -72,6 +72,9 @@ type fiscal_period = {
   ?accession : string option;
   ?aoci : float option;                       (* accumulated other comprehensive income, net of tax; any sign *)
   ?aoci_row : string option;
+  ?aoci_recipe : string option;               (* filed | sum_of_components (31) *)
+  ?aoci_composition : composition option;     (* the components summed, when the recipe is sum_of_components (31) *)
+  ?interest_recipe : string option;           (* filed | net_nonoperating_interest | interest_paid_stands_in (31): how interest_expense was obtained; read by the mid-cycle model only *)
   ?claims_incurred : float option;            (* >= 0; policyholder benefits and claims incurred *)
   ?claims_incurred_row : string option;
   ?benefits_losses_and_expenses : float option;   (* >= 0; the total including acquisition and operating expense *)
@@ -555,6 +558,7 @@ type roic_observation = {
   prior_period_end : string;
   net_income : float;
   interest_expense : float;
+  ~interest_recipe : string;          (* filed | net_nonoperating_interest | interest_paid_stands_in (31) *)
   nopat : float;                      (* net_income + interest_expense * (1 - statutory tax rate) *)
   invested_capital_prior : float;     (* book_equity + total_debt - cash at prior_period_end *)
   roic : float;                       (* nopat / invested_capital_prior *)

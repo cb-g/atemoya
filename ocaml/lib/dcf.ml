@@ -110,7 +110,7 @@ let missing_report (fin : financials) (p : fiscal_period) ~nwc_periods =
 
 let mean xs = List.fold_left ( +. ) 0. xs /. float_of_int (List.length xs)
 
-let value a ~country (fin : financials) =
+let value ?(declared = "") a ~country (fin : financials) =
   let ( let* ) = Result.bind in
   let* p = latest_period fin in
   let nwc = series fin (fun q -> q.delta_nwc) in
@@ -186,6 +186,13 @@ let value a ~country (fin : financials) =
           let fcff =
             fcff ~ebit ~tax_rate ~depreciation_amortization ~capex ~delta_nwc
           in
+          (* A non-positive base flow makes the DCF meaningless, not conservative (31): net
+             cash minus a stream of small negative flows, falling as long-run growth rises. *)
+          if fcff <= 0. then
+            Error
+              (Printf.sprintf "non-positive free cash flow (%.4g): the DCF is not applicable; declared %s" fcff
+                 (if declared = "" then "no class" else declared))
+          else
           let enterprise_value =
             enterprise_value ~fcff ~wacc ~growth_path
               ~terminal_growth_rate:a.terminal_growth_rate.value

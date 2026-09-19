@@ -232,7 +232,8 @@
       "kind": "duration",
       "tags": [
         "PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities",
-        "PurchaseOfPropertyPlantAndEquipmentIntangibleAssetsOtherThanGoodwillInvestmentPropertyAndOtherNoncurrentAssets"
+        "PurchaseOfPropertyPlantAndEquipmentIntangibleAssetsOtherThanGoodwillInvestmentPropertyAndOtherNoncurrentAssets",
+        "PurchaseOfOtherLongtermAssetsClassifiedAsInvestingActivities"
       ]
     },
     "book_equity": {

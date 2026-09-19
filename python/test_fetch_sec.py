@@ -234,8 +234,90 @@ def test_debt_aggregate_is_first_choice_with_convertible_notes_beside_it() -> No
            "LongTermDebtCurrent": usd(fact("2025-12-31", 874e6)), "ShortTermBorrowings": usd(fact("2025-12-31", 874e6))}
     p = period(amd)
     assert (p.total_debt, p.total_debt_source) == (3222e6, "DebtLongtermAndShorttermCombinedAmount")
-    # convertible notes without the aggregate are not read on their own
-    assert period({"ConvertibleLongTermNotesPayable": usd(fact("2025-12-31", 4664.1e6)), "InterestExpense": usd(fact("2025-12-31", 1e6, start="2025-01-01"))}).total_debt is None
+    # convertible notes without the aggregate are one component, summed on their own (31)
+    p = period({"ConvertibleLongTermNotesPayable": usd(fact("2025-12-31", 4664.1e6)), "InterestExpense": usd(fact("2025-12-31", 1e6, start="2025-01-01"))})
+    assert (p.total_debt, p.total_debt_source) == (4664.1e6, "ConvertibleLongTermNotesPayable")
+
+
+def test_debt_component_sum_when_no_aggregate_or_pair_is_filed() -> None:
+    """ServiceNow files convertible notes alone; Caterpillar noncurrent plus short-term with no
+    current portion (31). The absent-is-zero rule applies only with no component at all."""
+    now = {"ConvertibleLongTermNotesPayable": usd(fact("2025-12-31", 1491e6)), "InterestPaidNet": usd(fact("2025-12-31", 22e6, start="2025-01-01"))}
+    p = period(now)
+    assert (p.total_debt, p.total_debt_source) == (1491e6, "ConvertibleLongTermNotesPayable")
+    assert components(p.total_debt_composition) == [("convertible", 1491e6, "ConvertibleLongTermNotesPayable")]
+    cat = {"LongTermDebtNoncurrent": usd(fact("2025-12-31", 30696e6)), "ShortTermBorrowings": usd(fact("2025-12-31", 5514e6)), "InterestPaidNet": usd(fact("2025-12-31", 1842e6, start="2025-01-01"))}
+    p = period(cat)
+    assert p.total_debt is not None and math.isclose(p.total_debt, 36210e6)
+    assert p.total_debt_source == "LongTermDebtNoncurrent + ShortTermBorrowings"
+    assert components(p.total_debt_composition) == [("noncurrent", 30696e6, "LongTermDebtNoncurrent"), ("short_term_borrowings", 5514e6, "ShortTermBorrowings")]
+    # a complete pair still wins over the component sum, and the aggregate over both
+    both = {**cat, "LongTermDebtCurrent": usd(fact("2025-12-31", 7120e6))}
+    assert period(both).total_debt_source == "LongTermDebtNoncurrent + LongTermDebtCurrent + ShortTermBorrowings"
+    assert period({**both, "DebtLongtermAndShorttermCombinedAmount": usd(fact("2025-12-31", 43324e6))}).total_debt == 43324e6
+    # no component and no interest: zero, recorded; no component with interest: null
+    assert period({}).total_debt_source == fetch_sec.DEBT_FREE
+    assert period({"InterestPaidNet": usd(fact("2025-12-31", 22e6, start="2025-01-01"))}).total_debt is None
+
+
+def test_delta_nwc_batch_one_kinds() -> None:
+    """Each tag added from the first growth batch (31) carries its verified kind."""
+    d = DEFS.delta_nwc.xbrl
+    for tag in ("IncreaseDecreaseInRetailRelatedInventories", "IncreaseDecreaseInMaterialsAndSupplies", "IncreaseDecreaseInFinanceReceivables",
+                "IncreaseDecreaseInMarginDepositsOutstanding", "IncreaseDecreaseInRestrictedCashAndInvestmentsForOperatingActivities"):
+        assert tag in d.asset_components
+    for tag in ("IncreaseDecreaseInAccountsPayableAndOtherOperatingLiabilities", "IncreaseDecreaseInOperatingLiabilities", "IncreaseDecreaseInAccruedSalaries",
+                "IncreaseDecreaseInAirTrafficLiability1", "IncreaseDecreaseInFrequentFlyerLiability", "IncreaseDecreaseInInterestPayableNet", "IncreaseDecreaseInCustomerAdvances"):
+        assert tag in d.liability_components
+    assert "IncreaseDecreaseInPensionAndPostretirementObligations" in d.excluded
+    # Home Depot FY2026 by hand: inventory grew 1.498bn (an outflow, added), payables fell (an outflow, added back)
+    hd = {"IncreaseDecreaseInRetailRelatedInventories": usd(fact("2025-12-31", 1498e6, start="2025-01-01")),
+          "IncreaseDecreaseInAccountsPayable": usd(fact("2025-12-31", -1058e6, start="2025-01-01")),
+          "IncreaseDecreaseInPensionAndPostretirementObligations": usd(fact("2025-12-31", 400e6, start="2025-01-01"))}
+    p = period(hd)
+    assert p.delta_nwc is not None and math.isclose(p.delta_nwc, 1498e6 + 1058e6)  # the pension movement is excluded, not summed, not blocking
+    assert components(p.delta_nwc_composition) == [("asset_components", 1498e6, "IncreaseDecreaseInRetailRelatedInventories"), ("liability_components", 1058e6, "IncreaseDecreaseInAccountsPayable")]
+
+
+def test_aoci_sum_of_components_when_the_aggregate_is_absent() -> None:
+    """Aflac FY2025 (31): three components filed, no aggregate."""
+    afl = {"AccumulatedOtherComprehensiveIncomeLossAvailableForSaleSecuritiesAdjustmentNetOfTax": usd(fact("2025-12-31", -1809e6)),
+           "AccumulatedOtherComprehensiveIncomeLossDefinedBenefitPensionAndOtherPostretirementPlansNetOfTax": usd(fact("2025-12-31", -86e6)),
+           "AccumulatedOtherComprehensiveIncomeLossForeignCurrencyTranslationAdjustmentNetOfTax": usd(fact("2025-12-31", -4847e6))}
+    p = period(afl)
+    assert p.aoci is not None and math.isclose(p.aoci, -6742e6) and p.aoci_recipe == "sum_of_components"
+    assert p.aoci_composition is not None and p.aoci_composition.definition == "accumulated_other_comprehensive_income_net_of_tax"
+    assert [c.row for c in p.aoci_composition.components] == list(afl)
+    # the aggregate wins when filed, recorded as filed; nothing filed leaves it null
+    p = period({**afl, "AccumulatedOtherComprehensiveIncomeLossNetOfTax": usd(fact("2025-12-31", -5520e6))})
+    assert (p.aoci, p.aoci_recipe, p.aoci_composition) == (-5520e6, "filed", None)
+    assert period({}).aoci is None and period({}).aoci_recipe is None
+
+
+def test_ffo_depreciation_is_the_largest_filed_total() -> None:
+    """American Tower files DepreciationAmortizationAndAccretionNet alone; Equinix files two
+    totals and the larger is the real-estate depreciation (31)."""
+    base = {"NetIncomeLoss": usd(fact("2025-12-31", 2530e6, start="2025-01-01"))}
+    p = period({**base, "DepreciationAmortizationAndAccretionNet": usd(fact("2025-12-31", 2042e6, start="2025-01-01"))})
+    assert p.ffo is not None and math.isclose(p.ffo, 2530e6 + 2042e6)
+    assert p.ffo_composition is not None and [(c.name, c.row) for c in p.ffo_composition.components][:2] == [("net_income", "NetIncomeLoss"), ("real_estate_depreciation", "DepreciationAmortizationAndAccretionNet")]
+    p = period({**base, "DepreciationDepletionAndAmortization": usd(fact("2025-12-31", 2050e6, start="2025-01-01")),
+                "DepreciationAmortizationAndAccretionNet": usd(fact("2025-12-31", 2066e6, start="2025-01-01"))})
+    assert p.ffo is not None and math.isclose(p.ffo, 2530e6 + 2066e6)
+    assert p.ffo_composition is not None and p.ffo_composition.components[1].row == "DepreciationAmortizationAndAccretionNet"
+
+
+def test_interest_recipes_for_the_midcycle_nopat() -> None:
+    """Delta files a net non-operating interest figure, Caterpillar only cash paid (31)."""
+    p = period({"InterestExpenseDebt": usd(fact("2025-12-31", 1217e6, start="2025-01-01")), "InterestPaidNet": usd(fact("2025-12-31", 942e6, start="2025-01-01"))})
+    assert (p.interest_expense, p.interest_expense_row, p.interest_recipe) == (1217e6, "InterestExpenseDebt", "filed")
+    p = period({"InterestIncomeExpenseNonoperatingNet": usd(fact("2025-12-31", -679e6, start="2025-01-01")), "InterestPaidNet": usd(fact("2025-12-31", 850e6, start="2025-01-01"))})
+    assert (p.interest_expense, p.interest_expense_row, p.interest_recipe) == (679e6, "InterestIncomeExpenseNonoperatingNet", "net_nonoperating_interest")
+    p = period({"InterestPaidNet": usd(fact("2025-12-31", 1842e6, start="2025-01-01"))})
+    assert (p.interest_expense, p.interest_expense_row, p.interest_recipe) == (1842e6, "InterestPaidNet", "interest_paid_stands_in")
+    assert period({}).interest_expense is None and period({}).interest_recipe is None
+    definition = DEFS.interest_expense
+    assert definition is not None and definition.recipes == ["filed", "net_nonoperating_interest", "interest_paid_stands_in"]
 
 
 def test_delta_nwc_three_kinds_and_the_excluded_tags() -> None:
