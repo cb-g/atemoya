@@ -1772,6 +1772,9 @@ class MidcycleInputs:
     spot_fcff: Optional[float]
     spot_to_midcycle: Optional[float]
     exclusions: List[MidcycleExclusion] = field(default_factory=lambda: [])
+    reinvestment_rate_measured: Optional[float] = None
+    reinvestment_floor_applied: bool = field(default_factory=lambda: False)
+    reinvestment_floor_note: Optional[str] = None
     spot_reason: Optional[str] = None
 
     @classmethod
@@ -1795,6 +1798,9 @@ class MidcycleInputs:
                 spot_fcff=_atd_read_nullable(_atd_read_float)(x['spot_fcff']) if 'spot_fcff' in x else _atd_missing_json_field('MidcycleInputs', 'spot_fcff'),
                 spot_to_midcycle=_atd_read_nullable(_atd_read_float)(x['spot_to_midcycle']) if 'spot_to_midcycle' in x else _atd_missing_json_field('MidcycleInputs', 'spot_to_midcycle'),
                 exclusions=_atd_read_list(MidcycleExclusion.from_json)(x['exclusions']) if 'exclusions' in x else [],
+                reinvestment_rate_measured=_atd_read_float(x['reinvestment_rate_measured']) if 'reinvestment_rate_measured' in x else None,
+                reinvestment_floor_applied=_atd_read_bool(x['reinvestment_floor_applied']) if 'reinvestment_floor_applied' in x else False,
+                reinvestment_floor_note=_atd_read_string(x['reinvestment_floor_note']) if 'reinvestment_floor_note' in x else None,
                 spot_reason=_atd_read_string(x['spot_reason']) if 'spot_reason' in x else None,
             )
         else:
@@ -1819,6 +1825,11 @@ class MidcycleInputs:
         res['spot_fcff'] = _atd_write_nullable(_atd_write_float)(self.spot_fcff)
         res['spot_to_midcycle'] = _atd_write_nullable(_atd_write_float)(self.spot_to_midcycle)
         res['exclusions'] = _atd_write_list((lambda x: x.to_json()))(self.exclusions)
+        if self.reinvestment_rate_measured is not None:
+            res['reinvestment_rate_measured'] = _atd_write_float(self.reinvestment_rate_measured)
+        res['reinvestment_floor_applied'] = _atd_write_bool(self.reinvestment_floor_applied)
+        if self.reinvestment_floor_note is not None:
+            res['reinvestment_floor_note'] = _atd_write_string(self.reinvestment_floor_note)
         if self.spot_reason is not None:
             res['spot_reason'] = _atd_write_string(self.spot_reason)
         return res

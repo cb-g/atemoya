@@ -598,7 +598,10 @@ type midcycle_inputs = {
   reinvestment_periods : string list; (* the window periods with capex, d&a, delta_nwc, net income and interest expense, summed; at least 8 (27) *)
   reinvestment_sum : float;           (* sum over reinvestment_periods of capex - d&a + delta_nwc *)
   nopat_sum : float;                  (* sum over reinvestment_periods of nopat_t *)
-  reinvestment_rate_mid : float;      (* reinvestment_sum / nopat_sum: sums, never a mean of ratios *)
+  reinvestment_rate_mid : float;      (* reinvestment_sum / nopat_sum, sums never a mean of ratios, floored at zero (33) *)
+  ?reinvestment_rate_measured : float option;   (* (33) the ratio of sums as measured, present only when the floor bound (it was negative) *)
+  ~reinvestment_floor_applied : bool; (* (33) true when the measured rate was negative: no net reinvestment through the cycle, fcff_mid = nopat_mid, g0 = 0; disinvestment cash flows are not valued *)
+  ?reinvestment_floor_note : string option;
   fcff_mid : float;                   (* nopat_mid * (1 - reinvestment_rate_mid) *)
   spot_fcff : float nullable;         (* the latest period's own fcff at the same tax rate; a readout, null with spot_reason when the latest period lacks a flow (27) *)
   spot_to_midcycle : float nullable;  (* spot_fcff / fcff_mid: how far off-cycle the current year is *)

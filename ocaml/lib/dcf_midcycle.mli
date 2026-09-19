@@ -16,9 +16,11 @@
     [sum (capex - d&a + delta_nwc) / sum NOPAT_t] over the window, sums not a mean of
     ratios, so a negative-NOPAT year cannot poison it; [FCFF_mid = NOPAT_mid * (1 -
     r_mid)]; [g0 = ROIC_mid * r_mid] under the DCF's clamp, lambda, horizon, terminal,
-    WACC, net debt and shares. Guards: [ROIC_mid <= 0] (or a non-positive NOPAT sum),
-    [r_mid >= 1] and [r_mid < 0] (disinvestment, 32: liquidation and growth cannot be
-    expressed together) are [Error]s in the words of the record. No price deck: nothing
+    WACC, net debt and shares. Guards: [ROIC_mid <= 0] (or a non-positive NOPAT sum)
+    and [r_mid >= 1] are [Error]s in the words of the record. A negative measured rate is
+    floored at zero (33): no net reinvestment through the cycle, [FCFF_mid = NOPAT_mid],
+    [g0 = 0], the measured rate and the flag on the record; disinvestment cash flows are
+    not valued. No price deck: nothing
     outside the filed statements and the DCF's parameters enters. *)
 
 val minimum_observations : int

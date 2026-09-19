@@ -1171,9 +1171,23 @@ let test_midcycle_guards () =
   fail (midcycle_periods ~ebits:(List.map (fun e -> -.Float.abs e) midcycle_ebits) ())
     [ Printf.sprintf "through the cycle the business did not earn a positive return on its capital (mean roic %.4f over 9 observations)" (0.79 *. (-8700. /. 9.) /. 9000.) ];
   fail (midcycle_periods ~capex:2000. ()) [ "through the cycle the business reinvested more than it earned (reinvestment rate " ];
-  (* disinvestment (32): capex below d&a every year, so the reinvestment sum is negative *)
-  fail (midcycle_periods ~capex:20. ())
-    [ "through the cycle the business disinvested (reinvestment rate "; "the mid-cycle model cannot express liquidation and growth together" ];
+  (* the floor (33): capex below d&a every year, so the measured rate is negative; it is
+     floored, recorded, and the flow is the mid-cycle profit with zero starting growth *)
+  (match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials (midcycle_periods ~capex:20. ())) with
+  | Ok (m, fv) ->
+      check_float "measured rate" ((10. *. (20. -. 200. +. 50.)) /. (0.79 *. 8700.)) (Option.get m.reinvestment_rate_measured);
+      check_float "floored at zero" 0. m.reinvestment_rate_mid;
+      Alcotest.(check bool) "flag" true m.reinvestment_floor_applied;
+      check_mentions "note" (Option.value m.reinvestment_floor_note ~default:"") [ "net reinvestment through the cycle was negative (-0.1891)"; "treated as no net reinvestment; disinvestment cash flows are not valued" ];
+      check_float "fcff_mid = nopat_mid" m.nopat_mid m.fcff_mid;
+      check_float "g0 = 0" 0. m.dcf.g0;
+      Alcotest.(check (option approx)) "g_fundamental 0" (Some 0.) m.dcf.g_fundamental;
+      Alcotest.(check bool) "values" true (fv > 0.)
+  | Error e -> Alcotest.fail e);
+  (* a positive rate is untouched: no measured field, no flag *)
+  let m, _ = midcycle_ok () in
+  Alcotest.(check bool) "no flag" false m.reinvestment_floor_applied;
+  Alcotest.(check (option approx)) "no measured field when the floor does not bind" None m.reinvestment_rate_measured;
   (* the window cap: twenty periods, a fifteen-year window *)
   let twenty = midcycle_periods ~ebits:(midcycle_ebits @ midcycle_ebits) () in
   (match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials twenty) with
@@ -1476,7 +1490,6 @@ let test_flow_chart_names_every_reason () =
       "mid-cycle normalisation needs at least 8 annual return observations";
       "through the cycle the business did not earn a positive return on its capital";
       "through the cycle the business reinvested more than it earned";
-      "through the cycle the business disinvested";
       "mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat";
       "risk-free curve not fetched for"; "fx not fetched for";
       "non-positive free cash flow"; "the DCF is not applicable; declared";

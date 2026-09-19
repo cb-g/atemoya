@@ -112,19 +112,17 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
                  "through the cycle the business did not earn a positive return on its capital (the sum of nopat over %d periods, %.4g, is not positive)"
                  (List.length reinvestment_periods) nopat_sum)
           else
-            let reinvestment_rate_mid = reinvestment_sum /. nopat_sum in
-            if reinvestment_rate_mid >= 1. then
+            let reinvestment_rate_measured = reinvestment_sum /. nopat_sum in
+            if reinvestment_rate_measured >= 1. then
               Error
                 (Printf.sprintf "through the cycle the business reinvested more than it earned (reinvestment rate %.4f)"
-                   reinvestment_rate_mid)
-            else if reinvestment_rate_mid < 0. then
-              (* Disinvestment (32): the model cannot express liquidation cash flows and growth
-                 returning to the terminal rate at once. *)
-              Error
-                (Printf.sprintf
-                   "through the cycle the business disinvested (reinvestment rate %.4f); the mid-cycle model cannot express liquidation and growth together"
-                   reinvestment_rate_mid)
+                   reinvestment_rate_measured)
             else
+              (* The floor (33): a negative measured rate is capital roughly maintained, read as
+                 no net reinvestment through the cycle; fcff_mid = nopat_mid, g0 = 0, and the
+                 disinvestment cash is not valued. The measured rate stays on the record. *)
+              let floored = reinvestment_rate_measured < 0. in
+              let reinvestment_rate_mid = if floored then 0. else reinvestment_rate_measured in
               let fcff_mid = nopat_mid *. (1. -. reinvestment_rate_mid) in
               let g_fundamental = roic_mid *. reinvestment_rate_mid in
               let cost_of_equity = Dcf.cost_of_equity a in
@@ -239,6 +237,15 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
                         reinvestment_sum;
                         nopat_sum;
                         reinvestment_rate_mid;
+                        reinvestment_rate_measured = (if floored then Some reinvestment_rate_measured else None);
+                        reinvestment_floor_applied = floored;
+                        reinvestment_floor_note =
+                          (if floored then
+                             Some
+                               (Printf.sprintf
+                                  "net reinvestment through the cycle was negative (%.4f): treated as no net reinvestment; disinvestment cash flows are not valued"
+                                  reinvestment_rate_measured)
+                           else None);
                         fcff_mid;
                         spot_fcff;
                         spot_to_midcycle = Option.map (fun s -> s /. fcff_mid) spot_fcff;

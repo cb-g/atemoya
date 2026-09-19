@@ -47,11 +47,12 @@ let floor_verified ~currency (inputs : model_inputs) ~fair_value : floor =
     | `Dcf_midcycle (m : midcycle_inputs) ->
         Printf.sprintf
           "mid-cycle dcf: fcff_mid %.4g %s from a mean roic of %.4f over %d observations (%s to %s) on invested \
-           capital %.4g, reinvestment rate %.4f, spot fcff %s for the fiscal period ending %s, \
+           capital %.4g, reinvestment rate %.4f%s, spot fcff %s for the fiscal period ending %s, \
            fair value %.2f %s per share against price %.2f"
           m.fcff_mid currency m.roic_mid (List.length m.observations)
           (List.nth m.window (List.length m.window - 1)) (List.hd m.window) m.invested_capital_latest
           m.reinvestment_rate_mid
+          (match m.reinvestment_rate_measured with Some r -> Printf.sprintf " (measured %.4f, floored at zero)" r | None -> "")
           (match (m.spot_fcff, m.spot_to_midcycle) with
           | Some s, Some r -> Printf.sprintf "%.4g (%.2fx mid-cycle)" s r
           | _ -> "none (" ^ Option.value m.spot_reason ~default:"" ^ ")")

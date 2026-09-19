@@ -53,7 +53,8 @@
     "as_of": "2026-09-19",
     "max_age_days": 400,
     "notes": [
-      "The mid-cycle DCF's window: every annual period the record carries, newest first, up to this many; the fetch keeps this many periods for a class whose first admissible model is dcf_midcycle, five for every other model."
+      "The mid-cycle DCF's window: every annual period the record carries, newest first, up to this many; the fetch keeps this many periods for a class whose first admissible model is dcf_midcycle, five for every other model.",
+      "The reinvestment floor (33): a reinvestment rate of about -0.10 over ten to fifteen years is capital roughly maintained, with depreciation and working-capital release slightly ahead of capex, not a business selling itself off; a guard cannot tell the two apart and any threshold that could would be a tuned parameter. A negative measured rate is therefore read as no net reinvestment through the cycle: mid-cycle free cash flow equals mid-cycle profit and growth from reinvestment is zero. It drops the disinvestment cash entirely, conservative in the one direction that matters, and the reversion from zero starting growth to the terminal rate is the simplification every DCF path already makes for a name whose capex equals its depreciation. The measured rate stays on the record beside the floored one."
     ]
   },
   "sensitivity_steps": {

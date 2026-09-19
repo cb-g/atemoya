@@ -80,9 +80,8 @@ flowchart TD
     MID_GUARDS -- "horizon < 0" --> F_HORIZON
     MID_GUARDS -- "ROIC_mid <= 0, or the window's NOPAT sum <= 0" --> F_MIDROIC["through the cycle the business did not earn a positive return on its capital ((mean roic r over k observations) or (the sum of nopat over n periods, s, is not positive)) (22)"]:::failed
     MID_GUARDS -- "r_mid >= 1" --> F_MIDREINV["through the cycle the business reinvested more than it earned (reinvestment rate r) (22)"]:::failed
-    MID_GUARDS -- "r_mid < 0 (32): through the cycle the business returned more capital than it consumed, and liquidation cash flows cannot sit beside growth returning to the terminal rate" --> F_MIDDISINV["through the cycle the business disinvested (reinvestment rate r); the mid-cycle model cannot express liquidation and growth together (32)"]:::failed
     MID_GUARDS -- "wacc <= terminal growth" --> F_WACC
-    MID_GUARDS -- ok --> MID_EV["ROIC_mid = arithmetic mean of the observations, the bad years included (median recorded, not used); NOPAT_mid = ROIC_mid x latest invested capital; r_mid = sum(capex - d&a + delta_nwc) / sum NOPAT_t over the window, sums not a mean of ratios; FCFF_mid = NOPAT_mid x (1 - r_mid); g0 = ROIC_mid x r_mid under the DCF's clamp and lambda; then the DCF engine unchanged (EV along the path + Gordon terminal, equity = EV - net debt, per effective share); the record carries the window, every ROIC_t, the aggregates, the latest year's spot FCFF and spot / mid-cycle; the implied readouts run unchanged on FCFF_mid and g0; no price deck anywhere"]:::new
+    MID_GUARDS -- ok --> MID_EV["ROIC_mid = arithmetic mean of the observations, the bad years included (median recorded, not used); NOPAT_mid = ROIC_mid x latest invested capital; r_mid = sum(capex - d&a + delta_nwc) / sum NOPAT_t over the window, sums not a mean of ratios, floored at zero (33: a negative measured rate is capital roughly maintained, read as no net reinvestment through the cycle, so FCFF_mid = NOPAT_mid and g0 = 0, the measured rate and the flag on the record, disinvestment cash not valued); FCFF_mid = NOPAT_mid x (1 - r_mid); g0 = ROIC_mid x r_mid under the DCF's clamp and lambda; then the DCF engine unchanged (EV along the path + Gordon terminal, equity = EV - net debt, per effective share); the record carries the window, every ROIC_t, the aggregates, the latest year's spot FCFF and spot / mid-cycle; the implied readouts run unchanged on FCFF_mid and g0; no price deck anywhere"]:::new
     MID_EV -- "not finite" --> F_NAN
     MID_EV --> CONCLUDE
     EBIT -- "filed operating income, or derived and within threshold" --> DCF_PERIOD{"latest fiscal period, fields present? (ebit, d&a, capex, cash, total_debt, book_equity, delta_nwc over 2+ periods, price, market cap, currency)"}
@@ -149,7 +148,6 @@ flowchart TD
     F_MIDREINVN --> FLOOR
     F_NOFETCH --> FLOOR
     F_NEGFCFF --> FLOOR
-    F_MIDDISINV --> FLOOR
     F_FXFETCH --> FLOOR
     F_ROE --> FLOOR
     F_PAYOUT --> FLOOR
@@ -357,3 +355,6 @@ in this order:
   rate fails the mid-cycle model (one new `Failed` string); Caterpillar and Ford declare
   the captive-finance scope limit and the Cyclical class text names it; Oracle is declared
   Cyclical.
+- the reinvestment floor (33): the mid-cycle reinvestment rate is floored at zero with the
+  measured rate recorded beside it and a flag; the disinvestment guard and its `Failed`
+  string are gone.

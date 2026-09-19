@@ -337,7 +337,10 @@ let rec drivers (inputs : model_inputs) =
           m.roic_mid,
           Printf.sprintf " mean over %d observations, window %s to %s" (List.length m.observations)
             (List.nth m.window (List.length m.window - 1)) (List.hd m.window) );
-        ("reinvestment_rate_mid", m.reinvestment_rate_mid, Printf.sprintf " (%.4g / %.4g over %d periods)" m.reinvestment_sum m.nopat_sum (List.length m.reinvestment_periods));
+        ( "reinvestment_rate_mid",
+          m.reinvestment_rate_mid,
+          Printf.sprintf " (%.4g / %.4g over %d periods%s)" m.reinvestment_sum m.nopat_sum (List.length m.reinvestment_periods)
+            (match m.reinvestment_rate_measured with Some r -> Printf.sprintf ", measured %.4f floored at zero" r | None -> "") );
         ("invested_capital_latest", m.invested_capital_latest, "");
         ( "fcff_mid",
           m.fcff_mid,
