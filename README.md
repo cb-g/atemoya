@@ -229,6 +229,15 @@ name's chain on the latest snapshot date at or before the valuation date and rec
   axis, labelled `approximate` with the reason: a horizon of one to two years stands in
   for the long run. Null with the reason on the residual-income paths.
 
+Through time, `uv run python/build_panel.py --options data/options` values every panel
+date with the store under the no-lookahead rule (`--options-max-age 7`: the latest
+snapshot on or before the date and no older than seven days, else the reason), using that
+date's own fair value and required return for the anchor path; the panel rows gain the
+block's numbers beside `probability_overpaid` on the date, `output/pit/market_summary.txt`
+holds one descriptive line per date (no statistic), and
+`uv run python/plot_market_through_time.py` draws the two medians over the dates that
+have a block.
+
 Every field is risk-neutral: it embeds the market's risk pricing and is not a forecast.
 Without `--options` a record carries neither `market_implied` nor `market_implied_reason`;
 with it, a name without a chain says `no options data`, a chain without a usable expiry

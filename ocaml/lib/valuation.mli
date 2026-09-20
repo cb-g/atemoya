@@ -29,9 +29,10 @@
     ones and the class defaults; [name_required_returns] likewise for the declared
     required return (34), which replaces CAPM above the risk-free rate on every model and
     is recorded beside the CAPM rate on every Ok record. [options], given only under
-    --options DIR, looks a ticker's option chain up; every Ok record then carries the
-    market-implied readout ([Market_implied]) (36) or the reason it has none; without it
-    neither field exists. *)
+    --options DIR, looks a ticker's option chain up ([Options_store.lookup], with the
+    no-lookahead window on the point-in-time panel (37)); every Ok record then carries the
+    market-implied readout ([Market_implied]) (36) or the reason it has none, the lookup's
+    when it found no chain; without it neither field exists. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)
@@ -71,7 +72,7 @@ val run :
   ?thresholds:thresholds ->
   ?name_beliefs:Reference_t.name_beliefs ->
   ?name_required_returns:Reference_t.name_required_returns ->
-  ?options:(string -> Boundary_t.option_chain option) ->
+  ?options:(string -> (Boundary_t.option_chain, string) result) ->
   Params.t ->
   today:string ->
   model_version:string ->

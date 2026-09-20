@@ -300,8 +300,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     | None -> (None, None)
     | Some lookup -> (
         match lookup original.ticker with
-        | None -> (None, Some "no options data")
-        | Some chain -> (
+        | Error r -> (None, Some r)
+        | Ok chain -> (
             let growth =
               match terminal_and_f inputs with
               | Some (_, rate, f) -> Ok (rate, f)

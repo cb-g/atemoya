@@ -22,14 +22,16 @@
    <reference>/required_returns.json, CAPM being the default on every name without one.
    With --options DIR (the store python/fetch_options.py writes, DIR/<date>/<TICKER>.json), every
    Ok record carries the market-implied readout (36) from the name's chain on the latest
-   snapshot date at or before the valuation date, or the reason it has none; without the flag
+   snapshot date at or before the valuation date, or the reason it has none; with
+   --options-max-age N as well (37), a snapshot more than N calendar days before the valuation
+   date is not used and the reason says so (the point-in-time panel passes 7); without the flag
    neither field exists. Valuation never fetches. *)
 
 open Atemoya
 
 let usage =
   "usage: atemoya [--reference DIR] [--fetched DIR] [--today YYYY-MM-DD] [--out DIR] [--universe FILE] \
-   [--entity-class CLASS] [--baseline valuations.jsonl] [--baseline-snapshot DIR] [--beliefs FILE] [--required-returns FILE] [--options DIR] \
+   [--entity-class CLASS] [--baseline valuations.jsonl] [--baseline-snapshot DIR] [--beliefs FILE] [--required-returns FILE] [--options DIR] [--options-max-age N] \
    <financials.json | directory>...\n"
 
 type options = {
@@ -44,6 +46,7 @@ type options = {
   beliefs : string option;
   required_returns : string option;
   options : string option;
+  options_max_age : int option;
 }
 
 let usage_exit () =
@@ -67,7 +70,11 @@ let rec parse o paths = function
   | "--beliefs" :: v :: rest -> parse { o with beliefs = Some v } paths rest
   | "--required-returns" :: v :: rest -> parse { o with required_returns = Some v } paths rest
   | "--options" :: v :: rest -> parse { o with options = Some v } paths rest
-  | [ ("--reference" | "--fetched" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline" | "--baseline-snapshot" | "--beliefs" | "--required-returns" | "--options") ] ->
+  | "--options-max-age" :: v :: rest -> (
+      match int_of_string_opt v with
+      | Some n when n >= 0 -> parse { o with options_max_age = Some n } paths rest
+      | _ -> usage_exit ())
+  | [ ("--reference" | "--fetched" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline" | "--baseline-snapshot" | "--beliefs" | "--required-returns" | "--options" | "--options-max-age") ] ->
       usage_exit ()
   | p :: rest -> parse o (p :: paths) rest
 
@@ -168,6 +175,7 @@ let () =
         beliefs = None;
         required_returns = None;
         options = None;
+        options_max_age = None;
       }
       []
       (List.tl (Array.to_list Sys.argv))
@@ -224,25 +232,11 @@ let () =
             exit 2)
       o.required_returns
   in
-  (* The options store (36): DIR/<date>/<TICKER>.json; a name's chain is the one on the
-     latest snapshot date at or before the valuation date. *)
+  (* The options store (36, 37): a name's chain on the latest snapshot date at or before
+     the valuation date, within --options-max-age when given. *)
   let options =
     Option.map
-      (fun dir ->
-        let dates =
-          (match Sys.readdir dir with d -> Array.to_list d | exception Sys_error _ -> [])
-          |> List.filter (fun d ->
-                 Sys.is_directory (Filename.concat dir d)
-                 && d <= o.today
-                 && (match Date.days_between ~from:d ~until:o.today with Ok _ -> true | Error _ -> false))
-          |> List.sort (fun a b -> compare b a)
-        in
-        fun ticker ->
-          List.find_map
-            (fun d ->
-              let path = Filename.concat (Filename.concat dir d) (ticker ^ ".json") in
-              if Sys.file_exists path then read "option chain" Boundary_j.read_option_chain path else None)
-            dates)
+      (fun dir ticker -> Options_store.lookup ~dir ~today:o.today ?max_age_days:o.options_max_age ticker)
       o.options
   in
   let model_version = model_version () in

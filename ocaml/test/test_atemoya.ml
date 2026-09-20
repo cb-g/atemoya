@@ -1626,7 +1626,8 @@ let test_flow_chart_names_every_reason () =
       "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
       "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";
       "rate source has no history for"; "ffo growth needs two periods"; "is not positive";
-      "no options data"; "no expiry >= 365 days with >= 8 quoted strikes on each side"; "smile fit failed" ]
+      "no options data"; "no expiry >= 365 days with >= 8 quoted strikes on each side"; "smile fit failed";
+      "no options snapshot within" ]
 
 (* --- the market-implied readout (36) --- *)
 
@@ -1754,7 +1755,7 @@ let test_market_implied_chain () =
   Alcotest.(check (option string)) "with the reason" (Some "no growth axis") m.implied_growth_reason;
   (* on a record: the growth inversion is the implied-terminal-growth solver at each
      quantile discounted at ke; none without --options; the reasons on the other paths *)
-  let lookup t = if t = "TEST" then Some chain else None in
+  let lookup t = if t = "TEST" then Ok chain else Error "no options data" in
   let v = Valuation.run ~options:lookup params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
   Alcotest.check status "Ok" `Ok v.status;
   (match (v.market_implied, v.inputs, v.cost_of_equity_used) with
@@ -1778,13 +1779,13 @@ let test_market_implied_chain () =
   Alcotest.(check bool) "neither field without --options" true
     (Option.is_none plain.market_implied && Option.is_none plain.market_implied_reason
     && not (contains (Boundary_j.string_of_valuation plain) "market_implied"));
-  let bank = Valuation.run ~options:(fun _ -> Some { chain with ticker = "BNK" }) params ~today ~model_version:"test" ~declaration:(Some (declaration `Bank)) (bank_financials (bank_history ())) in
+  let bank = Valuation.run ~options:(fun _ -> Ok { chain with ticker = "BNK" }) params ~today ~model_version:"test" ~declaration:(Some (declaration `Bank)) (bank_financials (bank_history ())) in
   (match bank.market_implied with
   | Some m -> Alcotest.(check (option string)) "null growth axis on the residual-income path" (Some "the residual-income path has no terminal growth; the growth axis is undefined there") m.implied_growth_reason
   | None -> Alcotest.failf "bank: %s" (Option.value bank.market_implied_reason ~default:""));
-  let none = Valuation.run ~options:(fun _ -> None) params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  let none = Valuation.run ~options:(fun _ -> Error "no options data") params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
   Alcotest.(check (option string)) "no chain" (Some "no options data") none.market_implied_reason;
-  let short = Valuation.run ~options:(fun _ -> Some (synthetic_chain ~expiries:[ ("2027-03-19", 23) ] ())) params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  let short = Valuation.run ~options:(fun _ -> Ok (synthetic_chain ~expiries:[ ("2027-03-19", 23) ] ())) params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
   check_mentions "no expiry" (Option.value short.market_implied_reason ~default:"") [ "no expiry >= 365 days" ];
   (* the summary line and the JSON round trip *)
   check_mentions "summary" (Batch.summary [ v; bank; none ]) [ "market-implied (36), across 2 Ok names with an options chain: median p_below_anchor_path"; "against median probability_overpaid"; "on the 1 names with both; none on 1 Ok names (1 no options data)" ];
@@ -3005,6 +3006,55 @@ let test_json_round_trip () =
       {|"outcome":"Consistent"|}; {|"nii_ratio":null|}; {|"floor":{"present":true,|};
       {|"scope_limits":[]|}; {|"growth_source":"historical"|}; {|"growth_clamped":false|} ]
 
+(* --- the options store through time (37) --- *)
+
+let test_options_store_no_lookahead () =
+  let dir = Filename.concat (Filename.get_temp_dir_name ()) (Printf.sprintf "atemoya-options-%d" (Unix.getpid ())) in
+  let write d ticker chain =
+    let sub = Filename.concat dir d in
+    if not (Sys.file_exists sub) then (if not (Sys.file_exists dir) then Sys.mkdir dir 0o755; Sys.mkdir sub 0o755);
+    Atdgen_runtime.Util.Json.to_file Boundary_j.write_option_chain (Filename.concat sub (ticker ^ ".json")) chain
+  in
+  write "2025-06-20" "TEST" (synthetic_chain ~snapshot_date:"2025-06-20" ());
+  write "2025-06-27" "TEST" (synthetic_chain ~snapshot_date:"2025-06-27" ());
+  write "2025-07-02" "TEST" (synthetic_chain ~snapshot_date:"2025-07-02" ());
+  write "2025-06-27" "OTHER" (synthetic_chain ~snapshot_date:"2025-06-27" ());
+  let today = "2025-06-30" in
+  Alcotest.(check (list string)) "dates at or before D, newest first" [ "2025-06-27"; "2025-06-20" ] (Options_store.snapshot_dates ~dir ~today ());
+  Alcotest.(check (list string)) "within 7 days" [ "2025-06-27" ] (Options_store.snapshot_dates ~dir ~today ~max_age_days:7 ());
+  (* the latest on or before D, never the one after it *)
+  (match Options_store.lookup ~dir ~today ~max_age_days:7 "TEST" with
+  | Ok c -> Alcotest.(check string) "the 27th, not the 2nd of July" "2025-06-27" c.snapshot_date
+  | Error e -> Alcotest.fail e);
+  (* only an older snapshot: the reason names the window and the date *)
+  check_error "outside the window" (Options_store.lookup ~dir ~today:"2025-07-10" ~max_age_days:7 "TEST")
+    [ "no options snapshot within 7 days before 2025-07-10" ];
+  (* without a window (the live run) the older one serves *)
+  (match Options_store.lookup ~dir ~today:"2025-07-10" "TEST" with
+  | Ok c -> Alcotest.(check string) "any age" "2025-07-02" c.snapshot_date
+  | Error e -> Alcotest.fail e);
+  check_error "no chain at all" (Options_store.lookup ~dir ~today ~max_age_days:7 "NONE") [ "no options data" ];
+  check_error "a chain, but only after D, without a window (the live run)" (Options_store.lookup ~dir ~today:"2025-06-19" "TEST") [ "no options data" ];
+  check_error "a chain, but only after D, under the window: a panel date before the archive" (Options_store.lookup ~dir ~today:"2024-03-31" ~max_age_days:7 "TEST")
+    [ "no options snapshot within 7 days before 2024-03-31" ];
+  check_error "a name the store never holds, under the window" (Options_store.lookup ~dir ~today:"2024-03-31" ~max_age_days:7 "NONE") [ "no options data" ];
+  (* the panel record: the anchor path on D uses D's own fair value and rate *)
+  let chain = synthetic_chain ~snapshot_date:"2025-06-27" () in
+  let v =
+    Valuation.run ~options:(fun _ -> Ok chain) params ~today ~model_version:"test"
+      ~declaration:(Some (declaration `OperatingCompany))
+      { (financials (history ())) with point_in_time = Some (pit "2025-06-30"); latest_filing = Some "2025-02-20" }
+  in
+  (match (v.market_implied, v.fair_value, v.cost_of_equity_used) with
+  | Some m, Some fair_value, Some ke ->
+      Alcotest.(check string) "the snapshot before D" "2025-06-27" m.snapshot_date;
+      check_float "anchor = V_D (1 + ke_D)^T" (fair_value *. ((1. +. ke) ** m.horizon_years)) m.anchor_path_price;
+      check_float "spot is the store's close, not the record's price" chain.underlying_close m.spot
+  | _ -> Alcotest.failf "no block on the point-in-time record: %s" (Option.value v.market_implied_reason ~default:(Option.value v.failed_reason ~default:"")));
+  let gone = Valuation.run ~options:(fun _ -> Error "no options snapshot within 7 days before 2025-06-30") params ~today:"2026-09-10" ~model_version:"test"
+      ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  Alcotest.(check (option string)) "the lookup's reason is the record's" (Some "no options snapshot within 7 days before 2025-06-30") gone.market_implied_reason
+
 let () =
   let case name f = Alcotest.test_case name `Quick f in
   Alcotest.run "atemoya"
@@ -3066,6 +3116,7 @@ let () =
           case "flow chart names every failure reason" test_flow_chart_names_every_reason;
           case "market-implied smile: fit, butterfly, density, quantiles" test_market_implied_smile;
           case "market-implied chain: expiry, anchor, growth axis, record" test_market_implied_chain;
+          case "options store through time: no lookahead, the window, the panel anchor" test_options_store_no_lookahead;
         ] );
       ( "residual income",
         [
