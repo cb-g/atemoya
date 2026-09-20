@@ -168,7 +168,10 @@ type point_in_time = {
   ?shares_tag : string option;
   ?shares_as_of : string option;             (* the cover page's own date *)
   ?shares_filed : string option;
-  ?shares_ordinary : float option;           (* (42) the filed count before division by the receipt ratio; present iff adr_ratio is declared *)
+  ?shares_period_end : string option;        (* (44) the newest filed period the count serves *)
+  ?shares_split_factor : float option;       (* (44) the product of the vendor's split ratios dated after the count's date and on or before as_of_date; the count is multiplied by it, as prices are corrected *)
+  ?split_record : string option;             (* (44) "split record: 2.0 on 2025-09-08" or "split record: none between <count date> and <D>" *)
+  ?shares_ordinary : float option;           (* (42) the filed count before division by the receipt ratio, after the split adjustment; present iff adr_ratio is declared *)
   ?adr_ratio : float option;                 (* (42) ordinary shares per receipt, as declared on the universe entry *)
   ~rate_observations : (string * string) list <json repr="object">;   (* series -> observation date used *)
   ~anachronistic_inputs : string list;       (* filled by the valuation: "name (vintage as_of)" *)
@@ -205,6 +208,8 @@ type financials = {
   ?cover_page_shares : float option;                (* (42) the newest cover-page count filed by the fetch date, ordinary shares, for the receipt-ratio check; absent on records fetched before it existed or without a filer *)
   ?cover_page_shares_tag : string option;
   ?cover_page_shares_as_of : string option;
+  ?cover_page_split_factor : float option;          (* (44) the product of the vendor's split ratios after the cover page's date up to the fetch date; the check multiplies the count by it *)
+  ?cover_page_split_record : string option;
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -772,6 +777,7 @@ type receipt_check = {
   effective_shares : float;
   implied_ratio : float;              (* cover_page_shares / effective_shares *)
   declared_ratio : float nullable;    (* the universe entry's adr_ratio; null when none is declared *)
+  ?cover_page_split_factor : float option;   (* (44) applied to cover_page_shares before the comparison when the record carries it *)
   ?flag : string option;              (* depositary ratio mismatch: ... | undeclared depositary ratio: live shares imply ... *)
 }
 

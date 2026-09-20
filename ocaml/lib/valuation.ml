@@ -24,6 +24,8 @@ let receipt_check ~declared (fin : financials) =
       if Option.is_none declared && not cross then None
       else
         let effective = cap /. price in
+        (* (44) the cover page's count carried through the vendor's split record to the fetch date *)
+        let cover = cover *. Option.value fin.cover_page_split_factor ~default:1. in
         let implied = cover /. effective in
         let flag =
           match declared with
@@ -39,7 +41,9 @@ let receipt_check ~declared (fin : financials) =
                    implied cover as_of effective)
           | None -> None
         in
-        Some { cover_page_shares = cover; cover_page_shares_as_of = as_of; effective_shares = effective; implied_ratio = implied; declared_ratio = declared; flag }
+        Some
+          { cover_page_shares = cover; cover_page_shares_as_of = as_of; effective_shares = effective; implied_ratio = implied; declared_ratio = declared;
+            cover_page_split_factor = fin.cover_page_split_factor; flag }
   | _ -> None
 
 let floor_of_rule (r : Reference_t.class_rule) : floor =

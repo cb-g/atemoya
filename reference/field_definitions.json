@@ -1,6 +1,6 @@
 {
   "source": "one definition per statement field, applied identically to filed statements (SEC XBRL companyfacts, us-gaap tags) and to the vendor feed (yfinance 1.7.0 rows); components verified against the universe's FY2025 filings and vendor statements on 2026-09-19, widened on 2026-09-19 with tags verified on Meta, AMD, Intel, Valero, ConocoPhillips, Palantir and Super Micro, then on the first growth batch (Home Depot, Union Pacific, Cisco, Ford, Delta, Oracle, Texas Instruments, Lockheed Martin, American Tower, Caterpillar, ServiceNow, Aflac, Shell)",
-  "as_of": "2026-09-20",
+  "as_of": "2026-09-21",
   "notes": [
     "This file is the only place cash, total_debt, delta_nwc and ebit are defined. python/fetch.py reads the vendor rows from it, python/fetch_sec.py the us-gaap tags, and every record's fiscal periods carry a composition per field naming the definition and the components summed; the valuation refuses a record whose composition names a definition this file does not.",
     "Within each list the first present entry wins; 'first complete' means every entry of an alternative must be present. A component absent on both providers is absent, never a substituted zero; only the optional components (short-term investments, short-term borrowings, the current portion of debt on the vendor) may be missing without failing the field.",
@@ -420,18 +420,21 @@
   },
   "shares_for_market_cap": {
     "name": "point_count",
-    "why": "Market cap and price times shares need the shares outstanding at a point: effective shares (market cap / price) on the live run, so the ADR ratio cancels; point-in-time, the newest cover-page count filed by the date, else the balance-sheet count at the newest fiscal period end filed by the date (Alphabet files its cover page per share class with a dimension, which companyfacts omits, but its undimensioned CommonStockSharesOutstanding instant), else the record fails naming it. Never a weighted-average count.",
+    "why": "Market cap and price times shares need the shares outstanding at a point: effective shares (market cap / price) on the live run, so the ADR ratio cancels; point-in-time (44), the count nearest the newest filed period: the balance-sheet instant at that period end when filed (us-gaap CommonStockSharesOutstanding or ifrs-full NumberOfSharesOutstanding; Alphabet files its cover page per share class with a dimension, which companyfacts omits, but its undimensioned balance-sheet instant), else the newest cover page filed by the date if dated within cover_page_max_days_from_period of the period, else the record fails naming it; the count is then multiplied by the product of the vendor's split ratios dated after the count's date and on or before the valuation date, exactly as prices are corrected, so shares and prices stay in one unit, and a bonus issue the vendor does not record as a split is not corrected, the record saying so. Never a weighted-average count.",
     "live": "effective shares = market cap / price",
     "point_in_time": {
+      "cover_page_max_days_from_period": 400,
       "cover_page": [
         "EntityCommonStockSharesOutstanding"
       ],
       "balance_sheet": [
-        "CommonStockSharesOutstanding"
+        "CommonStockSharesOutstanding",
+        "NumberOfSharesOutstanding"
       ]
     },
     "notes": [
-      "The two definitions stay distinct: shares_for_flows is for a period's flow per share, this one for a point."
+      "The two definitions stay distinct: shares_for_flows is for a period's flow per share, this one for a point.",
+      "Brief 42's check found HDFC Bank doubled point-in-time after its August 2025 one-for-one bonus issue (the cover page in facts predates it) and Sony at a fifth of its count after the October 2024 five-for-one split; both are the vendor's split record applied to the count between its date and the valuation date (44)."
     ]
   },
   "depreciation_amortization": {

@@ -468,6 +468,7 @@ class PointCountSources:
 
     cover_page: List[str]
     balance_sheet: List[str]
+    cover_page_max_days_from_period: int = field(default_factory=lambda: 0)
 
     @classmethod
     def from_json(cls, x: Any) -> 'PointCountSources':
@@ -475,6 +476,7 @@ class PointCountSources:
             return cls(
                 cover_page=_atd_read_list(_atd_read_string)(x['cover_page']) if 'cover_page' in x else _atd_missing_json_field('PointCountSources', 'cover_page'),
                 balance_sheet=_atd_read_list(_atd_read_string)(x['balance_sheet']) if 'balance_sheet' in x else _atd_missing_json_field('PointCountSources', 'balance_sheet'),
+                cover_page_max_days_from_period=_atd_read_int(x['cover_page_max_days_from_period']) if 'cover_page_max_days_from_period' in x else 0,
             )
         else:
             _atd_bad_json('PointCountSources', x)
@@ -483,6 +485,7 @@ class PointCountSources:
         res: Dict[str, Any] = {}
         res['cover_page'] = _atd_write_list(_atd_write_string)(self.cover_page)
         res['balance_sheet'] = _atd_write_list(_atd_write_string)(self.balance_sheet)
+        res['cover_page_max_days_from_period'] = _atd_write_int(self.cover_page_max_days_from_period)
         return res
 
     @classmethod

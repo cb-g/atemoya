@@ -90,10 +90,23 @@ def submissions_on_or_before(index: Mapping[str, object] | None, d: date) -> dic
 
 
 class PointCount:
-    """A point count for market cap on the date: (shares, source, tag, as_of, filed)."""
+    """A point count for market cap on the date: (shares, source, tag, as_of, filed), and
+    after [adjusted] the split factor and the record behind it (44)."""
 
-    def __init__(self, shares: float, source: str, tag: str, as_of: str, filed: str) -> None:
+    def __init__(self, shares: float, source: str, tag: str, as_of: str, filed: str, *, split_factor: float = 1.0, split_record: str = "") -> None:
         self.shares, self.source, self.tag, self.as_of, self.filed = shares, source, tag, as_of, filed
+        self.split_factor, self.split_record = split_factor, split_record
+
+    def adjusted(self, history: History, d: date) -> PointCount:
+        """The count multiplied by the vendor's split ratios dated after its date and on or
+        before [d], exactly as prices are corrected; the record says which, or none."""
+        count_date = date.fromisoformat(self.as_of)
+        applied = sorted((day, ratio) for day, ratio in history.splits.items() if count_date < day <= d)
+        factor = 1.0
+        for _, ratio in applied:
+            factor *= ratio
+        record = ("split record: " + ", ".join(f"{ratio:g} on {day.isoformat()}" for day, ratio in applied)) if applied else f"split record: none between {self.as_of} and {d.isoformat()}"
+        return PointCount(self.shares * factor, self.source, self.tag, self.as_of, self.filed, split_factor=factor, split_record=record)
 
 
 def dei_shares(facts: Mapping[str, object], d: date, tags: list[str]) -> PointCount | None:
@@ -102,22 +115,43 @@ def dei_shares(facts: Mapping[str, object], d: date, tags: list[str]) -> PointCo
     return None if c is None else PointCount(c.shares, "dei cover page", c.tag, c.as_of, c.filed)
 
 
-def balance_sheet_shares(facts: Mapping[str, object], d: date, tags: list[str], xbrl_tags: reference.XbrlTags) -> PointCount | None:
-    """The balance-sheet count at the newest fiscal period end filed on or before [d]
-    (the facts are already filtered to that date)."""
-    gaap = fetch_sec._as_dict(fetch_sec._as_dict(facts.get("facts")).get("us-gaap"))  # pyright: ignore[reportPrivateUsage]
-    for tag in tags:
-        annual = fetch_sec.annual_facts(fetch_sec._entries(gaap.get(tag), "shares"), instant=True, tags=xbrl_tags, notes=[], tag=tag)  # pyright: ignore[reportPrivateUsage]
-        if annual:
-            end = max(annual)
-            return PointCount(annual[end].val, "balance sheet count", tag, end.isoformat(), annual[end].filed.isoformat())
+def balance_sheet_shares(facts: Mapping[str, object], d: date, tags: list[str], xbrl_tags: reference.XbrlTags, *, at: date | None = None) -> PointCount | None:
+    """The balance-sheet count (us-gaap or ifrs-full) as an instant at [at] when given, else at
+    the newest fiscal period end filed on or before [d] (the facts are already filtered to
+    that date)."""
+    all_facts = fetch_sec._as_dict(facts.get("facts"))  # pyright: ignore[reportPrivateUsage]
+    for taxonomy in ("us-gaap", "ifrs-full"):
+        gaap = fetch_sec._as_dict(all_facts.get(taxonomy))  # pyright: ignore[reportPrivateUsage]
+        for tag in tags:
+            annual = fetch_sec.annual_facts(fetch_sec._entries(gaap.get(tag), "shares"), instant=True, tags=xbrl_tags, notes=[], tag=tag)  # pyright: ignore[reportPrivateUsage]
+            if not annual:
+                continue
+            end = at if at is not None else max(annual)
+            if end in annual:
+                return PointCount(annual[end].val, "balance sheet count", tag, end.isoformat(), annual[end].filed.isoformat())
     return None
 
 
-def point_count(facts: Mapping[str, object], d: date, defs: reference.FieldDefinitions, xbrl_tags: reference.XbrlTags) -> PointCount | None:
-    """shares_for_market_cap point-in-time: the cover page, else the balance-sheet count."""
+def point_count(facts: Mapping[str, object], d: date, defs: reference.FieldDefinitions, xbrl_tags: reference.XbrlTags, *, period_end: date | None = None) -> PointCount | None:
+    """shares_for_market_cap point-in-time (44): the count nearest the newest filed period,
+    the balance-sheet instant at [period_end] when filed, else the newest cover page filed
+    by [d] if dated within cover_page_max_days_from_period of it, else None (the caller
+    fails the record naming the window). Without a period (no statements) the old order:
+    the cover page, else the newest balance-sheet count."""
     sources = defs.shares_for_market_cap.point_in_time
-    return dei_shares(facts, d, sources.cover_page) or balance_sheet_shares(facts, d, sources.balance_sheet, xbrl_tags)
+    if period_end is None:
+        return dei_shares(facts, d, sources.cover_page) or balance_sheet_shares(facts, d, sources.balance_sheet, xbrl_tags)
+    at = balance_sheet_shares(facts, d, sources.balance_sheet, xbrl_tags, at=period_end)
+    if at is not None:
+        return at
+    cover = dei_shares(facts, d, sources.cover_page)
+    if cover is not None and abs((date.fromisoformat(cover.as_of) - period_end).days) <= sources.cover_page_max_days_from_period:
+        return cover
+    return None
+
+
+def shares_window_reason(defs: reference.FieldDefinitions) -> str:
+    return f"no share count within {defs.shares_for_market_cap.point_in_time.cover_page_max_days_from_period} days of the period"
 
 
 VENDOR_CHECK_SOURCE = "live vendor statements, same fiscal period, fetched after D"
@@ -308,10 +342,14 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
     notes: list[str] = []
     periods, decision, why, submission, facts = statements_on(symbol, d, sec, notes, declared_cik=declared_cik)
     priced = price_on(history, d)
-    shares = point_count(facts, d, sec.definitions, sec.tags) if facts is not None else None
+    period_end = date.fromisoformat(periods[0].period_end) if why is None and periods else None
+    shares = point_count(facts, d, sec.definitions, sec.tags, period_end=period_end) if facts is not None else None
+    if shares is not None:
+        shares = shares.adjusted(history, d)
     ordinary = None if shares is None else shares.shares
     if shares is not None and adr_ratio is not None:
-        shares = PointCount(shares.shares / adr_ratio, shares.source, shares.tag, shares.as_of, shares.filed)
+        shares = PointCount(shares.shares / adr_ratio, shares.source, shares.tag, shares.as_of, shares.filed, split_factor=shares.split_factor, split_record=shares.split_record)
+    shares_reason = None if shares is not None or why is not None else (shares_window_reason(sec.definitions) if period_end is not None else SHARES_REASON)
     check = same_period_check(periods, vendor, sec.tags.cross_check_threshold) if why is None and vendor else None
     if why is None and check is None:
         notes.append("cross-check: the vendor's live statements carry no column for the filed period; a derived ebit cannot be checked on this date")
@@ -337,12 +375,15 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         shares_tag=None if shares is None else shares.tag,
         shares_as_of=None if shares is None else shares.as_of,
         shares_filed=None if shares is None else shares.filed,
+        shares_period_end=None if shares is None or period_end is None else period_end.isoformat(),
+        shares_split_factor=None if shares is None else shares.split_factor,
+        split_record=None if shares is None else shares.split_record,
         shares_ordinary=None if adr_ratio is None else ordinary,
         adr_ratio=adr_ratio,
         rate_observations=[],
         anachronistic_inputs=[],
         statements_unavailable=why,
-        shares_unavailable=None if shares is not None or why is not None else SHARES_REASON,
+        shares_unavailable=shares_reason,
         rates_unavailable=rates_unavailable,
     )
     provider = fetch_sec.PROVIDER if why is None else "yfinance"

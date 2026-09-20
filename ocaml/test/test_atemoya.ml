@@ -93,7 +93,7 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     ?(market_cap = Some 5000.) ?(country = Some "United States")
     ?(industry = Some "Consumer Electronics") ?(provider = "yfinance")
     ?(statements_unavailable = "") ?latest_filing ?cross_check ?(taxonomy = "")
-    ?vendor_financial_currency ?cover_page_shares periods : Boundary_t.financials =
+    ?vendor_financial_currency ?cover_page_shares ?cover_page_split_factor periods : Boundary_t.financials =
   {
     ticker = "TEST";
     as_of = "2026-09-10T00:00:00+00:00";
@@ -122,6 +122,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     cover_page_shares;
     cover_page_shares_tag = Option.map (fun _ -> "EntityCommonStockSharesOutstanding") cover_page_shares;
     cover_page_shares_as_of = Option.map (fun _ -> "2026-06-30") cover_page_shares;
+    cover_page_split_factor;
+    cover_page_split_record = Option.map (fun f -> Printf.sprintf "split record: %g on 2026-08-01" f) cover_page_split_factor;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -1619,6 +1621,17 @@ let test_receipt_ratio_check () =
   (* a cross-currency name with no declaration and a live ratio away from 1 is flagged as undeclared *)
   let undeclared = Valuation.run params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) fin in
   check_mentions "undeclared" (Option.value (Option.bind undeclared.receipt_check (fun c -> c.flag)) ~default:"") [ "undeclared depositary ratio: live shares imply 5.000" ];
+  (* (44) the count is carried through the vendor's split record: a one-for-one bonus after the
+     cover page doubles it, so a stale 1250 reads 2500 and the declared 5 holds; without the
+     factor the same record would flag *)
+  let bonus = Valuation.run params ~today ~model_version:"test" ~declaration:(Some (declaration ~adr_ratio:5. `OperatingCompany))
+      (financials ~currency:None ~financial_currency:(Some "BRL") ~trading_currency:(Some "USD") ~cover_page_shares:1250. ~cover_page_split_factor:2. (history ())) in
+  (match bonus.receipt_check with
+  | Some c -> check_float "adjusted count" 2500. c.cover_page_shares; Alcotest.(check (option approx)) "factor recorded" (Some 2.) c.cover_page_split_factor; Alcotest.(check (option string)) "no flag" None c.flag
+  | None -> Alcotest.fail "no check");
+  let stale = Valuation.run params ~today ~model_version:"test" ~declaration:(Some (declaration ~adr_ratio:5. `OperatingCompany))
+      (financials ~currency:None ~financial_currency:(Some "BRL") ~trading_currency:(Some "USD") ~cover_page_shares:1250. (history ())) in
+  check_mentions "unadjusted, it flags" (Option.value (Option.bind stale.receipt_check (fun c -> c.flag)) ~default:"") [ "depositary ratio mismatch: declared 5, live shares imply 2.500" ];
   (* a same-currency name without a declaration is not checked; a record without the cover page carries nothing *)
   let plain = run (financials ~cover_page_shares:2500. (history ())) in
   Alcotest.(check bool) "not checked" true (Option.is_none plain.receipt_check);
@@ -2260,7 +2273,7 @@ let test_summary_definitions_and_cross_check_listing () =
   let primary = run (filed ~cross_check:a_cross_check (history ())) in
   let s = Batch.summary ~definitions:params.field_definitions [ primary ] in
   check_mentions "summary" s
-    [ "field definitions (reference/field_definitions.json, as_of 2026-09-20): cash = cash_and_short_term_investments; total_debt = financial_debt_excluding_operating_leases; delta_nwc = cash_flow_statement_change_in_operating_working_capital; ebit = operating_income_else_pretax_plus_interest";
+    [ "field definitions (reference/field_definitions.json, as_of 2026-09-21): cash = cash_and_short_term_investments; total_debt = financial_debt_excluding_operating_leases; delta_nwc = cash_flow_statement_change_in_operating_working_capital; ebit = operating_income_else_pretax_plus_interest";
       "cross-check: 1 of 1 filed-statement records disagree";
       "  on a field the routed model reads: 1 of 1 (TEST)";
       "  TEST       cash filed 36 vendor 54.7 (34.2%)" ];
@@ -2645,7 +2658,7 @@ let test_stability_report () =
 let pit ?statements_unavailable ?shares_unavailable ?rates_unavailable as_of_date : Boundary_t.point_in_time =
   { as_of_date; price_date = Some as_of_date; close_as_served = Some 10.; split_factor = Some 1.; shares_source = "dei cover page";
     shares_tag = Some "EntityCommonStockSharesOutstanding"; shares_as_of = Some as_of_date; shares_filed = Some as_of_date;
-    shares_ordinary = None; adr_ratio = None;
+    shares_period_end = None; shares_split_factor = None; split_record = None; shares_ordinary = None; adr_ratio = None;
     rate_observations = [ ("DGS7", as_of_date) ]; anachronistic_inputs = []; statements_unavailable; shares_unavailable; rates_unavailable }
 
 let test_point_in_time_gates_and_vintages () =

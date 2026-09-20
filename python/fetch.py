@@ -620,11 +620,28 @@ def cik_of(symbol: str, table: Mapping[str, object], declared: str | None) -> tu
     return fetch_sec.cik_for(symbol, table), "SEC's ticker map"
 
 
+def split_factor_between(ticker: yf.Ticker, start: date, end: date) -> tuple[float, str]:
+    """(44) The product of the vendor's split ratios dated after [start] and on or before
+    [end], and the record behind it; the same source and convention point-in-time prices use."""
+    applied: list[tuple[date, float]] = []
+    try:
+        for stamp, ratio in ticker.splits.items():  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            if isinstance(stamp, pd.Timestamp) and isinstance(ratio, float) and ratio > 0 and start < stamp.date() <= end:
+                applied.append((stamp.date(), float(ratio)))
+    except Exception:  # noqa: BLE001
+        return 1.0, f"split record: unavailable between {start} and {end}"
+    applied.sort()
+    factor = 1.0
+    for _, ratio in applied:
+        factor *= ratio
+    return factor, ("split record: " + ", ".join(f"{r:g} on {d.isoformat()}" for d, r in applied)) if applied else f"split record: none between {start} and {end}"
+
+
 def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile | None, periods: list[boundary.FiscalPeriod],
             notes: list[str], *, provider: str, provider_reason: str, latest_filing: str | None = None,
             check: boundary.CrossCheck | None = None, taxonomy: str = "", filing_currency: str | None = None,
             submission: boundary.Submission | None = None, submissions_unavailable: str | None = None,
-            cover: fetch_sec.CoverPage | None = None) -> boundary.Financials:
+            cover: fetch_sec.CoverPage | None = None, cover_split: tuple[float, str] | None = None) -> boundary.Financials:
     """With [filing_currency] (filed statements) the statement currency is the filing's unit,
     the vendor's is recorded beside it, and the single currency basis holds iff the filing's
     unit is the trading currency."""
@@ -657,6 +674,8 @@ def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile 
         cover_page_shares=None if cover is None else cover.shares,
         cover_page_shares_tag=None if cover is None else cover.tag,
         cover_page_shares_as_of=None if cover is None else cover.as_of,
+        cover_page_split_factor=None if cover_split is None else cover_split[0],
+        cover_page_split_record=None if cover_split is None else cover_split[1],
     )
 
 
@@ -709,12 +728,14 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
                        provider_reason=f"no SEC filings for {symbol}: not in company_tickers.json"), None
     facts = fetch_sec.companyfacts(cik, sec.user_agent)
     submission, submissions_unavailable = fetch_sec.latest_annual_submission(fetch_sec.submissions(cik, sec.user_agent))
-    # (42) the cover page's ordinary count, for the receipt-ratio check on every CIK-resolved record
+    # (42) the cover page's ordinary count, for the receipt-ratio check on every CIK-resolved record,
+    # with (44) the vendor's split record between the cover page's date and the fetch date
     cover = None if facts is None else fetch_sec.cover_page_shares(facts, as_of.date(), sec.definitions.shares_for_market_cap.point_in_time.cover_page)
+    cover_split = None if cover is None else split_factor_between(ticker, date.fromisoformat(cover.as_of), as_of.date())
     decision = fetch_sec.decide(facts, sec.tags)
     if not decision.xbrl or decision.currency is None:
         return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
-                       provider_reason=f"CIK {cik}: {decision.reason}", submission=submission, submissions_unavailable=submissions_unavailable, cover=cover), None
+                       provider_reason=f"CIK {cik}: {decision.reason}", submission=submission, submissions_unavailable=submissions_unavailable, cover=cover, cover_split=cover_split), None
 
     filed_notes = list(notes)
     periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, filed_notes, taxonomy=decision.taxonomy, unit=decision.currency, depth=depth)
@@ -735,7 +756,7 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
                                               threshold=sec.tags.cross_check_threshold, fields=[], disagreements=0))
             lagged_notes = list(notes) + [f"CIK {cik}: {decision.reason}; the newest annual facts ({lag.facts_end}, filed {lag.facts_filed}) are {facts_age} days old"]
             return _record(symbol, as_of, quote, profile, vendor, lagged_notes, provider="yfinance", provider_reason=lag.text,
-                           check=check, submission=submission, cover=cover), None
+                           check=check, submission=submission, cover=cover, cover_split=cover_split), None
         else:
             reason += f"; {lag.text}; the vendor's newest annual ({max((p.period_end for p in vendor), default='none')}) predates the filing's period, so the filed statements are kept"
     check: boundary.CrossCheck | None = None
@@ -751,7 +772,7 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
     primary = _record(symbol, as_of, quote, profile, periods, filed_notes, provider=fetch_sec.PROVIDER,
                       provider_reason=reason, latest_filing=fetch_sec.latest_filing(periods), check=check,
                       taxonomy=decision.taxonomy, filing_currency=decision.currency,
-                      submission=submission, submissions_unavailable=submissions_unavailable, cover=cover)
+                      submission=submission, submissions_unavailable=submissions_unavailable, cover=cover, cover_split=cover_split)
     shadow = _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
                      provider_reason="shadow of an XBRL-primary record, for the provider diff")
     return primary, shadow

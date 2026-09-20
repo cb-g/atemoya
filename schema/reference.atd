@@ -417,6 +417,7 @@ type shares_for_flows = {
 }
 
 type point_count_sources = {
+  ~cover_page_max_days_from_period <ocaml default="400"> : int;   (* (44) a cover page dated further than this from the newest filed period is not a point count for it *)
   cover_page : string list;                 (* dei tags, the newest cover page filed by the date *)
   balance_sheet : string list;              (* us-gaap instants at the newest fiscal period end filed by the date *)
 }

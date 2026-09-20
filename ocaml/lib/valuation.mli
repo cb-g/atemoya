@@ -58,7 +58,8 @@ val receipt_tolerance : float
 val receipt_check : declared:float option -> Boundary_t.financials -> Boundary_t.receipt_check option
 (** (42) On a record carrying the cover page, with a declared ratio or a financial currency
     other than its trading currency: the cover page's ordinary count over the effective
-    shares against the declared ratio; the flag names both numbers on a disagreement beyond
+    shares against the declared ratio, the count first multiplied by the record's
+    cover_page_split_factor (44) when it carries one; the flag names both numbers on a disagreement beyond
     the tolerance, or the implied ratio when none is declared and it is not 1. A flag,
     never a gate. *)
 

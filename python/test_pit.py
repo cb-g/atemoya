@@ -122,7 +122,7 @@ def test_point_count_falls_back_to_the_balance_sheet_count_then_fails() -> None:
     weighted_only = {"facts": {"us-gaap": {"WeightedAverageNumberOfDilutedSharesOutstanding": facts["facts"]["us-gaap"]["WeightedAverageNumberOfDilutedSharesOutstanding"]}}}  # pyright: ignore[reportIndexIssue]
     assert pit.point_count(weighted_only, date(2026, 6, 30), DEFS, TAGS) is None
     assert DEFS.shares_for_market_cap.point_in_time.cover_page == ["EntityCommonStockSharesOutstanding"]
-    assert DEFS.shares_for_market_cap.point_in_time.balance_sheet == ["CommonStockSharesOutstanding"]
+    assert DEFS.shares_for_market_cap.point_in_time.balance_sheet == ["CommonStockSharesOutstanding", "NumberOfSharesOutstanding"]  # (44) the IFRS instant too
 
 
 def test_same_period_vendor_check_matches_the_filed_period_or_none() -> None:
@@ -179,7 +179,7 @@ def test_point_in_time_shares_are_divided_by_the_declared_receipt_ratio(monkeypa
         tags = TAGS
         definitions = DEFS
 
-    def count(facts: object, d: object, defs: object, tags: object) -> pit.PointCount:
+    def count(facts: object, d: object, defs: object, tags: object, period_end: object = None) -> pit.PointCount:
         return pit.PointCount(2500.0, "dei cover page", "EntityCommonStockSharesOutstanding", "2025-06-30", "2025-07-01")
 
     def statements(symbol: object, d: object, sec: object, notes: object, declared_cik: object = None) -> tuple[list[object], None, None, None, dict[str, object]]:
@@ -197,6 +197,41 @@ def test_point_in_time_shares_are_divided_by_the_declared_receipt_ratio(monkeypa
         r = pit.record("T", date(2025, 6, 30), Sec(), history, quote, None, adr_ratio=ratio)
         assert r.market_cap == expected * 10.0 and r.point_in_time is not None
         assert r.point_in_time.adr_ratio == ratio and r.point_in_time.shares_ordinary == (2500.0 if ratio is not None else None)
+
+
+def facts_with(counts: dict[tuple[str, str], tuple[str, str, float]]) -> dict[str, object]:
+    """{(taxonomy, tag): (end, filed, value)} as companyfacts shapes it; cover pages carry no start."""
+    facts: dict[str, dict[str, object]] = {}
+    for (tax, tag), (end, filed, val) in counts.items():
+        facts.setdefault(tax, {})[tag] = {"units": {"shares": [{"end": end, "filed": filed, "val": val, "fy": int(end[:4]), "fp": "FY", "form": "20-F", "accn": "x"}]}}
+    return {"facts": facts}
+
+
+def test_the_count_nearest_the_period_wins_then_the_cover_page_within_400_days() -> None:
+    d = date(2025, 12, 31)
+    # a balance-sheet instant at the period beats a newer cover page
+    both = facts_with({("dei", "EntityCommonStockSharesOutstanding"): ("2025-09-30", "2025-10-15", 9000.0), ("us-gaap", "CommonStockSharesOutstanding"): ("2025-03-31", "2025-07-14", 7000.0)})
+    c = pit.point_count(both, d, DEFS, TAGS, period_end=date(2025, 3, 31))
+    assert c is not None and (c.shares, c.source, c.as_of) == (7000.0, "balance sheet count", "2025-03-31")
+    # the IFRS instant serves an IFRS filer
+    ifrs = facts_with({("ifrs-full", "NumberOfSharesOutstanding"): ("2025-03-31", "2025-06-20", 6149.0)})
+    c = pit.point_count(ifrs, d, DEFS, TAGS, period_end=date(2025, 3, 31))
+    assert c is not None and c.shares == 6149.0 and c.tag == "NumberOfSharesOutstanding"
+    # no instant at the period: the cover page, if within 400 days of the period
+    cover = facts_with({("dei", "EntityCommonStockSharesOutstanding"): ("2025-09-30", "2025-10-15", 9000.0)})
+    c = pit.point_count(cover, d, DEFS, TAGS, period_end=date(2025, 3, 31))
+    assert c is not None and c.source == "dei cover page"
+    assert pit.point_count(cover, d, DEFS, TAGS, period_end=date(2024, 3, 31)) is None  # 548 days: not a count for that period
+    assert pit.shares_window_reason(DEFS) == "no share count within 400 days of the period"  # valuation.ml prefixes "no point-in-time shares: "
+
+
+def test_the_count_is_carried_through_the_vendor_split_record() -> None:
+    count = pit.PointCount(7652.0, "balance sheet count", "CommonStockSharesOutstanding", "2025-03-31", "2025-07-14")
+    history = pit.History({}, {date(2025, 9, 8): 2.0, date(2019, 9, 26): 2.0})
+    after = count.adjusted(history, date(2025, 9, 30))
+    assert after.shares == 15304.0 and after.split_factor == 2.0 and after.split_record == "split record: 2 on 2025-09-08"
+    before = count.adjusted(history, date(2025, 6, 30))  # the bonus is after D: no adjustment, and the record says none
+    assert before.shares == 7652.0 and before.split_factor == 1.0 and before.split_record == "split record: none between 2025-03-31 and 2025-06-30"
 
 
 def test_universe_loader_accepts_a_positive_receipt_ratio_only() -> None:

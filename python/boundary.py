@@ -1453,6 +1453,7 @@ class ReceiptCheck:
     effective_shares: float
     implied_ratio: float
     declared_ratio: Optional[float]
+    cover_page_split_factor: Optional[float] = None
     flag: Optional[str] = None
 
     @classmethod
@@ -1464,6 +1465,7 @@ class ReceiptCheck:
                 effective_shares=_atd_read_float(x['effective_shares']) if 'effective_shares' in x else _atd_missing_json_field('ReceiptCheck', 'effective_shares'),
                 implied_ratio=_atd_read_float(x['implied_ratio']) if 'implied_ratio' in x else _atd_missing_json_field('ReceiptCheck', 'implied_ratio'),
                 declared_ratio=_atd_read_nullable(_atd_read_float)(x['declared_ratio']) if 'declared_ratio' in x else _atd_missing_json_field('ReceiptCheck', 'declared_ratio'),
+                cover_page_split_factor=_atd_read_float(x['cover_page_split_factor']) if 'cover_page_split_factor' in x else None,
                 flag=_atd_read_string(x['flag']) if 'flag' in x else None,
             )
         else:
@@ -1476,6 +1478,8 @@ class ReceiptCheck:
         res['effective_shares'] = _atd_write_float(self.effective_shares)
         res['implied_ratio'] = _atd_write_float(self.implied_ratio)
         res['declared_ratio'] = _atd_write_nullable(_atd_write_float)(self.declared_ratio)
+        if self.cover_page_split_factor is not None:
+            res['cover_page_split_factor'] = _atd_write_float(self.cover_page_split_factor)
         if self.flag is not None:
             res['flag'] = _atd_write_string(self.flag)
         return res
@@ -1533,6 +1537,9 @@ class PointInTime:
     shares_tag: Optional[str] = None
     shares_as_of: Optional[str] = None
     shares_filed: Optional[str] = None
+    shares_period_end: Optional[str] = None
+    shares_split_factor: Optional[float] = None
+    split_record: Optional[str] = None
     shares_ordinary: Optional[float] = None
     adr_ratio: Optional[float] = None
     rate_observations: List[Tuple[str, str]] = field(default_factory=lambda: [])
@@ -1553,6 +1560,9 @@ class PointInTime:
                 shares_tag=_atd_read_string(x['shares_tag']) if 'shares_tag' in x else None,
                 shares_as_of=_atd_read_string(x['shares_as_of']) if 'shares_as_of' in x else None,
                 shares_filed=_atd_read_string(x['shares_filed']) if 'shares_filed' in x else None,
+                shares_period_end=_atd_read_string(x['shares_period_end']) if 'shares_period_end' in x else None,
+                shares_split_factor=_atd_read_float(x['shares_split_factor']) if 'shares_split_factor' in x else None,
+                split_record=_atd_read_string(x['split_record']) if 'split_record' in x else None,
                 shares_ordinary=_atd_read_float(x['shares_ordinary']) if 'shares_ordinary' in x else None,
                 adr_ratio=_atd_read_float(x['adr_ratio']) if 'adr_ratio' in x else None,
                 rate_observations=_atd_read_assoc_object_into_list(_atd_read_string)(x['rate_observations']) if 'rate_observations' in x else [],
@@ -1580,6 +1590,12 @@ class PointInTime:
             res['shares_as_of'] = _atd_write_string(self.shares_as_of)
         if self.shares_filed is not None:
             res['shares_filed'] = _atd_write_string(self.shares_filed)
+        if self.shares_period_end is not None:
+            res['shares_period_end'] = _atd_write_string(self.shares_period_end)
+        if self.shares_split_factor is not None:
+            res['shares_split_factor'] = _atd_write_float(self.shares_split_factor)
+        if self.split_record is not None:
+            res['split_record'] = _atd_write_string(self.split_record)
         if self.shares_ordinary is not None:
             res['shares_ordinary'] = _atd_write_float(self.shares_ordinary)
         if self.adr_ratio is not None:
@@ -4022,6 +4038,8 @@ class Financials:
     cover_page_shares: Optional[float] = None
     cover_page_shares_tag: Optional[str] = None
     cover_page_shares_as_of: Optional[str] = None
+    cover_page_split_factor: Optional[float] = None
+    cover_page_split_record: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Financials':
@@ -4054,6 +4072,8 @@ class Financials:
                 cover_page_shares=_atd_read_float(x['cover_page_shares']) if 'cover_page_shares' in x else None,
                 cover_page_shares_tag=_atd_read_string(x['cover_page_shares_tag']) if 'cover_page_shares_tag' in x else None,
                 cover_page_shares_as_of=_atd_read_string(x['cover_page_shares_as_of']) if 'cover_page_shares_as_of' in x else None,
+                cover_page_split_factor=_atd_read_float(x['cover_page_split_factor']) if 'cover_page_split_factor' in x else None,
+                cover_page_split_record=_atd_read_string(x['cover_page_split_record']) if 'cover_page_split_record' in x else None,
             )
         else:
             _atd_bad_json('Financials', x)
@@ -4096,6 +4116,10 @@ class Financials:
             res['cover_page_shares_tag'] = _atd_write_string(self.cover_page_shares_tag)
         if self.cover_page_shares_as_of is not None:
             res['cover_page_shares_as_of'] = _atd_write_string(self.cover_page_shares_as_of)
+        if self.cover_page_split_factor is not None:
+            res['cover_page_split_factor'] = _atd_write_float(self.cover_page_split_factor)
+        if self.cover_page_split_record is not None:
+            res['cover_page_split_record'] = _atd_write_string(self.cover_page_split_record)
         return res
 
     @classmethod
