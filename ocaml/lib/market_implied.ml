@@ -234,97 +234,137 @@ let growth_note days =
      return used and inverted through the implied-terminal-growth solver, everything else held"
     (float_of_int days /. 365.)
 
+(* One expiry's smile (36, 38): the forward by parity, the out-of-the-money mids inverted,
+   the constrained fit and its check. *)
+type expiry_fit = {
+  forward : float;
+  forward_source : string;
+  points : (float * float) list;
+  wide : int;
+  put_call_iv_gap_at_forward : float option;
+  params : svi;
+}
+
+let fit_expiry (chain : option_chain) ~rf ~expiry ~days =
+  let spot = chain.underlying_close in
+  let t = float_of_int days /. 365. in
+  let growth_factor = exp (rf *. t) in
+  let quotes = List.filter (fun (q : option_quote) -> q.expiration = expiry && q.bid > 0.) chain.quotes in
+  let at right strike = List.find_opt (fun (q : option_quote) -> q.right = right && q.strike = strike) quotes in
+  (* The forward: put-call parity at the straddle strike nearest spot with both sides quoted. *)
+  let straddles =
+    List.filter_map
+      (fun (q : option_quote) ->
+        if q.right = "call" then Option.map (fun (p : option_quote) -> (q.strike, q.mid, p.mid)) (at "put" q.strike) else None)
+      quotes
+  in
+  let forward, forward_source =
+    match List.sort (fun (k1, _, _) (k2, _, _) -> compare (Float.abs (k1 -. spot)) (Float.abs (k2 -. spot))) straddles with
+    | (k, c, p) :: _ -> (k +. (growth_factor *. (c -. p)), Printf.sprintf "put-call parity at strike %g" k)
+    | [] -> (spot *. growth_factor, "spot compounded at the risk-free rate (no strike quoted on both sides)")
+  in
+  (* Out-of-the-money by the forward: puts below, calls at or above; mids undiscounted;
+     a quote whose spread exceeds its mid (ask > 3 bid) says nothing about the price
+     and is left out of the fit, counted. *)
+  let otm = List.filter (fun (q : option_quote) -> (q.right = "put" && q.strike < forward) || (q.right = "call" && q.strike >= forward)) quotes in
+  let tight, wide = List.partition (fun (q : option_quote) -> q.ask <= 3. *. q.bid) otm in
+  let invert (q : option_quote) =
+    let right = if q.right = "put" then `Put else `Call in
+    Option.map (fun w -> (log (q.strike /. forward), w)) (implied_total_variance ~right ~forward ~strike:q.strike ~price:(q.mid *. growth_factor))
+  in
+  let points = List.filter_map invert tight in
+  (* The put-call gap at the forward: the nearest put below against the nearest call at
+     or above, in implied vol, a diagnostic of the European inversion of American quotes. *)
+  let put_call_iv_gap_at_forward =
+    let nearest right cmp =
+      List.filter (fun (q : option_quote) -> q.right = right) tight
+      |> List.sort (fun (x : option_quote) (y : option_quote) -> cmp x.strike y.strike)
+      |> function [] -> None | q :: _ -> invert q
+    in
+    match (nearest "put" (fun x y -> compare y x), nearest "call" compare) with
+    | Some (_, wp), Some (_, wc) -> Some (sqrt (wp /. t) -. sqrt (wc /. t))
+    | _ -> None
+  in
+  let n = List.length points in
+  if n < min_strikes_each_side then
+    Error (Printf.sprintf "smile fit failed: only %d out-of-the-money quotes invert to an implied volatility" n)
+  else
+    let p = fit points in
+    match check p with
+    | Error r -> Error r
+    | Ok () -> Ok { forward; forward_source; points; wide = List.length wide; put_call_iv_gap_at_forward; params = p }
+
+let svi_smile_of (f : expiry_fit) : svi_smile =
+  let p = f.params in
+  { a = p.a; b = p.b; rho = p.rho; m = p.m; sigma = p.sigma; rmse = fit_rmse p f.points; quotes_fitted = List.length f.points;
+    quotes_excluded_wide = f.wide; spread_rule = "ask <= 3 bid"; put_call_iv_gap_at_forward = f.put_call_iv_gap_at_forward }
+
+let smiles (chain : option_chain) ~rf : chain_smiles =
+  let expiries = List.sort_uniq compare (List.map (fun (q : option_quote) -> q.expiration) chain.quotes) in
+  let expiries =
+    List.filter_map
+      (fun expiry ->
+        match Date.days_between ~from:chain.snapshot_date ~until:expiry with
+        | Ok days when days > 0 -> (
+            match fit_expiry chain ~rf ~expiry ~days with
+            | Ok f -> Some { expiry; days_to_expiry = days; forward = f.forward; forward_source = f.forward_source; smile = Some (svi_smile_of f); reason = None }
+            | Error r ->
+                (* The forward is still reported when the fit is not: the parity forward needs no smile. *)
+                let t = float_of_int days /. 365. in
+                Some { expiry; days_to_expiry = days; forward = chain.underlying_close *. exp (rf *. t); forward_source = "spot compounded at the risk-free rate"; smile = None; reason = Some r })
+        | _ -> None)
+      expiries
+  in
+  { ticker = chain.ticker; snapshot_date = chain.snapshot_date; spot = chain.underlying_close; risk_free_rate = rf; expiries }
+
 let of_chain (chain : option_chain) ~rf ~ke ~fair_value ~growth =
   let spot = chain.underlying_close in
   match select_expiry chain.quotes ~spot ~snapshot_date:chain.snapshot_date with
   | Error r -> Error r
-  | Ok (expiry, days, below, above) ->
+  | Ok (expiry, days, below, above) -> (
       let t = float_of_int days /. 365. in
-      let growth_factor = exp (rf *. t) in
-      let quotes = List.filter (fun (q : option_quote) -> q.expiration = expiry && q.bid > 0.) chain.quotes in
-      let at right strike = List.find_opt (fun (q : option_quote) -> q.right = right && q.strike = strike) quotes in
-      (* The forward: put-call parity at the straddle strike nearest spot with both sides quoted. *)
-      let straddles =
-        List.filter_map
-          (fun (q : option_quote) ->
-            if q.right = "call" then Option.map (fun (p : option_quote) -> (q.strike, q.mid, p.mid)) (at "put" q.strike) else None)
-          quotes
-      in
-      let forward, forward_source =
-        match List.sort (fun (k1, _, _) (k2, _, _) -> compare (Float.abs (k1 -. spot)) (Float.abs (k2 -. spot))) straddles with
-        | (k, c, p) :: _ -> (k +. (growth_factor *. (c -. p)), Printf.sprintf "put-call parity at strike %g" k)
-        | [] -> (spot *. growth_factor, "spot compounded at the risk-free rate (no strike quoted on both sides)")
-      in
-      (* Out-of-the-money by the forward: puts below, calls at or above; mids undiscounted;
-         a quote whose spread exceeds its mid (ask > 3 bid) says nothing about the price
-         and is left out of the fit, counted. *)
-      let otm = List.filter (fun (q : option_quote) -> (q.right = "put" && q.strike < forward) || (q.right = "call" && q.strike >= forward)) quotes in
-      let tight, wide = List.partition (fun (q : option_quote) -> q.ask <= 3. *. q.bid) otm in
-      let invert (q : option_quote) =
-        let right = if q.right = "put" then `Put else `Call in
-        Option.map (fun w -> (log (q.strike /. forward), w)) (implied_total_variance ~right ~forward ~strike:q.strike ~price:(q.mid *. growth_factor))
-      in
-      let points = List.filter_map invert tight in
-      (* The put-call gap at the forward: the nearest put below against the nearest call at
-         or above, in implied vol, a diagnostic of the European inversion of American quotes. *)
-      let put_call_iv_gap_at_forward =
-        let nearest right cmp =
-          List.filter (fun (q : option_quote) -> q.right = right) tight
-          |> List.sort (fun (x : option_quote) (y : option_quote) -> cmp x.strike y.strike)
-          |> function [] -> None | q :: _ -> invert q
-        in
-        match (nearest "put" (fun x y -> compare y x), nearest "call" compare) with
-        | Some (_, wp), Some (_, wc) -> Some (sqrt (wp /. t) -. sqrt (wc /. t))
-        | _ -> None
-      in
-      let n = List.length points in
-      if n < min_strikes_each_side then
-        Error (Printf.sprintf "smile fit failed: only %d out-of-the-money quotes invert to an implied volatility" n)
-      else
-        let p = fit points in
-        match check p with
-        | Error r -> Error r
-        | Ok () ->
-            let price_at k = forward *. exp k in
-            let price_quantiles = List.map (fun prob -> { p = prob; price = price_at (quantile p prob) }) quantile_levels in
-            let anchor_path_price = fair_value *. ((1. +. ke) ** t) in
-            let p_below_anchor_path = clamp 0. 1. (cdf p (log (anchor_path_price /. forward))) in
-            let implied_growth_quantiles, implied_growth_reason =
-              match growth with
-              | Error r -> (None, Some r)
-              | Ok (rate, f) ->
-                  ( Some
-                      (List.map
-                         (fun (q : price_quantile) ->
-                           let today = q.price /. ((1. +. ke) ** t) in
-                           let readout, _ = Beliefs.implied_terminal_growth ~f ~price:today ~rate in
-                           { p = q.p; growth = readout })
-                         price_quantiles),
-                    None )
-            in
-            Ok
-              {
-                source = chain.source;
-                snapshot_date = chain.snapshot_date;
-                snapshot_timestamp = chain.snapshot_timestamp;
-                spot;
-                forward;
-                forward_source;
-                risk_free_rate = rf;
-                expiry;
-                horizon_years = t;
-                otm_quoted_below = below;
-                otm_quoted_above = above;
-                smile =
-                  { a = p.a; b = p.b; rho = p.rho; m = p.m; sigma = p.sigma; rmse = fit_rmse p points; quotes_fitted = n;
-                    quotes_excluded_wide = List.length wide; spread_rule = "ask <= 3 bid"; put_call_iv_gap_at_forward };
-                price_quantiles;
-                anchor_path_price;
-                p_below_anchor_path;
-                implied_growth_quantiles;
-                implied_growth_reason;
-                implied_growth_label = "approximate";
-                implied_growth_note = growth_note days;
-                risk_neutral = true;
-                note;
-              }
+      match fit_expiry chain ~rf ~expiry ~days with
+      | Error r -> Error r
+      | Ok f ->
+          let p = f.params and forward = f.forward in
+          let price_at k = forward *. exp k in
+          let price_quantiles = List.map (fun prob -> { p = prob; price = price_at (quantile p prob) }) quantile_levels in
+          let anchor_path_price = fair_value *. ((1. +. ke) ** t) in
+          let p_below_anchor_path = clamp 0. 1. (cdf p (log (anchor_path_price /. forward))) in
+          let implied_growth_quantiles, implied_growth_reason =
+            match growth with
+            | Error r -> (None, Some r)
+            | Ok (rate, f) ->
+                ( Some
+                    (List.map
+                       (fun (q : price_quantile) ->
+                         let today = q.price /. ((1. +. ke) ** t) in
+                         let readout, _ = Beliefs.implied_terminal_growth ~f ~price:today ~rate in
+                         { p = q.p; growth = readout })
+                       price_quantiles),
+                  None )
+          in
+          Ok
+            {
+              source = chain.source;
+              snapshot_date = chain.snapshot_date;
+              snapshot_timestamp = chain.snapshot_timestamp;
+              spot;
+              forward;
+              forward_source = f.forward_source;
+              risk_free_rate = rf;
+              expiry;
+              horizon_years = t;
+              otm_quoted_below = below;
+              otm_quoted_above = above;
+              smile = svi_smile_of f;
+              price_quantiles;
+              anchor_path_price;
+              p_below_anchor_path;
+              implied_growth_quantiles;
+              implied_growth_reason;
+              implied_growth_label = "approximate";
+              implied_growth_note = growth_note days;
+              risk_neutral = true;
+              note;
+            })

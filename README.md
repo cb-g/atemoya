@@ -249,6 +249,53 @@ uv run python/fetch_options.py AAPL MSFT PG                  # today's chain, or
 dune exec atemoya -- data/financials --out output --options data/options
 ```
 
+## Hedging
+
+`python/hedge.py <holdings.json>` hedges one holding at a time from the options store,
+with quotes and a declared constraint, never a model price or a hidden weighting. The
+holdings file is untracked (`data/holdings/` is ignored) and each entry is a ticker, a
+share count, a horizon in days and exactly one constraint: `{"max_cost_pct": x}`,
+`{"min_floor_pct": y}` or `{"floor": "anchor"}`; an optional `as_of` picks the store
+date, the latest snapshot at or before it.
+
+Four structures, per share held and evaluated held to expiry: a protective put, a collar
+(long put, short call above it), a put spread (long put, short lower put) and a covered
+call. For every expiry at least the horizon out and within 120 days beyond it and every
+quoted strike with a positive bid, the cost is the ask for what is bought and the bid for
+what is sold, the mid reported beside it. A structure whose leg has no quote is not a
+candidate; a leg whose mid sits more than five vol points off the fitted smile is a stale
+or junk quote and is excluded. The three numbers on every candidate:
+
+- `cost_pct`: the net premium over today's value, negative for a credit;
+- `floor_pct`: the worst outcome at expiry, premium included, over today's value. A put
+  spread's worst is at zero, since the protection ends at the short strike; a covered
+  call's floor is the premium alone;
+- `cap_pct`: the best outcome where a short call binds, null for a put or put spread.
+
+The frontier is the exact Pareto set over lower cost, higher floor and higher or null
+cap, no weights and no optimiser; the whole candidate table sits beside it. The
+constraint selects: `max_cost_pct` gives the frontier points at or below it, highest
+floor first; `min_floor_pct` the points at or above it, cheapest first; `floor: "anchor"`
+takes the name's fair value from the latest run as the floor and picks the cheapest point
+at or above it, and says "the anchor is above the price; nothing above it to insure" when
+the fair value exceeds spot. The first eligible point is the selection; without a
+constraint nothing is recommended. One risk-neutral readout goes with the selection: the
+market's probability, from the same smile, that the price at expiry is at or below the
+floor's strike. Position Greeks (holding plus structure) come from the smile at the quoted
+strikes.
+
+Scope limits, on every output: short calls carry assignment risk before expiry (American
+exercise), stated and not modelled; the structure is evaluated held to expiry; dividends
+inside the horizon are not modelled; commissions beyond the bid-ask are not included; the
+floor probability embeds the market's risk pricing and is not a forecast. Output goes to
+`output/hedge/<holdings-file-name>/<TICKER>.json` and `.png` (cost against floor, every
+candidate faint, the frontier as a line with capped points coloured by cap, the selection
+starred). Two runs are byte-identical; nothing is sampled.
+
+```sh
+uv run python/hedge.py data/holdings/mine.json      # {"holdings": [{"ticker": "AAPL", "shares": 100, "horizon_days": 180, "constraint": {"max_cost_pct": 0.03}}]}
+```
+
 ## Frontier
 
 `python/frontier.py <candidates.json>` is Smith and Smith's endgame: for an untracked

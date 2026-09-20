@@ -214,6 +214,19 @@ risk pricing and is not a forecast, and the spot it is read from is the snapshot
 close, which may differ from the record's price. The growth axis is approximate: a
 horizon of one to two years stands in for the long run.
 
+## Hedging
+
+Single-name hedging (38) runs beside the batch and touches no record: `python/hedge.py`
+takes an untracked holdings file (ticker, shares, horizon, exactly one constraint), reads
+the name's chain from the store (the latest snapshot at or before `as_of`, the same rule
+as everywhere), the per-expiry smiles from `atemoya-smile` (brief 36's constrained fit,
+expiry by expiry) and the name's fair value and risk-free rate from the latest run. Four
+structures priced from quotes, ask for what is bought and bid for what is sold; a missing
+leg or a leg more than five vol points off the smile excludes the candidate; cost, floor
+and cap per candidate, distribution-free; the exact Pareto set; the declared constraint
+selects and nothing is recommended without one; one risk-neutral floor probability from
+the smile's density; the scope limits on every output. No model price, no sampling.
+
 ## Frontier
 
 `python/frontier.py <candidates.json>` is Smith and Smith's endgame: for an untracked
@@ -436,6 +449,10 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- single-name hedging (38): `python/hedge.py` on the options store, four structures from
+  quotes, the Pareto set, the declared constraint, the anchor as a selectable floor and
+  one risk-neutral floor probability; `atemoya-smile` prints every expiry's smile on a
+  chain. No new `Failed` string; no number moves.
 - market-implied through time (37): `--options-max-age N` and the no-lookahead window on
   the point-in-time panel (`build_panel.py --options`, 7 days), the panel's market-implied
   columns beside `probability_overpaid` on the date, `output/pit/market_summary.txt` and

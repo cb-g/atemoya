@@ -72,6 +72,23 @@ val min_days : int
 val min_strikes_each_side : int
 val quantile_levels : float list
 
+type expiry_fit = {
+  forward : float;
+  forward_source : string;
+  points : (float * float) list;  (** (k, total variance) fitted *)
+  wide : int;  (** quotes left out for ask > 3 bid *)
+  put_call_iv_gap_at_forward : float option;
+  params : svi;
+}
+
+val fit_expiry :
+  Boundary_t.option_chain -> rf:float -> expiry:string -> days:int -> (expiry_fit, string) result
+(** One expiry's forward, inverted quotes and checked smile; [Error "smile fit failed: ..."]. *)
+
+val smiles : Boundary_t.option_chain -> rf:float -> Boundary_t.chain_smiles
+(** (38) Every expiry after the snapshot date fitted in turn, each with its smile or the
+    reason; what the hedging tool reads. *)
+
 val of_chain :
   Boundary_t.option_chain ->
   rf:float ->

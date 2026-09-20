@@ -737,6 +737,26 @@ type option_chain = {
   quotes : option_quote list;
 }
 
+(* Every expiry's smile on one chain (38): what python/hedge.py reads from the smile
+   executable for Greeks at quoted strikes, the stale-quote flag and the floor probability;
+   the fit is brief 36's, expiry by expiry, and never prices a leg. *)
+type expiry_smile = {
+  expiry : string;
+  days_to_expiry : int;
+  forward : float;
+  forward_source : string;
+  ?smile : svi_smile option;          (* absent with the reason when the expiry has too few quotes or the fit fails the arbitrage check *)
+  ?reason : string option;
+}
+
+type chain_smiles = {
+  ticker : string;
+  snapshot_date : string;
+  spot : float;
+  risk_free_rate : float;
+  expiries : expiry_smile list;
+}
+
 (* The market-implied readout (36): the risk-neutral distribution of the price at one
    expiry, read from the chain beside the declared belief. Every field is risk-neutral: it
    embeds the market's risk pricing and is not a forecast. *)

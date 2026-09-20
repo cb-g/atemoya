@@ -1,4 +1,4 @@
-(executable
- (name main)
- (public_name atemoya)
+(executables
+ (names main smile)
+ (public_names atemoya atemoya-smile)
  (libraries atemoya atdgen-runtime yojson unix))

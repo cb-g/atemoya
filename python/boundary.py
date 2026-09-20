@@ -4038,6 +4038,93 @@ class Financials:
 
 
 @dataclass
+class ExpirySmile:
+    """Original type: expiry_smile = { ... }
+    """
+
+    expiry: str
+    days_to_expiry: int
+    forward: float
+    forward_source: str
+    smile: Optional[SviSmile] = None
+    reason: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ExpirySmile':
+        if isinstance(x, dict):
+            return cls(
+                expiry=_atd_read_string(x['expiry']) if 'expiry' in x else _atd_missing_json_field('ExpirySmile', 'expiry'),
+                days_to_expiry=_atd_read_int(x['days_to_expiry']) if 'days_to_expiry' in x else _atd_missing_json_field('ExpirySmile', 'days_to_expiry'),
+                forward=_atd_read_float(x['forward']) if 'forward' in x else _atd_missing_json_field('ExpirySmile', 'forward'),
+                forward_source=_atd_read_string(x['forward_source']) if 'forward_source' in x else _atd_missing_json_field('ExpirySmile', 'forward_source'),
+                smile=SviSmile.from_json(x['smile']) if 'smile' in x else None,
+                reason=_atd_read_string(x['reason']) if 'reason' in x else None,
+            )
+        else:
+            _atd_bad_json('ExpirySmile', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['expiry'] = _atd_write_string(self.expiry)
+        res['days_to_expiry'] = _atd_write_int(self.days_to_expiry)
+        res['forward'] = _atd_write_float(self.forward)
+        res['forward_source'] = _atd_write_string(self.forward_source)
+        if self.smile is not None:
+            res['smile'] = (lambda x: x.to_json())(self.smile)
+        if self.reason is not None:
+            res['reason'] = _atd_write_string(self.reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ExpirySmile':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class ChainSmiles:
+    """Original type: chain_smiles = { ... }
+    """
+
+    ticker: str
+    snapshot_date: str
+    spot: float
+    risk_free_rate: float
+    expiries: List[ExpirySmile]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ChainSmiles':
+        if isinstance(x, dict):
+            return cls(
+                ticker=_atd_read_string(x['ticker']) if 'ticker' in x else _atd_missing_json_field('ChainSmiles', 'ticker'),
+                snapshot_date=_atd_read_string(x['snapshot_date']) if 'snapshot_date' in x else _atd_missing_json_field('ChainSmiles', 'snapshot_date'),
+                spot=_atd_read_float(x['spot']) if 'spot' in x else _atd_missing_json_field('ChainSmiles', 'spot'),
+                risk_free_rate=_atd_read_float(x['risk_free_rate']) if 'risk_free_rate' in x else _atd_missing_json_field('ChainSmiles', 'risk_free_rate'),
+                expiries=_atd_read_list(ExpirySmile.from_json)(x['expiries']) if 'expiries' in x else _atd_missing_json_field('ChainSmiles', 'expiries'),
+            )
+        else:
+            _atd_bad_json('ChainSmiles', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['ticker'] = _atd_write_string(self.ticker)
+        res['snapshot_date'] = _atd_write_string(self.snapshot_date)
+        res['spot'] = _atd_write_float(self.spot)
+        res['risk_free_rate'] = _atd_write_float(self.risk_free_rate)
+        res['expiries'] = _atd_write_list((lambda x: x.to_json()))(self.expiries)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ChainSmiles':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class BeliefGrid:
     """Original type: belief_grid = { ... }
     """
