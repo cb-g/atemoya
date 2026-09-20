@@ -233,7 +233,12 @@ on one index's chain, each holding declaring its beta with a why and a date
 (`python/beta.py` reports a regression beside it that the hedge never reads), exposure =
 shares x spot x beta summed, whole contracts with the residual reported, the book's floor
 and cap from the index payoff on the declared betas, the book floored at zero; an index
-absent from the store is refused with the fetch command named.
+absent from the store is refused with the fetch command named. Currency exposure (43):
+`python/hedge_fx.py` sells the declared exposure forward with CME FX futures from the
+dated table `reference/fx_futures.json` (strict loader), the forward by covered interest
+parity on the fetched curves with the vendor's front quote as a flag, whole standard and
+micro contracts with the residual, the margin, and a deterministic payoff grid; a currency
+not in the table is refused by name and a missing curve names the refresher.
 
 ## Frontier
 
@@ -460,6 +465,9 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- FX hedging with futures (43): `python/hedge_fx.py`, `reference/fx_futures.json`, parity
+  carry from the fetched curves, whole and micro contracts, the payoff grid. No new
+  `Failed` string; no number moves.
 - a book hedged with index options (41): `python/hedge_book.py` and `python/beta.py`,
   declared betas, whole contracts, the book's floor and cap on the index payoff. No new
   `Failed` string; no number moves.

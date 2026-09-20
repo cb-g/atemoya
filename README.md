@@ -323,6 +323,43 @@ uv run python/beta.py data/holdings/book.json
 uv run python/hedge_book.py data/holdings/book.json
 ```
 
+## FX hedging
+
+A holder of a name whose value moves with a foreign currency sells that currency forward
+for the horizon. `python/hedge_fx.py <holdings.json>` does it with CME FX futures only,
+standard or micro, and the reason is stated here: forwards are over the counter and not
+something a clone can assume its account can trade; options on FX futures are listed and
+tradable, but this tool prices structures from quotes and no source it has carries CME
+options quotes, so they enter when a quote source is declared, as the equity terminal was,
+and not before. Pricing them with Black-76 at an assumed volatility is exactly what the
+hedging tools refuse.
+
+Exposure is declared per holding, no default: `exposure_currency`, `exposure_fraction` in
+[0, 1] of the holding's value that moves with the currency, `exposure_why` and
+`exposure_as_of`; the file's `horizon_days` and `hedge_fraction` (of the exposure to hedge,
+written even at 1.0). A holding without a declared exposure is listed and excluded.
+`reference/fx_futures.json` is a dated, hand-transcribed table of the contracts per
+currency (EUR, JPY, GBP, CHF, CAD, AUD, MXN, BRL): product, size, tick, the exchange's
+published maintenance margin and its speculative initial margin, loaded strictly; a
+currency not in it is refused by name, a proxy being a declaration for a later brief.
+The fair forward is covered interest parity on the fetched curves at the tenor nearest
+the horizon (`F = S (1 + r_usd T) / (1 + r_ccy T)`, tenors recorded), the carry is
+`(F - S) / S`, positive when the hedged currency yields less than the dollar, and a
+missing curve fails the holding with the refresher named. The vendor's front futures
+quote is fetched and compared with the parity forward, the residual recorded and flagged
+beyond 0.5%, never used as the input (`--no-vendor` skips it offline). Contracts are
+whole: the standard-plus-micro combination leaving the smallest residual, the count and
+the residual reported, the margin tied up as a percent of the holding's value. The output
+is a deterministic payoff grid, currency moves from -20% to +20% in 1% steps, the
+holding's dollar value at the horizon unhedged and hedged, drawn as two lines with the
+residual's slope visible, under `output/hedge/<file>/fx.json` and `fx.png`. Scope limits
+on every output: expiry and rolling, margin calls before expiry, and the declared
+fraction are not modelled or estimated.
+
+```sh
+uv run python/hedge_fx.py data/holdings/fx.json
+```
+
 ## Frontier
 
 `python/frontier.py <candidates.json>` is Smith and Smith's endgame: for an untracked

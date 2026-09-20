@@ -121,6 +121,32 @@ type params = {
    model can see for the name. Nothing here remembers an outcome or a finding; those belong
    to the run, and "did anything change since the last run" is the baseline diff. The loader
    is strict: an unknown field is a load error. *)
+(* CME FX futures (43): transcribed public specifications and the exchange's published
+   margins, dated; read by python/hedge_fx.py and never fetched. *)
+type fx_future_contract = {
+  product : string;                     (* the exchange's product code, e.g. 6E, M6E *)
+  size : float;                         (* units of the currency per contract *)
+  tick : float;                         (* minimum price fluctuation in the quote convention *)
+  tick_value_usd : float;
+  maintenance_margin_usd : float;       (* as the exchange publishes it *)
+  initial_margin_usd : float;           (* the exchange's speculative initial margin, 110% of maintenance *)
+}
+
+type fx_future = {
+  quote : string;                       (* usd_per_unit | units_per_usd: how the future is quoted *)
+  vendor_symbol : string;               (* the vendor's front-month continuous symbol, for the parity check only *)
+  standard : fx_future_contract;
+  ?micro : fx_future_contract option;
+}
+
+type fx_futures = {
+  source : string;
+  as_of : string;
+  max_age_days : int;
+  ~notes : string list;
+  contracts : (string * fx_future) list <json repr="object">;   (* currency -> the products *)
+}
+
 type universe_entry = {
   ticker : string;
   entity_class : string;                (* a constructor of the boundary's entity_class; validated at load *)

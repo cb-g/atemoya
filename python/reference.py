@@ -1680,6 +1680,130 @@ class FxRates:
 
 
 @dataclass
+class FxFutureContract:
+    """Original type: fx_future_contract = { ... }
+    """
+
+    product: str
+    size: float
+    tick: float
+    tick_value_usd: float
+    maintenance_margin_usd: float
+    initial_margin_usd: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FxFutureContract':
+        if isinstance(x, dict):
+            return cls(
+                product=_atd_read_string(x['product']) if 'product' in x else _atd_missing_json_field('FxFutureContract', 'product'),
+                size=_atd_read_float(x['size']) if 'size' in x else _atd_missing_json_field('FxFutureContract', 'size'),
+                tick=_atd_read_float(x['tick']) if 'tick' in x else _atd_missing_json_field('FxFutureContract', 'tick'),
+                tick_value_usd=_atd_read_float(x['tick_value_usd']) if 'tick_value_usd' in x else _atd_missing_json_field('FxFutureContract', 'tick_value_usd'),
+                maintenance_margin_usd=_atd_read_float(x['maintenance_margin_usd']) if 'maintenance_margin_usd' in x else _atd_missing_json_field('FxFutureContract', 'maintenance_margin_usd'),
+                initial_margin_usd=_atd_read_float(x['initial_margin_usd']) if 'initial_margin_usd' in x else _atd_missing_json_field('FxFutureContract', 'initial_margin_usd'),
+            )
+        else:
+            _atd_bad_json('FxFutureContract', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['product'] = _atd_write_string(self.product)
+        res['size'] = _atd_write_float(self.size)
+        res['tick'] = _atd_write_float(self.tick)
+        res['tick_value_usd'] = _atd_write_float(self.tick_value_usd)
+        res['maintenance_margin_usd'] = _atd_write_float(self.maintenance_margin_usd)
+        res['initial_margin_usd'] = _atd_write_float(self.initial_margin_usd)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FxFutureContract':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class FxFuture:
+    """Original type: fx_future = { ... }
+    """
+
+    quote: str
+    vendor_symbol: str
+    standard: FxFutureContract
+    micro: Optional[FxFutureContract] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FxFuture':
+        if isinstance(x, dict):
+            return cls(
+                quote=_atd_read_string(x['quote']) if 'quote' in x else _atd_missing_json_field('FxFuture', 'quote'),
+                vendor_symbol=_atd_read_string(x['vendor_symbol']) if 'vendor_symbol' in x else _atd_missing_json_field('FxFuture', 'vendor_symbol'),
+                standard=FxFutureContract.from_json(x['standard']) if 'standard' in x else _atd_missing_json_field('FxFuture', 'standard'),
+                micro=FxFutureContract.from_json(x['micro']) if 'micro' in x else None,
+            )
+        else:
+            _atd_bad_json('FxFuture', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['quote'] = _atd_write_string(self.quote)
+        res['vendor_symbol'] = _atd_write_string(self.vendor_symbol)
+        res['standard'] = (lambda x: x.to_json())(self.standard)
+        if self.micro is not None:
+            res['micro'] = (lambda x: x.to_json())(self.micro)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FxFuture':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class FxFutures:
+    """Original type: fx_futures = { ... }
+    """
+
+    source: str
+    as_of: str
+    max_age_days: int
+    contracts: List[Tuple[str, FxFuture]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FxFutures':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('FxFutures', 'source'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('FxFutures', 'as_of'),
+                max_age_days=_atd_read_int(x['max_age_days']) if 'max_age_days' in x else _atd_missing_json_field('FxFutures', 'max_age_days'),
+                contracts=_atd_read_assoc_object_into_list(FxFuture.from_json)(x['contracts']) if 'contracts' in x else _atd_missing_json_field('FxFutures', 'contracts'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('FxFutures', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['max_age_days'] = _atd_write_int(self.max_age_days)
+        res['contracts'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.contracts)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FxFutures':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class FfoTags:
     """Original type: ffo_tags = { ... }
     """

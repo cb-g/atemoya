@@ -1,0 +1,34 @@
+{
+  "source": "CME Group contract specifications (contract unit, quotation, tick) and the exchange's published outright maintenance margins (CmeWS Margins OUTRIGHT, sector FX), transcribed by hand",
+  "as_of": "2026-09-20",
+  "max_age_days": 400,
+  "notes": [
+    "Margins are the exchange's published maintenance figures for the front periods on 2026-09-20; initial_margin_usd is the exchange's speculative initial margin at 110% of maintenance. Margins change with volatility; the as_of dates them and max_age_days fails a stale table.",
+    "Every product here is quoted in U.S. dollars per unit of the currency. Mexican peso and Brazilian real have no micro contract.",
+    "The vendor's front-month continuous symbols are for the parity check only; the parity forward from the fetched curves is the input, the vendor's quote a flag."
+  ],
+  "contracts": {
+    "EUR": {"quote": "usd_per_unit", "vendor_symbol": "6E=F",
+            "standard": {"product": "6E", "size": 125000, "tick": 0.00005, "tick_value_usd": 6.25, "maintenance_margin_usd": 2100, "initial_margin_usd": 2310},
+            "micro": {"product": "M6E", "size": 12500, "tick": 0.0001, "tick_value_usd": 1.25, "maintenance_margin_usd": 210, "initial_margin_usd": 231}},
+    "JPY": {"quote": "usd_per_unit", "vendor_symbol": "6J=F",
+            "standard": {"product": "6J", "size": 12500000, "tick": 0.0000005, "tick_value_usd": 6.25, "maintenance_margin_usd": 2800, "initial_margin_usd": 3080},
+            "micro": {"product": "MJY", "size": 1250000, "tick": 0.000001, "tick_value_usd": 1.25, "maintenance_margin_usd": 280, "initial_margin_usd": 308}},
+    "GBP": {"quote": "usd_per_unit", "vendor_symbol": "6B=F",
+            "standard": {"product": "6B", "size": 62500, "tick": 0.0001, "tick_value_usd": 6.25, "maintenance_margin_usd": 1700, "initial_margin_usd": 1870},
+            "micro": {"product": "M6B", "size": 6250, "tick": 0.0001, "tick_value_usd": 0.625, "maintenance_margin_usd": 170, "initial_margin_usd": 187}},
+    "CHF": {"quote": "usd_per_unit", "vendor_symbol": "6S=F",
+            "standard": {"product": "6S", "size": 125000, "tick": 0.0001, "tick_value_usd": 12.5, "maintenance_margin_usd": 3600, "initial_margin_usd": 3960},
+            "micro": {"product": "MSF", "size": 12500, "tick": 0.0001, "tick_value_usd": 1.25, "maintenance_margin_usd": 360, "initial_margin_usd": 396}},
+    "CAD": {"quote": "usd_per_unit", "vendor_symbol": "6C=F",
+            "standard": {"product": "6C", "size": 100000, "tick": 0.00005, "tick_value_usd": 5.0, "maintenance_margin_usd": 800, "initial_margin_usd": 880},
+            "micro": {"product": "MCD", "size": 10000, "tick": 0.0001, "tick_value_usd": 1.0, "maintenance_margin_usd": 80, "initial_margin_usd": 88}},
+    "AUD": {"quote": "usd_per_unit", "vendor_symbol": "6A=F",
+            "standard": {"product": "6A", "size": 100000, "tick": 0.0001, "tick_value_usd": 10.0, "maintenance_margin_usd": 1750, "initial_margin_usd": 1925},
+            "micro": {"product": "M6A", "size": 10000, "tick": 0.0001, "tick_value_usd": 1.0, "maintenance_margin_usd": 175, "initial_margin_usd": 192.5}},
+    "MXN": {"quote": "usd_per_unit", "vendor_symbol": "6M=F",
+            "standard": {"product": "6M", "size": 500000, "tick": 0.00001, "tick_value_usd": 5.0, "maintenance_margin_usd": 1100, "initial_margin_usd": 1210}},
+    "BRL": {"quote": "usd_per_unit", "vendor_symbol": "6L=F",
+            "standard": {"product": "6L", "size": 100000, "tick": 0.00005, "tick_value_usd": 5.0, "maintenance_margin_usd": 850, "initial_margin_usd": 935}}
+  }
+}
