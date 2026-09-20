@@ -228,7 +228,12 @@ selects and nothing is recommended without one; capping the upside is a declarat
 a collar or covered call is selectable only when the entry declares `min_cap_pct` and the
 cap is at or above it, else only puts and put spreads, the output saying which; one
 risk-neutral floor probability from the smile's density; the scope limits on every
-output. No model price, no sampling.
+output. No model price, no sampling. A book (41): `python/hedge_book.py` reuses all of it
+on one index's chain, each holding declaring its beta with a why and a date
+(`python/beta.py` reports a regression beside it that the hedge never reads), exposure =
+shares x spot x beta summed, whole contracts with the residual reported, the book's floor
+and cap from the index payoff on the declared betas, the book floored at zero; an index
+absent from the store is refused with the fetch command named.
 
 ## Frontier
 
@@ -455,6 +460,9 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- a book hedged with index options (41): `python/hedge_book.py` and `python/beta.py`,
+  declared betas, whole contracts, the book's floor and cap on the index payoff. No new
+  `Failed` string; no number moves.
 - the depositary-receipt ratio (42): `adr_ratio` on the universe entry, point-in-time
   shares divided by it, and the live check flagged in the summary. No new `Failed` string;
   no live number moves.

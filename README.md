@@ -300,6 +300,29 @@ starred). Two runs are byte-identical; nothing is sampled.
 uv run python/hedge.py data/holdings/mine.json      # {"holdings": [{"ticker": "AAPL", "shares": 100, "horizon_days": 180, "constraint": {"max_cost_pct": 0.03}}]}
 ```
 
+A book is hedged with one index product the same way, sized by declared betas.
+`python/hedge_book.py <book.json>` takes a file with `index`, `horizon_days`, one
+`constraint`, optional `min_cap_pct`, and holdings that each declare `beta`, `beta_why`
+and `beta_as_of`; a holding without a declared beta is listed and excluded, and an index
+not in the store is refused with the fetch command named. `python/beta.py <book.json>`
+writes `betas.txt`, a two-year weekly regression beta to the index beside each
+declaration with its standard error and R-squared: evidence for the holder, which the
+hedge never reads. Each holding's index-equivalent exposure is shares times spot times
+beta, the book's is the sum, and the contracts are the nearest whole number to the
+exposure over the index spot times the multiplier, the residual reported and never
+covered by a fraction. The structures, quotes, Pareto set, constraint and risk-neutral
+floor probability are the single-name tool's on the index's chain; the book's floor and
+cap come from the index payoff on the declared betas, the book floored at zero, so the
+worst outcome sits at a strike or where the book reaches zero, and a cap is hard only
+when the short call covers the exposure. Exact for the declared betas, and wrong exactly
+when the holdings' co-movement with the index breaks. Output: `book.json`, `book.png`
+and `betas.txt` under `output/hedge/<file>/`.
+
+```sh
+uv run python/beta.py data/holdings/book.json
+uv run python/hedge_book.py data/holdings/book.json
+```
+
 ## Frontier
 
 `python/frontier.py <candidates.json>` is Smith and Smith's endgame: for an untracked

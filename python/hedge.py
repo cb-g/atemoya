@@ -447,7 +447,7 @@ def points(entries: object) -> list[dict[str, object]]:
     return [{str(k): v for k, v in e.items()} for e in entries if isinstance(e, dict)] if isinstance(entries, list) else []  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType, reportUnknownMemberType]
 
 
-def draw(result: dict[str, object], png: Path) -> None:
+def draw(result: dict[str, object], png: Path, *, title: str | None = None) -> None:
     cands = points(result["candidates"])
     frontier = points(result["frontier"])
     selected = points([result["selection"]])
@@ -470,7 +470,7 @@ def draw(result: dict[str, object], png: Path) -> None:
         ax.scatter([float(str(sel["cost_pct"]))], [float(str(sel["floor_pct"]))], s=160, marker="*", color="tab:red", zorder=5, label=f"selection: {sel['structure']} {sel['expiry']}")
     ax.set_xlabel("cost_pct (net premium over today's value; negative is a credit)")
     ax.set_ylabel("floor_pct (worst outcome at expiry over today's value)")
-    ax.set_title(f"{result['ticker']} on {result['snapshot_date']}: {result['shares']} shares at {result['spot']}, horizon {result['horizon_days']} days")
+    ax.set_title(title or f"{result['ticker']} on {result['snapshot_date']}: {result['shares']} shares at {result['spot']}, horizon {result['horizon_days']} days", fontsize=10)
     ax.grid(True, alpha=0.3)
     ax.legend(loc="lower right", fontsize=8)
     fig.text(0.01, 0.01, "constraint: " + json.dumps(result["constraint"]) + f"; {result['selectable']}" + (f"; {result['selection_reason']}" if result["selection_reason"] else "") + ". Held to expiry; quotes, not model prices; no forecast.", fontsize=7)
