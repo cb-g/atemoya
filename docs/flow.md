@@ -169,7 +169,10 @@ flowchart TD
     SENS --> MAP["belief map (23), on dcf, dcf_midcycle and reit_ffo_dividend only (the residual-income paths carry belief_map_reason instead): the readout model, stated on the record as map_model = undecayed growth for N years, then terminal, is growth held at g for N years with no decay, then the settled terminal growth forever, everything else (discount rate, base, net debt, shares) at its recorded value, distinct from the headline's decaying path; the grid g = 0..50% in 2 pp steps by N = 1..40 goes to output/maps/(ticker).json, never onto the record; the record carries the price contour, for each N the g at which fair value equals price by bisection, null with reason where no g in [0, 50%] reaches it or the price sits below the zero-growth value; python/plot_map.py draws the surface, the contour and the observed starting growth to output/maps/(ticker).png (matplotlib, the first visualisation dependency; nothing in the batch imports it)"]:::new
     MAP --> BELIEF["declared belief (24), headline untouched, on dcf, dcf_midcycle and reit_ffo_dividend only (the residual-income paths carry belief_reason: no terminal growth, the belief parameter is undefined there; a class with no default and no per-name entry carries the reason too): the belief is six fields (mean, sd, floor, ceiling, why, as_of), a truncated normal, loaded strictly from reference/beliefs.json (one default per class as offsets in percentage points around the country's settled terminal growth) or, beside them under names, per-name absolute beliefs, both tracked, with a further per-name file given as --beliefs overriding them (26), never estimated from history; the fourth readout implied_terminal_growth is the long-run growth at which fair value equals price on the headline's decaying path by bisection in [-10%, discount rate - 5 bp], null with reason past either end; probability_overpaid = the belief's CDF at the implied value (the probability that the value surplus, the margin of safety, is negative), 1.0 with the reason when the price needs long-run growth at or above the discount rate, 0.0 when the price is below the value at -10%; recorded with the six fields beside it and belief_version (as_of, a hash of the six fields, class or name); the summary carries the distribution and the count at 1.0, the run diff every changed version"]:::new
     BELIEF --> CURVE["surplus curve (35): on every Ok record with a belief, the value surplus (V - P) / P at 41 evenly spaced long-run growths from the belief's floor to its ceiling, everything else held; the residual-income paths carry the reason instead; all the frontier needs from the models"]:::new
-    CURVE --> RECORD
+    CURVE --> MKT["market-implied (36), only under --options DIR, headline untouched: the name's end-of-day chain on the latest snapshot date at or before the valuation date (data/options/(date)/(TICKER).json, written by python/fetch_options.py through the local ThetaTerminal, never tracked); the expiry is the longest at least 365 days out with at least eight OTM strikes quoted with a positive bid on each side of spot; the forward by put-call parity at the straddle strike nearest spot; OTM mids with ask <= 3 bid invert to total implied variance under Black on the forward (a wider spread says nothing about the price; the count left out is recorded); the SVI smile w(k) = a + b (rho (k - m) + sqrt((k - m)^2 + sigma^2)) by least squares over the five parameters under the no-arbitrage constraints (Lee's wing bound b (1 + |rho|) <= 2 and g(k) >= 0 on [-3, 3]), then checked again on the same grid; the put-call implied-vol gap at the forward is recorded as a diagnostic (single-stock US options are American, the inversion is European, so a long-dated put's early-exercise premium shows there, never corrected); Breeden-Litzenberger in closed form: price_quantiles at 5/25/50/75/95, p_below_anchor_path = the risk-neutral CDF at V (1 + ke)^T beside probability_overpaid, implied_growth_quantiles = each quantile price discounted at ke and inverted through the implied-terminal-growth solver, labelled approximate (a horizon of a few years stands in for the long run), null with the reason on the residual-income paths; every field risk_neutral = true with the sentence that it embeds the market's risk pricing and is not a forecast; the summary line compares the two medians"]:::new
+    MKT --> RECORD
+    MKT -.-> MKT_NONE["market_implied null with market_implied_reason, only under --options: no options data | no expiry >= 365 days with >= 8 quoted strikes on each side | smile fit failed: (why: too few quotes invert, non-positive total variance, butterfly arbitrage at k, wing slope beyond Lee's bound)"]:::new
+    MKT_NONE --> RECORD
     FLOOR["floor: present = true (verified), false (Unprofitable, Ballast by definition), null (not assessable here), with basis from the admissibility row; scope_limits: the entry's own verbatim, then the class's defaults from the admissibility row (22: Cyclical carries that the through-cycle average is backward-looking and reserve replacement, the energy transition or a declared structural break are not assessed)"] --> RECORD[/"record: one line in output/valuations.jsonl, stamped with model_version (21: git short hash, -dirty when the tree had uncommitted edits, unversioned outside a checkout; the summary's first line and the run diff's header carry it, and a fair value that moved with no moved input is labelled moved under this version against the baseline's); every --out run is also written to output/runs/(valued_on)/ (-2, -3 on the same date, never overwritten; the summary's last line names it), summary groups Failed by reason and inadmissible by class; whether anything changed since the last run, and why, is the baseline diff (--baseline, --baseline-snapshot), the acceptance mechanism of every change, never a stored expectation"/]
 ```
 
@@ -193,6 +196,23 @@ and read by the batch from `--fetched DIR` (default `data/reference`). Point-in-
 its own per-date copies under `data/pit/(D)/reference/` and the panel passes that
 directory as both `--reference` and `--fetched`. A record that needs a curve or a rate
 the user has not fetched fails naming the refresher to run.
+
+## Market-implied
+
+The options store and the readout beside the declared belief (36). The terminal is
+self-contained: `tools/thetaterminal/` (gitignored entirely) holds the jar the user
+downloads, its config and logs; `python/theta_terminal.py start|stop|status` reads
+`THETADATA_EMAIL` and `THETADATA_PASSWORD` from the environment (direnv loads `.env`),
+writes a creds file there with mode 600, launches the jar with `--creds-file`, and removes
+the file once the port answers; it never prints a credential. `python/fetch_options.py
+<ticker>... [--as-of D]` writes the full end-of-day chain for the date, every expiry and
+strike unfiltered, with the underlying's close from the stock endpoint, to
+`data/options/<date>/<TICKER>.json`. The batch reads the store only under `--options DIR`
+and never requires it: without the flag a record carries neither `market_implied` nor
+`market_implied_reason`. Every number in the block is risk-neutral: it embeds the market's
+risk pricing and is not a forecast, and the spot it is read from is the snapshot date's
+close, which may differ from the record's price. The growth axis is approximate: a
+horizon of one to two years stands in for the long run.
 
 ## Frontier
 
@@ -416,3 +436,8 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- market-implied distribution (36): the self-contained ThetaTerminal and its credential
+  gates, the options store under `data/options/`, and under `--options` the SVI smile,
+  the Breeden-Litzenberger quantiles, `p_below_anchor_path` beside `probability_overpaid`
+  and the approximate growth quantiles on every Ok record with a chain, with the three
+  reasons otherwise. No new `Failed` string; no number moves.

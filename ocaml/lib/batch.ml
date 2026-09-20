@@ -238,6 +238,36 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
       (String.concat "; "
          (List.map (fun (r, n) -> Printf.sprintf "%d %s" n r)
             (count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> v.belief_reason) no_belief))));
+    (* The market-implied readout (36): only on a run under --options, so a run without one
+       prints exactly what it did before. *)
+    let with_block = List.filter_map (fun (v : valuation) -> v.market_implied) vs in
+    let without_block = List.filter (fun (v : valuation) -> Option.is_some v.market_implied_reason) vs in
+    if with_block <> [] || without_block <> [] then begin
+      let both =
+        List.filter_map
+          (fun (v : valuation) ->
+            match (v.market_implied, v.belief) with
+            | Some m, Some (b : belief_readout) -> Some (m.p_below_anchor_path, b.probability_overpaid)
+            | _ -> None)
+          vs
+      in
+      let median xs = let xs = List.sort compare xs in List.nth xs (List.length xs / 2) in
+      Printf.bprintf b
+        "market-implied (36), across %d Ok names with an options chain: %s; none on %d Ok names (%s)\n"
+        (List.length with_block)
+        (match both with
+        | [] -> "no name has both a chain and a belief"
+        | _ ->
+            Printf.sprintf "median p_below_anchor_path %.2f against median probability_overpaid %.2f on the %d names with both"
+              (median (List.map fst both)) (median (List.map snd both)) (List.length both))
+        (List.length without_block)
+        (match without_block with
+        | [] -> "none"
+        | _ ->
+            String.concat "; "
+              (List.map (fun (r, n) -> Printf.sprintf "%d %s" n r)
+                 (count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> Option.map reason_key v.market_implied_reason) without_block))))
+    end;
     let sources = count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> v.required_return_source) vs) in
     Printf.bprintf b "required return (34), across %d Ok names: %s\n"
       (List.length (List.filter (fun (v : valuation) -> Option.is_some v.required_return_source) vs))

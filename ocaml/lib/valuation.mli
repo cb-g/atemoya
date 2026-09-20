@@ -28,7 +28,10 @@
     them. [name_beliefs] are per-name entries from a --beliefs file, overriding the tracked
     ones and the class defaults; [name_required_returns] likewise for the declared
     required return (34), which replaces CAPM above the risk-free rate on every model and
-    is recorded beside the CAPM rate on every Ok record. *)
+    is recorded beside the CAPM rate on every Ok record. [options], given only under
+    --options DIR, looks a ticker's option chain up; every Ok record then carries the
+    market-implied readout ([Market_implied]) (36) or the reason it has none; without it
+    neither field exists. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)
@@ -68,6 +71,7 @@ val run :
   ?thresholds:thresholds ->
   ?name_beliefs:Reference_t.name_beliefs ->
   ?name_required_returns:Reference_t.name_required_returns ->
+  ?options:(string -> Boundary_t.option_chain option) ->
   Params.t ->
   today:string ->
   model_version:string ->

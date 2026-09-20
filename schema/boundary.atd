@@ -708,6 +708,85 @@ type surplus_point = {
   surplus : float;
 }
 
+(* The options store (36): one file per name and snapshot date, data/options/(date)/(TICKER).json,
+   written by python/fetch_options.py from ThetaData's end-of-day chain through the local
+   ThetaTerminal, the full chain unfiltered. Prices are in the option's quote currency (USD on
+   ThetaData's US listings); sizes and counts are contracts. Never tracked. *)
+type option_quote = {
+  expiration : string;                (* YYYY-MM-DD *)
+  strike : float;
+  right : string;                     (* call | put *)
+  bid : float;
+  ask : float;
+  mid : float;                        (* (bid + ask) / 2 *)
+  bid_size : int;
+  ask_size : int;
+  last : float;                       (* the option's close on the snapshot date; 0 when it did not trade *)
+  volume : int;
+  count : int;                        (* trades on the snapshot date *)
+}
+
+type option_chain = {
+  ticker : string;
+  snapshot_date : string;             (* YYYY-MM-DD, the date the end-of-day rows describe *)
+  snapshot_timestamp : string;        (* the vendor's created stamp on the rows *)
+  source : string;                    (* the endpoint the quotes came from *)
+  underlying_close : float;           (* the underlying's close on the snapshot date, from the stock endpoint *)
+  underlying_source : string;
+  fetched_at : string;                (* when the file was written *)
+  quotes : option_quote list;
+}
+
+(* The market-implied readout (36): the risk-neutral distribution of the price at one
+   expiry, read from the chain beside the declared belief. Every field is risk-neutral: it
+   embeds the market's risk pricing and is not a forecast. *)
+type svi_smile = {
+  a : float;                          (* total implied variance w(k) = a + b (rho (k - m) + sqrt((k - m)^2 + sigma^2)), k = ln(K / F) *)
+  b : float;
+  rho : float;
+  m : float;
+  sigma : float;
+  rmse : float;                       (* root mean square error in total variance over the quotes fitted *)
+  quotes_fitted : int;                (* out-of-the-money quotes with a positive bid and ask <= 3 bid whose mid inverted to an implied volatility *)
+  quotes_excluded_wide : int;         (* out-of-the-money quotes left out of the fit because ask > 3 bid: a spread wider than the mid says nothing about the price *)
+  spread_rule : string;               (* ask <= 3 bid *)
+  put_call_iv_gap_at_forward : float nullable;   (* implied vol of the nearest put below the forward minus the nearest call at or above it; single-stock US options are American and the inversion is European, so a long-dated put's early-exercise premium shows here as a positive gap; a diagnostic, never corrected *)
+}
+
+type price_quantile = {
+  p : float;                          (* 0.05, 0.25, 0.50, 0.75, 0.95 *)
+  price : float;                      (* the price at expiry at that risk-neutral quantile *)
+}
+
+type growth_quantile = {
+  p : float;
+  growth : readout;                   (* the long-run growth at which fair value equals the quantile price discounted at ke; null with reason past either end *)
+}
+
+type market_implied = {
+  source : string;
+  snapshot_date : string;
+  snapshot_timestamp : string;
+  spot : float;                       (* the underlying's close on the snapshot date; the record's price may be another day's *)
+  forward : float;                    (* put-call parity at the straddle strike nearest spot, else spot compounded at rf *)
+  forward_source : string;
+  risk_free_rate : float;             (* the record's risk-free rate, discounting the option horizon *)
+  expiry : string;                    (* the longest expiry at least 365 days out with at least eight OTM strikes quoted on each side of spot *)
+  horizon_years : float;              (* calendar days to expiry / 365 *)
+  otm_quoted_below : int;             (* put strikes below spot with a positive bid *)
+  otm_quoted_above : int;             (* call strikes above spot with a positive bid *)
+  smile : svi_smile;                  (* checked for butterfly arbitrage (g(k) >= 0) and Lee's wing bound *)
+  price_quantiles : price_quantile list;   (* Breeden-Litzenberger on the fitted smile, in closed form *)
+  anchor_path_price : float;          (* fair value grown at the required return used: V (1 + ke)^T *)
+  p_below_anchor_path : float;        (* the risk-neutral probability that the price at expiry is below the anchor path *)
+  implied_growth_quantiles : growth_quantile list nullable;   (* each price quantile discounted at ke to today, inverted through the implied-terminal-growth solver; null on the residual-income paths *)
+  ?implied_growth_reason : string option;
+  implied_growth_label : string;      (* approximate *)
+  implied_growth_note : string;       (* why: a horizon of a few years standing in for the long run *)
+  risk_neutral : bool;                (* always true *)
+  note : string;
+}
+
 type valuation = {
   ticker : string;
   as_of : string;                     (* the fetch timestamp, from financials *)
@@ -747,4 +826,6 @@ type valuation = {
   ?required_return_version : string option;  (* (34) as_of, a hash of the three fields, class or name; absent (null) under capm *)
   ?surplus_curve : surplus_point list option;   (* (35) the value surplus at 41 evenly spaced long-run growths from the belief's floor to its ceiling, everything else held; present iff the record has a belief *)
   ?surplus_curve_reason : string option;        (* (35) why there is none: no belief on the record *)
+  ?market_implied : market_implied option;      (* (36) present on an Ok record when --options DIR holds a chain for the name and a usable expiry *)
+  ?market_implied_reason : string option;       (* (36) present instead under --options: no options data | no expiry ... | smile fit failed: ... ; neither field without --options *)
 }

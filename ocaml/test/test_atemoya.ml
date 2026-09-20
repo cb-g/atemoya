@@ -1625,7 +1625,172 @@ let test_flow_chart_names_every_reason () =
       "missing market data: financial_currency"; "missing market data: trading_currency";
       "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
       "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";
-      "rate source has no history for"; "ffo growth needs two periods"; "is not positive" ]
+      "rate source has no history for"; "ffo growth needs two periods"; "is not positive";
+      "no options data"; "no expiry >= 365 days with >= 8 quoted strikes on each side"; "smile fit failed" ]
+
+(* --- the market-implied readout (36) --- *)
+
+let svi_fixture = { Market_implied.a = 0.04; b = 0.4; rho = -0.3; m = 0.05; sigma = 0.2 }
+
+let test_market_implied_smile () =
+  let open Market_implied in
+  (* the fit recovers known parameters from a synthetic smile *)
+  let ks = List.init 21 (fun i -> -0.5 +. (float_of_int i *. 0.05)) in
+  let points = List.map (fun k -> (k, total_variance svi_fixture k)) ks in
+  let p = fit points in
+  let close what expected got = if Float.abs (expected -. got) > 1e-3 then Alcotest.failf "%s: expected %g, got %g" what expected got in
+  close "a" svi_fixture.a p.a; close "b" svi_fixture.b p.b; close "rho" svi_fixture.rho p.rho; close "m" svi_fixture.m p.m; close "sigma" svi_fixture.sigma p.sigma;
+  Alcotest.(check bool) "rmse at zero" true (fit_rmse p points < 1e-6);
+  Alcotest.(check bool) "the fixture is arbitrage-free" true (Result.is_ok (check svi_fixture));
+  (* the butterfly check fires on an arbitrageable fixture (Gatheral and Jacquier's example) *)
+  let arb = { a = -0.0410; b = 0.1331; rho = 0.3060; m = 0.3586; sigma = 0.4153 } in
+  check_error "butterfly" (check arb) [ "smile fit failed: butterfly arbitrage (g(k) =" ];
+  check_error "Lee's bound" (check { svi_fixture with b = 1.9 }) [ "smile fit failed" ];
+  (* the density integrates to one and is the derivative of the CDF *)
+  let n = 80000 in
+  let h = 80. /. float_of_int n in
+  let mass = ref 0. in
+  for i = 0 to n do
+    let k = -40. +. (float_of_int i *. h) in
+    let wgt = if i = 0 || i = n then 0.5 else 1. in
+    mass := !mass +. (wgt *. h *. density svi_fixture k)
+  done;
+  Alcotest.(check (Alcotest.float 1e-4)) "integrates to one" 1.0 !mass;
+  let k = 0.1 in
+  let numeric = (cdf svi_fixture (k +. 1e-5) -. cdf svi_fixture (k -. 1e-5)) /. 2e-5 in
+  Alcotest.(check (Alcotest.float 1e-5)) "cdf' = density" (density svi_fixture k) numeric;
+  (* a flat smile is the lognormal: its quantiles are N^-1(p) sqrt(w) - w / 2 *)
+  let flat = { a = 0.0625; b = 0.; rho = 0.; m = 0.; sigma = 0.1 } in
+  let w = 0.0625 in
+  let z = [ (0.05, -1.6448536270); (0.25, -0.6744897502); (0.5, 0.); (0.75, 0.6744897502); (0.95, 1.6448536270) ] in
+  List.iter
+    (fun (prob, zp) -> Alcotest.(check (Alcotest.float 1e-6)) (Printf.sprintf "quantile %.2f" prob) ((zp *. sqrt w) -. (w /. 2.)) (quantile flat prob))
+    z;
+  (* Black's inversion round-trips *)
+  let w0 = 0.09 in
+  let price = black_call ~forward:100. ~strike:110. ~w:w0 in
+  (match implied_total_variance ~right:`Call ~forward:100. ~strike:110. ~price with
+  | Some w -> Alcotest.(check (Alcotest.float 1e-8)) "round trip" w0 w
+  | None -> Alcotest.fail "no inversion");
+  Alcotest.(check (option approx)) "below intrinsic" None (implied_total_variance ~right:`Call ~forward:100. ~strike:90. ~price:9.)
+
+(* A synthetic end-of-day chain from a flat lognormal: spot 100, rf 4%, vol 25%; quotes
+   both sides at every strike with bid and ask 2% around the model price. *)
+let synthetic_chain ?(snapshot_date = "2026-09-01") ?(expiries = [ ("2027-03-19", 23); ("2028-01-21", 23); ("2028-06-16", 6) ]) () =
+  let spot = 100. and rf = 0.04 and vol = 0.25 in
+  let quotes =
+    List.concat_map
+      (fun (expiry, strikes) ->
+        let days = get (Date.days_between ~from:snapshot_date ~until:expiry) in
+        let t = float_of_int days /. 365. in
+        let forward = spot *. exp (rf *. t) in
+        let w = vol *. vol *. t in
+        let step = if strikes = 23 then 5. else 20. in
+        let first = if strikes = 23 then 50. else 50. in
+        List.concat_map
+          (fun i ->
+            let strike = first +. (float_of_int i *. step) in
+            List.map
+              (fun right ->
+                let undiscounted =
+                  if right = "call" then Market_implied.black_call ~forward ~strike ~w
+                  else Market_implied.black_call ~forward ~strike ~w -. forward +. strike
+                in
+                let price = undiscounted *. exp (-.rf *. t) in
+                { Boundary_t.expiration = expiry; strike; right; bid = price *. 0.98; ask = price *. 1.02; mid = price;
+                  bid_size = 10; ask_size = 10; last = price; volume = 1; count = 1 })
+              [ "call"; "put" ])
+          (List.init strikes (fun i -> i)))
+      expiries
+  in
+  { Boundary_t.ticker = "TEST"; snapshot_date; snapshot_timestamp = snapshot_date ^ "T21:00:00.000";
+    source = "synthetic lognormal"; underlying_close = spot; underlying_source = "fixture"; fetched_at = snapshot_date; quotes }
+
+let test_market_implied_chain () =
+  let chain = synthetic_chain () in
+  (* expiry selection: the longest at least 365 days out with eight quoted strikes each side;
+     the six-strike expiry is skipped, the 199-day one is too short *)
+  (match Market_implied.select_expiry chain.quotes ~spot:100. ~snapshot_date:chain.snapshot_date with
+  | Ok (expiry, days, below, above) ->
+      Alcotest.(check string) "expiry" "2028-01-21" expiry;
+      Alcotest.(check int) "days" 507 days;
+      Alcotest.(check int) "puts below spot" 10 below;
+      Alcotest.(check int) "calls above spot" 12 above
+  | Error r -> Alcotest.fail r);
+  check_error "only the short expiry" (Market_implied.select_expiry (List.filter (fun (q : Boundary_t.option_quote) -> q.expiration = "2027-03-19") chain.quotes) ~spot:100. ~snapshot_date:chain.snapshot_date)
+    [ "no expiry >= 365 days with >= 8 quoted strikes on each side" ];
+  (* the readout on the flat lognormal: the smile is flat, p_below_anchor_path is the
+     lognormal CDF at the anchor, the quantiles are the lognormal's *)
+  let ke = 0.09 and fair_value = 90. and rf = 0.04 in
+  let m = get (Market_implied.of_chain chain ~rf ~ke ~fair_value ~growth:(Error "no growth axis")) in
+  Alcotest.(check string) "expiry" "2028-01-21" m.expiry;
+  let t = 507. /. 365. in
+  check_float "horizon" t m.horizon_years;
+  let forward = 100. *. exp (rf *. t) in
+  Alcotest.(check (Alcotest.float 1e-6)) "forward by parity" forward m.forward;
+  check_mentions "forward source" m.forward_source [ "put-call parity at strike 100" ];
+  let w = 0.0625 *. t in
+  Alcotest.(check bool) "flat smile" true (Float.abs m.smile.b < 1e-3 && Float.abs (m.smile.a -. w) < 1e-4);
+  let anchor = fair_value *. ((1. +. ke) ** t) in
+  check_float "anchor path" anchor m.anchor_path_price;
+  let lognormal_cdf x = Market_implied.norm_cdf ((log (x /. forward) +. (w /. 2.)) /. sqrt w) in
+  Alcotest.(check (Alcotest.float 1e-3)) "p_below_anchor_path" (lognormal_cdf anchor) m.p_below_anchor_path;
+  Alcotest.(check int) "five quantiles" 5 (List.length m.price_quantiles);
+  List.iter
+    (fun (q : Boundary_t.price_quantile) -> Alcotest.(check (Alcotest.float 1e-3)) (Printf.sprintf "quantile %.2f" q.p) q.p (lognormal_cdf q.price))
+    m.price_quantiles;
+  Alcotest.(check bool) "risk neutral" true m.risk_neutral;
+  Alcotest.(check int) "no wide quote in the fixture" 0 m.smile.quotes_excluded_wide;
+  (match m.smile.put_call_iv_gap_at_forward with
+  | Some gap -> Alcotest.(check (Alcotest.float 1e-6)) "no put-call gap on a European fixture" 0. gap
+  | None -> Alcotest.fail "no gap");
+  (* a junk quote (ask > 3 bid) is left out of the fit and counted *)
+  let junk = { (List.hd chain.quotes) with expiration = "2028-01-21"; strike = 20.; right = "put"; bid = 0.01; ask = 1.41; mid = 0.71 } in
+  let with_junk = get (Market_implied.of_chain { chain with quotes = junk :: chain.quotes } ~rf ~ke ~fair_value ~growth:(Error "no growth axis")) in
+  Alcotest.(check int) "excluded" 1 with_junk.smile.quotes_excluded_wide;
+  Alcotest.(check int) "fitted as before" m.smile.quotes_fitted with_junk.smile.quotes_fitted;
+  Alcotest.(check string) "the rule is recorded" "ask <= 3 bid" with_junk.smile.spread_rule;
+  Alcotest.(check bool) "no growth axis" true (Option.is_none m.implied_growth_quantiles);
+  Alcotest.(check (option string)) "with the reason" (Some "no growth axis") m.implied_growth_reason;
+  (* on a record: the growth inversion is the implied-terminal-growth solver at each
+     quantile discounted at ke; none without --options; the reasons on the other paths *)
+  let lookup t = if t = "TEST" then Some chain else None in
+  let v = Valuation.run ~options:lookup params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  Alcotest.check status "Ok" `Ok v.status;
+  (match (v.market_implied, v.inputs, v.cost_of_equity_used) with
+  | Some m, Some (`Dcf i), Some ke ->
+      let f terminal_growth_rate = Implied.dcf_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value in
+      check_float "rf is the record's" i.risk_free_rate.value m.risk_free_rate;
+      check_float "the anchor grows the fair value at ke" (Option.get v.fair_value *. ((1. +. ke) ** m.horizon_years)) m.anchor_path_price;
+      Alcotest.(check string) "labelled" "approximate" m.implied_growth_label;
+      check_mentions "why" m.implied_growth_note [ "1.4-year horizon stands in for the long run" ];
+      (match m.implied_growth_quantiles with
+      | Some gs ->
+          Alcotest.(check int) "five" 5 (List.length gs);
+          List.iter2
+            (fun (g : Boundary_t.growth_quantile) (q : Boundary_t.price_quantile) ->
+              let expected, _ = Beliefs.implied_terminal_growth ~f ~price:(q.price /. ((1. +. ke) ** m.horizon_years)) ~rate:i.wacc in
+              Alcotest.(check (option approx)) (Printf.sprintf "growth at %.2f" g.p) expected.value g.growth.value)
+            gs m.price_quantiles
+      | None -> Alcotest.fail "no growth quantiles on the dcf path")
+  | _ -> Alcotest.failf "no block: %s" (Option.value v.market_implied_reason ~default:""));
+  let plain = run (financials (history ())) in
+  Alcotest.(check bool) "neither field without --options" true
+    (Option.is_none plain.market_implied && Option.is_none plain.market_implied_reason
+    && not (contains (Boundary_j.string_of_valuation plain) "market_implied"));
+  let bank = Valuation.run ~options:(fun _ -> Some { chain with ticker = "BNK" }) params ~today ~model_version:"test" ~declaration:(Some (declaration `Bank)) (bank_financials (bank_history ())) in
+  (match bank.market_implied with
+  | Some m -> Alcotest.(check (option string)) "null growth axis on the residual-income path" (Some "the residual-income path has no terminal growth; the growth axis is undefined there") m.implied_growth_reason
+  | None -> Alcotest.failf "bank: %s" (Option.value bank.market_implied_reason ~default:""));
+  let none = Valuation.run ~options:(fun _ -> None) params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  Alcotest.(check (option string)) "no chain" (Some "no options data") none.market_implied_reason;
+  let short = Valuation.run ~options:(fun _ -> Some (synthetic_chain ~expiries:[ ("2027-03-19", 23) ] ())) params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
+  check_mentions "no expiry" (Option.value short.market_implied_reason ~default:"") [ "no expiry >= 365 days" ];
+  (* the summary line and the JSON round trip *)
+  check_mentions "summary" (Batch.summary [ v; bank; none ]) [ "market-implied (36), across 2 Ok names with an options chain: median p_below_anchor_path"; "against median probability_overpaid"; "on the 1 names with both; none on 1 Ok names (1 no options data)" ];
+  Alcotest.(check bool) "no line without --options" false (contains (Batch.summary [ plain ]) "market-implied (36)");
+  let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
+  Alcotest.check valuation "json round trip" v again
 
 (* --- the insurer model --- *)
 
@@ -2899,6 +3064,8 @@ let () =
           case "table and variant agree, universe declares known classes" test_table_and_variant_agree;
           case "batch summary" test_batch_summary;
           case "flow chart names every failure reason" test_flow_chart_names_every_reason;
+          case "market-implied smile: fit, butterfly, density, quantiles" test_market_implied_smile;
+          case "market-implied chain: expiry, anchor, growth axis, record" test_market_implied_chain;
         ] );
       ( "residual income",
         [

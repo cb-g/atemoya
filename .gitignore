@@ -12,6 +12,8 @@ __pycache__/
 creds.txt
 *.key
 *.pem
+# ThetaTerminal: the jar, its config, logs and any creds file live here; never tracked.
+tools/thetaterminal/
 
 # --- generated data ---
 # Convention: anything under data/, output/ or log/ is generated and disposable.
@@ -37,3 +39,5 @@ relay/
 
 # --- AI working instructions: local for now, may be committed later ---
 CLAUDE.md
+# Local tool settings (deny rules on secrets); never committed.
+.claude/

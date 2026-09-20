@@ -26,4 +26,21 @@ rc=$?
 [ "$rc" -eq 0 ] && refuse "staged content looks like a credential:
 $(printf '%s\n' "$hit" | cut -c1-80 | sed 's/^/  /')"
 [ "$rc" -ge 2 ] && refuse "credential scan errored (rc=$rc); refusing rather than passing blind"
+
+# 3. Name-specific refusals (36), in any file including .env.example: a ThetaData login or
+#    a FRED key with any value at all, and an SEC identity whose value is not the example.com
+#    placeholder. The generic pattern above needs 16 characters; these need none.
+named="(THETADATA_EMAIL|THETADATA_PASSWORD|FRED_API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]"
+hit=$(printf '%s
+' "$added" | grep -E "$named")
+rc=$?
+[ "$rc" -eq 0 ] && refuse "staged content assigns a named credential:
+$(printf '%s\n' "$hit" | cut -c1-40 | sed 's/^/  /')"
+[ "$rc" -ge 2 ] && refuse "named credential scan errored (rc=$rc); refusing rather than passing blind"
+hit=$(printf '%s
+' "$added" | grep -E "SEC_EDGAR_IDENTITY[[:space:]]*=" | grep -v "example\.com")
+rc=$?
+[ "$rc" -eq 0 ] && refuse "staged content assigns an SEC identity that is not the example.com placeholder:
+$(printf '%s\n' "$hit" | cut -c1-40 | sed 's/^/  /')"
+[ "$rc" -ge 2 ] && refuse "identity scan errored (rc=$rc); refusing rather than passing blind"
 exit 0

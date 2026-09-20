@@ -330,6 +330,62 @@ class TaxRateSource:
 
 
 @dataclass
+class SviSmile:
+    """Original type: svi_smile = { ... }
+    """
+
+    a: float
+    b: float
+    rho: float
+    m: float
+    sigma: float
+    rmse: float
+    quotes_fitted: int
+    quotes_excluded_wide: int
+    spread_rule: str
+    put_call_iv_gap_at_forward: Optional[float]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'SviSmile':
+        if isinstance(x, dict):
+            return cls(
+                a=_atd_read_float(x['a']) if 'a' in x else _atd_missing_json_field('SviSmile', 'a'),
+                b=_atd_read_float(x['b']) if 'b' in x else _atd_missing_json_field('SviSmile', 'b'),
+                rho=_atd_read_float(x['rho']) if 'rho' in x else _atd_missing_json_field('SviSmile', 'rho'),
+                m=_atd_read_float(x['m']) if 'm' in x else _atd_missing_json_field('SviSmile', 'm'),
+                sigma=_atd_read_float(x['sigma']) if 'sigma' in x else _atd_missing_json_field('SviSmile', 'sigma'),
+                rmse=_atd_read_float(x['rmse']) if 'rmse' in x else _atd_missing_json_field('SviSmile', 'rmse'),
+                quotes_fitted=_atd_read_int(x['quotes_fitted']) if 'quotes_fitted' in x else _atd_missing_json_field('SviSmile', 'quotes_fitted'),
+                quotes_excluded_wide=_atd_read_int(x['quotes_excluded_wide']) if 'quotes_excluded_wide' in x else _atd_missing_json_field('SviSmile', 'quotes_excluded_wide'),
+                spread_rule=_atd_read_string(x['spread_rule']) if 'spread_rule' in x else _atd_missing_json_field('SviSmile', 'spread_rule'),
+                put_call_iv_gap_at_forward=_atd_read_nullable(_atd_read_float)(x['put_call_iv_gap_at_forward']) if 'put_call_iv_gap_at_forward' in x else _atd_missing_json_field('SviSmile', 'put_call_iv_gap_at_forward'),
+            )
+        else:
+            _atd_bad_json('SviSmile', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['a'] = _atd_write_float(self.a)
+        res['b'] = _atd_write_float(self.b)
+        res['rho'] = _atd_write_float(self.rho)
+        res['m'] = _atd_write_float(self.m)
+        res['sigma'] = _atd_write_float(self.sigma)
+        res['rmse'] = _atd_write_float(self.rmse)
+        res['quotes_fitted'] = _atd_write_int(self.quotes_fitted)
+        res['quotes_excluded_wide'] = _atd_write_int(self.quotes_excluded_wide)
+        res['spread_rule'] = _atd_write_string(self.spread_rule)
+        res['put_call_iv_gap_at_forward'] = _atd_write_nullable(_atd_write_float)(self.put_call_iv_gap_at_forward)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'SviSmile':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class SurplusPoint:
     """Original type: surplus_point = { ... }
     """
@@ -1388,6 +1444,38 @@ class ReitInputs:
 
 
 @dataclass
+class PriceQuantile:
+    """Original type: price_quantile = { ... }
+    """
+
+    p: float
+    price: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'PriceQuantile':
+        if isinstance(x, dict):
+            return cls(
+                p=_atd_read_float(x['p']) if 'p' in x else _atd_missing_json_field('PriceQuantile', 'p'),
+                price=_atd_read_float(x['price']) if 'price' in x else _atd_missing_json_field('PriceQuantile', 'price'),
+            )
+        else:
+            _atd_bad_json('PriceQuantile', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['p'] = _atd_write_float(self.p)
+        res['price'] = _atd_write_float(self.price)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'PriceQuantile':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class PointInTime:
     """Original type: point_in_time = { ... }
     """
@@ -2239,6 +2327,128 @@ class Model:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'Model':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class GrowthQuantile:
+    """Original type: growth_quantile = { ... }
+    """
+
+    p: float
+    growth: Readout
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'GrowthQuantile':
+        if isinstance(x, dict):
+            return cls(
+                p=_atd_read_float(x['p']) if 'p' in x else _atd_missing_json_field('GrowthQuantile', 'p'),
+                growth=Readout.from_json(x['growth']) if 'growth' in x else _atd_missing_json_field('GrowthQuantile', 'growth'),
+            )
+        else:
+            _atd_bad_json('GrowthQuantile', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['p'] = _atd_write_float(self.p)
+        res['growth'] = (lambda x: x.to_json())(self.growth)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'GrowthQuantile':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class MarketImplied:
+    """Original type: market_implied = { ... }
+    """
+
+    source: str
+    snapshot_date: str
+    snapshot_timestamp: str
+    spot: float
+    forward: float
+    forward_source: str
+    risk_free_rate: float
+    expiry: str
+    horizon_years: float
+    otm_quoted_below: int
+    otm_quoted_above: int
+    smile: SviSmile
+    price_quantiles: List[PriceQuantile]
+    anchor_path_price: float
+    p_below_anchor_path: float
+    implied_growth_quantiles: Optional[List[GrowthQuantile]]
+    implied_growth_label: str
+    implied_growth_note: str
+    risk_neutral: bool
+    note: str
+    implied_growth_reason: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'MarketImplied':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('MarketImplied', 'source'),
+                snapshot_date=_atd_read_string(x['snapshot_date']) if 'snapshot_date' in x else _atd_missing_json_field('MarketImplied', 'snapshot_date'),
+                snapshot_timestamp=_atd_read_string(x['snapshot_timestamp']) if 'snapshot_timestamp' in x else _atd_missing_json_field('MarketImplied', 'snapshot_timestamp'),
+                spot=_atd_read_float(x['spot']) if 'spot' in x else _atd_missing_json_field('MarketImplied', 'spot'),
+                forward=_atd_read_float(x['forward']) if 'forward' in x else _atd_missing_json_field('MarketImplied', 'forward'),
+                forward_source=_atd_read_string(x['forward_source']) if 'forward_source' in x else _atd_missing_json_field('MarketImplied', 'forward_source'),
+                risk_free_rate=_atd_read_float(x['risk_free_rate']) if 'risk_free_rate' in x else _atd_missing_json_field('MarketImplied', 'risk_free_rate'),
+                expiry=_atd_read_string(x['expiry']) if 'expiry' in x else _atd_missing_json_field('MarketImplied', 'expiry'),
+                horizon_years=_atd_read_float(x['horizon_years']) if 'horizon_years' in x else _atd_missing_json_field('MarketImplied', 'horizon_years'),
+                otm_quoted_below=_atd_read_int(x['otm_quoted_below']) if 'otm_quoted_below' in x else _atd_missing_json_field('MarketImplied', 'otm_quoted_below'),
+                otm_quoted_above=_atd_read_int(x['otm_quoted_above']) if 'otm_quoted_above' in x else _atd_missing_json_field('MarketImplied', 'otm_quoted_above'),
+                smile=SviSmile.from_json(x['smile']) if 'smile' in x else _atd_missing_json_field('MarketImplied', 'smile'),
+                price_quantiles=_atd_read_list(PriceQuantile.from_json)(x['price_quantiles']) if 'price_quantiles' in x else _atd_missing_json_field('MarketImplied', 'price_quantiles'),
+                anchor_path_price=_atd_read_float(x['anchor_path_price']) if 'anchor_path_price' in x else _atd_missing_json_field('MarketImplied', 'anchor_path_price'),
+                p_below_anchor_path=_atd_read_float(x['p_below_anchor_path']) if 'p_below_anchor_path' in x else _atd_missing_json_field('MarketImplied', 'p_below_anchor_path'),
+                implied_growth_quantiles=_atd_read_nullable(_atd_read_list(GrowthQuantile.from_json))(x['implied_growth_quantiles']) if 'implied_growth_quantiles' in x else _atd_missing_json_field('MarketImplied', 'implied_growth_quantiles'),
+                implied_growth_label=_atd_read_string(x['implied_growth_label']) if 'implied_growth_label' in x else _atd_missing_json_field('MarketImplied', 'implied_growth_label'),
+                implied_growth_note=_atd_read_string(x['implied_growth_note']) if 'implied_growth_note' in x else _atd_missing_json_field('MarketImplied', 'implied_growth_note'),
+                risk_neutral=_atd_read_bool(x['risk_neutral']) if 'risk_neutral' in x else _atd_missing_json_field('MarketImplied', 'risk_neutral'),
+                note=_atd_read_string(x['note']) if 'note' in x else _atd_missing_json_field('MarketImplied', 'note'),
+                implied_growth_reason=_atd_read_string(x['implied_growth_reason']) if 'implied_growth_reason' in x else None,
+            )
+        else:
+            _atd_bad_json('MarketImplied', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['snapshot_date'] = _atd_write_string(self.snapshot_date)
+        res['snapshot_timestamp'] = _atd_write_string(self.snapshot_timestamp)
+        res['spot'] = _atd_write_float(self.spot)
+        res['forward'] = _atd_write_float(self.forward)
+        res['forward_source'] = _atd_write_string(self.forward_source)
+        res['risk_free_rate'] = _atd_write_float(self.risk_free_rate)
+        res['expiry'] = _atd_write_string(self.expiry)
+        res['horizon_years'] = _atd_write_float(self.horizon_years)
+        res['otm_quoted_below'] = _atd_write_int(self.otm_quoted_below)
+        res['otm_quoted_above'] = _atd_write_int(self.otm_quoted_above)
+        res['smile'] = (lambda x: x.to_json())(self.smile)
+        res['price_quantiles'] = _atd_write_list((lambda x: x.to_json()))(self.price_quantiles)
+        res['anchor_path_price'] = _atd_write_float(self.anchor_path_price)
+        res['p_below_anchor_path'] = _atd_write_float(self.p_below_anchor_path)
+        res['implied_growth_quantiles'] = _atd_write_nullable(_atd_write_list((lambda x: x.to_json())))(self.implied_growth_quantiles)
+        res['implied_growth_label'] = _atd_write_string(self.implied_growth_label)
+        res['implied_growth_note'] = _atd_write_string(self.implied_growth_note)
+        res['risk_neutral'] = _atd_write_bool(self.risk_neutral)
+        res['note'] = _atd_write_string(self.note)
+        if self.implied_growth_reason is not None:
+            res['implied_growth_reason'] = _atd_write_string(self.implied_growth_reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'MarketImplied':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -3225,6 +3435,8 @@ class Valuation:
     required_return_version: Optional[str] = None
     surplus_curve: Optional[List[SurplusPoint]] = None
     surplus_curve_reason: Optional[str] = None
+    market_implied: Optional[MarketImplied] = None
+    market_implied_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -3268,6 +3480,8 @@ class Valuation:
                 required_return_version=_atd_read_string(x['required_return_version']) if 'required_return_version' in x else None,
                 surplus_curve=_atd_read_list(SurplusPoint.from_json)(x['surplus_curve']) if 'surplus_curve' in x else None,
                 surplus_curve_reason=_atd_read_string(x['surplus_curve_reason']) if 'surplus_curve_reason' in x else None,
+                market_implied=MarketImplied.from_json(x['market_implied']) if 'market_implied' in x else None,
+                market_implied_reason=_atd_read_string(x['market_implied_reason']) if 'market_implied_reason' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -3329,10 +3543,123 @@ class Valuation:
             res['surplus_curve'] = _atd_write_list((lambda x: x.to_json()))(self.surplus_curve)
         if self.surplus_curve_reason is not None:
             res['surplus_curve_reason'] = _atd_write_string(self.surplus_curve_reason)
+        if self.market_implied is not None:
+            res['market_implied'] = (lambda x: x.to_json())(self.market_implied)
+        if self.market_implied_reason is not None:
+            res['market_implied_reason'] = _atd_write_string(self.market_implied_reason)
         return res
 
     @classmethod
     def from_json_string(cls, x: str) -> 'Valuation':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class OptionQuote:
+    """Original type: option_quote = { ... }
+    """
+
+    expiration: str
+    strike: float
+    right: str
+    bid: float
+    ask: float
+    mid: float
+    bid_size: int
+    ask_size: int
+    last: float
+    volume: int
+    count: int
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'OptionQuote':
+        if isinstance(x, dict):
+            return cls(
+                expiration=_atd_read_string(x['expiration']) if 'expiration' in x else _atd_missing_json_field('OptionQuote', 'expiration'),
+                strike=_atd_read_float(x['strike']) if 'strike' in x else _atd_missing_json_field('OptionQuote', 'strike'),
+                right=_atd_read_string(x['right']) if 'right' in x else _atd_missing_json_field('OptionQuote', 'right'),
+                bid=_atd_read_float(x['bid']) if 'bid' in x else _atd_missing_json_field('OptionQuote', 'bid'),
+                ask=_atd_read_float(x['ask']) if 'ask' in x else _atd_missing_json_field('OptionQuote', 'ask'),
+                mid=_atd_read_float(x['mid']) if 'mid' in x else _atd_missing_json_field('OptionQuote', 'mid'),
+                bid_size=_atd_read_int(x['bid_size']) if 'bid_size' in x else _atd_missing_json_field('OptionQuote', 'bid_size'),
+                ask_size=_atd_read_int(x['ask_size']) if 'ask_size' in x else _atd_missing_json_field('OptionQuote', 'ask_size'),
+                last=_atd_read_float(x['last']) if 'last' in x else _atd_missing_json_field('OptionQuote', 'last'),
+                volume=_atd_read_int(x['volume']) if 'volume' in x else _atd_missing_json_field('OptionQuote', 'volume'),
+                count=_atd_read_int(x['count']) if 'count' in x else _atd_missing_json_field('OptionQuote', 'count'),
+            )
+        else:
+            _atd_bad_json('OptionQuote', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['expiration'] = _atd_write_string(self.expiration)
+        res['strike'] = _atd_write_float(self.strike)
+        res['right'] = _atd_write_string(self.right)
+        res['bid'] = _atd_write_float(self.bid)
+        res['ask'] = _atd_write_float(self.ask)
+        res['mid'] = _atd_write_float(self.mid)
+        res['bid_size'] = _atd_write_int(self.bid_size)
+        res['ask_size'] = _atd_write_int(self.ask_size)
+        res['last'] = _atd_write_float(self.last)
+        res['volume'] = _atd_write_int(self.volume)
+        res['count'] = _atd_write_int(self.count)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'OptionQuote':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class OptionChain:
+    """Original type: option_chain = { ... }
+    """
+
+    ticker: str
+    snapshot_date: str
+    snapshot_timestamp: str
+    source: str
+    underlying_close: float
+    underlying_source: str
+    fetched_at: str
+    quotes: List[OptionQuote]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'OptionChain':
+        if isinstance(x, dict):
+            return cls(
+                ticker=_atd_read_string(x['ticker']) if 'ticker' in x else _atd_missing_json_field('OptionChain', 'ticker'),
+                snapshot_date=_atd_read_string(x['snapshot_date']) if 'snapshot_date' in x else _atd_missing_json_field('OptionChain', 'snapshot_date'),
+                snapshot_timestamp=_atd_read_string(x['snapshot_timestamp']) if 'snapshot_timestamp' in x else _atd_missing_json_field('OptionChain', 'snapshot_timestamp'),
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('OptionChain', 'source'),
+                underlying_close=_atd_read_float(x['underlying_close']) if 'underlying_close' in x else _atd_missing_json_field('OptionChain', 'underlying_close'),
+                underlying_source=_atd_read_string(x['underlying_source']) if 'underlying_source' in x else _atd_missing_json_field('OptionChain', 'underlying_source'),
+                fetched_at=_atd_read_string(x['fetched_at']) if 'fetched_at' in x else _atd_missing_json_field('OptionChain', 'fetched_at'),
+                quotes=_atd_read_list(OptionQuote.from_json)(x['quotes']) if 'quotes' in x else _atd_missing_json_field('OptionChain', 'quotes'),
+            )
+        else:
+            _atd_bad_json('OptionChain', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['ticker'] = _atd_write_string(self.ticker)
+        res['snapshot_date'] = _atd_write_string(self.snapshot_date)
+        res['snapshot_timestamp'] = _atd_write_string(self.snapshot_timestamp)
+        res['source'] = _atd_write_string(self.source)
+        res['underlying_close'] = _atd_write_float(self.underlying_close)
+        res['underlying_source'] = _atd_write_string(self.underlying_source)
+        res['fetched_at'] = _atd_write_string(self.fetched_at)
+        res['quotes'] = _atd_write_list((lambda x: x.to_json()))(self.quotes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'OptionChain':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:

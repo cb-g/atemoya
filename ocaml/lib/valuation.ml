@@ -170,7 +170,7 @@ let point_in_time_gates (fin : financials) =
       | None, None, Some currency -> Error ("rate source has no history for " ^ currency)
       | None, None, None -> Ok ())
 
-let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns (params : Params.t) ~today ~model_version
+let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns ?options (params : Params.t) ~today ~model_version
     ~declaration (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
   let hold_vintage = Option.is_some original.point_in_time in
@@ -239,6 +239,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       required_return_version = None;
       surplus_curve = None;
       surplus_curve_reason = None;
+      market_implied = None;
+      market_implied_reason = None;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,
@@ -252,8 +254,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   (* The declared belief (24) on a growth-then-terminal path: the fourth readout and the
      probability of overpaying under it; the residual-income paths and an undeclared class
      carry the reason instead. *)
-  let belief_of ~price ~fair_value (inputs : model_inputs) =
-    let terminal_and_f =
+  let terminal_and_f (inputs : model_inputs) =
       match inputs with
       | `Dcf i ->
           Some (i.terminal_growth_rate.value, i.wacc,
@@ -266,8 +267,9 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
           Some (i.terminal_growth_rate.value, i.cost_of_equity,
                 fun terminal_growth_rate -> Implied.reit_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value)
       | `Residual_income _ | `Residual_income_insurer _ -> None
-    in
-    match terminal_and_f with
+  in
+  let belief_of ~price ~fair_value (inputs : model_inputs) =
+    match terminal_and_f inputs with
     | None -> Error "the residual-income path has no terminal growth; the belief parameter is undefined there"
     | Some (terminal_growth_rate, rate, f) -> (
         let entity_class = match declared with Some c -> Admissibility.class_name c | None -> "" in
@@ -282,6 +284,32 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         | Some (b, source) ->
             let source_kind = if String.length source >= 8 && String.sub source 0 8 = "per-name" then "name" else "class" in
             Ok (Beliefs.readout b ~source ~source_kind ~f ~price ~rate ~fair_value, Beliefs.surplus_curve b ~f ~price))
+  in
+  (* The market-implied readout (36), only under --options: the chain for the name on the
+     latest snapshot date, or the reason there is none. *)
+  let rf_of (inputs : model_inputs) =
+    match inputs with
+    | `Dcf i -> i.risk_free_rate.value
+    | `Dcf_midcycle m -> m.dcf.risk_free_rate.value
+    | `Residual_income i -> i.risk_free_rate.value
+    | `Residual_income_insurer i -> i.core.risk_free_rate.value
+    | `Reit_ffo_dividend i -> i.risk_free_rate.value
+  in
+  let market_implied_of ~ke ~fair_value (inputs : model_inputs) =
+    match options with
+    | None -> (None, None)
+    | Some lookup -> (
+        match lookup original.ticker with
+        | None -> (None, Some "no options data")
+        | Some chain -> (
+            let growth =
+              match terminal_and_f inputs with
+              | Some (_, rate, f) -> Ok (rate, f)
+              | None -> Error "the residual-income path has no terminal growth; the growth axis is undefined there"
+            in
+            match Market_implied.of_chain chain ~rf:(rf_of inputs) ~ke ~fair_value ~growth with
+            | Ok m -> (Some m, None)
+            | Error r -> (None, Some r)))
   in
   let failed ?(fin = original) ?model ?class_check ?inputs ~floor reason =
     record ~fin ?model ?class_check ?inputs ~price:fin.price ~status:`Failed
@@ -331,6 +359,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
           required_return_source =
             Some (match assumptions.required_return with Some r -> r.source | None -> "capm");
           required_return_version = Option.map (fun (r : Dcf.declared_return) -> r.version) assumptions.required_return;
+          market_implied = fst (market_implied_of ~ke:(Dcf.cost_of_equity assumptions) ~fair_value inputs);
+          market_implied_reason = snd (market_implied_of ~ke:(Dcf.cost_of_equity assumptions) ~fair_value inputs);
         }
   in
   (* A derived ebit (any recipe but operating income) runs the dcf only when the record's
