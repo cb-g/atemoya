@@ -224,8 +224,11 @@ expiry by expiry) and the name's fair value and risk-free rate from the latest r
 structures priced from quotes, ask for what is bought and bid for what is sold; a missing
 leg or a leg more than five vol points off the smile excludes the candidate; cost, floor
 and cap per candidate, distribution-free; the exact Pareto set; the declared constraint
-selects and nothing is recommended without one; one risk-neutral floor probability from
-the smile's density; the scope limits on every output. No model price, no sampling.
+selects and nothing is recommended without one; capping the upside is a declaration (39):
+a collar or covered call is selectable only when the entry declares `min_cap_pct` and the
+cap is at or above it, else only puts and put spreads, the output saying which; one
+risk-neutral floor probability from the smile's density; the scope limits on every
+output. No model price, no sampling.
 
 ## Frontier
 
@@ -449,6 +452,8 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- capping upside is a declaration (39): `min_cap_pct` on a holding; without it only
+  uncapped structures are selectable. No number moves.
 - single-name hedging (38): `python/hedge.py` on the options store, four structures from
   quotes, the Pareto set, the declared constraint, the anchor as a selectable floor and
   one risk-neutral floor probability; `atemoya-smile` prints every expiry's smile on a

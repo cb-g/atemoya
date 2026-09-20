@@ -94,18 +94,46 @@ def test_constraints_select_and_the_anchor_above_spot_says_so() -> None:
     chain, smiles = fixture()
     expiries, _ = hedge.expiries_in_window(smiles, chain, 300)
     front = hedge.pareto(hedge.candidates_of(expiries, SPOT))
+    uncapped = [c for c in front if c.cap_pct is None]
     cheap, reason = hedge.select(front, hedge.Constraint(max_cost_pct=0.02), anchor=None, spot=SPOT)
-    assert reason is None and all(c.cost_pct <= 0.02 for c in cheap) and cheap[0].floor_pct == max(c.floor_pct for c in cheap)
+    assert reason is None and all(c.cost_pct <= 0.02 and c.cap_pct is None for c in cheap) and cheap[0].floor_pct == max(c.floor_pct for c in uncapped if c.cost_pct <= 0.02)
     floored, reason = hedge.select(front, hedge.Constraint(min_floor_pct=0.85), anchor=None, spot=SPOT)
-    assert reason is None and all(c.floor_pct >= 0.85 for c in floored) and floored[0].cost_pct == min(c.cost_pct for c in floored)
+    assert reason is None and all(c.floor_pct >= 0.85 and c.cap_pct is None for c in floored) and floored[0].cost_pct == min(c.cost_pct for c in uncapped if c.floor_pct >= 0.85)
     anchored, reason = hedge.select(front, hedge.Constraint(floor="anchor"), anchor=88.0, spot=SPOT)
-    assert reason is None and all(c.floor_pct >= 0.88 for c in anchored) and anchored[0].cost_pct == min(c.cost_pct for c in anchored)
+    assert reason is None and all(c.floor_pct >= 0.88 and c.cap_pct is None for c in anchored) and anchored[0].cost_pct == min(c.cost_pct for c in uncapped if c.floor_pct >= 0.88)
     none, reason = hedge.select(front, hedge.Constraint(floor="anchor"), anchor=120.0, spot=SPOT)
     assert none == [] and reason is not None and reason.startswith("the anchor is above the price; nothing above it to insure")
     none, reason = hedge.select(front, hedge.Constraint(floor="anchor"), anchor=None, spot=SPOT)
     assert none == [] and reason == "the anchor is not available: the name has no fair value in the run"
     none, reason = hedge.select(front, hedge.Constraint(max_cost_pct=-5.0), anchor=None, spot=SPOT)
-    assert none == [] and reason is not None and reason.startswith("no frontier point costs at most")
+    assert none == [] and reason is not None and reason.startswith("no selectable frontier point costs at most")
+
+
+def test_a_cap_is_declared_never_chosen() -> None:
+    chain, smiles = fixture()
+    expiries, _ = hedge.expiries_in_window(smiles, chain, 300)
+    front = hedge.pareto(hedge.candidates_of(expiries, SPOT))
+    # a collar dominates every put on cost and floor (a credit with a floor near par) ...
+    best_put = max((c for c in front if c.structure == "protective_put"), key=lambda c: c.floor_pct)
+    assert any(c.structure == "collar" and c.cost_pct < best_put.cost_pct and c.floor_pct > best_put.floor_pct for c in front)
+    # ... and is still never selected without min_cap_pct, under any of the three constraints
+    for constraint, anchor in ((hedge.Constraint(max_cost_pct=0.5), None), (hedge.Constraint(min_floor_pct=0.5), None), (hedge.Constraint(floor="anchor"), 60.0)):
+        eligible, reason = hedge.select(front, constraint, anchor=anchor, spot=SPOT)
+        assert reason is None and eligible and all(c.cap_pct is None for c in eligible)
+    _, note = hedge.selectable(front, None)
+    assert note == "selectable: uncapped only (min_cap_pct not declared)"
+    # declared: the cheapest qualifying collar under a floor, its cap at or above the declaration
+    eligible, reason = hedge.select(front, hedge.Constraint(min_floor_pct=0.85), anchor=None, spot=SPOT, min_cap_pct=1.2)
+    assert reason is None and eligible[0].structure in ("collar", "covered_call") and eligible[0].cap_pct is not None and eligible[0].cap_pct >= 1.2
+    assert all(c.cap_pct is None or c.cap_pct >= 1.2 for c in eligible)
+    qualifying = [c for c in front if c.floor_pct >= 0.85 and (c.cap_pct is None or c.cap_pct >= 1.2)]
+    assert eligible[0].cost_pct == min(c.cost_pct for c in qualifying)
+    _, note = hedge.selectable(front, 1.2)
+    assert note == "selectable: cap >= 1.2 declared"
+    # the row carries both
+    h = hedge.Holding(ticker="T", shares=1.0, horizon_days=300, constraint=hedge.Constraint(min_floor_pct=0.85), min_cap_pct=1.2)
+    out = hedge.hedge_one(h, chain, smiles, anchor=None, anchor_reason=None)
+    assert out["min_cap_pct"] == 1.2 and out["selectable"] == "selectable: cap >= 1.2 declared"
 
 
 def test_stale_quote_and_missing_leg_exclude_the_candidate() -> None:

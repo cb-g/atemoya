@@ -279,7 +279,11 @@ floor first; `min_floor_pct` the points at or above it, cheapest first; `floor: 
 takes the name's fair value from the latest run as the floor and picks the cheapest point
 at or above it, and says "the anchor is above the price; nothing above it to insure" when
 the fair value exceeds spot. The first eligible point is the selection; without a
-constraint nothing is recommended. One risk-neutral readout goes with the selection: the
+constraint nothing is recommended. A cap on the upside is something the holder declares,
+never something a rule chooses for them: an entry may carry `min_cap_pct`, the lowest
+best outcome at expiry the holder accepts, and without it only protective puts and put
+spreads are selectable, collars and covered calls staying in the table and the frontier;
+the output states which set was selectable. One risk-neutral readout goes with the selection: the
 market's probability, from the same smile, that the price at expiry is at or below the
 floor's strike. Position Greeks (holding plus structure) come from the smile at the quoted
 strikes.

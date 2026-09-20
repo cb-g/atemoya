@@ -8,7 +8,12 @@ constraint; holdings are never tracked.
 holdings.json: {"holdings": [{"ticker": "AAPL", "shares": 100, "horizon_days": 180,
 "constraint": {"max_cost_pct": 0.03}}, ...]}, the constraint exactly one of
 {"max_cost_pct": x}, {"min_floor_pct": y} or {"floor": "anchor"}; optional "as_of" picks
-the store date (the latest snapshot at or before it), default the latest.
+the store date (the latest snapshot at or before it), default the latest. Capping the
+upside is a declaration (39): an entry may carry "min_cap_pct", the lowest best outcome
+at expiry over today's value the holder accepts; without it only uncapped structures
+(protective puts and put spreads) are selectable, and a collar or covered call is selected
+only when it is declared and the structure's cap is at or above it. Collars and covered
+calls stay in the candidate table and the Pareto set either way.
 
 Structures, per share held, evaluated held to expiry: protective put (long put), collar
 (long put, short call above it), put spread (long put, short lower put), covered call
@@ -84,6 +89,7 @@ class Holding(BaseModel):
     shares: float
     horizon_days: int
     constraint: Constraint
+    min_cap_pct: float | None = None
 
 
 class Holdings(BaseModel):
@@ -328,25 +334,34 @@ def pareto(cands: list[Candidate]) -> list[Candidate]:
     return keep
 
 
-def select(frontier: list[Candidate], constraint: Constraint, *, anchor: float | None, spot: float) -> tuple[list[Candidate], str | None]:
-    """The eligible frontier points in the constraint's order, the first being the selection,
-    or the reason there is none."""
+def selectable(frontier: list[Candidate], min_cap_pct: float | None) -> tuple[list[Candidate], str]:
+    """(39) What the constraint may pick from: the uncapped frontier points, plus the capped
+    ones whose cap is at or above the declared min_cap_pct when there is one."""
+    if min_cap_pct is None:
+        return [c for c in frontier if c.cap_pct is None], "selectable: uncapped only (min_cap_pct not declared)"
+    return [c for c in frontier if c.cap_pct is None or c.cap_pct >= min_cap_pct], f"selectable: cap >= {min_cap_pct:g} declared"
+
+
+def select(frontier: list[Candidate], constraint: Constraint, *, anchor: float | None, spot: float, min_cap_pct: float | None = None) -> tuple[list[Candidate], str | None]:
+    """The eligible points of the selectable set in the constraint's order, the first being
+    the selection, or the reason there is none."""
     kind = constraint.kind()
+    frontier, _ = selectable(frontier, min_cap_pct)
     if kind == "max_cost_pct":
         x = float(constraint.max_cost_pct or 0.0)
         eligible = sorted([c for c in frontier if c.cost_pct <= x], key=lambda c: (-c.floor_pct, c.cost_pct, c.key()))
-        return eligible, None if eligible else f"no frontier point costs at most {x:.4f} of the holding"
+        return eligible, None if eligible else f"no selectable frontier point costs at most {x:.4f} of the holding"
     if kind == "min_floor_pct":
         y = float(constraint.min_floor_pct or 0.0)
         eligible = sorted([c for c in frontier if c.floor_pct >= y], key=lambda c: (c.cost_pct, -c.floor_pct, c.key()))
-        return eligible, None if eligible else f"no frontier point floors at least {y:.4f} of the holding"
+        return eligible, None if eligible else f"no selectable frontier point floors at least {y:.4f} of the holding"
     if anchor is None:
         return [], "the anchor is not available: the name has no fair value in the run"
     if anchor > spot:
         return [], f"the anchor is above the price; nothing above it to insure (fair value {anchor:.2f}, spot {spot:.2f})"
     target = anchor / spot
     eligible = sorted([c for c in frontier if c.floor_pct >= target], key=lambda c: (c.cost_pct, -c.floor_pct, c.key()))
-    return eligible, None if eligible else f"no frontier point floors at or above the anchor ({target:.4f} of spot)"
+    return eligible, None if eligible else f"no selectable frontier point floors at or above the anchor ({target:.4f} of spot)"
 
 
 def floor_probability(c: Candidate, expiries: list[Expiry]) -> dict[str, object]:
@@ -404,12 +419,15 @@ def hedge_one(h: Holding, chain: boundary.OptionChain, smiles: boundary.ChainSmi
     expiries, notes = expiries_in_window(smiles, chain, h.horizon_days)
     cands = candidates_of(expiries, spot)
     frontier = pareto(cands)
-    eligible, reason = select(frontier, h.constraint, anchor=anchor, spot=spot)
+    eligible, reason = select(frontier, h.constraint, anchor=anchor, spot=spot, min_cap_pct=h.min_cap_pct)
+    _, selectable_note = selectable(frontier, h.min_cap_pct)
     selection = eligible[0] if eligible else None
     return {
         "ticker": h.ticker, "snapshot_date": smiles.snapshot_date, "spot": spot, "shares": h.shares, "value": h.shares * spot,
         "horizon_days": h.horizon_days, "risk_free_rate": smiles.risk_free_rate,
         "constraint": h.constraint.model_dump(exclude_none=True),
+        "min_cap_pct": h.min_cap_pct,
+        "selectable": selectable_note,
         "anchor": {"fair_value": anchor, "fair_value_over_spot": (anchor / spot) if anchor is not None else None, "reason": anchor_reason},
         "expiries": [{"expiry": e.expiry, "days_to_expiry": e.days, "forward": e.forward, "puts_quoted": len(e.puts), "calls_quoted": len(e.calls),
                       "legs_excluded_stale": e.excluded_stale, "legs_excluded_no_inversion": e.excluded_no_inversion} for e in expiries],
@@ -455,7 +473,7 @@ def draw(result: dict[str, object], png: Path) -> None:
     ax.set_title(f"{result['ticker']} on {result['snapshot_date']}: {result['shares']} shares at {result['spot']}, horizon {result['horizon_days']} days")
     ax.grid(True, alpha=0.3)
     ax.legend(loc="lower right", fontsize=8)
-    fig.text(0.01, 0.01, "constraint: " + json.dumps(result["constraint"]) + (f"; {result['selection_reason']}" if result["selection_reason"] else "") + ". Held to expiry; quotes, not model prices; no forecast.", fontsize=7)
+    fig.text(0.01, 0.01, "constraint: " + json.dumps(result["constraint"]) + f"; {result['selectable']}" + (f"; {result['selection_reason']}" if result["selection_reason"] else "") + ". Held to expiry; quotes, not model prices; no forecast.", fontsize=7)
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(png, dpi=120)
     plt.close(fig)
@@ -473,7 +491,11 @@ def main(argv: list[str]) -> int:
     out_dir: Path = args.out / args.holdings.stem
     out_dir.mkdir(parents=True, exist_ok=True)
     rc = 0
+    seen: dict[str, int] = {}
     for h in holdings.holdings:
+        # A ticker held twice under two declarations: the second file is <TICKER>-2.json.
+        seen[h.ticker] = seen.get(h.ticker, 0) + 1
+        stem = h.ticker if seen[h.ticker] == 1 else f"{h.ticker}-{seen[h.ticker]}"
         chain_path = latest_chain(args.options, h.ticker, holdings.as_of)
         if chain_path is None:
             print(f"{h.ticker}: no options data{' at or before ' + holdings.as_of if holdings.as_of else ''}", file=sys.stderr)
@@ -490,18 +512,18 @@ def main(argv: list[str]) -> int:
         chain = boundary.OptionChain.from_json_string(chain_path.read_text())
         smiles = smiles_of(chain_path, rf)
         result = hedge_one(h, chain, smiles, anchor=anchor, anchor_reason=anchor_reason)
-        (out_dir / f"{h.ticker}.json").write_text(json.dumps(result, indent=1, sort_keys=True) + "\n")
-        draw(result, out_dir / f"{h.ticker}.png")
+        (out_dir / f"{stem}.json").write_text(json.dumps(result, indent=1, sort_keys=True) + "\n")
+        draw(result, out_dir / f"{stem}.png")
         selected = points([result["selection"]])
         n_cands, n_front = len(points(result["candidates"])), len(points(result["frontier"]))
         if selected:
             s = selected[0]
             fp = points([s["floor_probability"]])
             fp_value = fp[0].get("value") if fp else None
-            print(f"{h.ticker} {smiles.snapshot_date}: {n_cands} candidates, frontier {n_front}; selection {s['structure']} {s['expiry']} "
+            print(f"{h.ticker} {smiles.snapshot_date}: {n_cands} candidates, frontier {n_front}; {result['selectable']}; selection {s['structure']} {s['expiry']} "
                   f"cost {float(str(s['cost_pct'])):+.4f} floor {float(str(s['floor_pct'])):.4f} cap {s['cap_pct']}, floor probability {fp_value}")
         else:
-            print(f"{h.ticker} {smiles.snapshot_date}: {n_cands} candidates, frontier {n_front}; no selection: {result['selection_reason']}")
+            print(f"{h.ticker} {smiles.snapshot_date}: {n_cands} candidates, frontier {n_front}; {result['selectable']}; no selection: {result['selection_reason']}")
     return rc
 
 
