@@ -127,6 +127,7 @@ type universe_entry = {
   why : string;                         (* why this class *)
   ~scope_limits : string list;          (* durable: what the models cannot see for this name; carried verbatim *)
   ?cik : string option;                 (* an identifier, not a number (22): the SEC filer to read instead of the ticker map's, with the reason in why *)
+  ?adr_ratio : float option;            (* (42) ordinary shares per depositary receipt, positive, from the 20-F's deposit-agreement disclosure cited in why; absent means 1 *)
 }
 
 type universe = {

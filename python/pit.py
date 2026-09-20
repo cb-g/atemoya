@@ -97,19 +97,9 @@ class PointCount:
 
 
 def dei_shares(facts: Mapping[str, object], d: date, tags: list[str]) -> PointCount | None:
-    """The newest cover page filed on or before [d]; a filer with several share classes files
-    one entry per class under the same date, and distinct values on that date are summed."""
-    dei = fetch_sec._as_dict(fetch_sec._as_dict(facts.get("facts")).get("dei"))  # pyright: ignore[reportPrivateUsage]
-    for tag in tags:
-        node = fetch_sec._as_dict(dei.get(tag))  # pyright: ignore[reportPrivateUsage]
-        entries = [fetch_sec._as_dict(e) for e in cast(list[object], fetch_sec._as_dict(node.get("units")).get("shares", []))]  # pyright: ignore[reportPrivateUsage]
-        dated = [(str(e["filed"]), str(e["end"]), float(cast(float, e["val"]))) for e in entries
-                 if "filed" in e and "end" in e and "val" in e and str(e["filed"]) <= d.isoformat()]
-        if dated:
-            newest = max((filed, end) for filed, end, _ in dated)
-            values = sorted({v for filed, end, v in dated if (filed, end) == newest})
-            return PointCount(sum(values), "dei cover page", tag, newest[1], newest[0])
-    return None
+    """The newest cover page filed on or before [d] (fetch_sec.cover_page_shares)."""
+    c = fetch_sec.cover_page_shares(facts, d, tags)
+    return None if c is None else PointCount(c.shares, "dei cover page", c.tag, c.as_of, c.filed)
 
 
 def balance_sheet_shares(facts: Mapping[str, object], d: date, tags: list[str], xbrl_tags: reference.XbrlTags) -> PointCount | None:
@@ -312,11 +302,16 @@ def statements_on(symbol: str, d: date, sec: SecLike, notes: list[str], *, decla
 
 
 def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Quote | None, profile: fetch.Profile | None,
-           vendor: list[boundary.FiscalPeriod] | None = None, *, declared_cik: str | None = None) -> boundary.Financials:
+           vendor: list[boundary.FiscalPeriod] | None = None, *, declared_cik: str | None = None, adr_ratio: float | None = None) -> boundary.Financials:
+    """[adr_ratio] (42): ordinary shares per receipt as declared on the universe entry; the
+    filed count is divided by it, since the price is the receipt's, and both are recorded."""
     notes: list[str] = []
     periods, decision, why, submission, facts = statements_on(symbol, d, sec, notes, declared_cik=declared_cik)
     priced = price_on(history, d)
     shares = point_count(facts, d, sec.definitions, sec.tags) if facts is not None else None
+    ordinary = None if shares is None else shares.shares
+    if shares is not None and adr_ratio is not None:
+        shares = PointCount(shares.shares / adr_ratio, shares.source, shares.tag, shares.as_of, shares.filed)
     check = same_period_check(periods, vendor, sec.tags.cross_check_threshold) if why is None and vendor else None
     if why is None and check is None:
         notes.append("cross-check: the vendor's live statements carry no column for the filed period; a derived ebit cannot be checked on this date")
@@ -342,6 +337,8 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         shares_tag=None if shares is None else shares.tag,
         shares_as_of=None if shares is None else shares.as_of,
         shares_filed=None if shares is None else shares.filed,
+        shares_ordinary=None if adr_ratio is None else ordinary,
+        adr_ratio=adr_ratio,
         rate_observations=[],
         anachronistic_inputs=[],
         statements_unavailable=why,
@@ -368,14 +365,15 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
 
 def run_date(d: date, tickers: list[str], *, histories: dict[str, History], quotes: dict[str, tuple[fetch.Quote | None, fetch.Profile | None]],
              sec: SecLike, out_root: Path = PIT_ROOT, vendors: dict[str, list[boundary.FiscalPeriod]] | None = None,
-             ciks: Mapping[str, str] | None = None) -> Path:
+             ciks: Mapping[str, str] | None = None, ratios: Mapping[str, float] | None = None) -> Path:
     """data/pit/<D>/ with a record per ticker and the reference as of D. The vendor's live
     statements (fetched once per ticker) supply the same-period cross-check; [ciks] are the
-    universe entries' declared filers (25)."""
+    universe entries' declared filers (25), [ratios] their declared receipt ratios (42)."""
     out = out_root / d.isoformat()
     out.mkdir(parents=True, exist_ok=True)
     vendors = {} if vendors is None else vendors
     ciks = {} if ciks is None else ciks
+    ratios = {} if ratios is None else ratios
     records: list[boundary.Financials] = []
     for symbol in tickers:
         if symbol not in histories:
@@ -385,7 +383,7 @@ def run_date(d: date, tickers: list[str], *, histories: dict[str, History], quot
         if symbol not in vendors:
             vendors[symbol] = fetch.vendor_periods(yf.Ticker(symbol), [])
         quote, profile = quotes[symbol]
-        records.append(record(symbol, d, sec, histories[symbol], quote, profile, vendors[symbol], declared_cik=ciks.get(symbol)))
+        records.append(record(symbol, d, sec, histories[symbol], quote, profile, vendors[symbol], declared_cik=ciks.get(symbol), adr_ratio=ratios.get(symbol)))
     countries: set[str] = set()
     currencies: set[str] = set()
     fx_sources = reference.FxSources.from_json_string((REFERENCE / "fx_sources.json").read_text())

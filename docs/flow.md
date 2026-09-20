@@ -22,7 +22,7 @@ flowchart TD
     THR -- "stale / future / missing" --> PFAIL
 
     THR -- yes --> SIG["statement signature: Bank iff NII/revenue >= threshold, else Insurer iff premium row > 0, else none"]
-    SIG --> DECL{"entity_class declared? (a universe entry, exactly ticker, entity_class, why and scope_limits, loaded strictly, from reference/universe.json, the one universe (26), or any file of the same format given as --universe, optionally with cik, the SEC filer to read instead of the ticker map's (22), honoured on the point-in-time fetch too (25); or --entity-class)"}
+    SIG --> DECL{"entity_class declared? (a universe entry, exactly ticker, entity_class, why and scope_limits, loaded strictly, from reference/universe.json, the one universe (26), or any file of the same format given as --universe, optionally with cik, the SEC filer to read instead of the ticker map's (22), honoured on the point-in-time fetch too (25), and adr_ratio, ordinary shares per depositary receipt from the 20-F cited in why, absent meaning one (42): point-in-time shares are the filed count divided by it, both recorded, since the price is the receipt's; on every live record carrying the cover page, a name with a declared ratio or a cross-currency listing gets receipt_check, the cover page's ordinary count over the effective shares against the declaration, flagged in the summary beyond 3% as depositary ratio mismatch naming both numbers, or as undeclared depositary ratio: live shares imply (x) when none is declared, a flag and never a gate or a correction; or --entity-class)"}
     DECL -- "no, no signature" --> F_UNDECL["entity_class not declared"]:::failed
     DECL -- "no, signature fired" --> F_UNDECL_HINT["entity_class not declared; statements indicate (Bank|Insurer) (evidence)"]:::failed
     DECL -- "declared OperatingCompany, signature fired" --> F_DISAGREE["class disagreement: declared OperatingCompany, statements indicate (Bank|Insurer) (evidence)"]:::failed
@@ -455,6 +455,9 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- the depositary-receipt ratio (42): `adr_ratio` on the universe entry, point-in-time
+  shares divided by it, and the live check flagged in the summary. No new `Failed` string;
+  no live number moves.
 - the IFRS component sum (40): `DepreciationExpense` plus `AmortisationExpense` when no
   total is filed, verified on TSMC against the vendor's row; TSMC recovers point-in-time
   on the dates whose filing is in facts. No new `Failed` string; no live number moves.

@@ -1,6 +1,7 @@
 """The universe file, loaded strictly: each entry is exactly ticker, entity_class, why and
-optionally scope_limits; anything else is an error, so nothing that remembers an outcome
-or a finding can creep back into a declaration."""
+optionally scope_limits, cik and adr_ratio (42, ordinary shares per depositary receipt, a
+positive number); anything else is an error, so nothing that remembers an outcome or a
+finding can creep back into a declaration."""
 
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ from typing import Any, cast
 
 import reference
 
-ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "cik")
+ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "cik", "adr_ratio")
 REQUIRED = ("ticker", "entity_class", "why")
 
 
@@ -33,6 +34,9 @@ def _check_entry(index: int, entry: object) -> None:
     missing = [k for k in REQUIRED if not isinstance(fields.get(k), str) or not str(fields[k]).strip()]
     if missing:
         raise UniverseError(f"universe entry {name} lacks {', '.join(missing)}")
+    ratio = fields.get("adr_ratio")
+    if ratio is not None and (isinstance(ratio, bool) or not isinstance(ratio, (int, float)) or ratio <= 0):
+        raise UniverseError(f"universe entry {name}: adr_ratio must be a positive number (ordinary shares per receipt)")
 
 
 def load_text(text: str) -> reference.Universe:

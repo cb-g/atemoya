@@ -168,6 +168,8 @@ type point_in_time = {
   ?shares_tag : string option;
   ?shares_as_of : string option;             (* the cover page's own date *)
   ?shares_filed : string option;
+  ?shares_ordinary : float option;           (* (42) the filed count before division by the receipt ratio; present iff adr_ratio is declared *)
+  ?adr_ratio : float option;                 (* (42) ordinary shares per receipt, as declared on the universe entry *)
   ~rate_observations : (string * string) list <json repr="object">;   (* series -> observation date used *)
   ~anachronistic_inputs : string list;       (* filled by the valuation: "name (vintage as_of)" *)
   ?statements_unavailable : string option;   (* why no filed statements were available on the date *)
@@ -200,6 +202,9 @@ type financials = {
   ?submissions_latest_annual : submission option;   (* every CIK-resolved record (14); absent with the reason below *)
   ?submissions_unavailable : string option;         (* why submissions_latest_annual is absent (14) *)
   ?point_in_time : point_in_time option;            (* present iff the record is a point-in-time one (17) *)
+  ?cover_page_shares : float option;                (* (42) the newest cover-page count filed by the fetch date, ordinary shares, for the receipt-ratio check; absent on records fetched before it existed or without a filer *)
+  ?cover_page_shares_tag : string option;
+  ?cover_page_shares_as_of : string option;
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -757,6 +762,19 @@ type chain_smiles = {
   expiries : expiry_smile list;
 }
 
+(* The depositary-receipt check (42): on a name with a declared ratio or a financial
+   currency different from its trading currency, the cover page's ordinary count over the
+   live effective shares (market cap / price, receipt units) against the declared ratio;
+   a flag, never a gate or a correction; present iff the financials carry the cover page. *)
+type receipt_check = {
+  cover_page_shares : float;
+  cover_page_shares_as_of : string;
+  effective_shares : float;
+  implied_ratio : float;              (* cover_page_shares / effective_shares *)
+  declared_ratio : float nullable;    (* the universe entry's adr_ratio; null when none is declared *)
+  ?flag : string option;              (* depositary ratio mismatch: ... | undeclared depositary ratio: live shares imply ... *)
+}
+
 (* The market-implied readout (36): the risk-neutral distribution of the price at one
    expiry, read from the chain beside the declared belief. Every field is risk-neutral: it
    embeds the market's risk pricing and is not a forecast. *)
@@ -848,4 +866,5 @@ type valuation = {
   ?surplus_curve_reason : string option;        (* (35) why there is none: no belief on the record *)
   ?market_implied : market_implied option;      (* (36) present on an Ok record when --options DIR holds a chain for the name and a usable expiry *)
   ?market_implied_reason : string option;       (* (36) present instead under --options: no options data | no expiry ... | smile fit failed: ... ; neither field without --options *)
+  ?receipt_check : receipt_check option;        (* (42) present iff the financials carry cover_page_shares and the name has a declared ratio or a cross-currency listing *)
 }

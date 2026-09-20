@@ -393,6 +393,7 @@ class UniverseEntry:
     why: str
     scope_limits: List[str] = field(default_factory=lambda: [])
     cik: Optional[str] = None
+    adr_ratio: Optional[float] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'UniverseEntry':
@@ -403,6 +404,7 @@ class UniverseEntry:
                 why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('UniverseEntry', 'why'),
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
                 cik=_atd_read_string(x['cik']) if 'cik' in x else None,
+                adr_ratio=_atd_read_float(x['adr_ratio']) if 'adr_ratio' in x else None,
             )
         else:
             _atd_bad_json('UniverseEntry', x)
@@ -415,6 +417,8 @@ class UniverseEntry:
         res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
         if self.cik is not None:
             res['cik'] = _atd_write_string(self.cik)
+        if self.adr_ratio is not None:
+            res['adr_ratio'] = _atd_write_float(self.adr_ratio)
         return res
 
     @classmethod

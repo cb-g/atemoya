@@ -49,7 +49,18 @@ val signal : thresholds -> float -> Boundary_t.signal
 type declaration = {
   entity_class : Boundary_t.entity_class;
   scope_limits : string list;
+  adr_ratio : float option;  (** (42) ordinary shares per depositary receipt, declared on the universe entry *)
 }
+
+val receipt_tolerance : float
+(** 0.03: the relative disagreement beyond which the receipt-ratio check flags. *)
+
+val receipt_check : declared:float option -> Boundary_t.financials -> Boundary_t.receipt_check option
+(** (42) On a record carrying the cover page, with a declared ratio or a financial currency
+    other than its trading currency: the cover page's ordinary count over the effective
+    shares against the declared ratio; the flag names both numbers on a disagreement beyond
+    the tolerance, or the implied ratio when none is declared and it is not 1. A flag,
+    never a gate. *)
 
 val currency_agreement : Boundary_t.financials -> (unit, string) result
 (** [`Failed] naming both when the filing's currency and the vendor's disagree. *)

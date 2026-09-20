@@ -67,17 +67,20 @@
     {
       "ticker": "NU",
       "entity_class": "Bank",
-      "why": "a Brazilian digital bank reporting in U.S. dollars, filing under IFRS on a 20-F"
+      "why": "a Brazilian digital bank reporting in U.S. dollars, filing under IFRS on a 20-F; adr_ratio: the NYSE line is the Class A ordinary share itself, not a receipt; declared at one so the check runs on this cross-currency name.",
+      "adr_ratio": 1
     },
     {
       "ticker": "IBN",
       "entity_class": "Bank",
-      "why": "an Indian bank ADR reporting in rupees under a dollar listing"
+      "why": "an Indian bank ADR reporting in rupees under a dollar listing; adr_ratio: one American depositary share is two equity shares (20-F, deposit agreement).",
+      "adr_ratio": 2
     },
     {
       "ticker": "ITUB",
       "entity_class": "Bank",
-      "why": "a Brazilian bank ADR filing under IFRS on a 20-F"
+      "why": "a Brazilian bank ADR filing under IFRS on a 20-F; adr_ratio: one American depositary share is one preferred share (20-F, deposit agreement).",
+      "adr_ratio": 1
     },
     {
       "ticker": "ALL",
@@ -102,7 +105,8 @@
     {
       "ticker": "HDB",
       "entity_class": "Bank",
-      "why": "an Indian bank ADR filing under U.S. GAAP on a 20-F, reporting in rupees"
+      "why": "an Indian bank ADR filing under U.S. GAAP on a 20-F, reporting in rupees; adr_ratio: one American depositary share is three equity shares (20-F, deposit agreement).",
+      "adr_ratio": 3
     },
     {
       "ticker": "GS",
@@ -122,7 +126,8 @@
     {
       "ticker": "TSM",
       "entity_class": "OperatingCompany",
-      "why": "a Taiwanese foundry filing under IFRS on a 20-F, reporting in Taiwan dollars"
+      "why": "a Taiwanese foundry filing under IFRS on a 20-F, reporting in Taiwan dollars; adr_ratio: one American depositary share is five ordinary shares (20-F, deposit agreement).",
+      "adr_ratio": 5
     },
     {
       "ticker": "005930.KS",
@@ -137,12 +142,14 @@
     {
       "ticker": "SAP",
       "entity_class": "OperatingCompany",
-      "why": "a German software company filing under IFRS on a 20-F, reporting in euros under a dollar listing"
+      "why": "a German software company filing under IFRS on a 20-F, reporting in euros under a dollar listing; adr_ratio: one American depositary receipt is one ordinary share (20-F, deposit agreement).",
+      "adr_ratio": 1
     },
     {
       "ticker": "SONY",
       "entity_class": "OperatingCompany",
-      "why": "a Japanese conglomerate filing under IFRS on a 20-F, reporting in yen under a dollar listing"
+      "why": "a Japanese conglomerate filing under IFRS on a 20-F, reporting in yen under a dollar listing; adr_ratio: one American depositary share is one share of common stock (20-F, deposit agreement).",
+      "adr_ratio": 1
     },
     {
       "ticker": "AZN.L",
@@ -330,12 +337,14 @@
     {
       "ticker": "SHEL",
       "entity_class": "Cyclical",
-      "why": "an integrated oil company filing under IFRS on a 20-F: the mid-cycle model on an IFRS filer"
+      "why": "an integrated oil company filing under IFRS on a 20-F: the mid-cycle model on an IFRS filer; adr_ratio: one American depositary share is two ordinary shares (20-F, deposit agreement).",
+      "adr_ratio": 2
     },
     {
       "ticker": "BP",
       "entity_class": "Cyclical",
-      "why": "an integrated oil company filing under IFRS on a 20-F; a second one"
+      "why": "an integrated oil company filing under IFRS on a 20-F; a second one; adr_ratio: one American depositary share is six ordinary shares (20-F, deposit agreement).",
+      "adr_ratio": 6
     },
     {
       "ticker": "DAL",
@@ -355,7 +364,8 @@
     {
       "ticker": "HSBC",
       "entity_class": "Bank",
-      "why": "a bank filing under IFRS on a 20-F: the net interest income signature under IFRS tags"
+      "why": "a bank filing under IFRS on a 20-F: the net interest income signature under IFRS tags; adr_ratio: one American depositary share is five ordinary shares (20-F, deposit agreement).",
+      "adr_ratio": 5
     },
     {
       "ticker": "SCHW",

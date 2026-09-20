@@ -12,7 +12,35 @@ let signal t margin_of_safety : signal =
 type declaration = {
   entity_class : entity_class;
   scope_limits : string list;
+  adr_ratio : float option;
 }
+
+let receipt_tolerance = 0.03
+
+let receipt_check ~declared (fin : financials) =
+  match (fin.cover_page_shares, fin.cover_page_shares_as_of, fin.market_cap, fin.price) with
+  | Some cover, Some as_of, Some cap, Some price when price > 0. && cover > 0. ->
+      let cross = match (fin.financial_currency, fin.trading_currency) with Some f, Some t -> f <> t | _ -> false in
+      if Option.is_none declared && not cross then None
+      else
+        let effective = cap /. price in
+        let implied = cover /. effective in
+        let flag =
+          match declared with
+          | Some r when Float.abs ((implied -. r) /. r) > receipt_tolerance ->
+              Some
+                (Printf.sprintf
+                   "depositary ratio mismatch: declared %g, live shares imply %.3f (cover page %.0f ordinary shares as of %s, effective %.0f)"
+                   r implied cover as_of effective)
+          | Some _ -> None
+          | None when Float.abs (implied -. 1.) > receipt_tolerance ->
+              Some
+                (Printf.sprintf "undeclared depositary ratio: live shares imply %.3f (cover page %.0f ordinary shares as of %s, effective %.0f)"
+                   implied cover as_of effective)
+          | None -> None
+        in
+        Some { cover_page_shares = cover; cover_page_shares_as_of = as_of; effective_shares = effective; implied_ratio = implied; declared_ratio = declared; flag }
+  | _ -> None
 
 let floor_of_rule (r : Reference_t.class_rule) : floor =
   { present = r.floor_present_default; basis = r.floor_basis_default }
@@ -173,6 +201,7 @@ let point_in_time_gates (fin : financials) =
 let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns ?options (params : Params.t) ~today ~model_version
     ~declaration (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
+  let receipt = receipt_check ~declared:(Option.bind declaration (fun d -> d.adr_ratio)) original in
   let hold_vintage = Option.is_some original.point_in_time in
   (* Age of the newest filing the statements come from, when they are filed ones. *)
   let filing_age =
@@ -241,6 +270,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       surplus_curve_reason = None;
       market_implied = None;
       market_implied_reason = None;
+      receipt_check = receipt;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,

@@ -1444,6 +1444,51 @@ class ReitInputs:
 
 
 @dataclass
+class ReceiptCheck:
+    """Original type: receipt_check = { ... }
+    """
+
+    cover_page_shares: float
+    cover_page_shares_as_of: str
+    effective_shares: float
+    implied_ratio: float
+    declared_ratio: Optional[float]
+    flag: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ReceiptCheck':
+        if isinstance(x, dict):
+            return cls(
+                cover_page_shares=_atd_read_float(x['cover_page_shares']) if 'cover_page_shares' in x else _atd_missing_json_field('ReceiptCheck', 'cover_page_shares'),
+                cover_page_shares_as_of=_atd_read_string(x['cover_page_shares_as_of']) if 'cover_page_shares_as_of' in x else _atd_missing_json_field('ReceiptCheck', 'cover_page_shares_as_of'),
+                effective_shares=_atd_read_float(x['effective_shares']) if 'effective_shares' in x else _atd_missing_json_field('ReceiptCheck', 'effective_shares'),
+                implied_ratio=_atd_read_float(x['implied_ratio']) if 'implied_ratio' in x else _atd_missing_json_field('ReceiptCheck', 'implied_ratio'),
+                declared_ratio=_atd_read_nullable(_atd_read_float)(x['declared_ratio']) if 'declared_ratio' in x else _atd_missing_json_field('ReceiptCheck', 'declared_ratio'),
+                flag=_atd_read_string(x['flag']) if 'flag' in x else None,
+            )
+        else:
+            _atd_bad_json('ReceiptCheck', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['cover_page_shares'] = _atd_write_float(self.cover_page_shares)
+        res['cover_page_shares_as_of'] = _atd_write_string(self.cover_page_shares_as_of)
+        res['effective_shares'] = _atd_write_float(self.effective_shares)
+        res['implied_ratio'] = _atd_write_float(self.implied_ratio)
+        res['declared_ratio'] = _atd_write_nullable(_atd_write_float)(self.declared_ratio)
+        if self.flag is not None:
+            res['flag'] = _atd_write_string(self.flag)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ReceiptCheck':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class PriceQuantile:
     """Original type: price_quantile = { ... }
     """
@@ -1488,6 +1533,8 @@ class PointInTime:
     shares_tag: Optional[str] = None
     shares_as_of: Optional[str] = None
     shares_filed: Optional[str] = None
+    shares_ordinary: Optional[float] = None
+    adr_ratio: Optional[float] = None
     rate_observations: List[Tuple[str, str]] = field(default_factory=lambda: [])
     anachronistic_inputs: List[str] = field(default_factory=lambda: [])
     statements_unavailable: Optional[str] = None
@@ -1506,6 +1553,8 @@ class PointInTime:
                 shares_tag=_atd_read_string(x['shares_tag']) if 'shares_tag' in x else None,
                 shares_as_of=_atd_read_string(x['shares_as_of']) if 'shares_as_of' in x else None,
                 shares_filed=_atd_read_string(x['shares_filed']) if 'shares_filed' in x else None,
+                shares_ordinary=_atd_read_float(x['shares_ordinary']) if 'shares_ordinary' in x else None,
+                adr_ratio=_atd_read_float(x['adr_ratio']) if 'adr_ratio' in x else None,
                 rate_observations=_atd_read_assoc_object_into_list(_atd_read_string)(x['rate_observations']) if 'rate_observations' in x else [],
                 anachronistic_inputs=_atd_read_list(_atd_read_string)(x['anachronistic_inputs']) if 'anachronistic_inputs' in x else [],
                 statements_unavailable=_atd_read_string(x['statements_unavailable']) if 'statements_unavailable' in x else None,
@@ -1531,6 +1580,10 @@ class PointInTime:
             res['shares_as_of'] = _atd_write_string(self.shares_as_of)
         if self.shares_filed is not None:
             res['shares_filed'] = _atd_write_string(self.shares_filed)
+        if self.shares_ordinary is not None:
+            res['shares_ordinary'] = _atd_write_float(self.shares_ordinary)
+        if self.adr_ratio is not None:
+            res['adr_ratio'] = _atd_write_float(self.adr_ratio)
         res['rate_observations'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.rate_observations)
         res['anachronistic_inputs'] = _atd_write_list(_atd_write_string)(self.anachronistic_inputs)
         if self.statements_unavailable is not None:
@@ -3437,6 +3490,7 @@ class Valuation:
     surplus_curve_reason: Optional[str] = None
     market_implied: Optional[MarketImplied] = None
     market_implied_reason: Optional[str] = None
+    receipt_check: Optional[ReceiptCheck] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -3482,6 +3536,7 @@ class Valuation:
                 surplus_curve_reason=_atd_read_string(x['surplus_curve_reason']) if 'surplus_curve_reason' in x else None,
                 market_implied=MarketImplied.from_json(x['market_implied']) if 'market_implied' in x else None,
                 market_implied_reason=_atd_read_string(x['market_implied_reason']) if 'market_implied_reason' in x else None,
+                receipt_check=ReceiptCheck.from_json(x['receipt_check']) if 'receipt_check' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -3547,6 +3602,8 @@ class Valuation:
             res['market_implied'] = (lambda x: x.to_json())(self.market_implied)
         if self.market_implied_reason is not None:
             res['market_implied_reason'] = _atd_write_string(self.market_implied_reason)
+        if self.receipt_check is not None:
+            res['receipt_check'] = (lambda x: x.to_json())(self.receipt_check)
         return res
 
     @classmethod
@@ -3962,6 +4019,9 @@ class Financials:
     submissions_latest_annual: Optional[Submission] = None
     submissions_unavailable: Optional[str] = None
     point_in_time: Optional[PointInTime] = None
+    cover_page_shares: Optional[float] = None
+    cover_page_shares_tag: Optional[str] = None
+    cover_page_shares_as_of: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Financials':
@@ -3991,6 +4051,9 @@ class Financials:
                 submissions_latest_annual=Submission.from_json(x['submissions_latest_annual']) if 'submissions_latest_annual' in x else None,
                 submissions_unavailable=_atd_read_string(x['submissions_unavailable']) if 'submissions_unavailable' in x else None,
                 point_in_time=PointInTime.from_json(x['point_in_time']) if 'point_in_time' in x else None,
+                cover_page_shares=_atd_read_float(x['cover_page_shares']) if 'cover_page_shares' in x else None,
+                cover_page_shares_tag=_atd_read_string(x['cover_page_shares_tag']) if 'cover_page_shares_tag' in x else None,
+                cover_page_shares_as_of=_atd_read_string(x['cover_page_shares_as_of']) if 'cover_page_shares_as_of' in x else None,
             )
         else:
             _atd_bad_json('Financials', x)
@@ -4027,6 +4090,12 @@ class Financials:
             res['submissions_unavailable'] = _atd_write_string(self.submissions_unavailable)
         if self.point_in_time is not None:
             res['point_in_time'] = (lambda x: x.to_json())(self.point_in_time)
+        if self.cover_page_shares is not None:
+            res['cover_page_shares'] = _atd_write_float(self.cover_page_shares)
+        if self.cover_page_shares_tag is not None:
+            res['cover_page_shares_tag'] = _atd_write_string(self.cover_page_shares_tag)
+        if self.cover_page_shares_as_of is not None:
+            res['cover_page_shares_as_of'] = _atd_write_string(self.cover_page_shares_as_of)
         return res
 
     @classmethod

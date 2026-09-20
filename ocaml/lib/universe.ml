@@ -1,4 +1,4 @@
-let allowed_fields = [ "ticker"; "entity_class"; "why"; "scope_limits"; "cik" ]
+let allowed_fields = [ "ticker"; "entity_class"; "why"; "scope_limits"; "cik"; "adr_ratio" ]
 let required_fields = [ "ticker"; "entity_class"; "why" ]
 
 let check_entry index (entry : Yojson.Safe.t) =
@@ -26,7 +26,16 @@ let check_entry index (entry : Yojson.Safe.t) =
             Error
               (Printf.sprintf "universe entry %s declares unknown class %S; one of: %s" name class_name
                  (String.concat ", " (List.map Admissibility.class_name Admissibility.all_classes)))
-          else (
+          else
+            let ratio_ok =
+              match List.assoc_opt "adr_ratio" fields with
+              | None -> true
+              | Some (`Float f) -> f > 0.
+              | Some (`Int n) -> n > 0
+              | Some _ -> false
+            in
+            if not ratio_ok then Error (Printf.sprintf "universe entry %s: adr_ratio must be a positive number (ordinary shares per receipt)" name)
+            else (
             match (List.assoc_opt "scope_limits" fields, List.assoc_opt "cik" fields) with
             | (None | Some (`List [])), (None | Some (`String _)) -> Ok ()
             | Some (`List items), (None | Some (`String _)) when List.for_all (function `String _ -> true | _ -> false) items -> Ok ()

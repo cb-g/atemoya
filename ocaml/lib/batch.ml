@@ -268,6 +268,29 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
               (List.map (fun (r, n) -> Printf.sprintf "%d %s" n r)
                  (count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> Option.map reason_key v.market_implied_reason) without_block))))
     end;
+    (* The depositary-receipt check (42): a flag per name, never a gate. *)
+    let checks = List.filter_map (fun (v : valuation) -> Option.map (fun c -> (v.ticker, c)) v.receipt_check) vs in
+    (* A declared ratio the run could not check: the record carries no cover page (no facts,
+       or a filer without the dei count). *)
+    let unchecked =
+      match universe with
+      | None -> []
+      | Some (u : Reference_t.universe) ->
+          List.filter_map
+            (fun (e : Reference_t.universe_entry) ->
+              match e.adr_ratio with
+              | Some _ when List.exists (fun (v : valuation) -> v.ticker = e.ticker && Option.is_none v.receipt_check) vs -> Some e.ticker
+              | _ -> None)
+            u.tickers
+    in
+    if checks <> [] || unchecked <> [] then begin
+      let flagged = List.filter (fun ((_, c) : string * receipt_check) -> Option.is_some c.flag) checks in
+      Printf.bprintf b "depositary receipt ratio (42), checked on %d names with a declared ratio or a cross-currency listing: %d flagged%s%s\n"
+        (List.length checks) (List.length flagged)
+        (if unchecked = [] then "" else Printf.sprintf "; declared but unchecked, no cover page on the record: %s" (String.concat ", " unchecked))
+        (if flagged = [] then "" else ":");
+      List.iter (fun ((t, c) : string * receipt_check) -> Printf.bprintf b "  %-10s %s\n" t (Option.value c.flag ~default:"")) flagged
+    end;
     let sources = count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> v.required_return_source) vs) in
     Printf.bprintf b "required return (34), across %d Ok names: %s\n"
       (List.length (List.filter (fun (v : valuation) -> Option.is_some v.required_return_source) vs))

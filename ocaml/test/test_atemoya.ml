@@ -93,7 +93,7 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     ?(market_cap = Some 5000.) ?(country = Some "United States")
     ?(industry = Some "Consumer Electronics") ?(provider = "yfinance")
     ?(statements_unavailable = "") ?latest_filing ?cross_check ?(taxonomy = "")
-    ?vendor_financial_currency periods : Boundary_t.financials =
+    ?vendor_financial_currency ?cover_page_shares periods : Boundary_t.financials =
   {
     ticker = "TEST";
     as_of = "2026-09-10T00:00:00+00:00";
@@ -119,6 +119,9 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     submissions_latest_annual = None;
     submissions_unavailable = None;
     point_in_time = None;
+    cover_page_shares;
+    cover_page_shares_tag = Option.map (fun _ -> "EntityCommonStockSharesOutstanding") cover_page_shares;
+    cover_page_shares_as_of = Option.map (fun _ -> "2026-06-30") cover_page_shares;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -270,7 +273,7 @@ let params : Params.t =
     required_returns = Reference_j.required_returns_of_string {|{"classes": {}, "names": {}}|};
   }
 
-let declaration ?(scope_limits = []) entity_class = { Valuation.entity_class; scope_limits }
+let declaration ?(scope_limits = []) ?adr_ratio entity_class = { Valuation.entity_class; scope_limits; adr_ratio }
 
 (* Most valuation tests declare an operating company; the class tests declare otherwise. *)
 let run ?(declared = Some (declaration `OperatingCompany)) fin =
@@ -1597,6 +1600,42 @@ let test_required_return_on_the_record_and_the_paths () =
   let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
   Alcotest.check valuation "json round trip" v again
 
+(* --- the depositary-receipt check (42) --- *)
+
+let test_receipt_ratio_check () =
+  (* market cap 5000 at price 10: 500 effective shares; a cover page of 2500 ordinary shares implies 5 *)
+  let fin = financials ~currency:None ~financial_currency:(Some "BRL") ~trading_currency:(Some "USD") ~cover_page_shares:2500. (history ()) in
+  let v = Valuation.run params ~today ~model_version:"test" ~declaration:(Some (declaration ~adr_ratio:5. `OperatingCompany)) fin in
+  (match v.receipt_check with
+  | Some c ->
+      check_float "implied" 5. c.implied_ratio; check_float "effective" 500. c.effective_shares;
+      Alcotest.(check (option approx)) "declared" (Some 5.) c.declared_ratio; Alcotest.(check (option string)) "no flag within tolerance" None c.flag
+  | None -> Alcotest.fail "no check on a declared name");
+  (* a mismatch beyond 3% flags with both numbers; a flag, never a gate *)
+  let wrong = Valuation.run params ~today ~model_version:"test" ~declaration:(Some (declaration ~adr_ratio:3. `OperatingCompany)) fin in
+  check_mentions "mismatch" (Option.value (Option.bind wrong.receipt_check (fun c -> c.flag)) ~default:"")
+    [ "depositary ratio mismatch: declared 3, live shares imply 5.000 (cover page 2500 ordinary shares as of 2026-06-30, effective 500)" ];
+  Alcotest.check status "still Ok" `Ok wrong.status;
+  (* a cross-currency name with no declaration and a live ratio away from 1 is flagged as undeclared *)
+  let undeclared = Valuation.run params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) fin in
+  check_mentions "undeclared" (Option.value (Option.bind undeclared.receipt_check (fun c -> c.flag)) ~default:"") [ "undeclared depositary ratio: live shares imply 5.000" ];
+  (* a same-currency name without a declaration is not checked; a record without the cover page carries nothing *)
+  let plain = run (financials ~cover_page_shares:2500. (history ())) in
+  Alcotest.(check bool) "not checked" true (Option.is_none plain.receipt_check);
+  let none = run (financials (history ())) in
+  Alcotest.(check bool) "no cover page, no check, no field" true (Option.is_none none.receipt_check && not (contains (Boundary_j.string_of_valuation none) "receipt_check"));
+  (* the summary lists the flags *)
+  check_mentions "summary" (Batch.summary [ v; wrong; undeclared; plain ])
+    [ "depositary receipt ratio (42), checked on 3 names with a declared ratio or a cross-currency listing: 2 flagged:"; "depositary ratio mismatch: declared 3"; "undeclared depositary ratio" ];
+  Alcotest.(check bool) "no section without a check" false (contains (Batch.summary [ plain; none ]) "depositary receipt ratio (42)");
+  let declared_universe = get (Universe.load_string {|{"tickers": [{"ticker": "TEST", "entity_class": "OperatingCompany", "why": "a receipt", "adr_ratio": 5}]}|}) in
+  check_mentions "declared but unchecked" (Batch.summary ~universe:declared_universe [ none ]) [ "declared but unchecked, no cover page on the record: TEST" ];
+  (* the strict loader accepts the field and refuses a non-positive one *)
+  let u = get (Universe.load_string {|{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": 5}]}|}) in
+  Alcotest.(check (option approx)) "loaded" (Some 5.) (List.hd u.tickers).adr_ratio;
+  check_error "zero" (Universe.load_string {|{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": 0}]}|}) [ "adr_ratio must be a positive number" ];
+  check_error "a string" (Universe.load_string {|{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": "5"}]}|}) [ "adr_ratio must be a positive number" ]
+
 let test_flow_chart_names_every_reason () =
   let chart =
     In_channel.with_open_bin "../../docs/flow.md" In_channel.input_all
@@ -2606,6 +2645,7 @@ let test_stability_report () =
 let pit ?statements_unavailable ?shares_unavailable ?rates_unavailable as_of_date : Boundary_t.point_in_time =
   { as_of_date; price_date = Some as_of_date; close_as_served = Some 10.; split_factor = Some 1.; shares_source = "dei cover page";
     shares_tag = Some "EntityCommonStockSharesOutstanding"; shares_as_of = Some as_of_date; shares_filed = Some as_of_date;
+    shares_ordinary = None; adr_ratio = None;
     rate_observations = [ ("DGS7", as_of_date) ]; anachronistic_inputs = []; statements_unavailable; shares_unavailable; rates_unavailable }
 
 let test_point_in_time_gates_and_vintages () =
@@ -3114,6 +3154,7 @@ let () =
           case "table and variant agree, universe declares known classes" test_table_and_variant_agree;
           case "batch summary" test_batch_summary;
           case "flow chart names every failure reason" test_flow_chart_names_every_reason;
+          case "depositary receipt ratio: the check, its flags, the loader" test_receipt_ratio_check;
           case "market-implied smile: fit, butterfly, density, quantiles" test_market_implied_smile;
           case "market-implied chain: expiry, anchor, growth axis, record" test_market_implied_chain;
           case "options store through time: no lookahead, the window, the panel anchor" test_options_store_no_lookahead;

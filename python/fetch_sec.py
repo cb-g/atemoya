@@ -229,6 +229,31 @@ def value_of(selected: Selected, field: str, end: date) -> tuple[float | None, s
 DnaResult = tuple[float | None, str | None, list[boundary.Component] | None, str | None, boundary.Composition | None]
 
 
+class CoverPage:
+    """The newest cover-page share count filed on or before a date: ordinary shares, the tag,
+    the cover page's own date and the filing date."""
+
+    def __init__(self, shares: float, tag: str, as_of: str, filed: str) -> None:
+        self.shares, self.tag, self.as_of, self.filed = shares, tag, as_of, filed
+
+
+def cover_page_shares(facts: Mapping[str, object], on_or_before: date, tags: Iterable[str]) -> CoverPage | None:
+    """(19, 42) The newest cover page filed on or before the date; a filer with several share
+    classes files one entry per class under the same date, and distinct values on that date
+    are summed."""
+    dei = _as_dict(_as_dict(facts.get("facts")).get("dei"))
+    for tag in tags:
+        node = _as_dict(dei.get(tag))
+        entries = [_as_dict(e) for e in cast(list[object], _as_dict(node.get("units")).get("shares", []))]
+        dated = [(str(e["filed"]), str(e["end"]), float(cast(float, e["val"]))) for e in entries
+                 if "filed" in e and "end" in e and "val" in e and str(e["filed"]) <= on_or_before.isoformat()]
+        if dated:
+            newest = max((filed, end) for filed, end, _ in dated)
+            values = sorted({v for filed, end, v in dated if (filed, end) == newest})
+            return CoverPage(sum(values), tag, newest[1], newest[0])
+    return None
+
+
 def depreciation_ifrs(facts: "Facts", defs: reference.FieldDefinitions, end: date) -> DnaResult:
     """IFRS D&A excluding impairment (32): the pure tag; else the inclusive tag less the
     impairment filed (total, else components) plus the reversal filed (total, else

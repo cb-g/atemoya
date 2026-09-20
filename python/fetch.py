@@ -623,7 +623,8 @@ def cik_of(symbol: str, table: Mapping[str, object], declared: str | None) -> tu
 def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile | None, periods: list[boundary.FiscalPeriod],
             notes: list[str], *, provider: str, provider_reason: str, latest_filing: str | None = None,
             check: boundary.CrossCheck | None = None, taxonomy: str = "", filing_currency: str | None = None,
-            submission: boundary.Submission | None = None, submissions_unavailable: str | None = None) -> boundary.Financials:
+            submission: boundary.Submission | None = None, submissions_unavailable: str | None = None,
+            cover: fetch_sec.CoverPage | None = None) -> boundary.Financials:
     """With [filing_currency] (filed statements) the statement currency is the filing's unit,
     the vendor's is recorded beside it, and the single currency basis holds iff the filing's
     unit is the trading currency."""
@@ -653,6 +654,9 @@ def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile 
         cross_check=check,
         submissions_latest_annual=submission,
         submissions_unavailable=submissions_unavailable,
+        cover_page_shares=None if cover is None else cover.shares,
+        cover_page_shares_tag=None if cover is None else cover.tag,
+        cover_page_shares_as_of=None if cover is None else cover.as_of,
     )
 
 
@@ -705,10 +709,12 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
                        provider_reason=f"no SEC filings for {symbol}: not in company_tickers.json"), None
     facts = fetch_sec.companyfacts(cik, sec.user_agent)
     submission, submissions_unavailable = fetch_sec.latest_annual_submission(fetch_sec.submissions(cik, sec.user_agent))
+    # (42) the cover page's ordinary count, for the receipt-ratio check on every CIK-resolved record
+    cover = None if facts is None else fetch_sec.cover_page_shares(facts, as_of.date(), sec.definitions.shares_for_market_cap.point_in_time.cover_page)
     decision = fetch_sec.decide(facts, sec.tags)
     if not decision.xbrl or decision.currency is None:
         return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
-                       provider_reason=f"CIK {cik}: {decision.reason}", submission=submission, submissions_unavailable=submissions_unavailable), None
+                       provider_reason=f"CIK {cik}: {decision.reason}", submission=submission, submissions_unavailable=submissions_unavailable, cover=cover), None
 
     filed_notes = list(notes)
     periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, filed_notes, taxonomy=decision.taxonomy, unit=decision.currency, depth=depth)
@@ -729,7 +735,7 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
                                               threshold=sec.tags.cross_check_threshold, fields=[], disagreements=0))
             lagged_notes = list(notes) + [f"CIK {cik}: {decision.reason}; the newest annual facts ({lag.facts_end}, filed {lag.facts_filed}) are {facts_age} days old"]
             return _record(symbol, as_of, quote, profile, vendor, lagged_notes, provider="yfinance", provider_reason=lag.text,
-                           check=check, submission=submission), None
+                           check=check, submission=submission, cover=cover), None
         else:
             reason += f"; {lag.text}; the vendor's newest annual ({max((p.period_end for p in vendor), default='none')}) predates the filing's period, so the filed statements are kept"
     check: boundary.CrossCheck | None = None
@@ -745,7 +751,7 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
     primary = _record(symbol, as_of, quote, profile, periods, filed_notes, provider=fetch_sec.PROVIDER,
                       provider_reason=reason, latest_filing=fetch_sec.latest_filing(periods), check=check,
                       taxonomy=decision.taxonomy, filing_currency=decision.currency,
-                      submission=submission, submissions_unavailable=submissions_unavailable)
+                      submission=submission, submissions_unavailable=submissions_unavailable, cover=cover)
     shadow = _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
                      provider_reason="shadow of an XBRL-primary record, for the provider diff")
     return primary, shadow

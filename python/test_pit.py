@@ -11,6 +11,7 @@ from datetime import date
 
 import fetch
 import pit
+import pytest
 import refresh_rates as rr
 from test_fetch_sec import DEFS, TAGS, fact, usd
 
@@ -166,3 +167,42 @@ def test_statements_on_honours_the_declared_cik(monkeypatch: object) -> None:
     assert asked == ["0000034088"] and any("declared in the universe entry" in n for n in notes)
     periods, _, why, _, _ = pit.statements_on("XOM", date(2025, 6, 30), Sec(), [])
     assert periods == [] and why is not None and asked[-1] == "0002115436"  # the ticker map's filer, which has no facts here
+
+
+def test_point_in_time_shares_are_divided_by_the_declared_receipt_ratio(monkeypatch: pytest.MonkeyPatch) -> None:
+    """(42) The cover page counts ordinary shares, the price is the receipt's: 2,500 ordinary
+    shares at a ratio of 5 are 500 receipts; at 0.5, 5,000; absent means 1 and nothing is
+    recorded."""
+    class Sec:
+        user_agent = "test test@example.com"
+        tickers: dict[str, object] = {}
+        tags = TAGS
+        definitions = DEFS
+
+    def count(facts: object, d: object, defs: object, tags: object) -> pit.PointCount:
+        return pit.PointCount(2500.0, "dei cover page", "EntityCommonStockSharesOutstanding", "2025-06-30", "2025-07-01")
+
+    def statements(symbol: object, d: object, sec: object, notes: object, declared_cik: object = None) -> tuple[list[object], None, None, None, dict[str, object]]:
+        return [], None, None, None, {"facts": {}}
+
+    monkeypatch.setattr(pit, "point_count", count)
+    monkeypatch.setattr(pit, "statements_on", statements)
+    def available(country: str) -> bool:
+        return True
+
+    monkeypatch.setattr(pit, "rate_history_available", available)
+    history = pit.History({date(2025, 6, 30): 10.0}, {})
+    quote = fetch.Quote.model_validate({"currency": "USD", "financial_currency": "TWD", "price": 10.0, "market_cap": None})
+    for ratio, expected in ((5.0, 500.0), (0.5, 5000.0), (None, 2500.0)):
+        r = pit.record("T", date(2025, 6, 30), Sec(), history, quote, None, adr_ratio=ratio)
+        assert r.market_cap == expected * 10.0 and r.point_in_time is not None
+        assert r.point_in_time.adr_ratio == ratio and r.point_in_time.shares_ordinary == (2500.0 if ratio is not None else None)
+
+
+def test_universe_loader_accepts_a_positive_receipt_ratio_only() -> None:
+    import universe
+    u = universe.load_text('{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": 5}]}')
+    assert u.tickers[0].adr_ratio == 5
+    for bad in ("0", "-2", '"5"', "true"):
+        with pytest.raises(universe.UniverseError, match="adr_ratio must be a positive number"):
+            universe.load_text('{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": ' + bad + "}]}")
