@@ -423,6 +423,7 @@ type dna_ifrs = {
   reversal : string list;               (* the reversal total *)
   reversal_components : string list;
   totals : string list;                 (* plain totals, largest wins, when neither pure nor inclusive is filed *)
+  ~components : string list;            (* (40) after the totals: every tag required, summed as sum_of_components_ifrs (TSMC files DepreciationExpense and AmortisationExpense only) *)
 }
 
 type dna_definition = {

@@ -2221,7 +2221,7 @@ let test_summary_definitions_and_cross_check_listing () =
   let primary = run (filed ~cross_check:a_cross_check (history ())) in
   let s = Batch.summary ~definitions:params.field_definitions [ primary ] in
   check_mentions "summary" s
-    [ "field definitions (reference/field_definitions.json, as_of 2026-09-19): cash = cash_and_short_term_investments; total_debt = financial_debt_excluding_operating_leases; delta_nwc = cash_flow_statement_change_in_operating_working_capital; ebit = operating_income_else_pretax_plus_interest";
+    [ "field definitions (reference/field_definitions.json, as_of 2026-09-20): cash = cash_and_short_term_investments; total_debt = financial_debt_excluding_operating_leases; delta_nwc = cash_flow_statement_change_in_operating_working_capital; ebit = operating_income_else_pretax_plus_interest";
       "cross-check: 1 of 1 filed-statement records disagree";
       "  on a field the routed model reads: 1 of 1 (TEST)";
       "  TEST       cash filed 36 vendor 54.7 (34.2%)" ];

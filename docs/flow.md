@@ -311,7 +311,10 @@ at all (25):
    it excludes impairment** (32): the pure tag first; where absent, the inclusive tag less
    the impairment filed (the total, else its components) plus the reversal filed, recorded
    as `inclusive_less_impairment` with every tag; an impairment the filing does not tag is
-   never subtracted. When several D&A total tags are filed in one
+   never subtracted; the plain adjustment tag as a total when neither is filed; and when
+   no total of any kind is filed, `DepreciationExpense` plus `AmortisationExpense`, both
+   required, as `sum_of_components_ifrs` (40), the right-of-use depreciation not added
+   because on TSMC the two-tag sum equals the vendor's row exactly. When several D&A total tags are filed in one
    period the field is the largest, since a total is never smaller than any of its
    components; every candidate is recorded with the tag taken. The components fallback
    applies only when no total is filed.
@@ -452,6 +455,9 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- the IFRS component sum (40): `DepreciationExpense` plus `AmortisationExpense` when no
+  total is filed, verified on TSMC against the vendor's row; TSMC recovers point-in-time
+  on the dates whose filing is in facts. No new `Failed` string; no live number moves.
 - capping upside is a declaration (39): `min_cap_pct` on a holding; without it only
   uncapped structures are selectable. No number moves.
 - single-name hedging (38): `python/hedge.py` on the options store, four structures from

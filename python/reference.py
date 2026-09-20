@@ -1880,6 +1880,7 @@ class DnaIfrs:
     reversal: List[str]
     reversal_components: List[str]
     totals: List[str]
+    components: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'DnaIfrs':
@@ -1892,6 +1893,7 @@ class DnaIfrs:
                 reversal=_atd_read_list(_atd_read_string)(x['reversal']) if 'reversal' in x else _atd_missing_json_field('DnaIfrs', 'reversal'),
                 reversal_components=_atd_read_list(_atd_read_string)(x['reversal_components']) if 'reversal_components' in x else _atd_missing_json_field('DnaIfrs', 'reversal_components'),
                 totals=_atd_read_list(_atd_read_string)(x['totals']) if 'totals' in x else _atd_missing_json_field('DnaIfrs', 'totals'),
+                components=_atd_read_list(_atd_read_string)(x['components']) if 'components' in x else [],
             )
         else:
             _atd_bad_json('DnaIfrs', x)
@@ -1905,6 +1907,7 @@ class DnaIfrs:
         res['reversal'] = _atd_write_list(_atd_write_string)(self.reversal)
         res['reversal_components'] = _atd_write_list(_atd_write_string)(self.reversal_components)
         res['totals'] = _atd_write_list(_atd_write_string)(self.totals)
+        res['components'] = _atd_write_list(_atd_write_string)(self.components)
         return res
 
     @classmethod

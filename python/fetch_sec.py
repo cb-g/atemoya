@@ -233,7 +233,8 @@ def depreciation_ifrs(facts: "Facts", defs: reference.FieldDefinitions, end: dat
     """IFRS D&A excluding impairment (32): the pure tag; else the inclusive tag less the
     impairment filed (total, else components) plus the reversal filed (total, else
     components), recorded as a recipe with every tag; else the plain adjustment tag as a
-    total. (value, row, candidates, recipe, composition)."""
+    total; else (40) the sum of the components, every one required.
+    (value, row, candidates, recipe, composition)."""
     definition = defs.depreciation_amortization
     assert definition is not None
     d = definition.ifrs
@@ -258,6 +259,12 @@ def depreciation_ifrs(facts: "Facts", defs: reference.FieldDefinitions, end: dat
     if candidates:
         taken = max(candidates, key=lambda c: c.value)
         return taken.value, taken.row, candidates, "total", None
+    # (40) the component sum, every tag required: TSMC files DepreciationExpense and
+    # AmortisationExpense and no total; the right-of-use depreciation is inside the former
+    # (verified against the vendor's row, see the definition's notes) and is not added.
+    parts = [boundary.Component(name="component", value=v, row=tag) for tag in d.components if (v := facts.at(tag, end, instant=False)) is not None]
+    if d.components and len(parts) == len(d.components):
+        return sum(p.value for p in parts), _label(parts), None, "sum_of_components_ifrs", _composition(definition.name, parts)
     return None, None, None, None, None
 
 

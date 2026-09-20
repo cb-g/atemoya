@@ -742,3 +742,15 @@ def test_ifrs_depreciation_excludes_impairment_by_recipe() -> None:
     p = ifrs_dna_period(f("AdjustmentsForDepreciationAndAmortisationExpense", 1311e6))
     assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (1311e6, "total")
     assert ifrs_dna_period({}).depreciation_amortization is None
+    # (40) the component sum when no total of any kind is filed (TSMC), both tags required,
+    # the right-of-use line never added; a pure tag beats the components when both exist
+    p = ifrs_dna_period({**f("DepreciationExpense", 653610.5e6), **f("AmortisationExpense", 9186.1e6), **f("DepreciationRightofuseAssets", 3679.5e6)})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 662796.6e6)
+    assert p.depreciation_amortization_recipe == "sum_of_components_ifrs" and p.depreciation_amortization_candidates is None
+    assert components(p.depreciation_amortization_composition) == [("component", 653610.5e6, "DepreciationExpense"), ("component", 9186.1e6, "AmortisationExpense")]
+    assert ifrs_dna_period(f("DepreciationExpense", 653610.5e6)).depreciation_amortization is None  # one component alone is not the field
+    assert ifrs_dna_period(f("AmortisationExpense", 9186.1e6)).depreciation_amortization is None
+    p = ifrs_dna_period({**f("DepreciationExpense", 653610.5e6), **f("AmortisationExpense", 9186.1e6), **f("DepreciationAndAmortisationExpense", 17822e6)})
+    assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (17822e6, "pure")
+    p = ifrs_dna_period({**f("DepreciationExpense", 653610.5e6), **f("AmortisationExpense", 9186.1e6), **f("AdjustmentsForDepreciationAndAmortisationExpense", 1311e6)})
+    assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (1311e6, "total")
