@@ -366,6 +366,37 @@ risk-neutral. A fill model is not here; slippage is its placeholder.
 uv run python/express.py data/views/mine.json
 ```
 
+## Fills
+
+The slippage field in the view-expression tool is a placeholder for this: where option
+trades actually print relative to the quoted spread, per name, so the tool can rank on
+expected fills rather than on the ask and the bid. It is a data product with no model in
+it. `python/fetch_tape.py <ticker>... --from D1 --to D2` stores every print for every
+contract that traded, with the quote at the print, under `data/tape/<date>/<TICKER>.json`
+through the terminal, paced; the endpoint needs a ThetaData subscription above the free
+tier, and a refusal is reported as the vendor words it. `python/fill_model.py <ticker>...`
+turns the tape into a table of empirical quantiles and nothing fitted: per print
+`fill_position = (price - bid) / (ask - bid)`, 0 the bid, 1 the ask, 0.5 the mid, clamped
+to [-0.5, 1.5] with the clamps counted and prints at a locked or crossed quote excluded and
+counted; the 10/25/50/75/90 quantiles per (moneyness third by |delta| from the store's
+chain, spread width in ticks, half-hour of day), collapsed per (moneyness, width), per
+moneyness and overall, each cell with its count, to `data/fill_model/<name>.json` with a
+summary under `output/fill_model/`. Buys and sells are not distinguishable from the tape,
+so the table is symmetric by construction; a holder's own fills, recorded in an untracked
+`data/fills/<file>.json`, are the asymmetric truth, and `python/fills_vs_model.py`
+reports each fill's position against the model's quantiles. `python/express.py
+--fill-model data/fill_model` then prices each leg at its cell's median fill, a bought leg
+at bid + q50 x spread and a sold leg at bid + (1 - q50) x spread, recording the cell and
+the quantile; the flat slippage stays the fallback and the two are never combined on one
+leg. The batch never reads the tape.
+
+```sh
+uv run python/fetch_tape.py AAPL NVDA --from 2026-06-25 --to 2026-09-17
+uv run python/fill_model.py AAPL NVDA
+uv run python/express.py data/views/mine.json --fill-model data/fill_model
+uv run python/fills_vs_model.py data/fills/mine.json
+```
+
 ## FX hedging
 
 A holder of a name whose value moves with a foreign currency sells that currency forward

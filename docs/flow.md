@@ -250,7 +250,12 @@ or credit), puts the
 risk-neutral probability of the payoff regions beside it, ranks by expected value per
 dollar at risk with the disagreement shown, and states the implied-against-realised
 volatility diagnostic; a view without a probability or a why, or a name without a chain,
-is refused.
+is refused. The fill model (50): `python/fetch_tape.py` stores the trade tape with the
+quote at each print (a subscription-tier refusal reported as the vendor words it),
+`python/fill_model.py` builds empirical quantiles of the fill position per name, moneyness
+third, spread width and half-hour, nothing fitted and symmetric by construction, `--fill-model`
+prices each leg of a vertical at its cell's median fill instead of the flat slippage, never
+both, and `python/fills_vs_model.py` reads a holder's own fills against the table.
 
 ## Frontier
 
@@ -477,6 +482,8 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- a fill model from the trade tape (50): the tape fetcher, the empirical quantile table,
+  `--fill-model` in the expression tool and the holder's fills against it. No number moves.
 - margins, the exchange minimum and the broker's override (49): a holding may declare its
   broker's initial margin, used when present with the exchange minimum reported beside it.
   No number moves.

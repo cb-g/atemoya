@@ -28,7 +28,13 @@ recorded as level_strike) and the long strike where the spread's definition puts
 width, debit or credit alike; every other candidate carries p_view null with the reason
 and is listed, not ranked; ev_per_dollar_at_risk = (p_view x max_profit - (1 - p_view) x
 max_loss) / max_loss where p_view is. The ranking therefore answers two questions and
-only two, how wide and debit or credit; the level itself is the holder's. One
+only two, how wide and debit or credit; the level itself is the holder's.
+
+--fill-model DIR (50) replaces the flat slippage with the fill model's per-bucket median
+fill position on each leg: a bought leg fills at bid + q50 x spread, a sold leg at
+bid + (1 - q50) x spread by symmetry, the cell (moneyness third by |delta|, spread width
+in ticks) and the quantile recorded on every candidate; a name without a model falls back
+to the flat slippage, and the two are never combined on one leg. One
 diagnostic per view: the nearest expiry's at-the-money implied volatility against the
 name's realised volatility over the horizon's length and against its own ATM IV over the
 last 250 snapshot dates as a percentile."""
@@ -51,6 +57,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from pydantic import BaseModel, ConfigDict, ValidationError  # noqa: E402
 
 import boundary  # noqa: E402
+import fill_model as fm  # noqa: E402
 import hedge  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -109,6 +116,38 @@ def load_views(path: Path) -> Views:
 # --- spreads ---
 
 @dataclass(frozen=True)
+class FillModel:
+    """A name's fill table (50): the median fill position per (moneyness, width) cell, the
+    overall median as the fallback, and what was used."""
+    ticker: str
+    by_cell: dict[str, tuple[float, int]]
+    overall: tuple[float, int] | None
+
+    @classmethod
+    def load(cls, path: Path) -> FillModel:
+        m = json.loads(path.read_text())
+        cells: dict[str, tuple[float, int]] = {}
+        for k, v in hedge.points([m["by_moneyness_width"]])[0].items():
+            c = hedge.points([v])
+            if c and "q50" in c[0]:
+                cells[k] = (float(str(c[0]["q50"])), int(str(c[0]["count"])))
+        o = hedge.points([m["overall"]])[0]
+        return cls(str(m["ticker"]), cells, (float(str(o["q50"])), int(str(o["count"]))) if "q50" in o else None)
+
+    def fill(self, leg: hedge.Leg, bought: bool) -> tuple[float, str] | None:
+        """The leg's fill price and the cell used; None when the model has no cell for it."""
+        key = f"{fm.moneyness_bucket(abs(leg.greeks.delta))} | {fm.width_bucket(leg.bid, leg.ask)}"
+        if key in self.by_cell:
+            q, n, cell = self.by_cell[key][0], self.by_cell[key][1], key
+        elif self.overall is not None:
+            q, n, cell = self.overall[0], self.overall[1], "overall"
+        else:
+            return None
+        position = q if bought else 1.0 - q
+        return leg.bid + position * (leg.ask - leg.bid), f"{cell} (q50 {q:.2f}, {n} prints)"
+
+
+@dataclass(frozen=True)
 class Spread:
     kind: str            # bull_call | bull_put | bear_put | bear_call
     expiry: str
@@ -121,6 +160,7 @@ class Spread:
     max_profit: float
     max_loss: float
     breakeven: float
+    fill: str = "ask for what is bought, bid for what is sold"
 
     @property
     def credit(self) -> bool:
@@ -140,8 +180,22 @@ class Spread:
         return intrinsic(self.long_strike) - intrinsic(self.short_strike) - self.cost
 
 
-def spread(kind: str, expiry: hedge.Expiry, long: hedge.Leg, short: hedge.Leg, slippage_per_share: float) -> Spread:
-    cost = long.ask - short.bid + slippage_per_share
+def spread(kind: str, expiry: hedge.Expiry, long: hedge.Leg, short: hedge.Leg, slippage_per_share: float, model: FillModel | None = None) -> Spread:
+    """Cost at ask-bought/bid-sold plus slippage, or, with a fill model, at the model's fills
+    on each leg and no slippage: the two are never combined on one leg."""
+    fill = "ask for what is bought, bid for what is sold"
+    if model is not None:
+        bought, sold = model.fill(long, True), model.fill(short, False)
+        if bought is not None and sold is not None:
+            cost = bought[0] - sold[0]
+            fill = f"fill model: long at {bought[1]}; short at {sold[1]}"
+        else:
+            cost = long.ask - short.bid + slippage_per_share
+            fill = "ask for what is bought, bid for what is sold (no model cell for a leg; flat slippage)"
+    else:
+        cost = long.ask - short.bid + slippage_per_share
+        if slippage_per_share:
+            fill += " plus slippage"
     mid = long.mid - short.mid
     width = abs(long.strike - short.strike)
     if kind in ("bull_call", "bear_put"):
@@ -151,10 +205,10 @@ def spread(kind: str, expiry: hedge.Expiry, long: hedge.Leg, short: hedge.Leg, s
         credit = -cost
         max_profit, max_loss = credit, width - credit
         breakeven = short.strike - credit if kind == "bull_put" else short.strike + credit
-    return Spread(kind, expiry.expiry, expiry.days, long.strike, short.strike, cost, mid, width, max_profit, max_loss, breakeven)
+    return Spread(kind, expiry.expiry, expiry.days, long.strike, short.strike, cost, mid, width, max_profit, max_loss, breakeven, fill)
 
 
-def candidates_of(expiries: list[hedge.Expiry], direction: str, slippage_per_leg: float) -> list[Spread]:
+def candidates_of(expiries: list[hedge.Expiry], direction: str, slippage_per_leg: float, model: FillModel | None = None) -> list[Spread]:
     """Every vertical on the view's side over every pair of quoted strikes; a spread whose
     quotes leave nothing to win or nothing at risk is not a candidate."""
     per_share = 2.0 * slippage_per_leg / CONTRACT
@@ -165,15 +219,15 @@ def candidates_of(expiries: list[hedge.Expiry], direction: str, slippage_per_leg
         for i, lo in enumerate(calls):
             for hi in calls[i + 1:]:
                 if direction == "up":
-                    out.append(spread("bull_call", e, lo, hi, per_share))
+                    out.append(spread("bull_call", e, lo, hi, per_share, model))
                 else:
-                    out.append(spread("bear_call", e, hi, lo, per_share))
+                    out.append(spread("bear_call", e, hi, lo, per_share, model))
         for i, lo in enumerate(puts):
             for hi in puts[i + 1:]:
                 if direction == "up":
-                    out.append(spread("bull_put", e, lo, hi, per_share))
+                    out.append(spread("bull_put", e, lo, hi, per_share, model))
                 else:
-                    out.append(spread("bear_put", e, hi, lo, per_share))
+                    out.append(spread("bear_put", e, hi, lo, per_share, model))
     return [s for s in out if s.max_profit > 0.0 and s.max_loss > 0.0]
 
 
@@ -315,19 +369,19 @@ def vol_diagnostic(options: Path, ticker: str, snapshot_date: str, horizon_days:
 def candidate_json(s: Spread, pm: dict[str, float], pv: float | None, pv_reason: str | None, max_risk: float | None) -> dict[str, object]:
     ev = None if pv is None else ev_per_dollar_at_risk(pv, s.max_profit, s.max_loss)
     return {"kind": s.kind, "credit": s.credit, "expiry": s.expiry, "days_to_expiry": s.days, "long_strike": s.long_strike, "short_strike": s.short_strike,
-            "width": s.width, "cost_per_share": s.cost, "cost_per_share_at_mid": s.cost_at_mid, "max_profit_per_share": s.max_profit, "max_loss_per_share": s.max_loss,
+            "width": s.width, "cost_per_share": s.cost, "cost_per_share_at_mid": s.cost_at_mid, "fill": s.fill, "max_profit_per_share": s.max_profit, "max_loss_per_share": s.max_loss,
             "breakeven": s.breakeven, "p_market": pm["max_profit"], "p_market_regions": pm, "risk_neutral": True, "p_view": pv, "p_view_reason": pv_reason,
             "ev_per_dollar_at_risk": ev, "disagreement": None if pv is None else pv - pm["max_profit"],
             "contracts_for_max_risk": None if max_risk is None else int(max_risk // (s.max_loss * CONTRACT))}
 
 
-def express_one(v: View, chain: boundary.OptionChain, smiles: boundary.ChainSmiles, diagnostic: dict[str, object]) -> dict[str, object]:
+def express_one(v: View, chain: boundary.OptionChain, smiles: boundary.ChainSmiles, diagnostic: dict[str, object], model: FillModel | None = None) -> dict[str, object]:
     expiries, notes = hedge.expiries_in_window(smiles, chain, v.horizon_days, beyond=WINDOW_BEYOND_DAYS)
     by_expiry = {e.expiry: e for e in expiries}
     prob = float(v.probability or 0.0)
     level_strikes = {(e.expiry, right): level_strike(sorted(e.calls if right == "call" else e.puts), v.level, v.direction) for e in expiries for right in ("call", "put")}
     rows: list[dict[str, object]] = []
-    for s in candidates_of(expiries, v.direction, v.slippage_per_leg):
+    for s in candidates_of(expiries, v.direction, v.slippage_per_leg, model):
         pv, reason = p_view_of(s, v.direction, prob, level_strikes)
         rows.append(candidate_json(s, p_market_of(s, by_expiry[s.expiry]), pv, reason, v.max_risk_usd))
     ranked = sorted((r for r in rows if r["p_view"] is not None), key=lambda r: (-float(str(r["ev_per_dollar_at_risk"])), float(str(r["max_loss_per_share"])), str(r["kind"]), str(r["expiry"]), float(str(r["long_strike"])), float(str(r["short_strike"]))))
@@ -338,7 +392,9 @@ def express_one(v: View, chain: boundary.OptionChain, smiles: boundary.ChainSmil
                       "level_strike_calls": level_strikes[(e.expiry, "call")], "level_strike_puts": level_strikes[(e.expiry, "put")]} for e in expiries],
         "mapping": "p_view applies only where the short strike is the quoted strike nearest the level (ties to the near side); the ranking answers how wide and debit or credit, the level is the holder's",
         "expiries_without_a_smile": notes,
-        "pricing": f"ask for what is bought, bid for what is sold, plus slippage_per_leg {v.slippage_per_leg:.2f} per contract per leg on both legs; the mid beside it",
+        "pricing": (f"fill model {model.ticker}: each leg at the model's median fill position for its cell, a bought leg at bid + q50 x spread and a sold leg at bid + (1 - q50) x spread, the flat slippage not applied"
+                    if model is not None else f"ask for what is bought, bid for what is sold, plus slippage_per_leg {v.slippage_per_leg:.2f} per contract per leg on both legs; the mid beside it"),
+        "fill_model": None if model is None else {"ticker": model.ticker, "cells": len(model.by_cell), "overall_q50": None if model.overall is None else model.overall[0], "note": fm.SYMMETRY_NOTE},
         "candidates": rows, "ranked": ranked, "top": ranked[:10], "unranked_on_p_market": unranked,
         "market_prices_the_view_more_strongly": [r for r in ranked if float(str(r["p_market"])) > float(str(r["p_view"]))][:10],
         "vol_diagnostic": diagnostic, "risk_neutral_note": RISK_NEUTRAL_NOTE, "scope_limits": SCOPE_LIMITS,
@@ -381,6 +437,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--run", type=Path, default=REPO_ROOT / "output")
     parser.add_argument("--out", type=Path, default=REPO_ROOT / "output" / "express")
     parser.add_argument("--rf", type=float, default=None)
+    parser.add_argument("--fill-model", type=Path, default=None, help="the fill model directory (50): each leg priced at its cell's median fill instead of the flat slippage")
     args = parser.parse_args(argv)
     views = load_views(args.views)
     out_dir: Path = args.out / args.views.stem
@@ -405,11 +462,15 @@ def main(argv: list[str]) -> int:
         chain = boundary.OptionChain.from_json_string(chain_path.read_text())
         smiles = hedge.smiles_of(chain_path, rf)
         diagnostic = vol_diagnostic(args.options, v.ticker, chain.snapshot_date, v.horizon_days, rf)
-        result = express_one(v, chain, smiles, diagnostic)
+        model_path: Path | None = None if args.fill_model is None else args.fill_model / f"{v.ticker}.json"
+        model = FillModel.load(model_path) if model_path is not None and model_path.exists() else None
+        if args.fill_model is not None and model is None:
+            print(f"{v.ticker}: no fill model at {model_path}; the flat slippage applies", file=sys.stderr)
+        result = express_one(v, chain, smiles, diagnostic, model)
         (out_dir / f"{v.ticker}.json").write_text(json.dumps(result, indent=1, sort_keys=True) + "\n")
         draw(result, out_dir / f"{v.ticker}.png")
         top = hedge.points(result["top"])
-        head = f"{v.ticker} {chain.snapshot_date}: view {v.direction} to {v.level:g} in {v.horizon_days} days at p {v.probability}; {len(hedge.points(result['candidates']))} candidates, {len(hedge.points(result['ranked']))} with p_view; {diagnostic.get('sentence')}"
+        head = f"{v.ticker} {chain.snapshot_date}: view {v.direction} to {v.level:g} in {v.horizon_days} days at p {v.probability}; {len(hedge.points(result['candidates']))} candidates, {len(hedge.points(result['ranked']))} with p_view; {'fill model' if model else 'ask/bid plus slippage'}; {diagnostic.get('sentence')}"
         print(head)
         for r in top[:3]:
             print(f"   {r['kind']} {r['long_strike']}/{r['short_strike']} {r['expiry']}: cost {float(str(r['cost_per_share'])):+.2f}, max profit {float(str(r['max_profit_per_share'])):.2f}, max loss {float(str(r['max_loss_per_share'])):.2f}, "
