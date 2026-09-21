@@ -46,16 +46,21 @@ def test_payoffs_and_max_loss_by_hand_with_slippage() -> None:
     assert kinds == {"bull_call", "bull_put"} and {s.kind for s in ex.candidates_of([e], "down", 0.0)} == {"bear_put", "bear_call"}
 
 
-def test_p_view_mapping_and_the_null_reason() -> None:
-    e = expiry()
-    inside = ex.spread("bull_call", e, e.calls[90.0], e.calls[100.0], 0.0)   # max profit from 100, the level is 105
-    beyond = ex.spread("bull_call", e, e.calls[100.0], e.calls[110.0], 0.0)  # max profit from 110
-    assert ex.p_view_of(beyond, "up", 105.0, 0.3) == (0.3, None)
-    pv, reason = ex.p_view_of(inside, "up", 105.0, 0.3)
-    assert pv is None and reason is not None and reason.startswith("the max-profit region begins at 100, inside the declared level 105")
-    down_beyond = ex.spread("bear_put", e, e.puts[110.0], e.puts[90.0], 0.0)  # max profit at or below 90, the level 95
-    assert ex.p_view_of(down_beyond, "down", 95.0, 0.4) == (0.4, None)
-    assert ex.p_view_of(ex.spread("bear_put", e, e.puts[110.0], e.puts[100.0], 0.0), "down", 95.0, 0.4)[0] is None
+def test_p_view_applies_at_the_level_strike_only() -> None:
+    e = expiry()  # strikes 90, 100, 110 on both rights
+    # the level 104 is nearest 100; a tie at 105 goes to the near side, 100 for an up view and 110 for a down view
+    assert ex.level_strike([90.0, 100.0, 110.0], 104.0, "up") == 100.0 and ex.level_strike([90.0, 100.0, 110.0], 105.0, "up") == 100.0
+    assert ex.level_strike([90.0, 100.0, 110.0], 105.0, "down") == 110.0 and ex.level_strike([], 105.0, "up") is None
+    ls: dict[tuple[str, str], float | None] = {("2027-09-01", "call"): 100.0, ("2027-09-01", "put"): 100.0}
+    debit = ex.spread("bull_call", e, e.calls[90.0], e.calls[100.0], 0.0)   # short at the level strike: qualifies, any width
+    credit = ex.spread("bull_put", e, e.puts[90.0], e.puts[100.0], 0.0)     # short put at the level strike: qualifies too
+    beyond = ex.spread("bull_call", e, e.calls[100.0], e.calls[110.0], 0.0) # short one strike beyond: not the declared region
+    assert ex.p_view_of(debit, "up", 0.3, ls) == (0.3, None) and ex.p_view_of(credit, "up", 0.3, ls) == (0.3, None)
+    assert ex.p_view_of(beyond, "up", 0.3, ls) == (None, "max-profit region is not the declared one")
+    down: dict[tuple[str, str], float | None] = {("2027-09-01", "call"): 100.0, ("2027-09-01", "put"): 100.0}
+    assert ex.p_view_of(ex.spread("bear_put", e, e.puts[110.0], e.puts[100.0], 0.0), "down", 0.4, down) == (0.4, None)
+    assert ex.p_view_of(ex.spread("bear_call", e, e.calls[110.0], e.calls[100.0], 0.0), "down", 0.4, down) == (0.4, None)
+    assert ex.p_view_of(ex.spread("bear_put", e, e.puts[110.0], e.puts[90.0], 0.0), "down", 0.4, down)[0] is None
 
 
 def test_p_market_regions_on_a_flat_smile() -> None:
@@ -76,12 +81,15 @@ def test_ev_formula_and_ranking() -> None:
     assert math.isclose(ex.ev_per_dollar_at_risk(0.4, 9.0, 1.0), 0.4 * 9.0 - 0.6)
     assert math.isclose(ex.ev_per_dollar_at_risk(0.5, 1.0, 1.0), 0.0)
     chain, smiles = fixture()
-    v = ex.View(ticker="T", direction="up", level=105.0, horizon_days=300, probability=0.4, why="test", as_of="2026-09-01", slippage_per_leg=0.0)
+    v = ex.View(ticker="T", direction="up", level=105.0, horizon_days=330, probability=0.4, why="test", as_of="2026-09-01", slippage_per_leg=0.0)  # the fixture expiry, 365 days out, sits inside the 60-day window
     r = ex.express_one(v, chain, smiles, {"sentence": None})
     ranked = hedge.points(r["ranked"])
     evs = [float(str(x["ev_per_dollar_at_risk"])) for x in ranked]
-    assert evs == sorted(evs, reverse=True) and all(float(str(x["short_strike"])) >= 105.0 for x in ranked)
-    assert all(x["p_view"] is None and x["p_view_reason"] for x in hedge.points(r["unranked_on_p_market"]))
+    # the fixture's strikes step by 10, so the level 105 ties between 100 and 110 and the near side, 100, is the
+    # level strike; only spreads short at it are ranked, debit and credit alike
+    assert evs == sorted(evs, reverse=True) and ranked and all(float(str(x["short_strike"])) == 100.0 for x in ranked)
+    assert {str(x["kind"]) for x in ranked} == {"bull_call", "bull_put"}
+    assert all(x["p_view"] is None and x["p_view_reason"] == "max-profit region is not the declared one" for x in hedge.points(r["unranked_on_p_market"]))
     for x in ranked:
         assert math.isclose(float(str(x["disagreement"])), 0.4 - float(str(x["p_market"])))
     shown = hedge.points(r["market_prices_the_view_more_strongly"])

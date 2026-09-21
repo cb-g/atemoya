@@ -341,10 +341,14 @@ strikes, ask for what is bought and bid for what is sold plus slippage, with max
 max loss (the capital at risk), breakeven and width. Three probabilities sit on each
 candidate and stay distinct: `p_market`, the risk-neutral probability of the max-profit
 region from the fitted density on the candidate's expiry, with the breakeven and
-max-loss regions beside it; `p_view`, the declared probability, used only where the
-short strike is at or beyond the level, and null with the reason where the max-profit
-region begins inside the level, since pricing that needs the view's conditional shape,
-which the holder did not declare and the tool will not interpolate; and
+max-loss regions beside it; `p_view`, the declared probability, which applies at the
+level and nowhere else: only to candidates whose max-profit region is exactly the
+declared one, the short strike at the quoted strike nearest the level (ties to the near
+side) and the long strike where the spread's definition puts it, any width, debit or
+credit alike, every other candidate carrying null with the reason and listed, not
+ranked, since the tool neither interpolates nor extrapolates the view; the ranking
+therefore answers two questions and only two, how wide and debit or credit, the level
+itself being the holder's; and
 `ev_per_dollar_at_risk`, the expected value per dollar at risk under `p_view`, the
 number the ranking uses. The top ten are reported with `disagreement = p_view -
 p_market`, which is where the holder is being paid for the view or paying for it, and a

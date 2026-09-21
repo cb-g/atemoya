@@ -21,9 +21,14 @@ and bear call spreads (credit), over every pair of quoted strikes with a positiv
 the hedging tool). Cost is ask for what is bought and bid for what is sold plus slippage.
 Three probabilities per candidate: p_market, the risk-neutral probability of the
 max-profit region from the fitted density on the candidate's expiry (the breakeven and
-max-loss regions beside it); p_view, the declared probability, used only where the short
-strike is at or beyond the level, else null with the reason; ev_per_dollar_at_risk =
-(p_view x max_profit - (1 - p_view) x max_loss) / max_loss where p_view is. One
+max-loss regions beside it); p_view, the declared probability, which applies at the level
+and nowhere else (47): only to candidates whose max-profit region is exactly the declared
+one, the short strike at the quoted strike nearest the level (ties to the near side,
+recorded as level_strike) and the long strike where the spread's definition puts it, any
+width, debit or credit alike; every other candidate carries p_view null with the reason
+and is listed, not ranked; ev_per_dollar_at_risk = (p_view x max_profit - (1 - p_view) x
+max_loss) / max_loss where p_view is. The ranking therefore answers two questions and
+only two, how wide and debit or credit; the level itself is the holder's. One
 diagnostic per view: the nearest expiry's at-the-money implied volatility against the
 name's realised volatility over the horizon's length and against its own ATM IV over the
 last 250 snapshot dates as a percentile."""
@@ -174,14 +179,32 @@ def candidates_of(expiries: list[hedge.Expiry], direction: str, slippage_per_leg
 
 # --- probabilities ---
 
-def p_view_of(s: Spread, direction: str, level: float, probability: float) -> tuple[float | None, str | None]:
-    """The declared probability, only where the max-profit region is reached at or beyond the
-    level; else null with the reason. No interpolation of the holder's belief."""
-    beyond = s.short_strike >= level if direction == "up" else s.short_strike <= level
-    if beyond:
+NOT_DECLARED = "max-profit region is not the declared one"
+
+
+def level_strike(strikes: list[float], level: float, direction: str) -> float | None:
+    """(47) The quoted strike nearest the level; a tie goes to the near side, below the level
+    for an up view and above it for a down view."""
+    if not strikes:
+        return None
+
+    def key(k: float) -> tuple[float, int]:
+        near = k <= level if direction == "up" else k >= level
+        return abs(k - level), 0 if near else 1
+
+    return min(strikes, key=key)
+
+
+def p_view_of(s: Spread, direction: str, probability: float, level_strikes: dict[tuple[str, str], float | None]) -> tuple[float | None, str | None]:
+    """(47) The declared probability applies only where the max-profit region is exactly the
+    declared one: the short strike at the expiry's level strike for the spread's right; the
+    long strike sits where the spread's definition puts it, any width. Else null with the
+    reason; never interpolated or extrapolated."""
+    right = "call" if s.kind in ("bull_call", "bear_call") else "put"
+    at = level_strikes.get((s.expiry, right))
+    if at is not None and s.short_strike == at:
         return probability, None
-    return None, (f"the max-profit region begins at {s.short_strike:g}, inside the declared level {level:g}: pricing it needs the view's conditional shape "
-                  "short of the level, which the view did not declare; ranked on p_market only")
+    return None, NOT_DECLARED
 
 
 def p_market_of(s: Spread, e: hedge.Expiry) -> dict[str, float]:
@@ -302,15 +325,18 @@ def express_one(v: View, chain: boundary.OptionChain, smiles: boundary.ChainSmil
     expiries, notes = hedge.expiries_in_window(smiles, chain, v.horizon_days, beyond=WINDOW_BEYOND_DAYS)
     by_expiry = {e.expiry: e for e in expiries}
     prob = float(v.probability or 0.0)
+    level_strikes = {(e.expiry, right): level_strike(sorted(e.calls if right == "call" else e.puts), v.level, v.direction) for e in expiries for right in ("call", "put")}
     rows: list[dict[str, object]] = []
     for s in candidates_of(expiries, v.direction, v.slippage_per_leg):
-        pv, reason = p_view_of(s, v.direction, v.level, prob)
+        pv, reason = p_view_of(s, v.direction, prob, level_strikes)
         rows.append(candidate_json(s, p_market_of(s, by_expiry[s.expiry]), pv, reason, v.max_risk_usd))
     ranked = sorted((r for r in rows if r["p_view"] is not None), key=lambda r: (-float(str(r["ev_per_dollar_at_risk"])), float(str(r["max_loss_per_share"])), str(r["kind"]), str(r["expiry"]), float(str(r["long_strike"])), float(str(r["short_strike"]))))
     unranked = sorted((r for r in rows if r["p_view"] is None), key=lambda r: (-float(str(r["p_market"])), float(str(r["max_loss_per_share"])), str(r["kind"]), str(r["expiry"]), float(str(r["long_strike"])), float(str(r["short_strike"]))))
     return {
         "ticker": v.ticker, "view": v.model_dump(), "snapshot_date": smiles.snapshot_date, "spot": smiles.spot, "risk_free_rate": smiles.risk_free_rate,
-        "expiries": [{"expiry": e.expiry, "days_to_expiry": e.days, "forward": e.forward, "calls_quoted": len(e.calls), "puts_quoted": len(e.puts), "legs_excluded_stale": e.excluded_stale} for e in expiries],
+        "expiries": [{"expiry": e.expiry, "days_to_expiry": e.days, "forward": e.forward, "calls_quoted": len(e.calls), "puts_quoted": len(e.puts), "legs_excluded_stale": e.excluded_stale,
+                      "level_strike_calls": level_strikes[(e.expiry, "call")], "level_strike_puts": level_strikes[(e.expiry, "put")]} for e in expiries],
+        "mapping": "p_view applies only where the short strike is the quoted strike nearest the level (ties to the near side); the ranking answers how wide and debit or credit, the level is the holder's",
         "expiries_without_a_smile": notes,
         "pricing": f"ask for what is bought, bid for what is sold, plus slippage_per_leg {v.slippage_per_leg:.2f} per contract per leg on both legs; the mid beside it",
         "candidates": rows, "ranked": ranked, "top": ranked[:10], "unranked_on_p_market": unranked,
