@@ -121,6 +121,23 @@ type params = {
    model can see for the name. Nothing here remembers an outcome or a finding; those belong
    to the run, and "did anything change since the last run" is the baseline diff. The loader
    is strict: an unknown field is a load error. *)
+(* The FX hedge's daily spot (48): the ECB's daily reference rates, every currency against
+   the euro, a dollar cross being the two ECB rates divided; written by
+   python/refresh_fx.py --daily to data/reference/fx_spot_daily.json, never tracked, read by
+   the FX hedge only. The valuation path keeps the weekly H.10 series and its age gate. *)
+type fx_spot = {
+  as_of : string;                       (* the ECB observation date *)
+  per_eur : float;                      (* units of the currency per euro, as the ECB quotes it *)
+  usd_per_unit : float;                 (* (USD per EUR) / (units per EUR); 1 / per_eur is the euro itself *)
+}
+
+type fx_spot_daily = {
+  source : string;
+  fetched_on : string;
+  ~notes : string list;
+  currencies : (string * fx_spot) list <json repr="object">;
+}
+
 (* CME FX futures (43): transcribed public specifications and the exchange's published
    margins, dated; read by python/hedge_fx.py and never fetched. *)
 type fx_future_contract = {

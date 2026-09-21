@@ -385,7 +385,12 @@ written even at 1.0). A holding without a declared exposure is listed and exclud
 currency (EUR, JPY, GBP, CHF, CAD, AUD, MXN, BRL): product, size, tick, the exchange's
 published maintenance margin and its speculative initial margin, loaded strictly; a
 currency not in it is refused by name, a proxy being a declaration for a later brief.
-The fair forward is covered interest parity on the fetched curves at the tenor nearest
+The spot the hedge trades against is the ECB's daily reference rate, a dollar cross of two
+ECB rates, fetched keyless by `python/refresh_fx.py --daily` into
+`data/reference/fx_spot_daily.json`; a missing file or currency fails the holding naming
+the refresher, and the weekly H.10 rate the valuation uses is recorded beside it with
+both dates (the valuation path never reads the daily file, its weekly series and age gate
+being immaterial there). The fair forward is covered interest parity on the fetched curves at the tenor nearest
 the horizon (`F = S (1 + r_usd T) / (1 + r_ccy T)`, tenors recorded), the carry is
 `(F - S) / S`, positive when the hedged currency yields less than the dollar, and a
 missing curve fails the holding with the refresher named. The vendor's front futures

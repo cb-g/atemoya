@@ -1528,6 +1528,79 @@ class IndustryTable:
 
 
 @dataclass
+class FxSpot:
+    """Original type: fx_spot = { ... }
+    """
+
+    as_of: str
+    per_eur: float
+    usd_per_unit: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FxSpot':
+        if isinstance(x, dict):
+            return cls(
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('FxSpot', 'as_of'),
+                per_eur=_atd_read_float(x['per_eur']) if 'per_eur' in x else _atd_missing_json_field('FxSpot', 'per_eur'),
+                usd_per_unit=_atd_read_float(x['usd_per_unit']) if 'usd_per_unit' in x else _atd_missing_json_field('FxSpot', 'usd_per_unit'),
+            )
+        else:
+            _atd_bad_json('FxSpot', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['per_eur'] = _atd_write_float(self.per_eur)
+        res['usd_per_unit'] = _atd_write_float(self.usd_per_unit)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FxSpot':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class FxSpotDaily:
+    """Original type: fx_spot_daily = { ... }
+    """
+
+    source: str
+    fetched_on: str
+    currencies: List[Tuple[str, FxSpot]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FxSpotDaily':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('FxSpotDaily', 'source'),
+                fetched_on=_atd_read_string(x['fetched_on']) if 'fetched_on' in x else _atd_missing_json_field('FxSpotDaily', 'fetched_on'),
+                currencies=_atd_read_assoc_object_into_list(FxSpot.from_json)(x['currencies']) if 'currencies' in x else _atd_missing_json_field('FxSpotDaily', 'currencies'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('FxSpotDaily', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['fetched_on'] = _atd_write_string(self.fetched_on)
+        res['currencies'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.currencies)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FxSpotDaily':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class FxSource:
     """Original type: fx_source = { ... }
     """

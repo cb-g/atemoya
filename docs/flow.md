@@ -236,7 +236,10 @@ and cap from the index payoff on the declared betas, the book floored at zero; a
 absent from the store is refused with the fetch command named. Currency exposure (43):
 `python/hedge_fx.py` sells the declared exposure forward with CME FX futures from the
 dated table `reference/fx_futures.json` (strict loader), the forward by covered interest
-parity on the fetched curves with the vendor's front quote as a flag, whole standard and
+parity on the fetched curves, the spot the ECB's daily reference rate as a dollar cross of
+two ECB rates from `data/reference/fx_spot_daily.json` (48, `refresh_fx.py --daily`, the
+valuation path never reading it; a missing file names the refresher), the vendor's front
+quote as a flag, whole standard and
 micro contracts with the residual, the margin, and a deterministic payoff grid; a currency
 not in the table is refused by name and a missing curve names the refresher. A declared
 view (46): `python/express.py` prices every vertical on the view's side from quotes,
@@ -474,6 +477,8 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- a daily FX spot for the FX hedge (48): the ECB's daily reference rates as the hedge's
+  spot, the weekly H.10 file untouched for valuation. No number moves.
 - the view applies at the level only (47): `p_view` on the spreads short at the strike
   nearest the level, debit or credit, any width; nothing else ranked. No number moves.
 - expressing a view with verticals (46): `python/express.py`, the declared view, the

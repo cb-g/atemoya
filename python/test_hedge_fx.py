@@ -29,6 +29,11 @@ def fx(usd_per_unit: dict[str, float]) -> reference.FxRates:
     return reference.FxRates(source="test", notes=[], currencies=[(k, reference.FxRate(series="X", direction="usd_per_unit", as_of="2026-09-01", quoted=v, usd_per_unit=v)) for k, v in usd_per_unit.items()])
 
 
+def daily(usd_per_unit: dict[str, float], as_of: str = "2026-09-01") -> reference.FxSpotDaily:
+    return reference.FxSpotDaily(source="ECB reference rates, USD via EUR cross", fetched_on=as_of, notes=[],
+                                 currencies=[(k, reference.FxSpot(as_of=as_of, per_eur=1.0 if k == "EUR" else 1.10 / v, usd_per_unit=v)) for k, v in usd_per_unit.items()])
+
+
 def holding(ticker: str, ccy: str | None = "EUR", fraction: float | None = 1.0) -> hx.FxHolding:
     return hx.FxHolding(ticker=ticker, shares=100.0, exposure_currency=ccy, exposure_fraction=fraction, exposure_why=None if ccy is None else "declared for the test", exposure_as_of=None if ccy is None else "2026-09-01")
 
@@ -44,13 +49,13 @@ def test_parity_forward_and_carry_by_hand_in_both_conventions() -> None:
     assert hx.nearest_tenor(curve({"1y": 0.04, "3y": 0.045, "7y": 0.05}), 0.5) == ("1y", 0.04)
     assert hx.nearest_tenor(curve({"7y": 0.05, "10y": 0.052}), 0.5) == ("7y", 0.05)  # the UK-style curve: the nearest available, recorded
     r = hx.hedge_one(holding("X"), TOP, value_usd=110000.0, spot_source="test", table=TABLE, rates=rates({"United States": US, "Germany": {"1y": 0.02}}), fx=fx({"EUR": 1.10}),
-                     countries={"EUR": "Germany"}, vendor_quote=None)
+                     countries={"EUR": "Germany"}, vendor_quote=None, daily=daily({"EUR": 1.10}))
     k = hedge.points([r["carry"]])[0]
     assert math.isclose(float(str(k["forward_usd_per_unit"])), 1.10 * 1.04 / 1.02) and math.isclose(float(str(k["carry_over_horizon"])), 1.04 / 1.02 - 1.0)
     assert k["tenor_usd"] == "1y" and k["tenor_ccy"] == "1y" and float(str(k["carry_over_horizon"])) > 0  # the euro yields less: positive carry
     # the vendor's quote is a flag, never the input: a 2% richer future is flagged, the parity forward stays
     v = hx.hedge_one(holding("X"), TOP, value_usd=110000.0, spot_source="test", table=TABLE, rates=rates({"United States": US, "Germany": {"1y": 0.02}}), fx=fx({"EUR": 1.10}),
-                     countries={"EUR": "Germany"}, vendor_quote=1.10 * 1.04 / 1.02 * 1.02)
+                     countries={"EUR": "Germany"}, vendor_quote=1.10 * 1.04 / 1.02 * 1.02, daily=daily({"EUR": 1.10}))
     vc = hedge.points([v["vendor_check"]])[0]
     assert "beyond" in str(vc["flag"]) and v["carry"] == r["carry"]
 
@@ -69,7 +74,7 @@ def test_standard_plus_micro_selection_minimises_the_residual() -> None:
 
 def test_a_currency_not_in_the_table_is_refused_by_name() -> None:
     r = hx.hedge_one(holding("TSM", "TWD"), TOP, value_usd=1000.0, spot_source="test", table=TABLE, rates=rates({"United States": US, "Taiwan": {"1y": 0.015}}), fx=fx({"TWD": 0.033}),
-                     countries={"TWD": "Taiwan"}, vendor_quote=None)
+                     countries={"TWD": "Taiwan"}, vendor_quote=None, daily=daily({"TWD": 0.033}))
     assert r["refused"] == "TWD is not in reference/fx_futures.json: no CME future is transcribed for it; a proxy currency would be a declaration for a later brief"
 
 
@@ -88,7 +93,7 @@ def test_the_grid_at_three_points_by_hand() -> None:
 
 def test_a_missing_curve_names_the_refresher() -> None:
     r = hx.hedge_one(holding("X", "JPY"), TOP, value_usd=1000.0, spot_source="test", table=TABLE, rates=rates({"United States": US}), fx=fx({"JPY": 0.0067}),
-                     countries={"JPY": "Japan"}, vendor_quote=None)
+                     countries={"JPY": "Japan"}, vendor_quote=None, daily=daily({"JPY": 0.0067}))
     assert r["refused"] == "risk-free curve not fetched for Japan: run python/refresh_rates.py with your FRED key"
 
 
@@ -109,3 +114,32 @@ def test_the_table_loads_strictly() -> None:
         fx_futures.load_text(json.dumps(bad))
     # a holding without a declared exposure is not declared; a fraction outside [0, 1] neither
     assert not holding("X", None, None).declared() and not holding("X", "EUR", 1.5).declared() and holding("X").declared()
+
+
+def test_daily_spot_cross_missing_file_and_dates() -> None:
+    """(48) The dollar cross from two ECB rates; the missing daily file or currency names the
+    refresher; the record carries the daily spot and its date beside the weekly one. Every
+    rate and date here is invented: nothing in this file was observed at any source."""
+    import refresh_fx as rf
+    from datetime import date as d
+    assert math.isclose(rf.usd_cross(1.25, 200.0), 1.25 / 200.0)
+    obs = {"USD": (d(2026, 1, 9), 1.25), "JPY": (d(2026, 1, 9), 200.0), "GBP": (d(2026, 1, 6), 0.80), "TWD": (d(2020, 1, 2), 40.0)}
+    spots, skipped = rf.daily_spots(obs, ["EUR", "JPY", "GBP", "TWD", "BRL"], d(2026, 1, 9))
+    assert skipped == ["TWD", "BRL"] and math.isclose(spots["EUR"].usd_per_unit, 1.25) and math.isclose(spots["JPY"].usd_per_unit, 1.25 / 200.0, abs_tol=1e-8)
+    assert spots["GBP"].as_of == "2026-01-06" and spots["JPY"].as_of == "2026-01-09" and spots["EUR"].per_eur == 1.0
+    text = "KEY,FREQ,CURRENCY,CURRENCY_DENOM,EXR_TYPE,EXR_SUFFIX,TIME_PERIOD,OBS_VALUE\nEXR.D.USD.EUR.SP00.A,D,USD,EUR,SP00,A,2026-01-09,1.25\nEXR.D.JPY.EUR.SP00.A,D,JPY,EUR,SP00,A,2026-01-09,200.0\n"
+    assert rf.parse_ecb_exr(text) == {"USD": (d(2026, 1, 9), 1.25), "JPY": (d(2026, 1, 9), 200.0)}
+    r = hx.hedge_one(holding("X"), TOP, value_usd=110000.0, spot_source="test", table=TABLE, rates=rates({"United States": US, "Germany": {"1y": 0.02}}), fx=fx({"EUR": 1.20}),
+                     countries={"EUR": "Germany"}, vendor_quote=None, daily=None)
+    assert r["refused"] == "daily FX spot not fetched: run python/refresh_fx.py --daily"
+    r = hx.hedge_one(holding("X"), TOP, value_usd=110000.0, spot_source="test", table=TABLE, rates=rates({"United States": US, "Germany": {"1y": 0.02}}), fx=fx({"EUR": 1.20}),
+                     countries={"EUR": "Germany"}, vendor_quote=None, daily=daily({"JPY": 0.0067}))
+    assert r["refused"] == "daily FX spot not fetched for EUR: run python/refresh_fx.py --daily"
+    r = hx.hedge_one(holding("X"), TOP, value_usd=110000.0, spot_source="test", table=TABLE, rates=rates({"United States": US, "Germany": {"1y": 0.02}}), fx=fx({"EUR": 1.20}),
+                     countries={"EUR": "Germany"}, vendor_quote=None, daily=daily({"EUR": 1.10}, as_of="2026-09-21"))
+    f = hedge.points([r["fx"]])[0]
+    assert f["usd_per_unit"] == 1.10 and f["as_of"] == "2026-09-21" and f["source"] == "ECB reference rates, USD via EUR cross"
+    weekly = hedge.points([f["weekly_h10"]])[0]
+    assert weekly["usd_per_unit"] == 1.20 and weekly["as_of"] == "2026-09-01"
+    k = hedge.points([r["carry"]])[0]
+    assert math.isclose(float(str(k["forward_usd_per_unit"])), 1.10 * 1.04 / 1.02)  # the parity forward is on the daily spot

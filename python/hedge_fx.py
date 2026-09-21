@@ -13,6 +13,10 @@ exposure to hedge, must be written even at 1.0. A holding without a declared exp
 listed and excluded; a currency not in reference/fx_futures.json is refused by name.
 
 Value in dollars is shares x spot (the store's latest close, else the run's price). The
+currency spot is the ECB's daily reference rate (48), a dollar cross of two ECB rates,
+from data/reference/fx_spot_daily.json (python/refresh_fx.py --daily), the weekly H.10
+rate the valuation uses recorded beside it with both dates; a missing daily file or
+currency fails the holding naming the refresher. The
 fair forward for the horizon is covered interest parity on the two currencies' risk-free
 rates at the tenor nearest the horizon from the fetched curves, F = S (1 + r_usd T) /
 (1 + r_ccy T), simple compounding; carry = (F - S) / S over the horizon, positive when the
@@ -56,6 +60,7 @@ SCOPE_LIMITS = [
     "the futures leg settles at the spot rate at the horizon; the residual exposure stays with the holder",
 ]
 REFRESH_STRING = "risk-free curve not fetched for {country}: run python/refresh_rates.py with your FRED key"
+DAILY_STRING = "daily FX spot not fetched{what}: run python/refresh_fx.py --daily"
 
 
 class FxHolding(BaseModel):
@@ -161,7 +166,8 @@ def curve_of(rates: reference.RiskFreeRates, country: str) -> reference.Curve | 
 
 
 def hedge_one(h: FxHolding, top: FxHoldings, *, value_usd: float, spot_source: str, table: reference.FxFutures,
-              rates: reference.RiskFreeRates, fx: reference.FxRates, countries: dict[str, str], vendor_quote: float | None) -> dict[str, object]:
+              rates: reference.RiskFreeRates, fx: reference.FxRates, countries: dict[str, str], vendor_quote: float | None,
+              daily: reference.FxSpotDaily | None) -> dict[str, object]:
     ccy = str(h.exposure_currency)
     fraction = float(h.exposure_fraction or 0.0)
     products = dict(table.contracts).get(ccy)
@@ -170,7 +176,12 @@ def hedge_one(h: FxHolding, top: FxHoldings, *, value_usd: float, spot_source: s
     rate = dict(fx.currencies).get(ccy)
     if rate is None:
         return {"ticker": h.ticker, "exposure_currency": ccy, "refused": f"fx not fetched for {ccy}/USD: run python/refresh_fx.py with your FRED key"}
-    spot = rate.usd_per_unit
+    if daily is None:
+        return {"ticker": h.ticker, "exposure_currency": ccy, "refused": DAILY_STRING.format(what="")}
+    daily_spot = dict(daily.currencies).get(ccy)
+    if daily_spot is None:
+        return {"ticker": h.ticker, "exposure_currency": ccy, "refused": DAILY_STRING.format(what=f" for {ccy}")}
+    spot = daily_spot.usd_per_unit
     t = top.horizon_days / 365.0
     us = curve_of(rates, "United States")
     country = countries.get(ccy, "")
@@ -202,7 +213,8 @@ def hedge_one(h: FxHolding, top: FxHoldings, *, value_usd: float, spot_source: s
         "ticker": h.ticker, "shares": h.shares, "value_usd": value_usd, "spot_source": spot_source,
         "exposure_currency": ccy, "exposure_fraction": fraction, "exposure_why": h.exposure_why, "exposure_as_of": h.exposure_as_of,
         "hedge_fraction": top.hedge_fraction, "exposure_to_hedge_usd": exposure_usd, "exposure_to_hedge_units": units,
-        "fx": {"usd_per_unit": spot, "as_of": rate.as_of, "series": rate.series},
+        "fx": {"usd_per_unit": spot, "as_of": daily_spot.as_of, "source": daily.source, "per_eur": daily_spot.per_eur,
+               "weekly_h10": {"usd_per_unit": rate.usd_per_unit, "as_of": rate.as_of, "series": rate.series, "note": "the valuation's rate, not the hedge's"}},
         "carry": {"forward_usd_per_unit": forward, "carry_over_horizon": carry, "carry_usd_on_hedged_units": hedged_units * (forward - spot),
                   "r_usd": r_usd, "tenor_usd": tenor_us, "r_ccy": r_ccy, "tenor_ccy": tenor_ccy, "country": country, "horizon_years": t,
                   "formula": "F = S (1 + r_usd T) / (1 + r_ccy T), simple compounding, from the fetched curves; positive carry when the hedged currency yields less than the dollar"},
@@ -279,6 +291,8 @@ def main(argv: list[str]) -> int:
     table = fx_futures.load(REFERENCE / "fx_futures.json")
     rates = reference.RiskFreeRates.from_json_string((args.fetched / "risk_free_rates.json").read_text())
     fx = reference.FxRates.from_json_string((args.fetched / "fx_rates.json").read_text())
+    daily_path: Path = args.fetched / "fx_spot_daily.json"
+    daily = reference.FxSpotDaily.from_json_string(daily_path.read_text()) if daily_path.exists() else None
     countries = dict(reference.FxSources.from_json_string((REFERENCE / "fx_sources.json").read_text()).currency_countries)
     symbols = sorted({dict(table.contracts)[str(h.exposure_currency)].vendor_symbol for h in top.holdings if h.declared() and str(h.exposure_currency) in dict(table.contracts)})
     quotes = {} if args.no_vendor else vendor_quotes(symbols)
@@ -293,7 +307,7 @@ def main(argv: list[str]) -> int:
             continue
         products = dict(table.contracts).get(str(h.exposure_currency))
         vendor = None if products is None else quotes.get(products.vendor_symbol)
-        results.append(hedge_one(h, top, value_usd=h.shares * spot[0], spot_source=spot[1], table=table, rates=rates, fx=fx, countries=countries, vendor_quote=vendor))
+        results.append(hedge_one(h, top, value_usd=h.shares * spot[0], spot_source=spot[1], table=table, rates=rates, fx=fx, countries=countries, vendor_quote=vendor, daily=daily))
     out_dir: Path = args.out / args.holdings.stem
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = {"horizon_days": top.horizon_days, "hedge_fraction": top.hedge_fraction, "table_as_of": table.as_of, "holdings": results,
