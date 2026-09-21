@@ -238,7 +238,14 @@ absent from the store is refused with the fetch command named. Currency exposure
 dated table `reference/fx_futures.json` (strict loader), the forward by covered interest
 parity on the fetched curves with the vendor's front quote as a flag, whole standard and
 micro contracts with the residual, the margin, and a deterministic payoff grid; a currency
-not in the table is refused by name and a missing curve names the refresher.
+not in the table is refused by name and a missing curve names the refresher. A declared
+view (46): `python/express.py` prices every vertical on the view's side from quotes,
+applies the holder's probability only where the max-profit region is reached at or
+beyond the declared level (null with the reason inside it, never interpolated), puts the
+risk-neutral probability of the payoff regions beside it, ranks by expected value per
+dollar at risk with the disagreement shown, and states the implied-against-realised
+volatility diagnostic; a view without a probability or a why, or a name without a chain,
+is refused.
 
 ## Frontier
 
@@ -465,6 +472,9 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- expressing a view with verticals (46): `python/express.py`, the declared view, the
+  quote-priced verticals, `p_view` against `p_market`, EV per dollar at risk, the vol
+  diagnostic. No new `Failed` string; no number moves.
 - share counts through corporate actions (44): the point-in-time count nearest the filed
   period, the cover page within 400 days, the vendor's split record applied to the count
   and to the live check's cover page. One new `Failed` string; no live number moves.

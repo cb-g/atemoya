@@ -323,6 +323,45 @@ uv run python/beta.py data/holdings/book.json
 uv run python/hedge_book.py data/holdings/book.json
 ```
 
+## Expressing a view
+
+`python/express.py <views.json>` is the hedging machinery pointed the other way. It is
+not a signal, a forecast or a recommendation: the holder declares a view, six fields per
+entry, `ticker`, `direction` (`up` or `down`), `level`, `horizon_days`, `probability`
+(the holder's, that the price is at or beyond the level in the direction at the horizon),
+`why` and `as_of`, with `slippage_per_leg` written even at 0.00 and optional
+`max_risk_usd` and `as_of_snapshot`; a view without a probability or a why is refused,
+since a direction alone is not something the tool can price, and the tool never supplies,
+infers or adjusts a view. Views live in untracked files.
+
+Given the view, every vertical on its side is priced from the store's quotes for each
+expiry at or beyond the horizon and within 60 days past it: bull call and bull put
+spreads for `up`, bear put and bear call spreads for `down`, over every pair of quoted
+strikes, ask for what is bought and bid for what is sold plus slippage, with max profit,
+max loss (the capital at risk), breakeven and width. Three probabilities sit on each
+candidate and stay distinct: `p_market`, the risk-neutral probability of the max-profit
+region from the fitted density on the candidate's expiry, with the breakeven and
+max-loss regions beside it; `p_view`, the declared probability, used only where the
+short strike is at or beyond the level, and null with the reason where the max-profit
+region begins inside the level, since pricing that needs the view's conditional shape,
+which the holder did not declare and the tool will not interpolate; and
+`ev_per_dollar_at_risk`, the expected value per dollar at risk under `p_view`, the
+number the ranking uses. The top ten are reported with `disagreement = p_view -
+p_market`, which is where the holder is being paid for the view or paying for it, and a
+candidate the market prices more strongly than the holder is shown, not hidden. One
+diagnostic per view says whether the view is also a volatility bet: the nearest expiry's
+at-the-money implied volatility against the realised volatility over the horizon's
+length and against the name's own ATM implied volatility over the last 250 snapshot
+dates, as a percentile. Output: `output/express/<file>/<TICKER>.json` and `.png`
+(max loss against EV per dollar, points coloured by `p_market`, credit and debit by
+marker, the top one starred). Scope limits on every output: held to expiry, assignment
+before expiry not modelled, the holder's probability is theirs and the market's is
+risk-neutral. A fill model is not here; slippage is its placeholder.
+
+```sh
+uv run python/express.py data/views/mine.json
+```
+
 ## FX hedging
 
 A holder of a name whose value moves with a foreign currency sells that currency forward
