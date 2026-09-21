@@ -397,7 +397,11 @@ missing curve fails the holding with the refresher named. The vendor's front fut
 quote is fetched and compared with the parity forward, the residual recorded and flagged
 beyond 0.5%, never used as the input (`--no-vendor` skips it offline). Contracts are
 whole: the standard-plus-micro combination leaving the smallest residual, the count and
-the residual reported, the margin tied up as a percent of the holding's value. The output
+the residual reported, the margin tied up as a percent of the holding's value. The
+table's margins are the exchange's published minimums and brokers charge more, so a
+holding may declare its broker's initial margin per contract with `margin_why` naming the
+broker and the date; when it does, that figure is used and the exchange minimum reported
+beside it, and the output states which was used on every holding. The output
 is a deterministic payoff grid, currency moves from -20% to +20% in 1% steps, the
 holding's dollar value at the horizon unhedged and hedged, drawn as two lines with the
 residual's slope visible, under `output/hedge/<file>/fx.json` and `fx.png`. Scope limits

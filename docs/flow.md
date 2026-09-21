@@ -477,6 +477,9 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- margins, the exchange minimum and the broker's override (49): a holding may declare its
+  broker's initial margin, used when present with the exchange minimum reported beside it.
+  No number moves.
 - a daily FX spot for the FX hedge (48): the ECB's daily reference rates as the hedge's
   spot, the weekly H.10 file untouched for valuation. No number moves.
 - the view applies at the level only (47): `p_view` on the spreads short at the strike

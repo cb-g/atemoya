@@ -143,3 +143,21 @@ def test_daily_spot_cross_missing_file_and_dates() -> None:
     assert weekly["usd_per_unit"] == 1.20 and weekly["as_of"] == "2026-09-01"
     k = hedge.points([r["carry"]])[0]
     assert math.isclose(float(str(k["forward_usd_per_unit"])), 1.10 * 1.04 / 1.02)  # the parity forward is on the daily spot
+
+
+def test_broker_margin_overrides_the_exchange_minimum_when_declared() -> None:
+    """(49) The broker's declared figure is used when present and the exchange minimum reported
+    beside it; the minimum is used otherwise; the source says which."""
+    std = dict(TABLE.contracts)["EUR"].standard
+    mic = dict(TABLE.contracts)["EUR"].micro
+    minimum = std.initial_margin_usd + 2 * (mic.initial_margin_usd if mic else 0.0)
+    m = hx.margin_used(holding("X"), 1, 2, std, mic)
+    assert m["initial_usd"] == minimum and m["exchange_minimum_usd"] == minimum and str(m["source"]).startswith("exchange minimum from reference/fx_futures.json")
+    declared = hx.FxHolding(ticker="X", shares=1.0, exposure_currency="EUR", exposure_fraction=1.0, exposure_why="w", exposure_as_of="2026-09-01",
+                            broker_initial_margin_usd=3300.0, broker_initial_margin_micro_usd=330.0, margin_why="broker B, 2026-09-21")
+    m = hx.margin_used(declared, 1, 2, std, mic)
+    assert m["initial_usd"] == 3300.0 + 2 * 330.0 and m["exchange_minimum_usd"] == minimum and str(m["source"]) == "broker's declared initial margin (broker B, 2026-09-21)"
+    half = hx.FxHolding(ticker="X", shares=1.0, exposure_currency="EUR", exposure_fraction=1.0, exposure_why="w", exposure_as_of="2026-09-01",
+                        broker_initial_margin_usd=3300.0, margin_why="broker B, 2026-09-21")
+    m = hx.margin_used(half, 1, 2, std, mic)
+    assert m["initial_usd"] == 3300.0 + 2 * (mic.initial_margin_usd if mic else 0.0) and "exchange minimum on the contracts without a declared figure" in str(m["source"])

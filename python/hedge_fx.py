@@ -71,6 +71,9 @@ class FxHolding(BaseModel):
     exposure_fraction: float | None = None
     exposure_why: str | None = None
     exposure_as_of: str | None = None
+    broker_initial_margin_usd: float | None = None         # (49) per standard contract, the broker's figure
+    broker_initial_margin_micro_usd: float | None = None   # (49) per micro contract
+    margin_why: str | None = None                          # the broker and the date
 
     def declared(self) -> bool:
         return (self.exposure_currency is not None and self.exposure_fraction is not None and bool(self.exposure_why) and bool(self.exposure_as_of)
@@ -91,7 +94,28 @@ def load_holdings(path: Path) -> FxHoldings:
         raise SystemExit(f"{path}: {e}") from e
     if h.horizon_days <= 0 or not 0.0 <= h.hedge_fraction <= 1.0 or any(x.shares <= 0 for x in h.holdings):
         raise SystemExit(f"{path}: horizon_days positive, hedge_fraction in [0, 1], every shares positive")
+    for x in h.holdings:
+        if (x.broker_initial_margin_usd is not None or x.broker_initial_margin_micro_usd is not None) and not x.margin_why:
+            raise SystemExit(f"{path}: {x.ticker}: a broker margin needs margin_why naming the broker and the date")
+        if any(m is not None and m <= 0 for m in (x.broker_initial_margin_usd, x.broker_initial_margin_micro_usd)):
+            raise SystemExit(f"{path}: {x.ticker}: a broker margin must be positive")
     return h
+
+
+def margin_used(h: FxHolding, n_std: int, n_mic: int, std: reference.FxFutureContract, mic: reference.FxFutureContract | None) -> dict[str, object]:
+    """(49) The broker's declared initial margin when present, else the exchange minimum from the
+    table; the minimum reported beside it either way, and the source stated."""
+    exchange = n_std * std.initial_margin_usd + n_mic * (mic.initial_margin_usd if mic else 0.0)
+    broker_std = h.broker_initial_margin_usd
+    broker_mic = h.broker_initial_margin_micro_usd
+    declared = broker_std is not None or broker_mic is not None
+    if declared:
+        used = n_std * (broker_std if broker_std is not None else std.initial_margin_usd) + n_mic * (broker_mic if broker_mic is not None else (mic.initial_margin_usd if mic else 0.0))
+        source = f"broker's declared initial margin ({h.margin_why})" + ("" if (n_std == 0 or broker_std is not None) and (n_mic == 0 or broker_mic is not None) else "; the exchange minimum on the contracts without a declared figure")
+    else:
+        used, source = exchange, "exchange minimum from reference/fx_futures.json (no broker figure declared)"
+    return {"initial_usd": used, "source": source, "exchange_minimum_usd": exchange,
+            "broker_initial_margin_usd": broker_std, "broker_initial_margin_micro_usd": broker_mic, "margin_why": h.margin_why}
 
 
 # --- parity ---
@@ -199,7 +223,7 @@ def hedge_one(h: FxHolding, top: FxHoldings, *, value_usd: float, spot_source: s
     std, mic = products.standard, products.micro
     n_std, n_mic, residual_units = contracts_for(units, std.size, None if mic is None else mic.size)
     hedged_units = n_std * std.size + n_mic * (mic.size if mic else 0.0)
-    margin = n_std * std.initial_margin_usd + n_mic * (mic.initial_margin_usd if mic else 0.0)
+    margin = margin_used(h, n_std, n_mic, std, mic)
     vendor: dict[str, object]
     if vendor_quote is None:
         vendor = {"symbol": products.vendor_symbol, "quote": None, "residual_vs_parity": None, "flag": "vendor quote not fetched"}
@@ -222,7 +246,7 @@ def hedge_one(h: FxHolding, top: FxHoldings, *, value_usd: float, spot_source: s
         "contracts": {"standard": {"product": std.product, "count": n_std, "size": std.size, "initial_margin_usd": std.initial_margin_usd},
                       "micro": None if mic is None else {"product": mic.product, "count": n_mic, "size": mic.size, "initial_margin_usd": mic.initial_margin_usd},
                       "hedged_units": hedged_units, "residual_units": residual_units, "residual_usd": residual_units * spot, "residual_pct_of_value": residual_units * spot / value_usd},
-        "margin": {"initial_usd": margin, "pct_of_value": margin / value_usd, "as_published": table.as_of},
+        "margin": {**margin, "pct_of_value": float(str(margin["initial_usd"])) / value_usd, "exchange_minimum_as_published": table.as_of},
         "grid": grid(plan),
         "scope_limits": SCOPE_LIMITS,
     }
@@ -325,7 +349,7 @@ def main(argv: list[str]) -> int:
             print(f"{r['ticker']} {r['exposure_currency']}: value {float(str(r['value_usd'])):,.0f} USD, hedge {float(str(r['exposure_to_hedge_units'])):,.0f} {r['exposure_currency']}; "
                   f"{std['count']} x {std['product']}" + (f" + {mic[0]['count']} x {mic[0]['product']}" if mic else "") +
                   f", residual {float(str(c['residual_pct_of_value'])):+.2%} of value; carry {float(str(k['carry_over_horizon'])):+.2%} ({k['tenor_usd']} {float(str(k['r_usd'])):.2%} vs {k['tenor_ccy']} {float(str(k['r_ccy'])):.2%}); "
-                  f"margin {float(str(m['pct_of_value'])):.1%}; parity vs vendor {'' if v['residual_vs_parity'] is None else f'{float(str(v['residual_vs_parity'])):+.2%}'}{' FLAG' if v['flag'] and 'beyond' in str(v['flag']) else ''}")
+                  f"margin {float(str(m['pct_of_value'])):.1%} ({'broker' if str(m['source']).startswith("broker's") else 'exchange minimum'}); parity vs vendor {'' if v['residual_vs_parity'] is None else f'{float(str(v['residual_vs_parity'])):+.2%}'}{' FLAG' if v['flag'] and 'beyond' in str(v['flag']) else ''}")
     return 0
 
 
