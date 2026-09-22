@@ -462,6 +462,91 @@ class Universe:
 
 
 @dataclass
+class StretchSide:
+    """Original type: stretch_side = { ... }
+    """
+
+    dd_120: float
+    vs_ma50: float
+    vs_ma200: float
+    rsi_14: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'StretchSide':
+        if isinstance(x, dict):
+            return cls(
+                dd_120=_atd_read_float(x['dd_120']) if 'dd_120' in x else _atd_missing_json_field('StretchSide', 'dd_120'),
+                vs_ma50=_atd_read_float(x['vs_ma50']) if 'vs_ma50' in x else _atd_missing_json_field('StretchSide', 'vs_ma50'),
+                vs_ma200=_atd_read_float(x['vs_ma200']) if 'vs_ma200' in x else _atd_missing_json_field('StretchSide', 'vs_ma200'),
+                rsi_14=_atd_read_float(x['rsi_14']) if 'rsi_14' in x else _atd_missing_json_field('StretchSide', 'rsi_14'),
+            )
+        else:
+            _atd_bad_json('StretchSide', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['dd_120'] = _atd_write_float(self.dd_120)
+        res['vs_ma50'] = _atd_write_float(self.vs_ma50)
+        res['vs_ma200'] = _atd_write_float(self.vs_ma200)
+        res['rsi_14'] = _atd_write_float(self.rsi_14)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'StretchSide':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class StretchThresholds:
+    """Original type: stretch_thresholds = { ... }
+    """
+
+    as_of: str
+    why: str
+    history_trading_days: int
+    min_history_days: int
+    low: StretchSide
+    high: StretchSide
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'StretchThresholds':
+        if isinstance(x, dict):
+            return cls(
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('StretchThresholds', 'as_of'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('StretchThresholds', 'why'),
+                history_trading_days=_atd_read_int(x['history_trading_days']) if 'history_trading_days' in x else _atd_missing_json_field('StretchThresholds', 'history_trading_days'),
+                min_history_days=_atd_read_int(x['min_history_days']) if 'min_history_days' in x else _atd_missing_json_field('StretchThresholds', 'min_history_days'),
+                low=StretchSide.from_json(x['low']) if 'low' in x else _atd_missing_json_field('StretchThresholds', 'low'),
+                high=StretchSide.from_json(x['high']) if 'high' in x else _atd_missing_json_field('StretchThresholds', 'high'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('StretchThresholds', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['why'] = _atd_write_string(self.why)
+        res['history_trading_days'] = _atd_write_int(self.history_trading_days)
+        res['min_history_days'] = _atd_write_int(self.min_history_days)
+        res['low'] = (lambda x: x.to_json())(self.low)
+        res['high'] = (lambda x: x.to_json())(self.high)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'StretchThresholds':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class PointCountSources:
     """Original type: point_count_sources = { ... }
     """

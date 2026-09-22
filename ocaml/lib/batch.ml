@@ -291,6 +291,27 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
         (if flagged = [] then "" else ":");
       List.iter (fun ((t, c) : string * receipt_check) -> Printf.bprintf b "  %-10s %s\n" t (Option.value c.flag ~default:"")) flagged
     end;
+    (* Stretch (52): the names at or above 3 on either side, each with its measures and the
+       anchor beside it; whose thesis it corroborates is the reader's, never the tool's. *)
+    let with_stretch = List.filter_map (fun (v : valuation) -> Option.map (fun s -> (v, s)) v.stretch) vs in
+    if with_stretch <> [] then begin
+      let low = List.filter (fun ((_, s) : valuation * stretch) -> s.stretch_low >= 3) with_stretch in
+      let high = List.filter (fun ((_, s) : valuation * stretch) -> s.stretch_high >= 3) with_stretch in
+      let names xs = match xs with [] -> "none" | _ -> String.concat ", " (List.map (fun ((v, _) : valuation * stretch) -> v.ticker) xs) in
+      Printf.bprintf b "stretch (52), across %d names with a block (thresholds %s): at or above 3 on the low side %d (%s); on the high side %d (%s)%s\n"
+        (List.length with_stretch) (snd (List.hd with_stretch)).thresholds_version (List.length low) (names low) (List.length high) (names high)
+        (if low = [] && high = [] then "" else ":");
+      List.iter
+        (fun ((side, (v, s)) : string * (valuation * stretch)) ->
+          let m (x : stretch_measure) = Printf.sprintf "%.3f (p%.0f)" x.value x.percentile in
+          Printf.bprintf b
+            "  %-10s %s side, stretch_low %d, stretch_high %d at %s: dd_120 %s, above_120_low %s, vs_ma50 %s, vs_ma200 %s, rsi_14 %s, rv_ratio %s, vol_5_60 %s; anchor fair value %s, margin of safety %s, probability_overpaid %s\n"
+            v.ticker side s.stretch_low s.stretch_high s.as_of (m s.dd_120) (m s.above_120_low) (m s.vs_ma50) (m s.vs_ma200) (m s.rsi_14) (m s.rv_ratio) (m s.vol_5_60)
+            (match v.fair_value with Some f -> Printf.sprintf "%.2f" f | None -> "none")
+            (match v.margin_of_safety with Some x -> Printf.sprintf "%+.2f" x | None -> "none")
+            (match v.belief with Some (r : belief_readout) -> Printf.sprintf "%.2f" r.probability_overpaid | None -> "none"))
+        (List.map (fun x -> ("low", x)) low @ List.map (fun x -> ("high", x)) high)
+    end;
     let sources = count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> v.required_return_source) vs) in
     Printf.bprintf b "required return (34), across %d Ok names: %s\n"
       (List.length (List.filter (fun (v : valuation) -> Option.is_some v.required_return_source) vs))

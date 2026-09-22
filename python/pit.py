@@ -178,9 +178,10 @@ def same_period_check(periods: list[boundary.FiscalPeriod], vendor: list[boundar
 class History:
     """A ticker's closes and splits as the vendor serves them, fetched once."""
 
-    def __init__(self, closes: Mapping[date, float], splits: Mapping[date, float]) -> None:
+    def __init__(self, closes: Mapping[date, float], splits: Mapping[date, float], volumes: Mapping[date, float] | None = None) -> None:
         self.closes = dict(closes)
         self.splits = dict(splits)
+        self.volumes = dict(volumes) if volumes is not None else {}
 
     @classmethod
     def fetch(cls, symbol: str, *, start: str = HISTORY_START) -> History:
@@ -190,11 +191,15 @@ class History:
         for stamp, close in frame["Close"].items():
             if isinstance(stamp, pd.Timestamp) and isinstance(close, float) and close == close:
                 closes[stamp.date()] = float(close)
+        volumes: dict[date, float] = {}
+        for stamp, vol in frame["Volume"].items():
+            if isinstance(stamp, pd.Timestamp) and isinstance(vol, (int, float)) and vol == vol:
+                volumes[stamp.date()] = float(vol)
         splits: dict[date, float] = {}
         for stamp, ratio in ticker.splits.items():
             if isinstance(stamp, pd.Timestamp) and isinstance(ratio, float) and ratio > 0:
                 splits[stamp.date()] = float(ratio)
-        return cls(closes, splits)
+        return cls(closes, splits, volumes)
 
 
 def price_on(history: History, d: date, *, lookback_days: int = 10) -> tuple[date, float, float] | None:
@@ -366,6 +371,9 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
     rates_unavailable = None if why is not None or rate_country is None or rate_history_available(rate_country) else trading
     if priced is None:
         notes.append(f"no close within 10 days on or before {d}")
+    import stretch as stretch_mod  # noqa: PLC0415
+
+    stretch_block, stretch_reason = stretch_mod.compute(history.closes, history.volumes, d, stretch_mod.load_thresholds())
     pit = boundary.PointInTime(
         as_of_date=d.isoformat(),
         price_date=None if priced is None else priced[0].isoformat(),
@@ -401,6 +409,7 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         latest_filing=fetch_sec.latest_filing(periods) if why is None else None,
         cross_check=check,
         submissions_latest_annual=submission, point_in_time=pit,
+        stretch=stretch_block, stretch_reason=stretch_reason,
     )
 
 

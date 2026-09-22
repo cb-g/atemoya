@@ -456,6 +456,103 @@ class Submission:
 
 
 @dataclass
+class StretchMeasure:
+    """Original type: stretch_measure = { ... }
+    """
+
+    value: float
+    percentile: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'StretchMeasure':
+        if isinstance(x, dict):
+            return cls(
+                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('StretchMeasure', 'value'),
+                percentile=_atd_read_float(x['percentile']) if 'percentile' in x else _atd_missing_json_field('StretchMeasure', 'percentile'),
+            )
+        else:
+            _atd_bad_json('StretchMeasure', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['value'] = _atd_write_float(self.value)
+        res['percentile'] = _atd_write_float(self.percentile)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'StretchMeasure':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Stretch:
+    """Original type: stretch = { ... }
+    """
+
+    as_of: str
+    dd_120: StretchMeasure
+    above_120_low: StretchMeasure
+    vs_ma50: StretchMeasure
+    vs_ma200: StretchMeasure
+    rsi_14: StretchMeasure
+    rv_20: StretchMeasure
+    rv_ratio: StretchMeasure
+    vol_5_60: StretchMeasure
+    stretch_low: int
+    stretch_high: int
+    thresholds_version: str
+    history_days: int
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Stretch':
+        if isinstance(x, dict):
+            return cls(
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Stretch', 'as_of'),
+                dd_120=StretchMeasure.from_json(x['dd_120']) if 'dd_120' in x else _atd_missing_json_field('Stretch', 'dd_120'),
+                above_120_low=StretchMeasure.from_json(x['above_120_low']) if 'above_120_low' in x else _atd_missing_json_field('Stretch', 'above_120_low'),
+                vs_ma50=StretchMeasure.from_json(x['vs_ma50']) if 'vs_ma50' in x else _atd_missing_json_field('Stretch', 'vs_ma50'),
+                vs_ma200=StretchMeasure.from_json(x['vs_ma200']) if 'vs_ma200' in x else _atd_missing_json_field('Stretch', 'vs_ma200'),
+                rsi_14=StretchMeasure.from_json(x['rsi_14']) if 'rsi_14' in x else _atd_missing_json_field('Stretch', 'rsi_14'),
+                rv_20=StretchMeasure.from_json(x['rv_20']) if 'rv_20' in x else _atd_missing_json_field('Stretch', 'rv_20'),
+                rv_ratio=StretchMeasure.from_json(x['rv_ratio']) if 'rv_ratio' in x else _atd_missing_json_field('Stretch', 'rv_ratio'),
+                vol_5_60=StretchMeasure.from_json(x['vol_5_60']) if 'vol_5_60' in x else _atd_missing_json_field('Stretch', 'vol_5_60'),
+                stretch_low=_atd_read_int(x['stretch_low']) if 'stretch_low' in x else _atd_missing_json_field('Stretch', 'stretch_low'),
+                stretch_high=_atd_read_int(x['stretch_high']) if 'stretch_high' in x else _atd_missing_json_field('Stretch', 'stretch_high'),
+                thresholds_version=_atd_read_string(x['thresholds_version']) if 'thresholds_version' in x else _atd_missing_json_field('Stretch', 'thresholds_version'),
+                history_days=_atd_read_int(x['history_days']) if 'history_days' in x else _atd_missing_json_field('Stretch', 'history_days'),
+            )
+        else:
+            _atd_bad_json('Stretch', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['dd_120'] = (lambda x: x.to_json())(self.dd_120)
+        res['above_120_low'] = (lambda x: x.to_json())(self.above_120_low)
+        res['vs_ma50'] = (lambda x: x.to_json())(self.vs_ma50)
+        res['vs_ma200'] = (lambda x: x.to_json())(self.vs_ma200)
+        res['rsi_14'] = (lambda x: x.to_json())(self.rsi_14)
+        res['rv_20'] = (lambda x: x.to_json())(self.rv_20)
+        res['rv_ratio'] = (lambda x: x.to_json())(self.rv_ratio)
+        res['vol_5_60'] = (lambda x: x.to_json())(self.vol_5_60)
+        res['stretch_low'] = _atd_write_int(self.stretch_low)
+        res['stretch_high'] = _atd_write_int(self.stretch_high)
+        res['thresholds_version'] = _atd_write_string(self.thresholds_version)
+        res['history_days'] = _atd_write_int(self.history_days)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Stretch':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Ok:
     """Original type: status = [ ... | Ok | ... ]
     """
@@ -3507,6 +3604,8 @@ class Valuation:
     market_implied: Optional[MarketImplied] = None
     market_implied_reason: Optional[str] = None
     receipt_check: Optional[ReceiptCheck] = None
+    stretch: Optional[Stretch] = None
+    stretch_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -3553,6 +3652,8 @@ class Valuation:
                 market_implied=MarketImplied.from_json(x['market_implied']) if 'market_implied' in x else None,
                 market_implied_reason=_atd_read_string(x['market_implied_reason']) if 'market_implied_reason' in x else None,
                 receipt_check=ReceiptCheck.from_json(x['receipt_check']) if 'receipt_check' in x else None,
+                stretch=Stretch.from_json(x['stretch']) if 'stretch' in x else None,
+                stretch_reason=_atd_read_string(x['stretch_reason']) if 'stretch_reason' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -3620,6 +3721,10 @@ class Valuation:
             res['market_implied_reason'] = _atd_write_string(self.market_implied_reason)
         if self.receipt_check is not None:
             res['receipt_check'] = (lambda x: x.to_json())(self.receipt_check)
+        if self.stretch is not None:
+            res['stretch'] = (lambda x: x.to_json())(self.stretch)
+        if self.stretch_reason is not None:
+            res['stretch_reason'] = _atd_write_string(self.stretch_reason)
         return res
 
     @classmethod
@@ -4040,6 +4145,8 @@ class Financials:
     cover_page_shares_as_of: Optional[str] = None
     cover_page_split_factor: Optional[float] = None
     cover_page_split_record: Optional[str] = None
+    stretch: Optional[Stretch] = None
+    stretch_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Financials':
@@ -4074,6 +4181,8 @@ class Financials:
                 cover_page_shares_as_of=_atd_read_string(x['cover_page_shares_as_of']) if 'cover_page_shares_as_of' in x else None,
                 cover_page_split_factor=_atd_read_float(x['cover_page_split_factor']) if 'cover_page_split_factor' in x else None,
                 cover_page_split_record=_atd_read_string(x['cover_page_split_record']) if 'cover_page_split_record' in x else None,
+                stretch=Stretch.from_json(x['stretch']) if 'stretch' in x else None,
+                stretch_reason=_atd_read_string(x['stretch_reason']) if 'stretch_reason' in x else None,
             )
         else:
             _atd_bad_json('Financials', x)
@@ -4120,6 +4229,10 @@ class Financials:
             res['cover_page_split_factor'] = _atd_write_float(self.cover_page_split_factor)
         if self.cover_page_split_record is not None:
             res['cover_page_split_record'] = _atd_write_string(self.cover_page_split_record)
+        if self.stretch is not None:
+            res['stretch'] = (lambda x: x.to_json())(self.stretch)
+        if self.stretch_reason is not None:
+            res['stretch_reason'] = _atd_write_string(self.stretch_reason)
         return res
 
     @classmethod

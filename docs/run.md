@@ -118,6 +118,30 @@ Valuation never fetches, so running it twice on the same inputs with `--today` p
 gives byte-identical output. `data/` and `output/` are generated and gitignored;
 versioned inputs live in `reference/`.
 
+## Stretch
+
+Every record whose name has 250 closes on or before its date carries a `stretch` block:
+six measures from split-corrected closes and volume, `dd_120` (close over the 120-day
+high, minus one), `above_120_low`, `vs_ma50`, `vs_ma200`, Wilder's `rsi_14`, `rv_20` with
+`rv_ratio` against the name's own one-year median, and `vol_5_60`, each with its
+percentile of the name's own trailing two years, so "tail" is the name's. Two counts
+follow, never a blend: `stretch_low`, how many of `dd_120`, `vs_ma50`, `vs_ma200` and
+`rsi_14` sit at or beyond the low thresholds, and `stretch_high` with `above_120_low` in
+place of `dd_120`.
+
+The thresholds live in `reference/stretch.json`, dated with a why: set to fire on two
+remembered episodes and to be rare; changing them is a dated declaration. The summary
+names every record at or above 3 on either side and prints a line for each with the
+measures, the percentiles and the anchor's fair value, margin of safety and
+`probability_overpaid` beside it. Whose thesis a stretched name corroborates is the
+reader's to know; the tool holds no thesis and no flag. It says "stretched" and nothing
+more: no signal, no claim about what follows.
+
+The block is computed at fetch time and point-in-time from closes on or before the date
+(`python/stretch.py --ticker PLTR --as-of 2026-06-25` prints it; `--snapshot DIR` adds it
+to a snapshot's records), and `python/plot_stretch.py PLTR` draws two years of closes with
+the averages, shaded where either count reached 3, to `output/stretch/PLTR.png`.
+
 ## Build, test, type-check
 
 ```sh

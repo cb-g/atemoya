@@ -69,6 +69,7 @@ record naming the refresher to run. First run, in this order:
 | hedge | a single name, a book on an index, or FX exposure, from quotes under a declared constraint | `uv run python/hedge.py`, `hedge_book.py`, `hedge_fx.py` |
 | view | every vertical on a declared view's side, ranked by EV per dollar at risk | `uv run python/express.py data/views/mine.json` |
 | fills | empirical fill positions from the trade tape, read back into the view tool | `uv run python/fill_model.py AAPL` |
+| stretch | six price measures with own-history percentiles and two counts on every record; the summary lists every name at or above 3 on either side | the same run, `output/summary.txt` |
 
 ## Rules
 

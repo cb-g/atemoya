@@ -210,6 +210,8 @@ type financials = {
   ?cover_page_shares_as_of : string option;
   ?cover_page_split_factor : float option;          (* (44) the product of the vendor's split ratios after the cover page's date up to the fetch date; the check multiplies the count by it *)
   ?cover_page_split_record : string option;
+  ?stretch : stretch option;                        (* (52) present when the name has 250 trading days of closes on or before the date *)
+  ?stretch_reason : string option;                  (* (52) why not: price history shorter than 250 trading days *)
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -767,6 +769,31 @@ type chain_smiles = {
   expiries : expiry_smile list;
 }
 
+(* Stretch (52): how far a price has run from its own path, six measures from
+   split-corrected closes and volume with each measure's percentile of the name's own
+   trailing two years, and two counts against declared thresholds. Computed at fetch time
+   (python/stretch.py), copied through by the batch, never a Failed. *)
+type stretch_measure = {
+  value : float;
+  percentile : float;                 (* of the name's own trailing two years of the same measure, 0 to 100 *)
+}
+
+type stretch = {
+  as_of : string;                     (* the close used *)
+  dd_120 : stretch_measure;           (* close over the 120-day high, minus one *)
+  above_120_low : stretch_measure;    (* close over the 120-day low, minus one *)
+  vs_ma50 : stretch_measure;
+  vs_ma200 : stretch_measure;
+  rsi_14 : stretch_measure;           (* Wilder's *)
+  rv_20 : stretch_measure;            (* 20-day realised volatility, annualised *)
+  rv_ratio : stretch_measure;         (* rv_20 over the name's one-year median of rv_20 *)
+  vol_5_60 : stretch_measure;         (* five-day average volume over the prior sixty *)
+  stretch_low : int;                  (* of dd_120, vs_ma50, vs_ma200, rsi_14 at or beyond the low threshold: 0 to 4 *)
+  stretch_high : int;                 (* of above_120_low, vs_ma50, vs_ma200, rsi_14 at or beyond the high threshold *)
+  thresholds_version : string;        (* reference/stretch.json's as_of *)
+  history_days : int;                 (* closes on or before as_of that fed it *)
+}
+
 (* The depositary-receipt check (42): on a name with a declared ratio or a financial
    currency different from its trading currency, the cover page's ordinary count over the
    live effective shares (market cap / price, receipt units) against the declared ratio;
@@ -873,4 +900,6 @@ type valuation = {
   ?market_implied : market_implied option;      (* (36) present on an Ok record when --options DIR holds a chain for the name and a usable expiry *)
   ?market_implied_reason : string option;       (* (36) present instead under --options: no options data | no expiry ... | smile fit failed: ... ; neither field without --options *)
   ?receipt_check : receipt_check option;        (* (42) present iff the financials carry cover_page_shares and the name has a declared ratio or a cross-currency listing *)
+  ?stretch : stretch option;                    (* (52) copied from the financials; never fails a record *)
+  ?stretch_reason : string option;
 }

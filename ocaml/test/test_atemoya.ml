@@ -124,6 +124,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     cover_page_shares_as_of = Option.map (fun _ -> "2026-06-30") cover_page_shares;
     cover_page_split_factor;
     cover_page_split_record = Option.map (fun f -> Printf.sprintf "split record: %g on 2026-08-01" f) cover_page_split_factor;
+    stretch = None;
+    stretch_reason = None;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -1648,6 +1650,34 @@ let test_receipt_ratio_check () =
   Alcotest.(check (option approx)) "loaded" (Some 5.) (List.hd u.tickers).adr_ratio;
   check_error "zero" (Universe.load_string {|{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": 0}]}|}) [ "adr_ratio must be a positive number" ];
   check_error "a string" (Universe.load_string {|{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": "5"}]}|}) [ "adr_ratio must be a positive number" ]
+
+(* --- stretch (52): the block copied through, the alert rule, the loader --- *)
+
+let stretch_fixture ~low ~high : Boundary_t.stretch =
+  let m v p = { Boundary_t.value = v; percentile = p } in
+  { as_of = "2026-06-25"; dd_120 = m (-0.41) 1.; above_120_low = m 0. 0.; vs_ma50 = m (-0.217) 2.; vs_ma200 = m (-0.326) 1.; rsi_14 = m 27.4 4.;
+    rv_20 = m 0.70 88.; rv_ratio = m 1.4 90.; vol_5_60 = m 1.21 70.; stretch_low = low; stretch_high = high; thresholds_version = "2026-09-22"; history_days = 500 }
+
+let test_stretch_alert_rule () =
+  let with_block low high (fin : Boundary_t.financials) = { fin with stretch = Some (stretch_fixture ~low ~high) } in
+  let v = run (with_block 3 0 (financials (history ()))) in
+  (* copied through, untouched, and absent when the financials carry none *)
+  (match v.stretch with Some s -> Alcotest.(check int) "stretch_low copied" 3 s.stretch_low | None -> Alcotest.fail "no block");
+  Alcotest.(check bool) "no field without a block" false (contains (Boundary_j.string_of_valuation (run (financials (history ())))) "stretch");
+  let short = run { (financials (history ())) with stretch_reason = Some "price history shorter than 250 trading days on or before 2026-09-10: 40" } in
+  Alcotest.(check (option string)) "the reason copied" (Some "price history shorter than 250 trading days on or before 2026-09-10: 40") short.stretch_reason;
+  (* the summary: every name at or above 3 on either side gets its line with the anchor beside it;
+     whose thesis it corroborates is the reader's, so there is no flag anywhere *)
+  check_mentions "the low side" (Batch.summary [ v ])
+    [ "stretch (52), across 1 names with a block (thresholds 2026-09-22): at or above 3 on the low side 1 (TEST); on the high side 0 (none):";
+      "TEST       low side, stretch_low 3, stretch_high 0 at 2026-06-25: dd_120 -0.410 (p1)"; "anchor fair value"; "probability_overpaid" ];
+  let top = run (with_block 0 3 (financials (history ()))) in
+  check_mentions "the high side" (Batch.summary [ top ]) [ "on the high side 1 (TEST):"; "TEST       high side, stretch_low 0, stretch_high 3" ];
+  let calm = run (with_block 2 2 (financials (history ()))) in
+  check_mentions "under 3 on both sides: counted, no line" (Batch.summary [ calm ]) [ "on the low side 0 (none); on the high side 0 (none)\n" ];
+  check_error "the tracked universe refuses a thesis" (Universe.load_string {|{"tickers": [{"ticker": "TEST", "entity_class": "OperatingCompany", "why": "w", "thesis": "long"}]}|}) [ "unknown field(s) thesis" ];
+  let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
+  Alcotest.check valuation "json round trip" v again
 
 let test_flow_chart_names_every_reason () =
   let chart =
@@ -3180,6 +3210,7 @@ let () =
           case "batch summary" test_batch_summary;
           case "flow chart names every failure reason" test_flow_chart_names_every_reason;
           case "depositary receipt ratio: the check, its flags, the loader" test_receipt_ratio_check;
+          case "stretch: copied through, the summary lines, no thesis anywhere" test_stretch_alert_rule;
           case "market-implied smile: fit, butterfly, density, quantiles" test_market_implied_smile;
           case "market-implied chain: expiry, anchor, growth axis, record" test_market_implied_chain;
           case "options store through time: no lookahead, the window, the panel anchor" test_options_store_no_lookahead;

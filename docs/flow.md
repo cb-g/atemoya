@@ -59,6 +59,14 @@ file.
 | conclude | non-positive fair value (v): model not applicable |
 | conclude | margin of safety (m) exceeds sanity bound 5.00: likely structural break; check entity_class |
 
+The stretch block is never a `Failed` either: on every record whose price history holds
+250 closes on or before the date it carries the six measures with their own-history
+percentiles and the two counts (`stretch_low`, `stretch_high`) against
+`reference/stretch.json`; a shorter history carries `stretch_reason` instead. The summary
+counts the names at or above 3 on each side and prints a line for each with its measures
+and the anchor beside it; whose thesis it corroborates is the reader's, the tool holds
+none.
+
 The market-implied block is never a `Failed`: on an `Ok` record run with `--options` it is
 either present or null with one of `no options data`, `no options snapshot within (N)
 days before (D)`, `no expiry >= 365 days with >= 8 quoted strikes on each side`, or
@@ -384,6 +392,10 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- stretch (52): six measures from closes and volume with own-history percentiles, two
+  counts against declared thresholds and the summary's lines for every name at or above
+  three on either side; computed at fetch time and point-in-time, copied through by the batch. No
+  `Failed` string; no pre-existing field moves.
 - a fill model from the trade tape (50): the tape fetcher, the empirical quantile table,
   `--fill-model` in the expression tool and the holder's fills against it. No number moves.
 - margins, the exchange minimum and the broker's override (49): a holding may declare its

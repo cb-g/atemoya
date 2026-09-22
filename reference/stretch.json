@@ -1,0 +1,22 @@
+{
+  "as_of": "2026-09-22",
+  "why": "Set to fire on two remembered episodes, Palantir on 2026-06-25 (a fall of two fifths from its 120-day high, a fifth under its 50-day average) and Meta on 2026-03-27 (a fall of three tenths, a sixth under), and to be rare: in two years of daily closes those readings occurred in one cluster per name. The low side is for a long thesis, the high side its mirror for a short. A count of measures at or beyond these, never a blend, and changing any of them is a dated declaration.",
+  "history_trading_days": 500,
+  "min_history_days": 250,
+  "low": {
+    "dd_120": -0.25,
+    "vs_ma50": -0.15,
+    "vs_ma200": -0.2,
+    "rsi_14": 25
+  },
+  "high": {
+    "dd_120": 0.4,
+    "vs_ma50": 0.15,
+    "vs_ma200": 0.3,
+    "rsi_14": 75
+  },
+  "notes": [
+    "On the high side the dd_120 key holds the above_120_low threshold: close over the 120-day low, minus one.",
+    "RSI is Wilder's smoothed 14-day; on split-adjusted closes Palantir read 27 on 2026-06-25 and Meta 22 on 2026-03-27, so Palantir fires three of four on the low side and Meta four."
+  ]
+}

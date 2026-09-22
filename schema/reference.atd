@@ -164,6 +164,25 @@ type fx_futures = {
   contracts : (string * fx_future) list <json repr="object">;   (* currency -> the products *)
 }
 
+(* Stretch thresholds (52): declared, dated, with a why; set to fire on two remembered
+   episodes and to be rare; changing them is a dated declaration. *)
+type stretch_side = {
+  dd_120 : float;                       (* the low side reads dd_120; the high side reads above_120_low under the same key name *)
+  vs_ma50 : float;
+  vs_ma200 : float;
+  rsi_14 : float;
+}
+
+type stretch_thresholds = {
+  as_of : string;
+  why : string;
+  history_trading_days : int;           (* the window each percentile is taken over: 500, two years *)
+  min_history_days : int;               (* 250: fewer closes and the block is null with the reason *)
+  low : stretch_side;                   (* at or below fires *)
+  high : stretch_side;                  (* at or above fires; dd_120 here means above_120_low *)
+  ~notes : string list;
+}
+
 type universe_entry = {
   ticker : string;
   entity_class : string;                (* a constructor of the boundary's entity_class; validated at load *)
@@ -172,6 +191,7 @@ type universe_entry = {
   ?cik : string option;                 (* an identifier, not a number (22): the SEC filer to read instead of the ticker map's, with the reason in why *)
   ?adr_ratio : float option;            (* (42) ordinary shares per depositary receipt, positive, from the 20-F's deposit-agreement disclosure cited in why; absent means 1 *)
 }
+
 
 type universe = {
   ~notes : string list;

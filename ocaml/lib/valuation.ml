@@ -275,6 +275,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       market_implied = None;
       market_implied_reason = None;
       receipt_check = receipt;
+      stretch = original.stretch;
+      stretch_reason = original.stretch_reason;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,

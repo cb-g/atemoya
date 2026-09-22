@@ -620,6 +620,18 @@ def cik_of(symbol: str, table: Mapping[str, object], declared: str | None) -> tu
     return fetch_sec.cik_for(symbol, table), "SEC's ticker map"
 
 
+def stretch_of(symbol: str, as_of: date) -> tuple[boundary.Stretch | None, str | None]:
+    """(52) The stretch block from the vendor's closes and volume on or before the date."""
+    import pit  # noqa: PLC0415
+    import stretch  # noqa: PLC0415
+
+    try:
+        history = pit.History.fetch(symbol)
+    except Exception as e:  # noqa: BLE001
+        return None, f"price history not fetched: {e}"
+    return stretch.compute(history.closes, history.volumes, as_of, stretch.load_thresholds())
+
+
 def split_factor_between(ticker: yf.Ticker, start: date, end: date) -> tuple[float, str]:
     """(44) The product of the vendor's split ratios dated after [start] and on or before
     [end], and the record behind it; the same source and convention point-in-time prices use."""
@@ -641,7 +653,8 @@ def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile 
             notes: list[str], *, provider: str, provider_reason: str, latest_filing: str | None = None,
             check: boundary.CrossCheck | None = None, taxonomy: str = "", filing_currency: str | None = None,
             submission: boundary.Submission | None = None, submissions_unavailable: str | None = None,
-            cover: fetch_sec.CoverPage | None = None, cover_split: tuple[float, str] | None = None) -> boundary.Financials:
+            cover: fetch_sec.CoverPage | None = None, cover_split: tuple[float, str] | None = None,
+            stretch_block: boundary.Stretch | None = None, stretch_reason: str | None = None) -> boundary.Financials:
     """With [filing_currency] (filed statements) the statement currency is the filing's unit,
     the vendor's is recorded beside it, and the single currency basis holds iff the filing's
     unit is the trading currency."""
@@ -676,6 +689,8 @@ def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile 
         cover_page_shares_as_of=None if cover is None else cover.as_of,
         cover_page_split_factor=None if cover_split is None else cover_split[0],
         cover_page_split_record=None if cover_split is None else cover_split[1],
+        stretch=stretch_block,
+        stretch_reason=stretch_reason,
     )
 
 
@@ -721,11 +736,12 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
     ticker = yf.Ticker(symbol)
     quote, profile = _info(ticker, notes)
     vendor = vendor_periods(ticker, notes)
+    stretch_block, stretch_reason = stretch_of(symbol, as_of.date())
 
     cik, cik_source = cik_of(symbol, sec.tickers, declared_cik)
     if cik is None:
         return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
-                       provider_reason=f"no SEC filings for {symbol}: not in company_tickers.json"), None
+                       provider_reason=f"no SEC filings for {symbol}: not in company_tickers.json", stretch_block=stretch_block, stretch_reason=stretch_reason), None
     facts = fetch_sec.companyfacts(cik, sec.user_agent)
     submission, submissions_unavailable = fetch_sec.latest_annual_submission(fetch_sec.submissions(cik, sec.user_agent))
     # (42) the cover page's ordinary count, for the receipt-ratio check on every CIK-resolved record,
@@ -735,7 +751,7 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
     decision = fetch_sec.decide(facts, sec.tags)
     if not decision.xbrl or decision.currency is None:
         return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
-                       provider_reason=f"CIK {cik}: {decision.reason}", submission=submission, submissions_unavailable=submissions_unavailable, cover=cover, cover_split=cover_split), None
+                       provider_reason=f"CIK {cik}: {decision.reason}", submission=submission, submissions_unavailable=submissions_unavailable, cover=cover, cover_split=cover_split, stretch_block=stretch_block, stretch_reason=stretch_reason), None
 
     filed_notes = list(notes)
     periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, filed_notes, taxonomy=decision.taxonomy, unit=decision.currency, depth=depth)
@@ -756,7 +772,7 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
                                               threshold=sec.tags.cross_check_threshold, fields=[], disagreements=0))
             lagged_notes = list(notes) + [f"CIK {cik}: {decision.reason}; the newest annual facts ({lag.facts_end}, filed {lag.facts_filed}) are {facts_age} days old"]
             return _record(symbol, as_of, quote, profile, vendor, lagged_notes, provider="yfinance", provider_reason=lag.text,
-                           check=check, submission=submission, cover=cover, cover_split=cover_split), None
+                           check=check, submission=submission, cover=cover, cover_split=cover_split, stretch_block=stretch_block, stretch_reason=stretch_reason), None
         else:
             reason += f"; {lag.text}; the vendor's newest annual ({max((p.period_end for p in vendor), default='none')}) predates the filing's period, so the filed statements are kept"
     check: boundary.CrossCheck | None = None
@@ -772,9 +788,9 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
     primary = _record(symbol, as_of, quote, profile, periods, filed_notes, provider=fetch_sec.PROVIDER,
                       provider_reason=reason, latest_filing=fetch_sec.latest_filing(periods), check=check,
                       taxonomy=decision.taxonomy, filing_currency=decision.currency,
-                      submission=submission, submissions_unavailable=submissions_unavailable, cover=cover, cover_split=cover_split)
+                      submission=submission, submissions_unavailable=submissions_unavailable, cover=cover, cover_split=cover_split, stretch_block=stretch_block, stretch_reason=stretch_reason)
     shadow = _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
-                     provider_reason="shadow of an XBRL-primary record, for the provider diff")
+                     provider_reason="shadow of an XBRL-primary record, for the provider diff", stretch_block=stretch_block, stretch_reason=stretch_reason)
     return primary, shadow
 
 
