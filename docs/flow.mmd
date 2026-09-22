@@ -1,0 +1,40 @@
+%% Stages only: reasoning lives in docs/flow.md, every Failed string in its table.
+flowchart TD
+  U[universe entry] --> F[fetch statements, price]
+  F --> P[provider decision]
+  P --> D[class declared, signature checked]
+  D --> A[admissibility row]
+  A --> G[currency, definition, filing gates]
+  G --> X[cross-currency conversion]
+  X --> R[parameters, curves, FX]
+  R --> M{model dispatch}
+  M --> DCF[FCFF DCF]
+  M --> MID[mid-cycle DCF]
+  M --> RI[residual income]
+  M --> INS[insurer residual income]
+  M --> REIT[FFO-covered dividend]
+  DCF --> C[conclude: bound, signal, floor]
+  MID --> C
+  RI --> C
+  INS --> C
+  REIT --> C
+  C --> RO[implied readouts, sensitivity]
+  RO --> B[belief map, declared belief]
+  B --> SC[surplus curve]
+  SC --> MK[market-implied block]
+  MK --> REC[(record)]
+  REC --> OUT[summary, run diff, stability]
+  REC --> PAN[point-in-time panel]
+  REC --> FR[frontier]
+  REC --> H[hedges: name, book, FX]
+  REC --> V[view expression, fills]
+  ST[(options store)] -.-> MK
+  ST -.-> H
+  ST -.-> V
+  F -. "unreadable or gated" .-> FF1[Failed: see table]
+  M -. "guard or missing field" .-> FF2[Failed: see table]
+  C -. "bound or sign" .-> FF3[Failed: see table]
+  classDef failed fill:#f8d7da,stroke:#b02a37,color:#000
+  classDef store fill:#e2e3e5,stroke:#6c757d,color:#000
+  class FF1,FF2,FF3 failed
+  class ST store

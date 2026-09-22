@@ -1,9 +1,11 @@
 (test
  (name test_atemoya)
- (libraries atemoya alcotest)
+ (libraries atemoya alcotest unix)
  (deps
   (source_tree ../../reference)
-  ../../docs/flow.md))
+  ../../docs/flow.md
+  ../../docs/flow.mmd
+  ../../docs/flow.svg))
 
 ; Determinism: the valuation step over a fixed input directory with --today pinned must
 ; be byte-identical across two runs. The fetch step is inherently non-deterministic; this

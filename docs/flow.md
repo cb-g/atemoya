@@ -1,261 +1,160 @@
 # Flow: ticker in, record out
 
-Every branch that exists today, from a ticker in `reference/universe.json` (or an ad-hoc
-file plus `--entity-class`) to one line in `output/valuations.jsonl`. Red terminal nodes
-are the exact `failed_reason` strings, with variable parts in parentheses, so the chart is
-checkable against `output/summary.txt`; a test asserts every reason string in the code
-appears here. **Every change that adds a branch updates this file in the same commit.**
+![The stages from a universe entry to a record and the tools that hang off it](flow.svg)
 
-Nodes marked *(06)* were added by the bank model, *(07)* by the risk-free fetchers, *(08)* by the insurer model, *(09)* by the cross-currency layer, *(10)* by filed statements as the primary source, *(11)* by one definition per field, *(12)* by the implied readouts and the bounded EBIT, *(13)* by the IFRS filers, *(14)* by the companyfacts-lag decision and the implied horizon, *(15)* by the residual-income model losing its terminal, *(16)* by the stability pass, *(17)* by point-in-time, *(18)* by the REIT model, *(19)* by the two share counts and the point-in-time recoveries.
+The chart shows stages only; `docs/flow.mmd` is its source and the two change together.
+Every `failed_reason` a record can carry is in the table below against the stage that
+emits it, with variable parts in parentheses, so a line of `output/summary.txt` can be
+traced to a stage. A test asserts that every reason string in the code appears in this
+file.
 
-```mermaid
-flowchart TD
-    classDef failed fill:#f8d7da,stroke:#b02a37,color:#58151c
-    classDef ok fill:#d1e7dd,stroke:#0f5132,color:#0a3622
-    classDef new stroke-dasharray: 4 3
+## Every Failed reason, by stage
 
-    IN[/"ticker: data/financials/(TICKER).json"/] --> FETCHED{"file parses as boundary financials?"}
-    SNAP["snapshots (16): python/fetch_all.py writes every fetch to data/snapshots/(YYYY-MM-DD)/ (the fetch date, UTC; a second fetch on the same date gets a -2, -3 suffix, a snapshot is never overwritten), the shadow-yfinance records included, and data/financials is a relative symlink to the latest; there is one universe, reference/universe.json, growing to every name anyone classifies (26), and --universe FILE points the fetch or the batch at another file of the same format; the batch runs on any snapshot by path. With --baseline (a previous run) and --baseline-snapshot (the financials it was valued from) the batch writes output/stability_(old)_(new).txt: every moved input of every record classified as price (the market provider's price or cap; expected on a trading day, a finding on a non-trading day), new_filing (the accession changed), restated (same accession and period, the filed value changed; a finding), vendor_row (a vendor-path value moved with no filing behind it; a finding, old and new listed), rate_or_fx (a parameter or the fx rate; expected only when the refreshers ran, and the report says whether the risk-free as_of differs) or unexplained (anything else: zero is the acceptance); the summary carries the counts. A report, never a gate, never an adjustment. Snapshot three, after the next trading day's close: uv run python/fetch_all.py, then dune exec atemoya -- data/financials --out output --baseline output/run-2026-09-19/valuations.jsonl --baseline-snapshot data/snapshots/2026-09-19; expect price on every record and nothing else"]:::new -.-> IN
-    PROVIDER["statements provider (10, 13): per ticker, decided by the filing and recorded on the record with the reason and the taxonomy. CIK resolves exactly in SEC's ticker map (or is the entry's declared cik, 22, recorded on the record as such) and the facts carry annual net income and equity on a 10-K or 20-F under us-gaap, else under ifrs-full (13): filed statements (SEC XBRL companyfacts) are primary, the tag per field per period from that taxonomy's section of reference/xbrl_tags.json, the statement currency taken from the facts' unit as financial_currency with the vendor's recorded beside it, SEC's submissions index read for every CIK-resolved name and its newest 10-K or 20-F recorded as submissions_latest_annual (14): when that filing is newer than the newest annual facts and those facts are past max_filing_age_days, and the vendor's newest annual ends no earlier than the filing's period less 45 days, the vendor's statements are used by a decision written into provider_reason (companyfacts lags submissions: (form) filed (date) (period (date)) not yet in facts; facts end (date)), the cross-check against the facts' newest period where one is common, else recorded as no common period; a lag with facts still within the gate keeps the filing and is noted; a lag with a stale vendor keeps the filing and the age gate fails it as before, the lag noted in provider_reason, filing date and accession on each period, the vendor's statements fetched as a cross-check (recorded per field, never a gate) and written beside as a shadow record. IFRS filer, facts on 20-F only, no annual anchors, no CIK, or companyfacts 404: the vendor feed (yfinance). Price, market cap and currencies always from yfinance. On either provider cash, total_debt, delta_nwc and ebit follow reference/field_definitions.json (11): cash and equivalents plus short-term investments less restricted cash; financial debt with operating leases excluded; the cash-flow statement's change in operating working capital (aggregate tag, else the classified components, null with a note when a tag is unclassified); operating income, else pretax plus interest expense as ebit_recipe = pretax_plus_interest; every period records the composition (definition and components summed)."]:::new -.-> IN
-    FETCHED -- no --> UNREAD["stderr: cannot read financials; no record"]:::failed
-    FETCHED -- yes --> THR{"bank_nii_ratio_threshold fresh?"}
-    THR -- "stale / future / missing" --> PFAIL
+| stage | reason as the record carries it |
+|---|---|
+| read | stderr: cannot read financials; no record |
+| declaration | entity_class not declared |
+| declaration | entity_class not declared; statements indicate (Bank or Insurer) (evidence) |
+| declaration | class disagreement: declared OperatingCompany, statements indicate (Bank or Insurer) (evidence) |
+| admissibility | no admissibility row for entity class (class) in the reference table |
+| admissibility | dcf not admissible for (class); lens: (lens) |
+| country | country not determinable from the fetch |
+| point-in-time gates | no point-in-time statements: (vendor provider carries no filing dates, or filed statements lag on the date: ...) |
+| point-in-time gates | no point-in-time shares: no cover page or balance-sheet count filed by the date, or no share count within 400 days of the period |
+| point-in-time gates | rate source has no history for (currency) |
+| currency gate | financial currency disagreement: filing (X), vendor (Y) |
+| definitions gate | field definition mismatch: (field) follows (recorded), reference/field_definitions.json defines (name); refetch the statements |
+| filing age | latest annual filing is N days old, older than its max_filing_age_days 400 |
+| currency gate | missing market data: financial_currency, or missing market data: trading_currency |
+| FX | fx not fetched for (financial)/(trading): run python/refresh_fx.py with your FRED key |
+| FX | fx not available for (financial)/(trading) |
+| FX | fx for (code) (as_of date) is N days old, older than its max_age_days M |
+| parameters | risk-free curve not fetched for (country): run python/refresh_rates.py with your FRED key |
+| parameters | no risk-free curve for country (country) |
+| parameters | no (equity_risk_premium, statutory_tax_rate or terminal_growth_rate) for country (country) |
+| parameters | risk-free curve for (key) has no (tenor) tenor |
+| parameters | (parameter) for (key) (as_of date) is N days old, older than its max_age_days M |
+| parameters | (parameter) for (key) has as_of (date), later than the valuation date (today) |
+| EBIT policy | operating income not filed; derived EBIT misses the cross-check ((recipe): derived (x) against the vendor's (y), (d)% beyond the 2% threshold, or: no vendor operating income to check against) |
+| mid-cycle window | mid-cycle normalisation needs at least 8 annual return observations, have (k); the provider carries (n) periods |
+| mid-cycle window | mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat, have (k) |
+| mid-cycle guards | through the cycle the business did not earn a positive return on its capital ((mean roic r over k observations) or (the sum of nopat over n periods, s, is not positive)) |
+| mid-cycle guards | through the cycle the business reinvested more than it earned (reinvestment rate r) |
+| DCF period | no fiscal periods in statements |
+| DCF period | missing market data: (fields); missing statement fields for fiscal period ending (date): (fields) |
+| DCF guards | price (p) and market cap (m) must be positive |
+| DCF guards | projection horizon (N) years is negative |
+| DCF guards | wacc (w) does not exceed terminal growth (g) |
+| DCF guards | non-positive free cash flow (v): the DCF is not applicable; declared (class) |
+| DCF growth | growth not derivable: (why) |
+| DCF value | fair value is not finite (enterprise value (ev), shares (n)) |
+| residual income guards | book equity (b) is not positive |
+| residual income guards | roe not derivable: need 2 fiscal periods with net income and positive book equity, have (n) |
+| residual income guards | payout not derivable: need 2 fiscal periods with positive net income and dividends paid, have (n) |
+| residual income value | fair value is not finite (equity value (e), shares (n)) |
+| insurer | insurer model requires filed-statement data; (why: no SEC filings for (ticker), or the period carries no AOCI or premiums earned) |
+| REIT guards | ffo (f) is not positive |
+| REIT guards | ffo growth needs two periods with ffo and weighted-average shares, have (n) |
+| REIT guards | cost of equity (ke) does not exceed terminal growth (g) |
+| conclude | non-positive fair value (v): model not applicable |
+| conclude | margin of safety (m) exceeds sanity bound 5.00: likely structural break; check entity_class |
 
-    THR -- yes --> SIG["statement signature: Bank iff NII/revenue >= threshold, else Insurer iff premium row > 0, else none"]
-    SIG --> DECL{"entity_class declared? (a universe entry, exactly ticker, entity_class, why and scope_limits, loaded strictly, from reference/universe.json, the one universe (26), or any file of the same format given as --universe, optionally with cik, the SEC filer to read instead of the ticker map's (22), honoured on the point-in-time fetch too (25), and adr_ratio, ordinary shares per depositary receipt from the 20-F cited in why, absent meaning one (42): point-in-time shares are the filed count divided by it, both recorded, since the price is the receipt's; the point-in-time count itself (44) is the one nearest the newest filed period, the balance-sheet instant at that period end (us-gaap or ifrs-full) when filed, else the newest cover page filed by the date if within 400 days of the period, else Failed (no point-in-time shares: no share count within 400 days of the period), multiplied by the vendor's split ratios dated after the count's date and on or before the date exactly as prices are corrected, the record naming the splits applied or none, and the live check carries the cover page through the same split record to the fetch date; on every live record carrying the cover page, a name with a declared ratio or a cross-currency listing gets receipt_check, the cover page's ordinary count over the effective shares against the declaration, flagged in the summary beyond 3% as depositary ratio mismatch naming both numbers, or as undeclared depositary ratio: live shares imply (x) when none is declared, a flag and never a gate or a correction; or --entity-class)"}
-    DECL -- "no, no signature" --> F_UNDECL["entity_class not declared"]:::failed
-    DECL -- "no, signature fired" --> F_UNDECL_HINT["entity_class not declared; statements indicate (Bank|Insurer) (evidence)"]:::failed
-    DECL -- "declared OperatingCompany, signature fired" --> F_DISAGREE["class disagreement: declared OperatingCompany, statements indicate (Bank|Insurer) (evidence)"]:::failed
-    DECL -- "declared, consistent / absent / differs (recorded in class_check)" --> ROW{"admissibility row for the class?"}
-
-    ROW -- no --> F_NOROW["no admissibility row for entity class (class) in the reference table"]:::failed
-    ROW -- yes --> ADM{"first admissible model in the row"}
-    ADM -- "none (RegulatedUtility, MerchantPower, Miner, Royalty, Unprofitable (was PreProfit, 22: a state, no history of profit to normalise from), Wrapper, ConstructionStage, UnderBid, Ballast)" --> F_INADM["dcf not admissible for (class); lens: (lens)"]:::failed
-    ADM -- "dcf (OperatingCompany; HighGrowthSoftware since 21: the settled reversion is the anchor at conservative persistence and the implied readouts are the reading, stock compensation inside EBIT as filed; Unprofitable stays refused, negative free cash flow gives the solvers nothing to invert)" --> COUNTRY
-    ADM -- "residual_income (Bank) (06)" --> COUNTRY
-    ADM -- "residual_income_insurer (Insurer) (08)" --> COUNTRY
-    ADM -- "reit_ffo_dividend (Reit) (18)" --> COUNTRY
-    ADM -- "dcf_midcycle (Cyclical) (22): earnings set by a commodity price or an industry cycle the company does not control; a company that was profitable and is through a break is Cyclical with a declared scope limit, never Unprofitable" --> COUNTRY
-
-    COUNTRY{"country in the fetch?"} -- no --> F_COUNTRY["country not determinable from the fetch"]:::failed
-    COUNTRY -- yes --> PIT{"point-in-time record (17)? then it needs filed statements, cover-page shares and rate history on its date"}:::new
-    PIT -- "vendor path, or a filing listed but not yet in facts on the date" --> F_PITSTMT["no point-in-time statements: (vendor provider carries no filing dates | filed statements lag on the date: ...) (17)"]:::failed
-    PIT -- "no cover page or balance-sheet count filed by the date, or none within 400 days of the period" --> F_PITSHARES["no point-in-time shares: no cover page or balance-sheet count filed by the date (17, 19) | no share count within 400 days of the period (44)"]:::failed
-    PIT -- "the trading currency's rate source offers no history" --> F_PITRATE["rate source has no history for (currency) (17)"]:::failed
-    PIT -- "complete, or a live record" --> CURAGREE{"filed statements: the filing's currency (the facts' unit) agrees with the vendor's statement currency? (13)"}:::new
-    PITNOTE["point-in-time (17): python/fetch_all.py --as-of D writes data/pit/D/ from facts filed on or before D (the same per-period selection, the lag clause evaluated on D), the close on the last trading day on or before D times every split ratio dated after D (the vendor's closes are split-adjusted whatever auto_adjust says), shares per shares_for_market_cap (19): the newest dei cover page filed by D, else the balance-sheet CommonStockSharesOutstanding instant at the newest period end filed by D (shares_source says which; Alphabet files its cover page per class with a dimension, which companyfacts omits), never a weighted-average count (market cap = shares x price); the cross-check runs against the vendor's live column for the same fiscal period, cross_check.source naming it as fetched after D, legitimate for the ebit recipe's admissibility check and never an input, and data/pit/D/reference/ with FRED rates and FX observed on or before D; the batch runs with --reference data/pit/D/reference --today D, so every staleness gate measures against D; ERP, tax, betas and the assumptions are held at the current vintage and every one whose as_of postdates D is named in point_in_time.anachronistic_inputs on the record; python/build_panel.py runs every quarter-end from 2022-03-31 to 2026-06-30 into output/pit/ and a panel with the forward 12-month return, with one descriptive table and no statistic; with --options DIR (37) the batch runs with --options-max-age 7, the no-lookahead rule: at D the chain is the store's latest snapshot on or before D and no older than seven calendar days, else market_implied null with no options snapshot within 7 days before (D); the anchor path on D is D's own fair value grown at D's required return, spot the store's close on the snapshot date, never the live quote; the row gains the block's numbers (risk_neutral true) beside probability_overpaid on D; output/pit/market_summary.txt is one descriptive table per date (names with a block, the two medians, the count where the market's number is below 0.5 while the belief's is at 1.0, stated, not tested) and python/plot_market_through_time.py draws the two medians over the dates with a block, the others blank and named"]:::new -.-> PIT
-    CURAGREE -- "differ" --> F_CURAGREE["financial currency disagreement: filing (X), vendor (Y) (13)"]:::failed
-    CURAGREE -- "agree, or vendor statements" --> DEFS{"every period's compositions name the definitions in reference/field_definitions.json, and its ebit_recipe one the file lists? (11)"}:::new
-    DEFS -- "another definition or recipe" --> F_DEFS["field definition mismatch: (field) follows (recorded), reference/field_definitions.json defines (name); refetch the statements (11)"]:::failed
-    DEFS -- "yes, or none recorded" --> FILING{"filed statements: newest annual filing within max_filing_age_days 400? (10)"}:::new
-    FILING -- "older" --> F_FILING["latest annual filing is N days old, older than its max_filing_age_days 400 (10)"]:::failed
-    FILING -- "fresh, or vendor statements" --> CUR{"currency gate (09): financial_currency and trading_currency present? equal?"}:::new
-    CUR -- "a field missing" --> F_CUR["missing market data: financial_currency, or missing market data: trading_currency (09)"]:::failed
-    CUR -- "equal: the same-currency path, untouched" --> PARAMS
-    CUR -- "differ: cross-currency (09)" --> FX{"FX both legs through USD from data/reference/fx_rates.json (fetched by python/refresh_fx.py with the user's own FRED key, never tracked, 29), fresh? (09)"}:::new
-    FX -- "file never fetched" --> F_FXFETCH["fx not fetched for (financial)/(trading): run python/refresh_fx.py with your FRED key (29)"]:::failed
-    FX -- "no series for a leg" --> F_FX["fx not available for (financial)/(trading) (09)"]:::failed
-    FX -- "a leg stale or future" --> F_FXSTALE["fx for (code) (as_of date) is N days old, older than its max_age_days M (09)"]:::failed
-    FX -- ok --> CONV["convert every statement total by fx_rate into the trading currency; price and market cap untouched (minor-unit prices were already divided at the fetch and the divisor recorded); parameters via resolve_cross: risk-free and terminal growth from the trading currency's country, tax from the domicile, cost of equity = rf + beta x mature ERP + country risk premium (domicile total ERP less the base); the same model runs on the converted record and the conversion rides on its inputs (09)"]:::new
-    CONV --> PARAMS
-    PARAMS["resolve parameters: projection_years, risk-free (country, 7y), ERP, statutory tax, terminal growth, debt spread, growth clamp, lambda, beta (industry table or default 1.0)"]
-    PARAMS -. "risk-free curve tier (07): official (issuer or central bank) / fred_oecd_10y (the 7y taken from the OECD 10y, recorded as tenor_used) / manual (hand-copied, ages out under the 45-day gate); tier, tenor_requested and tenor_used ride on the parameter" .-> PARAMS
-    PARAMS -- "curve file never fetched (data/reference/risk_free_rates.json, written by python/refresh_rates.py with the user's own FRED key, never tracked, 29)" --> F_NOFETCH["risk-free curve not fetched for (country): run python/refresh_rates.py with your FRED key (29)"]:::failed
-    PARAMS -- "country absent" --> F_NOCURVE["no risk-free curve for country (country)"]:::failed
-    PARAMS -- "country absent" --> F_NOPARAM["no (equity_risk_premium|statutory_tax_rate|terminal_growth_rate) for country (country)"]:::failed
-    PARAMS -- "tenor absent" --> F_NOTENOR["risk-free curve for (key) has no (tenor) tenor"]:::failed
-    PARAMS -- "stale" --> PFAIL["(parameter) for (key) (as_of date) is N days old, older than its max_age_days M"]:::failed
-    PARAMS -- "future as_of" --> F_FUTURE["(parameter) for (key) has as_of (date), later than the valuation date (today)"]:::failed
-    PARAMS -- "resolved" --> RR["required return (34): a names entry, else the class default, else CAPM; a declaration replaces the CAPM chain above the risk-free rate on every model (the WACC blend and the after-tax cost of debt unchanged); every Ok record carries cost_of_equity_capm, cost_of_equity_used, required_return_source and, when declared, required_return_version"]:::new
-    RR --> WHICH{"routed model"}
-
-    WHICH -- dcf --> EBIT{"ebit on the latest period derived (ebit_recipe other than operating_income)? then the record's cross-check must find it within threshold of the vendor's operating income (12)"}:::new
-    EBIT -- "derived and the check misses, or no vendor figure to check against" --> F_EBIT["operating income not filed; derived EBIT misses the cross-check ((recipe): derived (x) against the vendor's (y), (d)% beyond the 2% threshold, or: no vendor operating income to check against) (12)"]:::failed
-    WHICH -- "dcf_midcycle (22; 25: no EBIT policy on this path, an operating-income line is not an input to it)" --> MID_WINDOW{"window: every annual period the record carries, newest first, up to midcycle_window_years (15, a parameter); per consecutive pair, NOPAT_t = net_income_t + interest_expense_t x (1 - statutory tax rate), bottom-up from filed lines (nopat_bottom_up, 25: the through-cycle mean is what dampens one-offs), ROIC_t = NOPAT_t / (book_equity + total_debt - cash at the prior period end), on positive prior capital; at least 8 observations? (the fetch keeps 15 periods for the class; the vendor path's four or five can never serve the model)"}:::new
-    MID_WINDOW -- "no periods" --> F_NOPERIOD
-    MID_WINDOW -- "fewer than 8" --> F_MIDOBS["mid-cycle normalisation needs at least 8 annual return observations, have (k); the provider carries (n) periods (22)"]:::failed
-    MID_WINDOW -- "a period lacking a flow is excluded from the sum it cannot serve and named on the record (27: roic needs net income, interest expense and a positive prior capital; the reinvestment sums need capex, d&a, delta_nwc and nopat); fewer than 8 periods left in the reinvestment sums" --> F_MIDREINVN["mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat, have (k); the provider carries (n) periods (27)"]:::failed
-    MID_WINDOW -- "latest period fields present? per required_on_latest_period in field_definitions.json (27): the balance sheet only, book_equity, total_debt and cash, because the model applies a through-cycle return to today's capital; plus price, market cap, currency. A missing latest flow leaves spot_fcff and spot_to_midcycle null with the reason" --> MID_GUARDS{"guards (22)"}:::new
-    MID_WINDOW -- missing --> F_MISSING
-    MID_GUARDS -- "price or market cap <= 0" --> F_PRICE
-    MID_GUARDS -- "horizon < 0" --> F_HORIZON
-    MID_GUARDS -- "ROIC_mid <= 0, or the window's NOPAT sum <= 0" --> F_MIDROIC["through the cycle the business did not earn a positive return on its capital ((mean roic r over k observations) or (the sum of nopat over n periods, s, is not positive)) (22)"]:::failed
-    MID_GUARDS -- "r_mid >= 1" --> F_MIDREINV["through the cycle the business reinvested more than it earned (reinvestment rate r) (22)"]:::failed
-    MID_GUARDS -- "wacc <= terminal growth" --> F_WACC
-    MID_GUARDS -- ok --> MID_EV["ROIC_mid = arithmetic mean of the observations, the bad years included (median recorded, not used); NOPAT_mid = ROIC_mid x latest invested capital; r_mid = sum(capex - d&a + delta_nwc) / sum NOPAT_t over the window, sums not a mean of ratios, floored at zero (33: a negative measured rate is capital roughly maintained, read as no net reinvestment through the cycle, so FCFF_mid = NOPAT_mid and g0 = 0, the measured rate and the flag on the record, disinvestment cash not valued); FCFF_mid = NOPAT_mid x (1 - r_mid); g0 = ROIC_mid x r_mid under the DCF's clamp and lambda; then the DCF engine unchanged (EV along the path + Gordon terminal, equity = EV - net debt, per effective share); the record carries the window, every ROIC_t, the aggregates, the latest year's spot FCFF and spot / mid-cycle; the implied readouts run unchanged on FCFF_mid and g0; no price deck anywhere"]:::new
-    MID_EV -- "not finite" --> F_NAN
-    MID_EV --> CONCLUDE
-    EBIT -- "filed operating income, or derived and within threshold" --> DCF_PERIOD{"latest fiscal period, fields present? (ebit, d&a, capex, cash, total_debt, book_equity, delta_nwc over 2+ periods, price, market cap, currency)"}
-    DCF_PERIOD -- "no periods" --> F_NOPERIOD["no fiscal periods in statements"]:::failed
-    DCF_PERIOD -- "missing" --> F_MISSING["missing market data: (fields); missing statement fields for fiscal period ending (date): (fields)"]:::failed
-    DCF_PERIOD -- ok --> DCF_GUARDS{"guards"}
-    DCF_GUARDS -- "price or market cap <= 0" --> F_PRICE["price (p) and market cap (m) must be positive"]:::failed
-    DCF_GUARDS -- "horizon < 0" --> F_HORIZON["projection horizon (N) years is negative"]:::failed
-    DCF_GUARDS -- "wacc <= terminal growth" --> F_WACC["wacc (w) does not exceed terminal growth (g)"]:::failed
-    DCF_GUARDS -- "base fcff <= 0 (31): net cash minus a stream of small negative flows, falling as long-run growth rises, is meaningless, not conservative" --> F_NEGFCFF["non-positive free cash flow (v): the DCF is not applicable; declared (class) (31)"]:::failed
-    DCF_GUARDS -- ok --> GROWTH["growth: fundamental (roic x reinvestment rate) if nopat > 0 and net reinvestment > 0, else revenue CAGR (3+ periods) capped at roic; clamp; mean-revert toward terminal at lambda"]
-    GROWTH -- "neither computable" --> F_GROWTH["growth not derivable: (why)"]:::failed
-    GROWTH --> DCF_EV["fcff = nopat + d&a - capex - mean delta_nwc; EV along the growth path + Gordon terminal; equity = EV - net debt; fair value = equity / (market cap / price)"]
-    DCF_EV -- "not finite" --> F_NAN["fair value is not finite (enterprise value (ev), shares (n))"]:::failed
-    DCF_EV --> CONCLUDE
-
-    WHICH -- "residual_income (06)" --> RI_PERIOD{"latest fiscal period, fields present? (book_equity, net_income, price, market cap, currency) (06)"}:::new
-    RI_PERIOD -- "no periods" --> F_NOPERIOD
-    RI_PERIOD -- "missing" --> F_MISSING
-    RI_PERIOD -- ok --> RI_GUARDS{"guards (06)"}:::new
-    RI_GUARDS -- "price or market cap <= 0" --> F_PRICE
-    RI_GUARDS -- "book equity <= 0" --> F_BOOK["book equity (b) is not positive (06)"]:::failed
-    RI_GUARDS -- "fewer than 2 periods of net income over positive book" --> F_ROE["roe not derivable: need 2 fiscal periods with net income and positive book equity, have (n) (06)"]:::failed
-    RI_GUARDS -- "fewer than 2 periods of dividends over positive net income" --> F_PAYOUT["payout not derivable: need 2 fiscal periods with positive net income and dividends paid, have (n) (06)"]:::failed
-    RI_GUARDS -- "horizon < 0" --> F_HORIZON
-    RI_GUARDS -- ok --> RI_EV["ROE_0 = mean net income / book; ROE_t reverts to CAPM cost of equity at lambda; book compounds by retained earnings (retention = 1 - mean payout); equity = book + PV of (ROE_t - ke) x start-of-year book over the explicit years, and nothing after them (15): ROE has reverted to the cost of equity by then and growth at the cost of equity is value neutral, so a bank earning its cost of equity is worth exactly book and franchise value is something the price must ask for through implied_roe0, not something the model grants; fair value = equity / shares; loan-loss ratios recorded, never a gate (06)"]:::new
-    RI_EV -- "not finite" --> F_RINAN["fair value is not finite (equity value (e), shares (n)) (06)"]:::failed
-    RI_EV --> CONCLUDE
-
-    WHICH -- "residual_income_insurer (08)" --> INS_FILED{"filed statements with AOCI and premiums earned? (08)"}:::new
-    INS_FILED -- "provider had none, or no AOCI / premiums on the latest period" --> F_FILED["insurer model requires filed-statement data; (why: no SEC filings for (ticker), or the period carries no AOCI or premiums earned) (08)"]:::failed
-    INS_FILED -- yes --> INS_CORE["book per period = reported stockholders' equity - AOCI; then the residual-income core above (same guards: roe, payout), no terminal (15); underwriting checks recorded, never gates: combined-ratio proxy, reserves over premiums, AOCI over reported book; solvency null, basis stated (08)"]:::new
-    INS_CORE -- "core guard fails" --> F_ROE
-    INS_CORE -- "core guard fails" --> F_PAYOUT
-    INS_CORE --> CONCLUDE
-
-    WHICH -- "reit_ffo_dividend (18)" --> REIT_PERIOD{"latest fiscal period, fields present? (ffo from the filed NAREIT recipe in field_definitions.json with its components, dividends_paid, price, market cap, currency) (18)"}:::new
-    REIT_PERIOD -- "no periods" --> F_NOPERIOD
-    REIT_PERIOD -- "missing (vendor rows carry no ffo)" --> F_MISSING
-    REIT_PERIOD -- ok --> REIT_GUARDS{"guards (18)"}:::new
-    REIT_GUARDS -- "price or market cap <= 0" --> F_PRICE
-    REIT_GUARDS -- "ffo <= 0" --> F_FFO["ffo (f) is not positive (18)"]:::failed
-    REIT_GUARDS -- "fewer than 2 periods with ffo and weighted-average shares" --> F_FFOG["ffo growth needs two periods with ffo and weighted-average shares, have (n) (18, 19)"]:::failed
-    REIT_GUARDS -- "cost of equity <= terminal growth" --> F_KE["cost of equity (ke) does not exceed terminal growth (g) (18)"]:::failed
-    REIT_GUARDS -- "horizon < 0" --> F_HORIZON
-    REIT_GUARDS -- ok --> REIT_EV["D0 = min(dividends_paid, ffo) / effective shares (an uncovered dividend is never valued; coverage recorded); g0 = CAGR of ffo per weighted-average diluted share, each period on its own count per shares_for_flows in field_definitions.json (19: a flow is never divided by a point count; the period record carries none), over the filed periods, clamped, mean-reverting to terminal at lambda; ke = CAPM with the REIT industry beta; value = sum D_t / (1 + ke)^t + D_N (1 + g_T) / (ke - g_T) / (1 + ke)^N; price/ffo and the caveat (FFO overstates distributable cash by the untagged recurring capex and non-cash rent) on the record (18)"]:::new
-    REIT_EV -- "not finite" --> F_RINAN
-    REIT_EV --> CONCLUDE
-
-    CONCLUDE{"fair value > 0?"} -- no --> F_NONPOS["non-positive fair value (v): model not applicable"]:::failed
-    CONCLUDE -- yes --> BOUND{"margin of safety <= sanity bound 5.0?"}
-    BOUND -- no --> F_BOUND["margin of safety (m) exceeds sanity bound 5.00: likely structural break; check entity_class"]:::failed
-    BOUND -- yes --> OK["Ok: fair_value, margin_of_safety, signal (Buy >= +25%, Sell <= -25%, else Hold), inputs tagged by model, floor present = true with the model's basis"]:::ok
-    OK --> IMPLIED["implied readouts (12, 14), headline untouched: horizon_years (14) = the smallest whole number of explicit years, holding the observed start, at which fair value reaches the price, an integer scan over 1 to 40 with the bracket and fair_value_at_40, the risk-free rate held at the recorded 7y point, under the same guard; not reached at 40 means even indefinite persistence of the decaying path does not reach the price; meaningful_readout three-way: horizon when one solves, else level; level when the guard fails; level = the starting growth (dcf, domain -0.50 to 3.00) or starting ROE (residual income, -0.50 to 1.00) at which fair value equals price; half_life_years = the reversion half-life at which it does, holding the observed start, only when the start lies above its target (terminal growth / cost of equity), lambda domain 0.01 to 5.0; bisection; every null carries its reason; meaningful_readout by rule: half_life above the target, level otherwise"]:::new
-
-    F_INADM --> FLOOR
-    F_COUNTRY --> FLOOR
-    PFAIL --> FLOOR
-    F_MISSING --> FLOOR
-    F_GROWTH --> FLOOR
-    F_MIDOBS --> FLOOR
-    F_MIDROIC --> FLOOR
-    F_MIDREINV --> FLOOR
-    F_MIDREINVN --> FLOOR
-    F_NOFETCH --> FLOOR
-    F_NEGFCFF --> FLOOR
-    F_FXFETCH --> FLOOR
-    F_ROE --> FLOOR
-    F_PAYOUT --> FLOOR
-    F_FILED --> FLOOR
-    F_FILING --> FLOOR
-    F_DEFS --> FLOOR
-    F_EBIT --> FLOOR
-    F_CURAGREE --> FLOOR
-    F_PITSTMT --> FLOOR
-    F_PITSHARES --> FLOOR
-    F_PITRATE --> FLOOR
-    F_FFO --> FLOOR
-    F_FFOG --> FLOOR
-    F_KE --> FLOOR
-    F_NONPOS --> FLOOR
-    F_BOUND --> FLOOR
-    IMPLIED --> SENS["sensitivity (23), headline untouched: for each held input with a declared step in reference/params.json (sensitivity_steps: starting growth or ROE0 +-2 pp, lambda +-0.10, terminal growth +-0.5 pp, WACC or cost of equity +-1 pp, the cash-flow base fcff / fcff_mid / covered dividend / book equity +-10%; readability steps, not standard deviations, never derived from history), fair value at the input stepped down and up with everything else held, swing = |up - down| / fair value, the inputs ranked by swing and the first named binding_input; a step that crosses a guard (a discount rate reaching terminal growth, a non-positive base or lambda) is null with the reason on that side; the summary counts the binding input across Ok names"]:::new
-    SENS --> MAP["belief map (23), on dcf, dcf_midcycle and reit_ffo_dividend only (the residual-income paths carry belief_map_reason instead): the readout model, stated on the record as map_model = undecayed growth for N years, then terminal, is growth held at g for N years with no decay, then the settled terminal growth forever, everything else (discount rate, base, net debt, shares) at its recorded value, distinct from the headline's decaying path; the grid g = 0..50% in 2 pp steps by N = 1..40 goes to output/maps/(ticker).json, never onto the record; the record carries the price contour, for each N the g at which fair value equals price by bisection, null with reason where no g in [0, 50%] reaches it or the price sits below the zero-growth value; python/plot_map.py draws the surface, the contour and the observed starting growth to output/maps/(ticker).png (matplotlib, the first visualisation dependency; nothing in the batch imports it)"]:::new
-    MAP --> BELIEF["declared belief (24), headline untouched, on dcf, dcf_midcycle and reit_ffo_dividend only (the residual-income paths carry belief_reason: no terminal growth, the belief parameter is undefined there; a class with no default and no per-name entry carries the reason too): the belief is six fields (mean, sd, floor, ceiling, why, as_of), a truncated normal, loaded strictly from reference/beliefs.json (one default per class as offsets in percentage points around the country's settled terminal growth) or, beside them under names, per-name absolute beliefs, both tracked, with a further per-name file given as --beliefs overriding them (26), never estimated from history; the fourth readout implied_terminal_growth is the long-run growth at which fair value equals price on the headline's decaying path by bisection in [-10%, discount rate - 5 bp], null with reason past either end; probability_overpaid = the belief's CDF at the implied value (the probability that the value surplus, the margin of safety, is negative), 1.0 with the reason when the price needs long-run growth at or above the discount rate, 0.0 when the price is below the value at -10%; recorded with the six fields beside it and belief_version (as_of, a hash of the six fields, class or name); the summary carries the distribution and the count at 1.0, the run diff every changed version"]:::new
-    BELIEF --> CURVE["surplus curve (35): on every Ok record with a belief, the value surplus (V - P) / P at 41 evenly spaced long-run growths from the belief's floor to its ceiling, everything else held; the residual-income paths carry the reason instead; all the frontier needs from the models"]:::new
-    CURVE --> MKT["market-implied (36), only under --options DIR, headline untouched: the name's end-of-day chain on the latest snapshot date at or before the valuation date (data/options/(date)/(TICKER).json, written by python/fetch_options.py through the local ThetaTerminal, never tracked); the expiry is the longest at least 365 days out with at least eight OTM strikes quoted with a positive bid on each side of spot; the forward by put-call parity at the straddle strike nearest spot; OTM mids with ask <= 3 bid invert to total implied variance under Black on the forward (a wider spread says nothing about the price; the count left out is recorded); the SVI smile w(k) = a + b (rho (k - m) + sqrt((k - m)^2 + sigma^2)) by least squares over the five parameters under the no-arbitrage constraints (Lee's wing bound b (1 + |rho|) <= 2 and g(k) >= 0 on [-3, 3]), then checked again on the same grid; the put-call implied-vol gap at the forward is recorded as a diagnostic (single-stock US options are American, the inversion is European, so a long-dated put's early-exercise premium shows there, never corrected); Breeden-Litzenberger in closed form: price_quantiles at 5/25/50/75/95, p_below_anchor_path = the risk-neutral CDF at V (1 + ke)^T beside probability_overpaid, implied_growth_quantiles = each quantile price discounted at ke and inverted through the implied-terminal-growth solver, labelled approximate (a horizon of a few years stands in for the long run), null with the reason on the residual-income paths; every field risk_neutral = true with the sentence that it embeds the market's risk pricing and is not a forecast; the summary line compares the two medians"]:::new
-    MKT --> RECORD
-    MKT -.-> MKT_NONE["market_implied null with market_implied_reason, only under --options: no options data | no options snapshot within (N) days before (D) (37, under --options-max-age N; the panel passes 7) | no expiry >= 365 days with >= 8 quoted strikes on each side | smile fit failed: (why: too few quotes invert, non-positive total variance, butterfly arbitrage at k, wing slope beyond Lee's bound)"]:::new
-    MKT_NONE --> RECORD
-    FLOOR["floor: present = true (verified), false (Unprofitable, Ballast by definition), null (not assessable here), with basis from the admissibility row; scope_limits: the entry's own verbatim, then the class's defaults from the admissibility row (22: Cyclical carries that the through-cycle average is backward-looking and reserve replacement, the energy transition or a declared structural break are not assessed)"] --> RECORD[/"record: one line in output/valuations.jsonl, stamped with model_version (21: git short hash, -dirty when the tree had uncommitted edits, unversioned outside a checkout; the summary's first line and the run diff's header carry it, and a fair value that moved with no moved input is labelled moved under this version against the baseline's); every --out run is also written to output/runs/(valued_on)/ (-2, -3 on the same date, never overwritten; the summary's last line names it), summary groups Failed by reason and inadmissible by class; whether anything changed since the last run, and why, is the baseline diff (--baseline, --baseline-snapshot), the acceptance mechanism of every change, never a stored expectation"/]
-```
+The market-implied block is never a `Failed`: on an `Ok` record run with `--options` it is
+either present or null with one of `no options data`, `no options snapshot within (N)
+days before (D)`, `no expiry >= 365 days with >= 8 quoted strikes on each side`, or
+`smile fit failed: (why)`.
 
 ## Reading the chart against a run
 
-`output/summary.txt` lists each ticker's `failed_reason`; find the same string here to see
-which branch produced it. Reason text with numbers or names in it is shown with the
-variable part in parentheses. Every `Failed` record still carries `floor` and
-`scope_limits`, so the floor node applies to all red terminals, not only the ones drawn
-into it. The universe file declares and does not remember: a run's outcomes live in its
-records, and the acceptance of any change is the run diff against the previous run
+`output/summary.txt` lists each ticker's `failed_reason`; find the same string in the
+table to see which stage produced it. Every `Failed` record still carries `floor` and
+`scope_limits`, so the floor applies to every terminal, not only the drawn one.
+
+The universe file declares and does not remember: a run's outcomes live in its records,
+and the acceptance of any change is the run diff against the previous run
 (`--baseline`), with every moved input classified against the previous snapshot
 (`--baseline-snapshot`).
 
 ## Fetched data
 
-Nothing obtained from a data provider is tracked (29). `reference/` holds declarations and
+Nothing obtained from a data provider is tracked. `reference/` holds declarations and
 attributed vintage tables; the risk-free curves and FX rates are written by the refreshers
 to `data/reference/`, gitignored at that path and at their old paths under `reference/`,
-and read by the batch from `--fetched DIR` (default `data/reference`). Point-in-time writes
-its own per-date copies under `data/pit/(D)/reference/` and the panel passes that
-directory as both `--reference` and `--fetched`. A record that needs a curve or a rate
-the user has not fetched fails naming the refresher to run.
+and read by the batch from `--fetched DIR` (default `data/reference`).
+
+Point-in-time writes its own per-date copies under `data/pit/(D)/reference/` and the panel
+passes that directory as both `--reference` and `--fetched`. A record that needs a curve
+or a rate the user has not fetched fails naming the refresher to run.
 
 ## Market-implied
 
-The options store and the readout beside the declared belief (36). The terminal is
+The options store and the readout beside the declared belief. The terminal is
 self-contained: `tools/thetaterminal/` (gitignored entirely) holds the jar the user
 downloads, its config and logs; `python/theta_terminal.py start|stop|status` reads
 `THETADATA_EMAIL` and `THETADATA_PASSWORD` from the environment (direnv loads `.env`),
 writes a creds file there with mode 600, launches the jar with `--creds-file`, and removes
-the file once the port answers; it never prints a credential. `python/fetch_options.py
-<ticker>... [--as-of D]` writes the full end-of-day chain for the date, every expiry and
-strike unfiltered, with the underlying's close from the stock endpoint, to
-`data/options/<date>/<TICKER>.json`. The batch reads the store only under `--options DIR`
-and never requires it: without the flag a record carries neither `market_implied` nor
-`market_implied_reason`. Every number in the block is risk-neutral: it embeds the market's
-risk pricing and is not a forecast, and the spot it is read from is the snapshot date's
-close, which may differ from the record's price. The growth axis is approximate: a
-horizon of one to two years stands in for the long run.
+the file once the port answers; it never prints a credential.
+
+`python/fetch_options.py <ticker>... [--as-of D]` writes the full end-of-day chain for the
+date, every expiry and strike unfiltered, with the underlying's close from the stock
+endpoint, to `data/options/<date>/<TICKER>.json`. The batch reads the store only under
+`--options DIR` and never requires it: without the flag a record carries neither
+`market_implied` nor `market_implied_reason`.
+
+Every number in the block is risk-neutral: it embeds the market's risk pricing and is not
+a forecast, and the spot it is read from is the snapshot date's close, which may differ
+from the record's price. The growth axis is approximate: a horizon of one to two years
+stands in for the long run. The detail is in `docs/market-implied.md`.
 
 ## Hedging
 
-Single-name hedging (38) runs beside the batch and touches no record: `python/hedge.py`
-takes an untracked holdings file (ticker, shares, horizon, exactly one constraint), reads
-the name's chain from the store (the latest snapshot at or before `as_of`, the same rule
-as everywhere), the per-expiry smiles from `atemoya-smile` (brief 36's constrained fit,
-expiry by expiry) and the name's fair value and risk-free rate from the latest run. Four
-structures priced from quotes, ask for what is bought and bid for what is sold; a missing
-leg or a leg more than five vol points off the smile excludes the candidate; cost, floor
-and cap per candidate, distribution-free; the exact Pareto set; the declared constraint
-selects and nothing is recommended without one; capping the upside is a declaration (39):
-a collar or covered call is selectable only when the entry declares `min_cap_pct` and the
-cap is at or above it, else only puts and put spreads, the output saying which; one
-risk-neutral floor probability from the smile's density; the scope limits on every
-output. No model price, no sampling. A book (41): `python/hedge_book.py` reuses all of it
-on one index's chain, each holding declaring its beta with a why and a date
-(`python/beta.py` reports a regression beside it that the hedge never reads), exposure =
-shares x spot x beta summed, whole contracts with the residual reported, the book's floor
-and cap from the index payoff on the declared betas, the book floored at zero; an index
-absent from the store is refused with the fetch command named. Currency exposure (43):
-`python/hedge_fx.py` sells the declared exposure forward with CME FX futures from the
-dated table `reference/fx_futures.json` (strict loader), the forward by covered interest
-parity on the fetched curves, the spot the ECB's daily reference rate as a dollar cross of
-two ECB rates from `data/reference/fx_spot_daily.json` (48, `refresh_fx.py --daily`, the
-valuation path never reading it; a missing file names the refresher), the vendor's front
-quote as a flag, whole standard and
-micro contracts with the residual, the margin, and a deterministic payoff grid; a currency
-not in the table is refused by name and a missing curve names the refresher. A declared
-view (46): `python/express.py` prices every vertical on the view's side from quotes,
-applies the holder's probability only where the max-profit region is exactly the declared
-one, the short strike at the quoted strike nearest the level (47; every other candidate
-null with the reason and listed, not ranked; the ranking answers only how wide and debit
-or credit), puts the
-risk-neutral probability of the payoff regions beside it, ranks by expected value per
-dollar at risk with the disagreement shown, and states the implied-against-realised
-volatility diagnostic; a view without a probability or a why, or a name without a chain,
-is refused. The fill model (50): `python/fetch_tape.py` stores the trade tape with the
-quote at each print (a subscription-tier refusal reported as the vendor words it),
-`python/fill_model.py` builds empirical quantiles of the fill position per name, moneyness
-third, spread width and half-hour, nothing fitted and symmetric by construction, `--fill-model`
-prices each leg of a vertical at its cell's median fill instead of the flat slippage, never
-both, and `python/fills_vs_model.py` reads a holder's own fills against the table.
+Single-name hedging runs beside the batch and touches no record: `python/hedge.py` takes
+an untracked holdings file (ticker, shares, horizon, exactly one constraint), reads the
+name's chain from the store (the latest snapshot at or before `as_of`, the same rule as
+everywhere), the per-expiry smiles from `atemoya-smile` (the constrained fit, expiry by
+expiry) and the name's fair value and risk-free rate from the latest run.
+
+Four structures are priced from quotes, ask for what is bought and bid for what is sold; a
+missing leg or a leg more than five vol points off the smile excludes the candidate;
+cost, floor and cap per candidate, distribution-free; the exact Pareto set; the declared
+constraint selects and nothing is recommended without one. Capping the upside is a
+declaration: a collar or covered call is selectable only when the entry declares
+`min_cap_pct` and the cap is at or above it, else only puts and put spreads, the output
+saying which. One risk-neutral floor probability comes from the smile's density; the
+scope limits sit on every output. No model price, no sampling.
+
+A book: `python/hedge_book.py` reuses all of it on one index's chain, each holding
+declaring its beta with a why and a date (`python/beta.py` reports a regression beside it
+that the hedge never reads), exposure = shares x spot x beta summed, whole contracts with
+the residual reported, the book's floor and cap from the index payoff on the declared
+betas, the book floored at zero; an index absent from the store is refused with the fetch
+command named.
+
+Currency exposure: `python/hedge_fx.py` sells the declared exposure forward with CME FX
+futures from the dated table `reference/fx_futures.json` (strict loader), the forward by
+covered interest parity on the fetched curves, the spot the ECB's daily reference rate as a
+dollar cross of two ECB rates from `data/reference/fx_spot_daily.json`
+(`refresh_fx.py --daily`, the valuation path never reading it; a missing file names the
+refresher), the vendor's front quote as a flag, whole standard and micro contracts with
+the residual, the margin, and a deterministic payoff grid; a currency not in the table is
+refused by name and a missing curve names the refresher.
+
+A declared view: `python/express.py` prices every vertical on the view's side from
+quotes, applies the holder's probability only where the max-profit region is exactly the
+declared one, the short strike at the quoted strike nearest the level (every other
+candidate null with the reason and listed, not ranked; the ranking answers only how wide
+and debit or credit), puts the risk-neutral probability of the payoff regions beside it,
+ranks by expected value per dollar at risk with the disagreement shown, and states the
+implied-against-realised volatility diagnostic; a view without a probability or a why, or
+a name without a chain, is refused.
+
+The fill model: `python/fetch_tape.py` stores the trade tape with the quote at each print
+(a subscription-tier refusal reported as the vendor words it), `python/fill_model.py`
+builds empirical quantiles of the fill position per name, moneyness third, spread width
+and half-hour, nothing fitted and symmetric by construction, `--fill-model` prices each
+leg of a vertical at its cell's median fill instead of the flat slippage, never both, and
+`python/fills_vs_model.py` reads a holder's own fills against the table. The detail is in
+`docs/hedging.md`.
 
 ## Frontier
 
@@ -265,24 +164,27 @@ under the declared beliefs, and the long-only weightings that minimise downside 
 each level of expected surplus. It needs a batch run whose records carry a belief and its
 41-point surplus curve, the correlation section of `reference/beliefs.json` (one declared
 common-factor number, per-pair overrides optional, never estimated), and the draws and
-seed in `reference/params.json`. Each name's marginal is its truncated normal; the joint is
-a Gaussian copula. Risk is downside-only: the probability of a negative surplus, LPM1 at
-zero and CVaR at 95%; the standard deviation is reported beside them and never optimised.
-The frontier minimises CVaR95 at each target mean by the Rockafellar and Uryasev linear
-programme; the minimum-p_negative, minimum-CVaR and minimum-std portfolios are reported
-side by side, with the current weights when given. Names that are Failed, absent or
-without a belief are listed with the reason and excluded; the universe is never the
-candidate set. Output goes to `output/frontier/<candidates-file-name>/` as a JSON, a text
-summary and a two-panel plot, expected surplus against p_negative and against CVaR95.
-When every candidate's p_negative is one, the summary says the frontier is not
-informative at these prices and the output is still written.
+seed in `reference/params.json`.
 
+Each name's marginal is its truncated normal; the joint is a Gaussian copula. Risk is
+downside-only: the probability of a negative surplus, LPM1 at zero and CVaR at 95%; the
+standard deviation is reported beside them and never optimised. The frontier minimises
+CVaR95 at each target mean by the Rockafellar and Uryasev linear programme; the
+minimum-p_negative, minimum-CVaR and minimum-std portfolios are reported side by side,
+with the current weights when given.
+
+Names that are Failed, absent or without a belief are listed with the reason and
+excluded; the universe is never the candidate set. Output goes to
+`output/frontier/<candidates-file-name>/` as a JSON, a text summary and a two-panel
+plot, expected surplus against p_negative and against CVaR95. When every candidate's
+p_negative is one, the summary says the frontier is not informative at these prices and
+the output is still written.
 
 ## Required return
 
 CAPM is the default cost of equity and is never silently replaced. A declared required
-return (34) is a premium in percentage points over the country's risk-free rate, resolved
-per name (a `names` entry, else the class default, else CAPM) from
+return is a premium in percentage points over the country's risk-free rate, resolved per
+name (a `names` entry, else the class default, else CAPM) from
 `reference/required_returns.json`, both sections empty until the user declares one, or a
 further `--required-returns` file. The rules of use:
 
@@ -308,8 +210,8 @@ further `--required-returns` file. The rules of use:
 
 ## Definition rules
 
-Three rules of `reference/field_definitions.json` that decide whether a filed field exists
-at all (25):
+The rules of `reference/field_definitions.json` that decide whether a filed field exists
+at all:
 
 1. **Working capital has three kinds and a refusal.** A cash-flow `IncreaseDecreaseIn*`
    component is an asset (positive when the balance grew, an outflow, added), a liability
@@ -327,31 +229,31 @@ at all (25):
    one minus the statutory rate, per period from filed lines, so no operating-income line
    is needed and the EBIT policy does not apply on that path; the through-cycle mean is
    what dampens one-offs.
-4. **The latest-period gate is the model's** (27). `required_on_latest_period` in the
+4. **The latest-period gate is the model's.** `required_on_latest_period` in the
    definitions names, per model, what the latest fiscal period must carry: everything the
    DCF reads (FCFF is that year), the balance sheet only for the mid-cycle model (its
    reinvestment rate is a ratio of sums and its NOPAT applies a through-cycle return to
    today's capital). Inside the mid-cycle window a period lacking a flow is excluded from
    the sum it cannot serve, named on the record, and the guards count what remains: at
    least 8 return observations and at least 8 periods in the reinvestment sums.
-5. **D&A is the largest filed total** (27), inside the FFO recipe too (31). **Under IFRS
-   it excludes impairment** (32): the pure tag first; where absent, the inclusive tag less
-   the impairment filed (the total, else its components) plus the reversal filed, recorded
-   as `inclusive_less_impairment` with every tag; an impairment the filing does not tag is
+5. **D&A is the largest filed total**, inside the FFO recipe too. **Under IFRS it
+   excludes impairment**: the pure tag first; where absent, the inclusive tag less the
+   impairment filed (the total, else its components) plus the reversal filed, recorded as
+   `inclusive_less_impairment` with every tag; an impairment the filing does not tag is
    never subtracted; the plain adjustment tag as a total when neither is filed; and when
    no total of any kind is filed, `DepreciationExpense` plus `AmortisationExpense`, both
-   required, as `sum_of_components_ifrs` (40), the right-of-use depreciation not added
-   because on TSMC the two-tag sum equals the vendor's row exactly. When several D&A total tags are filed in one
-   period the field is the largest, since a total is never smaller than any of its
-   components; every candidate is recorded with the tag taken. The components fallback
-   applies only when no total is filed.
-6. **Debt components are summed when no aggregate or complete pair is filed** (31). A
-   filer with fewer instruments is not missing data: one component per kind, recorded;
+   required, as `sum_of_components_ifrs`, the right-of-use depreciation not added because
+   on TSMC the two-tag sum matched the vendor's row within the threshold. When several
+   D&A total tags are filed in one period the field is the largest, since a total is
+   never smaller than any of its components; every candidate is recorded with the tag
+   taken. The components fallback applies only when no total is filed.
+6. **Debt components are summed when no aggregate or complete pair is filed.** A filer
+   with fewer instruments is not missing data: one component per kind, recorded;
    absent-is-zero applies only when no component and no interest tag is present.
-7. **AOCI by components** (31). When the aggregate is absent the filed components are
-   summed, recorded as `sum_of_components` with each component.
-8. **Interest stand-ins on the mid-cycle path only** (31). When no interest-expense line
-   is filed, a net non-operating interest figure negated, else cash interest paid, stands
+7. **AOCI by components.** When the aggregate is absent the filed components are summed,
+   recorded as `sum_of_components` with each component.
+8. **Interest stand-ins on the mid-cycle path only.** When no interest-expense line is
+   filed, a net non-operating interest figure negated, else cash interest paid, stands
    in, recorded as `net_nonoperating_interest` or `interest_paid_stands_in` on the period
    and on every observation; the DCF path's EBIT policy never reads a stand-in.
 
@@ -524,3 +426,12 @@ in this order:
   the Breeden-Litzenberger quantiles, `p_below_anchor_path` beside `probability_overpaid`
   and the approximate growth quantiles on every Ok record with a chain, with the three
   reasons otherwise. No new `Failed` string; no number moves.
+
+`docs/flow.svg` is rendered from `docs/flow.mmd` with `@mermaid-js/mermaid-cli` 11.17 run
+through `npx` against a headless Chromium in the user's cache (nothing added to the
+project's manifests), the browser launched with `--no-sandbox` because this machine
+restricts user namespaces: `npx -y @mermaid-js/mermaid-cli -p puppeteer.json -c mermaid.json -i docs/flow.mmd -o docs/flow.svg -b white`
+with `puppeteer.json` holding `{"args": ["--no-sandbox"]}` and `mermaid.json` holding
+`{"htmlLabels": false}` (top level; the flowchart-scoped form is ignored), so the labels are SVG text rather than embedded
+HTML, which image viewers and GitHub's image pipeline leave blank. The pair changes in the
+same commit.

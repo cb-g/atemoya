@@ -1679,7 +1679,19 @@ let test_flow_chart_names_every_reason () =
       "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";
       "rate source has no history for"; "ffo growth needs two periods"; "is not positive";
       "no options data"; "no expiry >= 365 days with >= 8 quoted strikes on each side"; "smile fit failed";
-      "no options snapshot within" ]
+      "no options snapshot within" ];
+  (* (51) the chart is one SVG rendered from docs/flow.mmd; the pair changes together *)
+  Alcotest.(check bool) "docs/flow.svg exists" true (Sys.file_exists "../../docs/flow.svg");
+  Alcotest.(check bool) "docs/flow.mmd exists" true (Sys.file_exists "../../docs/flow.mmd");
+  let latest path =
+    match Unix.open_process_in (Printf.sprintf "git -C ../../.. log -1 --format=%%H -- %s 2>/dev/null" path) with
+    | ic ->
+        let out = In_channel.input_all ic in
+        ignore (Unix.close_process_in ic);
+        String.trim out
+    | exception Unix.Unix_error _ -> ""
+  in
+  Alcotest.(check string) "flow.svg and flow.mmd share their latest commit" (latest "docs/flow.mmd") (latest "docs/flow.svg")
 
 (* --- the market-implied readout (36) --- *)
 
