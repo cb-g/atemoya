@@ -1,7 +1,8 @@
 {
   "notes": [
     "The one universe, growing to every name anyone classifies. A declaration, nothing else: the ticker, the class a human declared for it (never inferred), why that class in words meant to hold for years, and what no model can see for the name. No outcome, number, date, tag or parameter lives here; the run records those per record, and whether anything changed since the last run is the baseline diff. The loader is strict: an unknown field is a load error. An entry may declare the SEC filer to read by cik when the ticker map points elsewhere, with the reason in why.",
-    "Reclassified 2026-09-23 (54) by the user: Amazon and Venture Global move from OperatingCompany and Unprofitable to Cyclical, both for the same reason Oracle carries, a capacity build-out inside the growth window that the latest year's free cash flow cannot speak for; Robinhood stays under the software lens with the interest-revenue scope limit written down, so the bank signature its filing fires is a recorded disagreement and not a misclassification. The class judgments drafted in batch 2 were confirmed by the user on the same day."
+    "Reclassified 2026-09-23 (54) by the user: Amazon and Venture Global move from OperatingCompany and Unprofitable to Cyclical, both for the same reason Oracle carries, a capacity build-out inside the growth window that the latest year's free cash flow cannot speak for; Robinhood stays under the software lens with the interest-revenue scope limit written down, so the bank signature its filing fires is a recorded disagreement and not a misclassification. The class judgments drafted in batch 2 were confirmed by the user on the same day.",
+    "FDUS, MAIN and GBDC move from Wrapper to Bdc (59): a business development company is not a wrapper holding other securities, it is a lender whose portfolio is marked to fair value every quarter, and the net asset value lens reads that mark with the coverage of the distribution beside it. The ten other wrappers stay refused."
   ],
   "tickers": [
     {
@@ -709,18 +710,18 @@
     },
     {
       "ticker": "FDUS",
-      "entity_class": "Wrapper",
-      "why": "A business development company; declared a wrapper for now, refused by design; a BDC lens would be net asset value and net investment income, a later class."
+      "entity_class": "Bdc",
+      "why": "Fidus Investment, a business development company lending to lower-middle-market companies; the net asset value the filing marks each quarter is the anchor, and whether net investment income covers the distribution is the check."
     },
     {
       "ticker": "MAIN",
-      "entity_class": "Wrapper",
-      "why": "A business development company; declared a wrapper for now, refused by design; a BDC lens would be net asset value and net investment income, a later class."
+      "entity_class": "Bdc",
+      "why": "Main Street Capital, a business development company lending to and taking equity in lower-middle-market companies, internally managed; the net asset value lens, with the coverage of its monthly distribution the check."
     },
     {
       "ticker": "GBDC",
-      "entity_class": "Wrapper",
-      "why": "A business development company; declared a wrapper for now, refused by design; a BDC lens would be net asset value and net investment income, a later class."
+      "entity_class": "Bdc",
+      "why": "Golub Capital BDC, a business development company holding first-lien loans to sponsor-backed borrowers; the net asset value lens, with the coverage of the distribution the check."
     },
     {
       "ticker": "SPCX",

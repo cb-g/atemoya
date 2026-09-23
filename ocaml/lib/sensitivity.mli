@@ -9,5 +9,10 @@
 
 val note : string
 
+val no_projection : string
+(** (59) Why a model whose anchor is a filed mark has no sensitivity block. *)
+
 val of_inputs :
-  Reference_t.sensitivity_steps -> Boundary_t.model_inputs -> fair_value:float -> Boundary_t.sensitivity
+  Reference_t.sensitivity_steps -> Boundary_t.model_inputs -> fair_value:float ->
+  (Boundary_t.sensitivity, string) result
+(** [Error] with the reason on a path that holds no assumption to step (59). *)

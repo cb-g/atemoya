@@ -401,6 +401,8 @@ def rf_of(v: boundary.Valuation | None) -> float | None:
         return i.value.dcf.risk_free_rate.value
     if isinstance(i, boundary.ResidualIncomeInsurer):
         return i.value.core.risk_free_rate.value
+    if isinstance(i, boundary.BdcNav):
+        return None  # (59) the nav lens holds no rate: nothing on that path is discounted
     return i.value.risk_free_rate.value
 
 

@@ -102,6 +102,18 @@ type fiscal_period = {
   (* REIT (18): funds from operations per the definition, filed statements only. *)
   ?ffo : float option;
   ?ffo_composition : composition option;
+  (* (59) A business development company's three filed lines. Optional, so no other
+     filer's period carries them: the net asset value per share the filing states, the
+     net investment income that is meant to cover the distribution, and the distribution
+     the filer declared per share. *)
+  ?net_asset_value_per_share : float option;
+  ?net_asset_value_per_share_row : string option;   (* the tag, or "net assets / shares outstanding" naming both *)
+  ?net_asset_value_composition : composition option;
+  ?net_investment_income : float option;
+  ?net_investment_income_row : string option;
+  ?net_investment_income_composition : composition option;
+  ?distributions_per_share : float option;
+  ?distributions_per_share_row : string option;
   ?ffo_unavailable : string option;           (* (54) why the definition left ffo null when the reason is structural, not a missing tag: the REIT model fails with this string instead of naming the absent field *)
   ?weighted_shares : float option;            (* the period's weighted-average diluted (else basic) share count, the only count a flow per share may use (19) *)
   ?weighted_shares_tag : string option;
@@ -225,6 +237,7 @@ type model = [
   | Residual_income_insurer <json name="residual_income_insurer">   (* excess returns over AOCI-adjusted book; Insurer *)
   | Reit_ffo_dividend <json name="reit_ffo_dividend">   (* the FFO-covered dividend discounted at the cost of equity; Reit (18) *)
   | Dcf_midcycle <json name="dcf_midcycle">           (* the FCFF DCF on through-cycle earning power; Cyclical (22) *)
+  | Bdc_nav <json name="bdc_nav">                     (* the filed net asset value per share, with the coverage of the distribution beside it; Bdc (59) *)
 ]
 
 (* What a company is judged on: a controlled vocabulary of economic drivers, not sectors.
@@ -243,6 +256,7 @@ type entity_class = [
   | Unprofitable         (* no history of profit to normalise from: cash runway vs the catalyst calendar; no multiple applies (was PreProfit, renamed 22) *)
   | Cyclical             (* earnings set by a commodity price or an industry cycle the company does not control: through-cycle return on today's capital (22) *)
   | Wrapper              (* NAV premium/discount plus distribution by source *)
+  | Bdc                  (* a business development company (59): the filed net asset value per share, and whether net investment income covers the distribution *)
   | ConstructionStage    (* percent complete, distance to first production, debt paydown *)
   | UnderBid             (* the announced offer price; all other valuation suspended *)
   | Ballast              (* nothing; held as a hedge, no directional thesis *)
@@ -629,6 +643,7 @@ type model_inputs = [
   | Residual_income <json name="residual_income"> of residual_income_inputs
   | Residual_income_insurer <json name="residual_income_insurer"> of insurer_inputs
   | Reit_ffo_dividend <json name="reit_ffo_dividend"> of reit_inputs
+  | Bdc_nav <json name="bdc_nav"> of bdc_inputs
 ]
 
 (* Sensitivity (23): the anchor re-evaluated at each held input stepped down and up by a
@@ -725,6 +740,46 @@ type belief_readout = {
 type surplus_point = {
   growth : float;
   surplus : float;
+}
+
+(* The BDC lens (59). A business development company is a portfolio of loans and equity
+   stakes marked to fair value every quarter; its earnings measure is net investment income
+   and its payout is a regulated distribution. It is NOT a discount model: fair value is the
+   filed net asset value per share and nothing else, because the filing's own mark is the
+   anchor and the tool does not second-guess a portfolio of private loans it cannot see. No
+   discount rate, no growth rate and no projection appear anywhere on this path, so the
+   record carries none of the country parameters: they gate the pipeline, they are not
+   inputs to the lens. The readouts are what make the mark useful to a reader: the premium
+   or discount the market puts on it, what the portfolio earns against it, what the holder
+   is paid, and whether that payment is covered. *)
+type bdc_inputs = {
+  fiscal_period_end : string;
+  country : string;
+  industry : string nullable;
+  price : float;
+  market_cap : float;
+  shares : float;                        (* effective shares = market_cap / price, as everywhere *)
+  net_asset_value_per_share : float;     (* the anchor, and the fair value *)
+  net_asset_value_row : string;
+  ?net_asset_value_composition : composition option;   (* present when the per-share figure was not filed and net assets over shares was used *)
+  net_investment_income : float;
+  net_investment_income_row : string;
+  ?net_investment_income_composition : composition option;
+  weighted_shares : float;               (* the period's own weighted-average count, per shares_for_flows: a flow per share may use no other *)
+  weighted_shares_tag : string;
+  net_investment_income_per_share : float;
+  distributions_per_share : float;
+  distributions_per_share_row : string;
+  price_to_nav : float;                  (* price / net asset value per share: above 1 is a premium *)
+  nii_yield_on_nav : float;              (* net investment income per share / net asset value per share *)
+  distribution_yield : float;            (* distributions per share / price *)
+  nii_coverage : float;                  (* net investment income per share / distributions per share *)
+  coverage_note : string;                (* what the coverage means, and that below 1 the distribution erodes the net asset value *)
+  nav_per_share_series : (string * float) list <json repr="object">;   (* period end -> the filed net asset value per share *)
+  nav_periods : string list;             (* the periods the CAGR spans, newest first *)
+  nav_cagr : float;                      (* the compound growth of the filed mark over those periods, measured in calendar years *)
+  ?conversion : conversion option;
+  caveat : string;                       (* the mark is the filer's own, on assets with no quoted price; the tool records it, it does not verify it *)
 }
 
 (* The options store (36): one file per name and snapshot date, data/options/(date)/(TICKER).json,
@@ -891,8 +946,10 @@ type valuation = {
   status : status;
   failed_reason : string nullable;
   inputs : model_inputs nullable;
-  ?implied : implied option;              (* present iff status is Ok (12) *)
-  ?sensitivity : sensitivity option;      (* present iff status is Ok (23) *)
+  ?implied : implied option;              (* present iff status is Ok (12), and (59) the model has something to solve for *)
+  ?implied_reason : string option;        (* (59) why there are no implied readouts: a model whose anchor is a filed mark has no parameter to invert *)
+  ?sensitivity : sensitivity option;      (* present iff status is Ok (23), and (59) the model holds an input worth stepping *)
+  ?sensitivity_reason : string option;    (* (59) why there is no sensitivity block *)
   ?belief_map : belief_map option;        (* present on an Ok record with a growth-then-terminal structure: dcf, dcf_midcycle, reit_ffo_dividend (23) *)
   ?belief_map_reason : string option;     (* present instead on an Ok record without one: the residual-income paths (23) *)
   ?belief_version : string option;        (* (24) on every Ok record that used a belief; absent (null) on a run without one for the name *)

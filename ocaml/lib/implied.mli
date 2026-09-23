@@ -57,7 +57,11 @@ val dcf_block : Boundary_t.inputs -> price:float -> Boundary_t.implied
 (** The dcf readouts on the engine's inputs; the mid-cycle model (22) reads the same
     block on its own fcff and g0. *)
 
-val of_inputs : Boundary_t.model_inputs -> price:float -> Boundary_t.implied
+val no_projection : string
+(** (59) Why a model whose anchor is a filed mark has no implied readouts. *)
+
+val of_inputs : Boundary_t.model_inputs -> price:float -> (Boundary_t.implied, string) result
 (** The three readouts for an Ok record (level and half-life by bisection, the horizon by
     an integer scan over 1..40 under the same guard), every null with its reason, the
-    three-way rule that picked the meaningful one, and the inputs held fixed. *)
+    three-way rule that picked the meaningful one, and the inputs held fixed; [Error] with
+    the reason on a path with no parameter to invert (59). *)

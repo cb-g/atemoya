@@ -187,10 +187,15 @@ let dcf_block (i : inputs) ~price =
         ("shares", i.shares); ("g0", i.g0); ("mean_reversion_lambda", lambda);
         ("risk_free_rate", i.risk_free_rate.value) ]
 
+(* (59) A model whose anchor is a filed mark has no parameter to invert: there is no
+   starting growth, no return and no horizon that the price could be read back into. *)
+let no_projection = "the anchor is a filed mark, not a projection: there is no parameter to solve the price back into"
+
 let of_inputs (m : model_inputs) ~price =
   match m with
-  | `Dcf i -> dcf_block i ~price
-  | `Dcf_midcycle m -> dcf_block m.dcf ~price
+  | `Bdc_nav _ -> Error no_projection
+  | `Dcf i -> Ok (dcf_block i ~price)
+  | `Dcf_midcycle m -> Ok (dcf_block m.dcf ~price)
   | `Reit_ffo_dividend (i : reit_inputs) ->
       let terminal = i.terminal_growth_rate.value in
       let lambda = i.mean_reversion_lambda.value in
@@ -206,12 +211,12 @@ let of_inputs (m : model_inputs) ~price =
         solve_horizon ~driver:"growth" ~target_name:"terminal" ~start:i.g0 ~target:terminal ~price
           ~f:(fun n -> reit_fair_value ~projection_years:n i ~g0:i.g0 ~lambda)
       in
-      block ~implied_roe_target:None ~roe_target_domain:None ~level_name:"implied_g0" ~level ~level_domain ~half_life_years ~horizon ~guard:above
+      Ok (block ~implied_roe_target:None ~roe_target_domain:None ~level_name:"implied_g0" ~level ~level_domain ~half_life_years ~horizon ~guard:above
         ~guard_rule:(Printf.sprintf "g0 %.4f %s terminal growth %.4f" i.g0 (if above then ">" else "<=") terminal)
         ~held:
           [ ("dividend_per_share", i.dividend_per_share); ("cost_of_equity", i.cost_of_equity);
             ("terminal_growth_rate", terminal); ("projection_years", float_of_int i.projection_years.value);
-            ("g0", i.g0); ("mean_reversion_lambda", lambda); ("risk_free_rate", i.risk_free_rate.value) ]
+            ("g0", i.g0); ("mean_reversion_lambda", lambda); ("risk_free_rate", i.risk_free_rate.value) ])
   | `Residual_income i | `Residual_income_insurer { core = i; _ } ->
       let lambda = i.mean_reversion_lambda.value in
       let level =
@@ -232,10 +237,10 @@ let of_inputs (m : model_inputs) ~price =
         solve_roe_target ~price ~domain:(tlo, thi) ~cost_of_equity:i.cost_of_equity
           ~f:(fun roe_target -> residual_income_fair_value i ~roe_0:i.roe_0 ~lambda ~roe_target)
       in
-      block ~implied_roe_target:(Some implied_roe_target) ~roe_target_domain:(Some [ tlo; thi ])
+      Ok (block ~implied_roe_target:(Some implied_roe_target) ~roe_target_domain:(Some [ tlo; thi ])
         ~level_name:"implied_roe0" ~level ~level_domain:roe_domain ~half_life_years ~horizon ~guard:above
         ~guard_rule:(Printf.sprintf "roe_0 %.4f %s cost of equity %.4f" i.roe_0 (if above then ">" else "<=") i.cost_of_equity)
         ~held:
           [ ("book_equity", i.book_equity); ("retention", i.retention); ("cost_of_equity", i.cost_of_equity);
             ("projection_years", float_of_int i.projection_years.value); ("shares", i.shares);
-            ("roe_0", i.roe_0); ("mean_reversion_lambda", lambda); ("risk_free_rate", i.risk_free_rate.value) ]
+            ("roe_0", i.roe_0); ("mean_reversion_lambda", lambda); ("risk_free_rate", i.risk_free_rate.value) ])

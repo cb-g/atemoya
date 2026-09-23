@@ -16,7 +16,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?claims_liability ?claims_liability_row ?total_revenue_row ?ebit_row ?pretax_income_row
     ?tax_provision_row ?capex_row ?delta_nwc_row ?cash_row ?book_equity_row ?net_income_row
     ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
-    ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?ffo_unavailable ?weighted_shares
+    ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?ffo_unavailable ?net_asset_value_per_share ?net_asset_value_per_share_row ?net_asset_value_composition ?net_investment_income ?net_investment_income_row ?net_investment_income_composition ?distributions_per_share ?distributions_per_share_row ?weighted_shares
     ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates ?aoci_recipe ?aoci_composition
     ?interest_recipe ?depreciation_amortization_recipe ?depreciation_amortization_composition () : Boundary_t.fiscal_period =
   {
@@ -72,6 +72,14 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ffo;
     ffo_composition;
     ffo_unavailable;
+    net_asset_value_per_share;
+    net_asset_value_per_share_row;
+    net_asset_value_composition;
+    net_investment_income;
+    net_investment_income_row;
+    net_investment_income_composition;
+    distributions_per_share;
+    distributions_per_share_row;
     weighted_shares;
     weighted_shares_tag;
     ebit_recipe;
@@ -249,6 +257,7 @@ let params : Params.t =
             "Unprofitable": {"lens": "cash runway vs the catalyst calendar", "admissible_models": [], "never": "any multiple", "floor_basis_default": "no floor until the catalyst", "floor_present_default": false},
             "Cyclical": {"lens": "through-cycle return on invested capital applied to today's capital", "admissible_models": ["dcf_midcycle"], "never": "a DCF on one year's FCFF", "floor_basis_default": "a completed mid-cycle DCF", "scope_limits_default": ["the through-cycle average is backward-looking"]},
             "Wrapper": {"lens": "NAV premium or discount", "admissible_models": [], "never": "headline yield", "floor_basis_default": "NAV per unit"},
+            "Bdc": {"lens": "net asset value per share and the coverage of the distribution", "admissible_models": ["bdc_nav"], "never": "a DCF or a multiple of earnings", "floor_basis_default": "the filed net asset value per share"},
             "HighGrowthSoftware": {"lens": "the DCF at the settled reversion is the anchor", "admissible_models": ["dcf"], "never": "P/E or FCF yield", "floor_basis_default": "a completed FCFF DCF"}}}|};
     fx_sources =
       Reference_j.fx_sources_of_string
@@ -1118,6 +1127,7 @@ let test_bank_routes_to_residual_income () =
   | Some (`Residual_income_insurer _) -> Alcotest.fail "a bank reached the insurer model"
   | Some (`Reit_ffo_dividend _) -> Alcotest.fail "a bank reached the reit model"
   | Some (`Dcf_midcycle _) -> Alcotest.fail "a bank reached the mid-cycle dcf"
+  | Some (`Bdc_nav _) -> Alcotest.fail "a bank reached the bdc lens"
   | None -> Alcotest.fail "no inputs");
   match v.class_check with
   | Some e -> Alcotest.check class_check_outcome "signature consistent" `Consistent e.outcome
@@ -1193,7 +1203,7 @@ let test_midcycle_arithmetic () =
   check_float "fair value = (EV - net debt) / shares" ((ev -. 4000.) /. 500.) fair_value;
   (* the implied solvers on the same inputs *)
   check_float "dcf_fair_value reproduces it" fair_value (Implied.dcf_fair_value m.dcf ~g0:m.dcf.g0 ~lambda:0.25);
-  let readouts = Implied.of_inputs (`Dcf_midcycle m) ~price:fair_value in
+  let readouts = get (Implied.of_inputs (`Dcf_midcycle m) ~price:fair_value) in
   (match readouts.level.value with
   | Some g -> Alcotest.(check bool) "implied_g0 at the fair value recovers g0" true (Float.abs (g -. m.dcf.g0) < 1e-4)
   | None -> Alcotest.failf "no level: %s" (Option.value readouts.level.reason ~default:""));
@@ -1374,7 +1384,7 @@ let dcf_ok () =
 let test_sensitivity_by_hand () =
   let v, i, fv = dcf_ok () in
   check_float "anchor" 12. fv;
-  let s = Sensitivity.of_inputs steps (`Dcf i) ~fair_value:fv in
+  let s = get (Sensitivity.of_inputs steps (`Dcf i) ~fair_value:fv) in
   let entry name = List.find (fun (e : Boundary_t.sensitivity_entry) -> e.input = name) s.entries in
   let fcff = entry "fcff" in
   Alcotest.(check (option approx)) "fcff down" (Some 10.) fcff.down.value;
@@ -1398,7 +1408,7 @@ let test_sensitivity_by_hand () =
   | None -> Alcotest.fail "no sensitivity on an Ok record");
   (* a step that crosses a guard: terminal growth at 6.5% with wacc 7%, the wacc step down reaches it *)
   let tight = { i with terminal_growth_rate = param 0.065 } in
-  let s = Sensitivity.of_inputs steps (`Dcf tight) ~fair_value:fv in
+  let s = get (Sensitivity.of_inputs steps (`Dcf tight) ~fair_value:fv) in
   let wacc = List.find (fun (e : Boundary_t.sensitivity_entry) -> e.input = "wacc") s.entries in
   Alcotest.(check (option approx)) "the crossing side is null" None wacc.down.value;
   check_mentions "with the reason" (Option.value wacc.down.reason ~default:"") [ "wacc 0.0600 does not exceed terminal growth 0.0650" ];
@@ -1409,7 +1419,7 @@ let test_sensitivity_by_hand () =
   Alcotest.(check bool) "a guarded input is not ranked" false (List.mem "wacc" s.ranking);
   (* the residual-income path steps roe_0, lambda, cost of equity and book *)
   let bank = get (Residual_income.value bank_assumptions ~country:"T" (bank_financials (bank_history ()))) in
-  let ri = Sensitivity.of_inputs steps (`Residual_income (fst bank)) ~fair_value:(snd bank) in
+  let ri = get (Sensitivity.of_inputs steps (`Residual_income (fst bank)) ~fair_value:(snd bank)) in
   Alcotest.(check (list string)) "ri inputs" [ "roe_0"; "mean_reversion_lambda"; "cost_of_equity"; "book_equity" ]
     (List.map (fun (e : Boundary_t.sensitivity_entry) -> e.input) ri.entries)
 
@@ -2548,7 +2558,7 @@ let growing () =
 (* The block for the same inputs at another price: what the solver sees on a record is
    exactly this (price enters the record's wacc through market cap, so a repriced record
    would be a different function; the solver holds the recorded one). *)
-let implied_at (m : Boundary_t.model_inputs) price = Implied.of_inputs m ~price
+let implied_at (m : Boundary_t.model_inputs) price = get (Implied.of_inputs m ~price)
 
 let test_bisect () =
   (match Implied.bisect ~f:(fun x -> x *. x) ~target:2. ~lo:0. ~hi:3. ~tolerance:1e-9 with
@@ -3169,7 +3179,7 @@ let test_ok () =
   Alcotest.(check bool) "signal present" true (Option.is_some v.signal);
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
-  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _ | `Dcf_midcycle _) -> Alcotest.fail "routed to the wrong model"
+  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _ | `Dcf_midcycle _ | `Bdc_nav _) -> Alcotest.fail "routed to the wrong model"
   | Some (`Dcf i) ->
       Alcotest.(check string) "country" "United States" i.country;
       Alcotest.(check (option string)) "industry" (Some "Consumer Electronics") i.industry;
@@ -3227,7 +3237,7 @@ let test_no_industry () =
   Alcotest.check status "status" `Ok v.status;
   match v.inputs with
   | None -> Alcotest.fail "Ok without inputs"
-  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _ | `Dcf_midcycle _) -> Alcotest.fail "routed to the wrong model"
+  | Some (`Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _ | `Dcf_midcycle _ | `Bdc_nav _) -> Alcotest.fail "routed to the wrong model"
   | Some (`Dcf i) ->
       check_float "beta" 1.0 i.beta.value;
       Alcotest.check beta_source "beta_source" `Default_no_industry i.beta_source;
@@ -3405,6 +3415,122 @@ let test_options_store_no_lookahead () =
       ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
   Alcotest.(check (option string)) "the lookup's reason is the record's" (Some "no options snapshot within 7 days before 2025-06-30") gone.market_implied_reason
 
+(* --- the BDC lens (59) --- *)
+
+let bdc_period ?(period_end = "2025-12-31") ?nav ?(nav_row = "NetAssetValuePerShare") ?nav_composition
+    ?(nii = 76.097) ?(dps = 2.15) ?(weighted_shares = 35.489578) () =
+  { (period ~period_end ~net_income:70. ~book_equity:694. ()) with
+    net_asset_value_per_share = nav;
+    net_asset_value_per_share_row = (if Option.is_some nav then Some nav_row else None);
+    net_asset_value_composition = nav_composition;
+    net_investment_income = Some nii;
+    net_investment_income_row = Some "InvestmentIncomeNet";
+    distributions_per_share = Some dps;
+    distributions_per_share_row = Some "CommonStockDividendsPerShareDeclared";
+    weighted_shares = Some weighted_shares;
+    weighted_shares_tag = Some "WeightedAverageNumberOfSharesOutstandingBasic" }
+
+let bdc_financials periods =
+  { (filed periods) with price = Some 20.; market_cap = Some 700.; industry = Some "Asset Management" }
+
+let bdc_history ?(navs = [ 19.55; 19.33; 19.37 ]) () =
+  List.mapi
+    (fun i nav -> bdc_period ~period_end:(Printf.sprintf "%d-12-31" (2025 - i)) ~nav ())
+    navs
+
+let test_bdc_nav_is_the_anchor_and_the_readouts_are_ratios () =
+  let inputs, fair_value = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_history ()))) in
+  (* the anchor is the filed mark, and nothing is discounted *)
+  check_float "fair value IS the filed net asset value per share" 19.55 fair_value;
+  check_float "and the record says the same" 19.55 inputs.net_asset_value_per_share;
+  Alcotest.(check string) "taken from the filed tag" "NetAssetValuePerShare" inputs.net_asset_value_row;
+  Alcotest.(check bool) "no discount rate anywhere on the record" false
+    (contains (Boundary_j.string_of_bdc_inputs inputs) "cost_of_equity");
+  Alcotest.(check bool) "and no growth rate either" false
+    (contains (Boundary_j.string_of_bdc_inputs inputs) "terminal_growth");
+  (* the four readouts, each a ratio of filed lines *)
+  check_float "price to nav" (20. /. 19.55) inputs.price_to_nav;
+  check_float "nii per share on the period's own weighted count" (76.097 /. 35.489578) inputs.net_investment_income_per_share;
+  check_float "nii yield on nav" (76.097 /. 35.489578 /. 19.55) inputs.nii_yield_on_nav;
+  check_float "distribution yield on price" (2.15 /. 20.) inputs.distribution_yield;
+  check_float "coverage is nii per share over the distribution" (76.097 /. 35.489578 /. 2.15) inputs.nii_coverage;
+  (* the trend of the mark itself, over the filed periods *)
+  Alcotest.(check (list string)) "nav periods, newest first" [ "2025-12-31"; "2024-12-31"; "2023-12-31" ] inputs.nav_periods;
+  (* the trend runs from the oldest filed mark to the newest, in calendar years *)
+  check_float "the trend is the compound change in the filed mark"
+    (((19.55 /. 19.37) ** (365.25 /. 731.)) -. 1.) inputs.nav_cagr;
+  let falling = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_history ~navs:[ 18.0; 19.0; 20.0 ] ()))) in
+  Alcotest.(check bool) "a mark that fell reads a negative trend" true ((fst falling).nav_cagr < 0.);
+  check_mentions "the caveat is on every record" inputs.caveat [ "the filer's own"; "does not verify" ]
+
+let test_bdc_nav_recipe_coverage_and_guards () =
+  (* without the per-share tag the recipe is net assets over shares, and the composition says so *)
+  let composed =
+    let parts : Boundary_t.component list =
+      [ { name = "net_assets"; value = 694.0; row = "StockholdersEquity" };
+        { name = "shares_outstanding"; value = 35.0; row = "CommonStockSharesOutstanding" } ]
+    in
+    bdc_period ~nav:(694.0 /. 35.0) ~nav_row:"StockholdersEquity / CommonStockSharesOutstanding"
+      ~nav_composition:{ definition = "filed_net_asset_value_and_its_coverage"; components = parts } ()
+  in
+  let periods = composed :: List.tl (bdc_history ()) in
+  let inputs, fv = get (Bdc.value assumptions ~country:"United States" (bdc_financials periods)) in
+  check_float "the recipe's mark is the fair value" (694.0 /. 35.0) fv;
+  check_mentions "and the row names both tags" inputs.net_asset_value_row [ "StockholdersEquity"; "CommonStockSharesOutstanding" ];
+  Alcotest.(check bool) "with the composition recorded" true (Option.is_some inputs.net_asset_value_composition);
+  (* coverage below one is said on the record; at or above one it reads the other way *)
+  let thin = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period ~nav:19.55 ~nii:35. () :: List.tl (bdc_history ())))) in
+  Alcotest.(check bool) "below one" true ((fst thin).nii_coverage < 1.);
+  check_mentions "and the record says what that means" (fst thin).coverage_note
+    [ "covers only"; "paid out of capital and erodes the net asset value" ];
+  let fat = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period ~nav:19.55 ~nii:200. () :: List.tl (bdc_history ())))) in
+  Alcotest.(check bool) "above one" true ((fst fat).nii_coverage > 1.);
+  check_mentions "and that too" (fst fat).coverage_note [ "covers the distribution"; "retained and lifts" ];
+  (* the trend needs two periods with a filed mark *)
+  check_error "one period is not a trend"
+    (Bdc.value assumptions ~country:"United States" (bdc_financials [ bdc_period ~nav:19.55 () ]))
+    [ "net asset value growth needs two periods carrying a filed net asset value per share, have 1" ];
+  (* every absent filed line is named, never defaulted *)
+  check_error "no mark" (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period () :: List.tl (bdc_history ()))))
+    [ "missing statement fields"; "net_asset_value_per_share" ];
+  check_error "a distribution of nothing has no coverage to read"
+    (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period ~nav:19.55 ~dps:0. () :: List.tl (bdc_history ()))))
+    [ "distributions per share 0 is not positive" ]
+
+let test_bdc_routes_refuses_the_projection_readouts_and_never_enters_the_frontier () =
+  let v = run ~declared:(Some (declaration `Bdc)) (bdc_financials (bdc_history ())) in
+  Alcotest.check status "a bdc values" `Ok v.status;
+  Alcotest.(check (option model)) "routed to the nav lens" (Some `Bdc_nav) v.model;
+  Alcotest.(check (option signal)) "a discount reads Buy or Hold, a premium Sell" (Some `Hold) v.signal;
+  check_mentions "the floor is the filed mark" v.floor.basis [ "bdc nav"; "net asset value"; "as filed" ];
+  (* nothing to invert, nothing to step, nothing for a belief to be about *)
+  Alcotest.(check bool) "no implied block" true (Option.is_none v.implied);
+  check_mentions "with the reason" (Option.value v.implied_reason ~default:"") [ "filed mark, not a projection" ];
+  Alcotest.(check bool) "no sensitivity block" true (Option.is_none v.sensitivity);
+  check_mentions "with the reason" (Option.value v.sensitivity_reason ~default:"") [ "filed mark, not a projection" ];
+  Alcotest.(check bool) "no belief" true (Option.is_none v.belief);
+  Alcotest.(check bool) "no curve, so no frontier entry" true (Option.is_none v.surplus_curve);
+  check_mentions "with the reason" (Option.value v.surplus_curve_reason ~default:"") [ "filed mark, not a projection" ];
+  Alcotest.(check bool) "no belief map" true (Option.is_none v.belief_map);
+  let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
+  Alcotest.check valuation "json round trip" v again
+
+let test_valeros_subtotal_tag_stays_unclassified () =
+  (* (59) The reconciliation admits a tag only where it reconciles. On Valero the one tag
+     those years leave over is the face-line subtotal of the components beside it, so no
+     kind reconciles and it stays out of all five lists; the definition's notes carry the
+     arithmetic. A filer carrying it as a real component is why it is not simply excluded. *)
+  let d = params.field_definitions.delta_nwc.xbrl in
+  let tag = "IncreaseDecreaseInOtherCurrentAssetsAndLiabilitiesNet" in
+  List.iter
+    (fun (name, l) -> Alcotest.(check bool) (tag ^ " not in " ^ name) false (List.mem tag l))
+    [ ("aggregate", d.aggregate); ("asset_components", d.asset_components);
+      ("liability_components", d.liability_components); ("net_components", d.net_components);
+      ("excluded", d.excluded) ];
+  (* and an unclassified tag on a period leaves the field null naming it, as it always has *)
+  Alcotest.(check bool) "the refusal is recorded in the notes with its years" true
+    (List.exists (fun n -> contains n "IT STAYS UNCLASSIFIED" && contains n "FY2011-FY2019") d.notes)
+
 let () =
   let case name f = Alcotest.test_case name `Quick f in
   Alcotest.run "atemoya"
@@ -3513,6 +3639,13 @@ let () =
           case "growth on the weighted count, never a point count" test_reit_growth_uses_the_weighted_count_not_a_point_count;
           case "covered dividend, growth needs two periods, guards" test_reit_covered_dividend_and_guards;
           case "routes, floors, implied g0 and horizon" test_reit_routes_and_implied;
+        ] );
+      ( "bdc",
+        [
+          case "the filed mark is the anchor and the readouts are ratios (59)" test_bdc_nav_is_the_anchor_and_the_readouts_are_ratios;
+          case "the recipe, the coverage note and every guard (59)" test_bdc_nav_recipe_coverage_and_guards;
+          case "routes, refuses the projection readouts, never enters the frontier (59)" test_bdc_routes_refuses_the_projection_readouts_and_never_enters_the_frontier;
+          case "Valero's subtotal tag stays unclassified (59)" test_valeros_subtotal_tag_stays_unclassified;
           case "a financing-lease filer is refused with the structural reason" test_reit_refuses_a_financing_lease_filer;
         ] );
       ( "point-in-time",

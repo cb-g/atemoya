@@ -59,6 +59,7 @@ let model_reads (m : model option) =
   | Some `Dcf_midcycle -> [ "net_income"; "depreciation_amortization"; "capex"; "delta_nwc"; "cash"; "total_debt"; "book_equity" ]
   | Some `Residual_income | Some `Residual_income_insurer -> [ "book_equity"; "net_income"; "dividends_paid" ]
   | Some `Reit_ffo_dividend -> [ "net_income"; "depreciation_amortization"; "dividends_paid" ]
+  | Some `Bdc_nav -> [ "net_asset_value_per_share"; "net_investment_income"; "distributions_per_share" ]
   | None -> []
 
 let flagged_fields (v : valuation) =
@@ -491,6 +492,22 @@ let rec drivers (inputs : model_inputs) =
           @ match i.country_risk_premium with Some c -> [ ("country_risk_premium", c) ] | None -> [])
       @ [ ("projection_years", float_of_int i.projection_years.value, "") ]
       @ conversion_driver i.conversion
+  | `Bdc_nav (i : bdc_inputs) ->
+      (* (59) Filed lines and the ratios of them; no parameter appears, because none is an
+         input to this lens. *)
+      [
+        ("price", i.price, "");
+        ("market_cap", i.market_cap, "");
+        ("net_asset_value_per_share", i.net_asset_value_per_share, " (" ^ i.net_asset_value_row ^ ")");
+        ("net_investment_income", i.net_investment_income, " (" ^ i.net_investment_income_row ^ ")");
+        ("net_investment_income_per_share", i.net_investment_income_per_share,
+         Printf.sprintf " (on %.0f weighted-average shares)" i.weighted_shares);
+        ("distributions_per_share", i.distributions_per_share, " (" ^ i.distributions_per_share_row ^ ")");
+        ("price_to_nav", i.price_to_nav, "");
+        ("nii_coverage", i.nii_coverage, "");
+        ("nav_cagr", i.nav_cagr, Printf.sprintf " (filed net asset value per share over %s)" (String.concat ", " i.nav_periods));
+      ]
+      @ conversion_driver i.conversion
 
 let differs a b =
   let scale = Float.max (Float.abs a) (Float.abs b) in
@@ -615,6 +632,7 @@ let run_diff ?(baseline_raw = []) ~baseline (vs : valuation list) =
                 | Some (`Residual_income_insurer _) -> "residual_income_insurer"
                 | Some (`Reit_ffo_dividend _) -> "reit_ffo_dividend"
                 | Some (`Dcf_midcycle _) -> "dcf_midcycle"
+                | Some (`Bdc_nav _) -> "bdc_nav"
                 | None -> "-");
               List.iter
                 (fun (name, nv, ntext) ->
@@ -717,6 +735,7 @@ let identity (v : valuation) (fin : financials option) =
     | Some (`Residual_income_insurer i) -> Some i.core.fiscal_period_end
     | Some (`Reit_ffo_dividend i) -> Some i.fiscal_period_end
     | Some (`Dcf_midcycle m) -> Some m.dcf.fiscal_period_end
+    | Some (`Bdc_nav i) -> Some i.fiscal_period_end
     | None -> None
   in
   let accession =
@@ -797,6 +816,8 @@ let stability ~snapshot_old ~snapshot_new ~(old : (valuation * financials option
     | Some (`Residual_income_insurer i) -> Some i.core.risk_free_rate.as_of
     | Some (`Reit_ffo_dividend i) -> Some i.risk_free_rate.as_of
     | Some (`Dcf_midcycle m) -> Some m.dcf.risk_free_rate.as_of
+    (* (59) no risk-free rate on this path: the lens holds no parameter *)
+    | Some (`Bdc_nav _) -> None
     | None -> None
   in
   let as_of_pair =

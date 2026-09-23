@@ -30,6 +30,7 @@ let parameters (m : model_inputs) =
       Ok ("dividend_per_share", i.dividend_per_share, "cost_of_equity", i.cost_of_equity, i.terminal_growth_rate.value, 0., 1., i.g0)
   | `Residual_income _ | `Residual_income_insurer _ ->
       Error "no belief map: the residual-income path has no growth-then-terminal structure to hold a growth on"
+  | `Bdc_nav _ -> Error ("no belief map: " ^ Sensitivity.no_projection)
 
 let contour ~base ~rate ~terminal ~net_debt ~shares ~price =
   let lo, hi = growth_domain in

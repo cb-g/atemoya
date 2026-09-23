@@ -357,6 +357,12 @@ class Facts:
                 return value, tag
         return None
 
+    @property
+    def per_share_unit(self) -> str:
+        """(59) The unit a per-share fact carries: the filer's currency over shares. A
+        per-share tag read in the plain currency unit silently finds nothing."""
+        return f"{self._unit}/shares"
+
     def duration_tags_with_prefix(self, prefix: str, end: date) -> list[str]:
         """Every tag with the prefix that carries an annual duration fact at [end]."""
         return sorted(tag for tag in self._gaap if tag.startswith(prefix) and self.at(tag, end, instant=False) is not None)
@@ -614,6 +620,53 @@ def ffo(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: 
     return sum(p.value for p in parts), _label(parts), _composition(defs.ffo.name, parts), None
 
 
+BdcLines = tuple[
+    tuple[float, str, "boundary.Composition | None"] | None,   # net asset value per share
+    tuple[float, str, "boundary.Composition | None"] | None,   # net investment income
+    tuple[float, str] | None,                                  # distributions per share
+]
+
+
+def bdc_lines(facts: Facts, defs: reference.FieldDefinitions, end: date) -> BdcLines:
+    """(59) The three filed lines the BDC lens reads, each taken AT the fiscal period end
+    and never as the newest instant: the tag carries quarter-end instants filed under form
+    10-K with fp FY, from the financial-highlights table. Net asset value per share as
+    filed, else net assets over shares outstanding with both tags recorded; net investment
+    income as the filer's own line, else total investment income less total expenses;
+    distributions per share, declared or paid."""
+    definition = defs.bdc
+    if definition is None:
+        return (None, None, None)
+    d = definition.xbrl
+
+    nav: tuple[float, str, boundary.Composition | None] | None = None
+    filed = facts.first(d.net_asset_value_per_share, end, instant=True, unit=facts.per_share_unit)
+    if filed is not None:
+        nav = (filed[0], filed[1], None)
+    else:
+        assets = facts.first(d.net_assets, end, instant=True)
+        count = facts.first(d.shares_outstanding, end, instant=True, unit="shares")
+        if assets is not None and count is not None and count[0] > 0:
+            parts = [boundary.Component(name="net_assets", value=assets[0], row=assets[1]),
+                     boundary.Component(name="shares_outstanding", value=count[0], row=count[1])]
+            nav = (assets[0] / count[0], f"{assets[1]} / {count[1]}", _composition(definition.name, parts))
+
+    nii: tuple[float, str, boundary.Composition | None] | None = None
+    line = facts.first(d.net_investment_income, end, instant=False)
+    if line is not None:
+        nii = (line[0], line[1], None)
+    else:
+        income = facts.first(d.total_investment_income, end, instant=False)
+        expense = facts.first(d.total_expenses, end, instant=False)
+        if income is not None and expense is not None:
+            parts = [boundary.Component(name="total_investment_income", value=income[0], row=income[1]),
+                     boundary.Component(name="total_expenses", value=-expense[0], row=expense[1])]
+            nii = (income[0] - expense[0], f"{income[1]} - {expense[1]}", _composition(definition.name, parts))
+
+    dps = facts.first(d.distributions_per_share, end, instant=False, unit=facts.per_share_unit)
+    return (nav, nii, (dps if dps is None else (dps[0], dps[1])))
+
+
 def aoci(facts: Facts, defs: reference.FieldDefinitions, end: date, filed: tuple[float | None, str | None]) -> tuple[float | None, str | None, str | None, boundary.Composition | None]:
     """AOCI (31): the filed aggregate, else the sum of the filed components with the recipe
     recorded. (value, row, recipe, composition)."""
@@ -659,10 +712,31 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
     ifrs = taxonomy == "ifrs-full"
     selected = select(gaap, tags, notes, taxonomy=taxonomy, unit=unit)
     facts = Facts(gaap, tags, notes, unit=unit)
-    ends = sorted(set(selected["net_income"]) & set(selected["book_equity"]), reverse=True)[:depth]
+    # The fiscal year ends the filer anchors. Net income with book equity for every filer
+    # that reports one; (59) a business development company's net asset value per share
+    # stands in beside it, because two of the three verified stop tagging net income (and
+    # one tags its realised-gain line under that element), which would otherwise leave the
+    # newest years out. No other filer carries the tag, so no other filer's set moves.
+    nav_tags: list[str] = list(defs.bdc.xbrl.net_asset_value_per_share) if defs.bdc is not None else []
+    nav_ends: set[date] = set()
+    for tag in nav_tags:
+        nav_ends |= set(facts.annual(tag, instant=True, unit=facts.per_share_unit))
+    anchored = set(selected["net_income"]) & set(selected["book_equity"])
+    ends = sorted(anchored | (nav_ends & set(selected["book_equity"])), reverse=True)[:depth]
+
+    def anchor_for(end: date) -> Fact:
+        hit = selected["net_income"].get(end)
+        if hit is not None:
+            return hit[0]
+        for tag in nav_tags:
+            fact = facts.annual(tag, instant=True, unit=facts.per_share_unit).get(end)
+            if fact is not None:
+                return fact
+        raise KeyError(end)  # unreachable: end came from one of the two sets
+
     periods: list[boundary.FiscalPeriod] = []
     for end in ends:
-        anchor = selected["net_income"][end][0]
+        anchor = anchor_for(end)
         v: dict[str, float | None] = {}
         r: dict[str, str | None] = {}
         for field, _ in taxonomy_fields(tags, taxonomy):
@@ -680,6 +754,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
             nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
         ffo_value, _, ffo_composition, ffo_unavailable = ffo(facts, defs, end, taxonomy=taxonomy)
+        nav_line, nii_line, dps_line = bdc_lines(facts, defs, end) if not ifrs else (None, None, None)
         shares = weighted_shares(facts, defs, end, taxonomy=taxonomy)
         interest_value, interest_row, interest_recipe = interest_expense(facts, defs, end, taxonomy=taxonomy)
         aoci_value, aoci_row, aoci_recipe, aoci_composition = aoci(facts, defs, end, (v["aoci"], r["aoci"]))
@@ -714,6 +789,14 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 cash_composition=cash_composition,
                 total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,
                 ffo=ffo_value, ffo_composition=ffo_composition, ffo_unavailable=ffo_unavailable,
+                net_asset_value_per_share=None if nav_line is None else nav_line[0],
+                net_asset_value_per_share_row=None if nav_line is None else nav_line[1],
+                net_asset_value_composition=None if nav_line is None else nav_line[2],
+                net_investment_income=None if nii_line is None else nii_line[0],
+                net_investment_income_row=None if nii_line is None else nii_line[1],
+                net_investment_income_composition=None if nii_line is None else nii_line[2],
+                distributions_per_share=None if dps_line is None else dps_line[0],
+                distributions_per_share_row=None if dps_line is None else dps_line[1],
                 weighted_shares=None if shares is None else shares[0], weighted_shares_tag=None if shares is None else shares[1],
             )
         )

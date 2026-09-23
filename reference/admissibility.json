@@ -98,6 +98,18 @@
       "never": "headline yield or a DCF: the wrapper holds other securities",
       "floor_basis_default": "NAV per unit of the holdings"
     },
+    "Bdc": {
+      "lens": "net asset value per share and the net investment income that covers the distribution; never earnings or FCF",
+      "admissible_models": [
+        "bdc_nav"
+      ],
+      "never": "a DCF, FFO, or a multiple of earnings: the portfolio is marked to fair value every quarter and the mark is the anchor",
+      "floor_basis_default": "the filed net asset value per share",
+      "scope_limits_default": [
+        "the net asset value is the filer's own mark on private loans and equity stakes with no quoted price; the tool records it and does not verify it",
+        "realised credit losses show up in the mark only when the filer takes them, so a deteriorating portfolio is visible late"
+      ]
+    },
     "ConstructionStage": {
       "lens": "percent complete, distance to first production, debt paydown against the deadline",
       "admissible_models": [],

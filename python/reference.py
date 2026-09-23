@@ -2610,6 +2610,94 @@ class CashDefinition:
 
 
 @dataclass
+class BdcTags:
+    """Original type: bdc_tags = { ... }
+    """
+
+    net_asset_value_per_share: List[str]
+    net_assets: List[str]
+    shares_outstanding: List[str]
+    net_investment_income: List[str]
+    total_investment_income: List[str]
+    total_expenses: List[str]
+    distributions_per_share: List[str]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BdcTags':
+        if isinstance(x, dict):
+            return cls(
+                net_asset_value_per_share=_atd_read_list(_atd_read_string)(x['net_asset_value_per_share']) if 'net_asset_value_per_share' in x else _atd_missing_json_field('BdcTags', 'net_asset_value_per_share'),
+                net_assets=_atd_read_list(_atd_read_string)(x['net_assets']) if 'net_assets' in x else _atd_missing_json_field('BdcTags', 'net_assets'),
+                shares_outstanding=_atd_read_list(_atd_read_string)(x['shares_outstanding']) if 'shares_outstanding' in x else _atd_missing_json_field('BdcTags', 'shares_outstanding'),
+                net_investment_income=_atd_read_list(_atd_read_string)(x['net_investment_income']) if 'net_investment_income' in x else _atd_missing_json_field('BdcTags', 'net_investment_income'),
+                total_investment_income=_atd_read_list(_atd_read_string)(x['total_investment_income']) if 'total_investment_income' in x else _atd_missing_json_field('BdcTags', 'total_investment_income'),
+                total_expenses=_atd_read_list(_atd_read_string)(x['total_expenses']) if 'total_expenses' in x else _atd_missing_json_field('BdcTags', 'total_expenses'),
+                distributions_per_share=_atd_read_list(_atd_read_string)(x['distributions_per_share']) if 'distributions_per_share' in x else _atd_missing_json_field('BdcTags', 'distributions_per_share'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('BdcTags', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['net_asset_value_per_share'] = _atd_write_list(_atd_write_string)(self.net_asset_value_per_share)
+        res['net_assets'] = _atd_write_list(_atd_write_string)(self.net_assets)
+        res['shares_outstanding'] = _atd_write_list(_atd_write_string)(self.shares_outstanding)
+        res['net_investment_income'] = _atd_write_list(_atd_write_string)(self.net_investment_income)
+        res['total_investment_income'] = _atd_write_list(_atd_write_string)(self.total_investment_income)
+        res['total_expenses'] = _atd_write_list(_atd_write_string)(self.total_expenses)
+        res['distributions_per_share'] = _atd_write_list(_atd_write_string)(self.distributions_per_share)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BdcTags':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BdcDefinition:
+    """Original type: bdc_definition = { ... }
+    """
+
+    name: str
+    why: str
+    xbrl: BdcTags
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BdcDefinition':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('BdcDefinition', 'name'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('BdcDefinition', 'why'),
+                xbrl=BdcTags.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('BdcDefinition', 'xbrl'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('BdcDefinition', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['why'] = _atd_write_string(self.why)
+        res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BdcDefinition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class AociXbrl:
     """Original type: aoci_xbrl = { ... }
     """
@@ -2702,6 +2790,7 @@ class FieldDefinitions:
     aoci: Optional[AociDefinition] = None
     interest_expense: Optional[InterestDefinition] = None
     required_on_latest_period: Optional[RequiredOnLatestPeriod] = None
+    bdc: Optional[BdcDefinition] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'FieldDefinitions':
@@ -2722,6 +2811,7 @@ class FieldDefinitions:
                 aoci=AociDefinition.from_json(x['aoci']) if 'aoci' in x else None,
                 interest_expense=InterestDefinition.from_json(x['interest_expense']) if 'interest_expense' in x else None,
                 required_on_latest_period=RequiredOnLatestPeriod.from_json(x['required_on_latest_period']) if 'required_on_latest_period' in x else None,
+                bdc=BdcDefinition.from_json(x['bdc']) if 'bdc' in x else None,
             )
         else:
             _atd_bad_json('FieldDefinitions', x)
@@ -2747,6 +2837,8 @@ class FieldDefinitions:
             res['interest_expense'] = (lambda x: x.to_json())(self.interest_expense)
         if self.required_on_latest_period is not None:
             res['required_on_latest_period'] = (lambda x: x.to_json())(self.required_on_latest_period)
+        if self.bdc is not None:
+            res['bdc'] = (lambda x: x.to_json())(self.bdc)
         return res
 
     @classmethod

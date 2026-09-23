@@ -74,7 +74,14 @@ let reit_entries (s : Reference_t.sensitivity_steps) (i : reit_inputs) ~fair_val
       (fun dividend_per_share -> Implied.reit_fair_value i ~dividend_per_share ~g0:i.g0 ~lambda);
   ]
 
+(* (59) A model with no held assumption has nothing to step: the BDC lens reads filed marks,
+   and stepping a filed mark would be a sensitivity of the filing, not of the model. *)
+let no_projection = "the anchor is a filed mark, not a projection: there is no held assumption to step"
+
 let of_inputs (s : Reference_t.sensitivity_steps) (m : model_inputs) ~fair_value =
+  match m with
+  | `Bdc_nav _ -> Error no_projection
+  | (`Dcf _ | `Dcf_midcycle _ | `Residual_income _ | `Residual_income_insurer _ | `Reit_ffo_dividend _) as m ->
   let entries =
     match m with
     | `Dcf i -> dcf_entries s i ~base_name:"fcff" ~fair_value
@@ -87,12 +94,13 @@ let of_inputs (s : Reference_t.sensitivity_steps) (m : model_inputs) ~fair_value
     |> List.stable_sort (fun (_, a) (_, b) -> compare b a)
     |> List.map fst
   in
-  {
-    fair_value;
-    steps_source = s.source;
-    steps_as_of = s.as_of;
-    entries;
-    ranking = ranked;
-    binding_input = (match ranked with x :: _ -> Some x | [] -> None);
-    note;
-  }
+  Ok
+    {
+      fair_value;
+      steps_source = s.source;
+      steps_as_of = s.as_of;
+      entries;
+      ranking = ranked;
+      binding_input = (match ranked with x :: _ -> Some x | [] -> None);
+      note;
+    }

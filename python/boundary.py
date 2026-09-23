@@ -2236,6 +2236,116 @@ class InsurerInputs:
 
 
 @dataclass
+class BdcInputs:
+    """Original type: bdc_inputs = { ... }
+    """
+
+    fiscal_period_end: str
+    country: str
+    industry: Optional[str]
+    price: float
+    market_cap: float
+    shares: float
+    net_asset_value_per_share: float
+    net_asset_value_row: str
+    net_investment_income: float
+    net_investment_income_row: str
+    weighted_shares: float
+    weighted_shares_tag: str
+    net_investment_income_per_share: float
+    distributions_per_share: float
+    distributions_per_share_row: str
+    price_to_nav: float
+    nii_yield_on_nav: float
+    distribution_yield: float
+    nii_coverage: float
+    coverage_note: str
+    nav_per_share_series: List[Tuple[str, float]]
+    nav_periods: List[str]
+    nav_cagr: float
+    caveat: str
+    net_asset_value_composition: Optional[Composition] = None
+    net_investment_income_composition: Optional[Composition] = None
+    conversion: Optional[Conversion] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BdcInputs':
+        if isinstance(x, dict):
+            return cls(
+                fiscal_period_end=_atd_read_string(x['fiscal_period_end']) if 'fiscal_period_end' in x else _atd_missing_json_field('BdcInputs', 'fiscal_period_end'),
+                country=_atd_read_string(x['country']) if 'country' in x else _atd_missing_json_field('BdcInputs', 'country'),
+                industry=_atd_read_nullable(_atd_read_string)(x['industry']) if 'industry' in x else _atd_missing_json_field('BdcInputs', 'industry'),
+                price=_atd_read_float(x['price']) if 'price' in x else _atd_missing_json_field('BdcInputs', 'price'),
+                market_cap=_atd_read_float(x['market_cap']) if 'market_cap' in x else _atd_missing_json_field('BdcInputs', 'market_cap'),
+                shares=_atd_read_float(x['shares']) if 'shares' in x else _atd_missing_json_field('BdcInputs', 'shares'),
+                net_asset_value_per_share=_atd_read_float(x['net_asset_value_per_share']) if 'net_asset_value_per_share' in x else _atd_missing_json_field('BdcInputs', 'net_asset_value_per_share'),
+                net_asset_value_row=_atd_read_string(x['net_asset_value_row']) if 'net_asset_value_row' in x else _atd_missing_json_field('BdcInputs', 'net_asset_value_row'),
+                net_investment_income=_atd_read_float(x['net_investment_income']) if 'net_investment_income' in x else _atd_missing_json_field('BdcInputs', 'net_investment_income'),
+                net_investment_income_row=_atd_read_string(x['net_investment_income_row']) if 'net_investment_income_row' in x else _atd_missing_json_field('BdcInputs', 'net_investment_income_row'),
+                weighted_shares=_atd_read_float(x['weighted_shares']) if 'weighted_shares' in x else _atd_missing_json_field('BdcInputs', 'weighted_shares'),
+                weighted_shares_tag=_atd_read_string(x['weighted_shares_tag']) if 'weighted_shares_tag' in x else _atd_missing_json_field('BdcInputs', 'weighted_shares_tag'),
+                net_investment_income_per_share=_atd_read_float(x['net_investment_income_per_share']) if 'net_investment_income_per_share' in x else _atd_missing_json_field('BdcInputs', 'net_investment_income_per_share'),
+                distributions_per_share=_atd_read_float(x['distributions_per_share']) if 'distributions_per_share' in x else _atd_missing_json_field('BdcInputs', 'distributions_per_share'),
+                distributions_per_share_row=_atd_read_string(x['distributions_per_share_row']) if 'distributions_per_share_row' in x else _atd_missing_json_field('BdcInputs', 'distributions_per_share_row'),
+                price_to_nav=_atd_read_float(x['price_to_nav']) if 'price_to_nav' in x else _atd_missing_json_field('BdcInputs', 'price_to_nav'),
+                nii_yield_on_nav=_atd_read_float(x['nii_yield_on_nav']) if 'nii_yield_on_nav' in x else _atd_missing_json_field('BdcInputs', 'nii_yield_on_nav'),
+                distribution_yield=_atd_read_float(x['distribution_yield']) if 'distribution_yield' in x else _atd_missing_json_field('BdcInputs', 'distribution_yield'),
+                nii_coverage=_atd_read_float(x['nii_coverage']) if 'nii_coverage' in x else _atd_missing_json_field('BdcInputs', 'nii_coverage'),
+                coverage_note=_atd_read_string(x['coverage_note']) if 'coverage_note' in x else _atd_missing_json_field('BdcInputs', 'coverage_note'),
+                nav_per_share_series=_atd_read_assoc_object_into_list(_atd_read_float)(x['nav_per_share_series']) if 'nav_per_share_series' in x else _atd_missing_json_field('BdcInputs', 'nav_per_share_series'),
+                nav_periods=_atd_read_list(_atd_read_string)(x['nav_periods']) if 'nav_periods' in x else _atd_missing_json_field('BdcInputs', 'nav_periods'),
+                nav_cagr=_atd_read_float(x['nav_cagr']) if 'nav_cagr' in x else _atd_missing_json_field('BdcInputs', 'nav_cagr'),
+                caveat=_atd_read_string(x['caveat']) if 'caveat' in x else _atd_missing_json_field('BdcInputs', 'caveat'),
+                net_asset_value_composition=Composition.from_json(x['net_asset_value_composition']) if 'net_asset_value_composition' in x else None,
+                net_investment_income_composition=Composition.from_json(x['net_investment_income_composition']) if 'net_investment_income_composition' in x else None,
+                conversion=Conversion.from_json(x['conversion']) if 'conversion' in x else None,
+            )
+        else:
+            _atd_bad_json('BdcInputs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['fiscal_period_end'] = _atd_write_string(self.fiscal_period_end)
+        res['country'] = _atd_write_string(self.country)
+        res['industry'] = _atd_write_nullable(_atd_write_string)(self.industry)
+        res['price'] = _atd_write_float(self.price)
+        res['market_cap'] = _atd_write_float(self.market_cap)
+        res['shares'] = _atd_write_float(self.shares)
+        res['net_asset_value_per_share'] = _atd_write_float(self.net_asset_value_per_share)
+        res['net_asset_value_row'] = _atd_write_string(self.net_asset_value_row)
+        res['net_investment_income'] = _atd_write_float(self.net_investment_income)
+        res['net_investment_income_row'] = _atd_write_string(self.net_investment_income_row)
+        res['weighted_shares'] = _atd_write_float(self.weighted_shares)
+        res['weighted_shares_tag'] = _atd_write_string(self.weighted_shares_tag)
+        res['net_investment_income_per_share'] = _atd_write_float(self.net_investment_income_per_share)
+        res['distributions_per_share'] = _atd_write_float(self.distributions_per_share)
+        res['distributions_per_share_row'] = _atd_write_string(self.distributions_per_share_row)
+        res['price_to_nav'] = _atd_write_float(self.price_to_nav)
+        res['nii_yield_on_nav'] = _atd_write_float(self.nii_yield_on_nav)
+        res['distribution_yield'] = _atd_write_float(self.distribution_yield)
+        res['nii_coverage'] = _atd_write_float(self.nii_coverage)
+        res['coverage_note'] = _atd_write_string(self.coverage_note)
+        res['nav_per_share_series'] = _atd_write_assoc_list_to_object(_atd_write_float)(self.nav_per_share_series)
+        res['nav_periods'] = _atd_write_list(_atd_write_string)(self.nav_periods)
+        res['nav_cagr'] = _atd_write_float(self.nav_cagr)
+        res['caveat'] = _atd_write_string(self.caveat)
+        if self.net_asset_value_composition is not None:
+            res['net_asset_value_composition'] = (lambda x: x.to_json())(self.net_asset_value_composition)
+        if self.net_investment_income_composition is not None:
+            res['net_investment_income_composition'] = (lambda x: x.to_json())(self.net_investment_income_composition)
+        if self.conversion is not None:
+            res['conversion'] = (lambda x: x.to_json())(self.conversion)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BdcInputs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Dcf:
     """Original type: model_inputs = [ ... | Dcf of ... | ... ]
     """
@@ -2331,11 +2441,30 @@ class ReitFfoDividend:
 
 
 @dataclass
+class BdcNav:
+    """Original type: model_inputs = [ ... | Bdc_nav of ... | ... ]
+    """
+
+    value: BdcInputs
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'BdcNav'
+
+    def to_json(self) -> Any:
+        return ['bdc_nav', (lambda x: x.to_json())(self.value)]
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class ModelInputs:
     """Original type: model_inputs = [ ... ]
     """
 
-    value: Union[Dcf, DcfMidcycle, ResidualIncome, ResidualIncomeInsurer, ReitFfoDividend]
+    value: Union[Dcf, DcfMidcycle, ResidualIncome, ResidualIncomeInsurer, ReitFfoDividend, BdcNav]
 
     @property
     def kind(self) -> str:
@@ -2356,6 +2485,8 @@ class ModelInputs:
                 return cls(ResidualIncomeInsurer(InsurerInputs.from_json(x[1])))
             if cons == 'reit_ffo_dividend':
                 return cls(ReitFfoDividend(ReitInputs.from_json(x[1])))
+            if cons == 'bdc_nav':
+                return cls(BdcNav(BdcInputs.from_json(x[1])))
             _atd_bad_json('ModelInputs', x)
         _atd_bad_json('ModelInputs', x)
 
@@ -2461,11 +2592,29 @@ class DcfMidcycle_:
 
 
 @dataclass
+class BdcNav_:
+    """Original type: model = [ ... | Bdc_nav | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'BdcNav_'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'bdc_nav'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Model:
     """Original type: model = [ ... ]
     """
 
-    value: Union[Dcf_, ResidualIncome_, ResidualIncomeInsurer_, ReitFfoDividend_, DcfMidcycle_]
+    value: Union[Dcf_, ResidualIncome_, ResidualIncomeInsurer_, ReitFfoDividend_, DcfMidcycle_, BdcNav_]
 
     @property
     def kind(self) -> str:
@@ -2485,6 +2634,8 @@ class Model:
                 return cls(ReitFfoDividend_())
             if x == 'dcf_midcycle':
                 return cls(DcfMidcycle_())
+            if x == 'bdc_nav':
+                return cls(BdcNav_())
             _atd_bad_json('Model', x)
         _atd_bad_json('Model', x)
 
@@ -3021,6 +3172,24 @@ class Wrapper:
 
 
 @dataclass
+class Bdc:
+    """Original type: entity_class = [ ... | Bdc | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Bdc'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'Bdc'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class ConstructionStage:
     """Original type: entity_class = [ ... | ConstructionStage | ... ]
     """
@@ -3079,7 +3248,7 @@ class EntityClass:
     """Original type: entity_class = [ ... ]
     """
 
-    value: Union[OperatingCompany, Bank, Insurer, RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, Unprofitable, Cyclical, Wrapper, ConstructionStage, UnderBid, Ballast]
+    value: Union[OperatingCompany, Bank, Insurer, RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, Unprofitable, Cyclical, Wrapper, Bdc, ConstructionStage, UnderBid, Ballast]
 
     @property
     def kind(self) -> str:
@@ -3113,6 +3282,8 @@ class EntityClass:
                 return cls(Cyclical())
             if x == 'Wrapper':
                 return cls(Wrapper())
+            if x == 'Bdc':
+                return cls(Bdc())
             if x == 'ConstructionStage':
                 return cls(ConstructionStage())
             if x == 'UnderBid':
@@ -3605,7 +3776,9 @@ class Valuation:
     submissions_latest_annual: Optional[Submission] = None
     point_in_time: Optional[PointInTime] = None
     implied: Optional[Implied] = None
+    implied_reason: Optional[str] = None
     sensitivity: Optional[Sensitivity] = None
+    sensitivity_reason: Optional[str] = None
     belief_map: Optional[BeliefMap] = None
     belief_map_reason: Optional[str] = None
     belief_version: Optional[str] = None
@@ -3653,7 +3826,9 @@ class Valuation:
                 submissions_latest_annual=Submission.from_json(x['submissions_latest_annual']) if 'submissions_latest_annual' in x else None,
                 point_in_time=PointInTime.from_json(x['point_in_time']) if 'point_in_time' in x else None,
                 implied=Implied.from_json(x['implied']) if 'implied' in x else None,
+                implied_reason=_atd_read_string(x['implied_reason']) if 'implied_reason' in x else None,
                 sensitivity=Sensitivity.from_json(x['sensitivity']) if 'sensitivity' in x else None,
+                sensitivity_reason=_atd_read_string(x['sensitivity_reason']) if 'sensitivity_reason' in x else None,
                 belief_map=BeliefMap.from_json(x['belief_map']) if 'belief_map' in x else None,
                 belief_map_reason=_atd_read_string(x['belief_map_reason']) if 'belief_map_reason' in x else None,
                 belief_version=_atd_read_string(x['belief_version']) if 'belief_version' in x else None,
@@ -3707,8 +3882,12 @@ class Valuation:
             res['point_in_time'] = (lambda x: x.to_json())(self.point_in_time)
         if self.implied is not None:
             res['implied'] = (lambda x: x.to_json())(self.implied)
+        if self.implied_reason is not None:
+            res['implied_reason'] = _atd_write_string(self.implied_reason)
         if self.sensitivity is not None:
             res['sensitivity'] = (lambda x: x.to_json())(self.sensitivity)
+        if self.sensitivity_reason is not None:
+            res['sensitivity_reason'] = _atd_write_string(self.sensitivity_reason)
         if self.belief_map is not None:
             res['belief_map'] = (lambda x: x.to_json())(self.belief_map)
         if self.belief_map_reason is not None:
@@ -3919,6 +4098,14 @@ class FiscalPeriod:
     net_interest_income_row: Optional[str] = None
     ffo: Optional[float] = None
     ffo_composition: Optional[Composition] = None
+    net_asset_value_per_share: Optional[float] = None
+    net_asset_value_per_share_row: Optional[str] = None
+    net_asset_value_composition: Optional[Composition] = None
+    net_investment_income: Optional[float] = None
+    net_investment_income_row: Optional[str] = None
+    net_investment_income_composition: Optional[Composition] = None
+    distributions_per_share: Optional[float] = None
+    distributions_per_share_row: Optional[str] = None
     ffo_unavailable: Optional[str] = None
     weighted_shares: Optional[float] = None
     weighted_shares_tag: Optional[str] = None
@@ -3991,6 +4178,14 @@ class FiscalPeriod:
                 net_interest_income_row=_atd_read_string(x['net_interest_income_row']) if 'net_interest_income_row' in x else None,
                 ffo=_atd_read_float(x['ffo']) if 'ffo' in x else None,
                 ffo_composition=Composition.from_json(x['ffo_composition']) if 'ffo_composition' in x else None,
+                net_asset_value_per_share=_atd_read_float(x['net_asset_value_per_share']) if 'net_asset_value_per_share' in x else None,
+                net_asset_value_per_share_row=_atd_read_string(x['net_asset_value_per_share_row']) if 'net_asset_value_per_share_row' in x else None,
+                net_asset_value_composition=Composition.from_json(x['net_asset_value_composition']) if 'net_asset_value_composition' in x else None,
+                net_investment_income=_atd_read_float(x['net_investment_income']) if 'net_investment_income' in x else None,
+                net_investment_income_row=_atd_read_string(x['net_investment_income_row']) if 'net_investment_income_row' in x else None,
+                net_investment_income_composition=Composition.from_json(x['net_investment_income_composition']) if 'net_investment_income_composition' in x else None,
+                distributions_per_share=_atd_read_float(x['distributions_per_share']) if 'distributions_per_share' in x else None,
+                distributions_per_share_row=_atd_read_string(x['distributions_per_share_row']) if 'distributions_per_share_row' in x else None,
                 ffo_unavailable=_atd_read_string(x['ffo_unavailable']) if 'ffo_unavailable' in x else None,
                 weighted_shares=_atd_read_float(x['weighted_shares']) if 'weighted_shares' in x else None,
                 weighted_shares_tag=_atd_read_string(x['weighted_shares_tag']) if 'weighted_shares_tag' in x else None,
@@ -4095,6 +4290,22 @@ class FiscalPeriod:
             res['ffo'] = _atd_write_float(self.ffo)
         if self.ffo_composition is not None:
             res['ffo_composition'] = (lambda x: x.to_json())(self.ffo_composition)
+        if self.net_asset_value_per_share is not None:
+            res['net_asset_value_per_share'] = _atd_write_float(self.net_asset_value_per_share)
+        if self.net_asset_value_per_share_row is not None:
+            res['net_asset_value_per_share_row'] = _atd_write_string(self.net_asset_value_per_share_row)
+        if self.net_asset_value_composition is not None:
+            res['net_asset_value_composition'] = (lambda x: x.to_json())(self.net_asset_value_composition)
+        if self.net_investment_income is not None:
+            res['net_investment_income'] = _atd_write_float(self.net_investment_income)
+        if self.net_investment_income_row is not None:
+            res['net_investment_income_row'] = _atd_write_string(self.net_investment_income_row)
+        if self.net_investment_income_composition is not None:
+            res['net_investment_income_composition'] = (lambda x: x.to_json())(self.net_investment_income_composition)
+        if self.distributions_per_share is not None:
+            res['distributions_per_share'] = _atd_write_float(self.distributions_per_share)
+        if self.distributions_per_share_row is not None:
+            res['distributions_per_share_row'] = _atd_write_string(self.distributions_per_share_row)
         if self.ffo_unavailable is not None:
             res['ffo_unavailable'] = _atd_write_string(self.ffo_unavailable)
         if self.weighted_shares is not None:

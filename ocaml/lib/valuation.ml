@@ -99,6 +99,12 @@ let floor_verified ~currency (inputs : model_inputs) ~fair_value : floor =
            %.2f; %s"
           i.ffo_per_share currency i.price_to_ffo i.dividend_per_share i.coverage i.fiscal_period_end
           fair_value currency i.price i.caveat
+    | `Bdc_nav (i : bdc_inputs) ->
+        Printf.sprintf
+          "bdc nav: net asset value %.2f %s per share as filed for the fiscal period ending %s, price/nav %.2f,            net investment income %.2f per share covering a distribution of %.2f per share (coverage %.2f);            fair value %.2f %s per share against price %.2f; %s"
+          i.net_asset_value_per_share currency i.fiscal_period_end i.price_to_nav
+          i.net_investment_income_per_share i.distributions_per_share i.nii_coverage fair_value currency
+          i.price i.caveat
   in
   { present = Some true; basis }
 
@@ -110,6 +116,7 @@ let with_conversion conversion (inputs : model_inputs) : model_inputs =
       `Residual_income_insurer { i with core = { i.core with conversion = Some conversion } }
   | `Reit_ffo_dividend i -> `Reit_ffo_dividend { i with conversion = Some conversion }
   | `Dcf_midcycle m -> `Dcf_midcycle { m with dcf = { m.dcf with conversion = Some conversion } }
+  | `Bdc_nav i -> `Bdc_nav { i with conversion = Some conversion }
 
 (* A record's compositions must follow the reference's definitions on every period: a
    data file fetched under another definition is refused, never valued as if it were the
@@ -181,6 +188,9 @@ let rec parameters_of (inputs : model_inputs) : (string * parameter) list =
         ("growth_clamp_lower", i.growth_clamp_lower); ("growth_clamp_upper", i.growth_clamp_upper);
         ("mean_reversion_lambda", i.mean_reversion_lambda); ("terminal_growth_rate", i.terminal_growth_rate) ]
       @ (match i.country_risk_premium with Some c -> [ ("country_risk_premium", c) ] | None -> [])
+  (* (59) None: the BDC lens discounts nothing and projects nothing, so no country
+     parameter is an input to it. The parameters gate the pipeline, they are not held. *)
+  | `Bdc_nav _ -> []
 
 (* The parameters whose vintage postdates the point-in-time date: held, declared. *)
 let anachronistic ~(class_check : class_check option) (inputs : model_inputs option) =
@@ -263,7 +273,9 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       failed_reason;
       inputs;
       implied = None;
+      implied_reason = None;
       sensitivity = None;
+      sensitivity_reason = None;
       belief_map = None;
       belief_map_reason = None;
       belief_version = None;
@@ -312,6 +324,10 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                 fun terminal_growth_rate -> Implied.reit_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value)
       | `Residual_income i -> Some (roe_axis i)
       | `Residual_income_insurer i -> Some (roe_axis i.core)
+      (* (59) the BDC lens holds no parameter, so there is nothing for a belief to be
+         about and nothing for a surplus curve to sweep; the record says so and the name
+         does not enter the frontier *)
+      | `Bdc_nav _ -> None
   in
   (* The market-implied readout maps option quantiles onto long-run GROWTH, so it stays on
      the growth-then-terminal paths only: the residual-income path has no growth axis, and
@@ -323,7 +339,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   in
   let belief_of ~price ~fair_value (inputs : model_inputs) =
     match axis_of inputs with
-    | None -> Error "this path has no parameter for a belief to be about"
+    | None -> Error Sensitivity.no_projection
     | Some (axis, anchor, anchor_name, rate, f) -> (
         let entity_class = match declared with Some c -> Admissibility.class_name c | None -> "" in
         match
@@ -353,6 +369,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     | `Residual_income i -> i.risk_free_rate.value
     | `Residual_income_insurer i -> i.core.risk_free_rate.value
     | `Reit_ffo_dividend i -> i.risk_free_rate.value
+    | `Bdc_nav _ -> 0.
   in
   let market_implied_of ~ke ~fair_value (inputs : model_inputs) =
     match options with
@@ -403,8 +420,13 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
              ~floor:(floor_verified ~currency inputs ~fair_value)
              ())
           with
-          implied = Some (Implied.of_inputs inputs ~price);
-          sensitivity = Some (Sensitivity.of_inputs params.params.sensitivity_steps inputs ~fair_value);
+          implied = Result.to_option (Implied.of_inputs inputs ~price);
+          implied_reason = (match Implied.of_inputs inputs ~price with Error r -> Some r | Ok _ -> None);
+          sensitivity = Result.to_option (Sensitivity.of_inputs params.params.sensitivity_steps inputs ~fair_value);
+          sensitivity_reason =
+            (match Sensitivity.of_inputs params.params.sensitivity_steps inputs ~fair_value with
+            | Error r -> Some r
+            | Ok _ -> None);
           belief_map = Result.to_option (Belief_map.of_inputs inputs ~price);
           belief_map_reason = (match Belief_map.of_inputs inputs ~price with Error r -> Some r | Ok _ -> None);
           belief_version = (match belief_of ~price ~fair_value inputs with Ok (r, _) -> Some r.belief_version | Error _ -> None);
@@ -489,6 +511,11 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
             match Dcf_midcycle.value assumptions ~country ~required fin with
             | Error reason -> failed reason
             | Ok (inputs, fair_value) -> finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value))
+    | `Bdc_nav -> (
+        (* (59) No EBIT policy and no parameter: the anchor is the filed mark. *)
+        match Bdc.value assumptions ~country fin with
+        | Error reason -> failed reason
+        | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Bdc_nav inputs) fair_value)
   in
   (* The filing-age gate, then the currency gate: the same-currency path untouched, else
      convert and re-source. *)

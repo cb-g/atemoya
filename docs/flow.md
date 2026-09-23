@@ -54,6 +54,10 @@ file.
 | residual income guards | payout not derivable: need 2 fiscal periods with positive net income and dividends paid, have (n) |
 | residual income value | fair value is not finite (equity value (e), shares (n)) |
 | insurer | insurer model requires filed-statement data; (why: no SEC filings for (ticker), or the period carries no AOCI or premiums earned) |
+| BDC guards | missing statement fields for fiscal period ending (end): net_asset_value_per_share, net_investment_income, distributions_per_share, weighted_shares |
+| BDC guards | net asset value per share (v) is not positive |
+| BDC guards | distributions per share (d) is not positive; there is no coverage to read, and the distribution is the point of the lens |
+| BDC guards | net asset value growth needs two periods carrying a filed net asset value per share, have (n) |
 | REIT guards | the filer's leases are financing receivables; NAREIT FFO does not apply |
 | REIT guards | ffo (f) is not positive |
 | REIT guards | ffo growth needs two periods with ffo and weighted-average shares, have (n) |
@@ -296,6 +300,28 @@ at all:
    in, recorded as `net_nonoperating_interest` or `interest_paid_stands_in` on the period
    and on every observation; the DCF path's EBIT policy never reads a stand-in.
 
+### A lens that discounts nothing
+
+Most classes here end in a model that projects something and discounts it. The BDC lens
+does not. A business development company marks a portfolio of private loans and equity
+stakes to fair value every quarter and states a net asset value per share; **that mark is
+the fair value**, because the alternative is for the tool to re-underwrite loans it cannot
+see. So there is no discount rate, no growth rate and no country parameter on that record
+at all — the parameters gate the pipeline, they are not inputs to the lens.
+
+What the record carries instead are four ratios of filed lines, which is what makes the
+mark useful: the premium or discount the market puts on it (`price_to_nav`, and the signal
+follows the margin of safety as everywhere, so a premium reads Sell and a discount Buy),
+what the portfolio earns against it (`nii_yield_on_nav`), what the holder is paid
+(`distribution_yield`), and whether the payment is covered (`nii_coverage`, net investment
+income per share over distributions per share; below one the distribution comes out of
+capital and erodes the mark, which `coverage_note` says and `nav_cagr` shows over the filed
+periods).
+
+Because there is no parameter, there is nothing to invert and nothing to step: the implied
+readouts, the sensitivity block, the belief and the surplus curve are all absent with the
+same reason, and the name never enters the frontier.
+
 ### The belief's parameter, per path
 
 Every belief is a declaration about the one thing the long run turns on, and which thing
@@ -463,6 +489,21 @@ in this order:
   distributions shift up with their anchor** — by design, and no belief was adjusted to
   offset it. Residual-income records are untouched: that path has carried no terminal
   growth since the terminal spread was removed. No new `Failed` string.
+- a BDC lens, and Valero's old years refused (59): a `Bdc` class and a `bdc_nav` model
+  whose fair value is the net asset value per share the filing states, with the premium to
+  it, the yield on it, the distribution yield and the coverage of the distribution beside
+  it; no rate, no growth and no parameter appear on that path, so the implied readouts, the
+  sensitivity block, the belief and the curve are all refused with one reason and the name
+  does not enter the frontier. Four new `Failed` strings, all guards on filed lines. The
+  period selection gains the net asset value per share as a second anchor beside net
+  income, because two of the three filers stop tagging net income and one tags its
+  realised-gain line under that element; no other filer carries the tag, so no other
+  filer's period set moves. Separately, the filing's own reconciliation of net income to
+  operating cash flow is admitted as a second verification for a working-capital tag on
+  years the vendor does not cover — and applied to Valero it **refuses** the one tag its
+  2011-2019 years leave over, because on that filer the tag is the face-line subtotal of
+  the components beside it and no kind reconciles, while another filer uses the same tag as
+  a real component. Valero keeps seven reinvestment periods and stays `Failed`.
 - a belief for banks and insurers (58): the residual-income model's ROE reversion target
   becomes a parameter defaulting to the cost of equity, which leaves every number where it
   was and gives the path something a belief can be about; `reference/beliefs.json` gains
