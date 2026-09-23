@@ -11,6 +11,7 @@ type t = {
   admissibility : admissibility;
   fx_sources : fx_sources;
   fx_rates : fx_rates option;           (* fetched (29): likewise *)
+  rate_sources : rate_sources;          (* the tracked curve registry; its no_curve_fallback is a declaration, read here and nowhere else (54) *)
   xbrl_tags : xbrl_tags;
   field_definitions : field_definitions;
   beliefs : class_beliefs;
@@ -47,6 +48,7 @@ let load ~dir ~fetched =
     read Reference_j.read_admissibility (file "admissibility.json")
   in
   let* fx_sources = read Reference_j.read_fx_sources (file "fx_sources.json") in
+  let* rate_sources = read Reference_j.read_rate_sources (file "rate_sources.json") in
   let* fx_rates = read_fetched Reference_j.read_fx_rates (fetched_file "fx_rates.json") in
   let* xbrl_tags = read Reference_j.read_xbrl_tags (file "xbrl_tags.json") in
   let* field_definitions =
@@ -73,6 +75,7 @@ let load ~dir ~fetched =
       admissibility;
       fx_sources;
       fx_rates;
+      rate_sources;
       xbrl_tags;
       field_definitions;
       beliefs;
@@ -142,6 +145,17 @@ let risk_free ?hold_vintage (rf : risk_free_rates option) ~today ~country ~tenor
                ~estimated:(List.mem tenor curve.estimated)
                ~tier:curve.tier ~tenor_requested:tenor ~tenor_used ~value ~key
                ~source:curve.source ~as_of:curve.as_of ~age_days ())))
+
+(* (54) Whether the domicile has a curve at all, and whether the registry declares it as
+   one whose records fall back to the trading currency's. Two separate questions: the
+   declaration is inert while a curve exists, and a domicile not declared still fails. *)
+let has_curve (rf : risk_free_rates option) ~country =
+  match rf with
+  | None -> false
+  | Some rf -> List.mem_assoc (canonical rf.aliases country) rf.countries
+
+let no_curve_declared (sources : rate_sources) ~country =
+  List.mem (canonical sources.aliases country) sources.no_curve_fallback
 
 let beta ?hold_vintage (table : industry_table) ~today ~industry =
   let default key =
@@ -228,13 +242,18 @@ let resolve ?hold_vintage t ~today ~country ~industry =
       required_return = None;
     }
 
-let resolve_cross ?hold_vintage t ~today ~domicile ~rate_country ~industry =
+let resolve_cross ?hold_vintage ?rf_note t ~today ~domicile ~rate_country ~industry =
   let* projection_years = int_scalar ?hold_vintage t.params.projection_years ~today ~name:"projection_years" in
   let* midcycle_window_years =
     int_scalar ?hold_vintage t.params.midcycle_window_years ~today ~name:"midcycle_window_years"
   in
   let tenor = Printf.sprintf "%dy" projection_years.value in
   let* risk_free_rate = risk_free ?hold_vintage t.risk_free ~today ~country:rate_country ~tenor in
+  let risk_free_rate =
+    match rf_note with
+    | None -> risk_free_rate
+    | Some note -> { risk_free_rate with source = risk_free_rate.source ^ "; " ^ note }
+  in
   let* terminal_growth_rate =
     country_value ?hold_vintage t.params.terminal_growth_rate ~today ~name:"terminal_growth_rate"
       ~country:rate_country

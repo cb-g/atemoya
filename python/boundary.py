@@ -3903,6 +3903,7 @@ class FiscalPeriod:
     net_interest_income_row: Optional[str] = None
     ffo: Optional[float] = None
     ffo_composition: Optional[Composition] = None
+    ffo_unavailable: Optional[str] = None
     weighted_shares: Optional[float] = None
     weighted_shares_tag: Optional[str] = None
     ebit_recipe: Optional[str] = None
@@ -3974,6 +3975,7 @@ class FiscalPeriod:
                 net_interest_income_row=_atd_read_string(x['net_interest_income_row']) if 'net_interest_income_row' in x else None,
                 ffo=_atd_read_float(x['ffo']) if 'ffo' in x else None,
                 ffo_composition=Composition.from_json(x['ffo_composition']) if 'ffo_composition' in x else None,
+                ffo_unavailable=_atd_read_string(x['ffo_unavailable']) if 'ffo_unavailable' in x else None,
                 weighted_shares=_atd_read_float(x['weighted_shares']) if 'weighted_shares' in x else None,
                 weighted_shares_tag=_atd_read_string(x['weighted_shares_tag']) if 'weighted_shares_tag' in x else None,
                 ebit_recipe=_atd_read_string(x['ebit_recipe']) if 'ebit_recipe' in x else None,
@@ -4077,6 +4079,8 @@ class FiscalPeriod:
             res['ffo'] = _atd_write_float(self.ffo)
         if self.ffo_composition is not None:
             res['ffo_composition'] = (lambda x: x.to_json())(self.ffo_composition)
+        if self.ffo_unavailable is not None:
+            res['ffo_unavailable'] = _atd_write_string(self.ffo_unavailable)
         if self.weighted_shares is not None:
             res['weighted_shares'] = _atd_write_float(self.weighted_shares)
         if self.weighted_shares_tag is not None:

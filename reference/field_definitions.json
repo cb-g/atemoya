@@ -1,6 +1,6 @@
 {
   "source": "one definition per statement field, applied identically to filed statements (SEC XBRL companyfacts, us-gaap tags) and to the vendor feed (yfinance 1.7.0 rows); components verified against the universe's FY2025 filings and vendor statements on 2026-09-19, widened on 2026-09-19 with tags verified on Meta, AMD, Intel, Valero, ConocoPhillips, Palantir and Super Micro, then on the first growth batch (Home Depot, Union Pacific, Cisco, Ford, Delta, Oracle, Texas Instruments, Lockheed Martin, American Tower, Caterpillar, ServiceNow, Aflac, Shell)",
-  "as_of": "2026-09-21",
+  "as_of": "2026-09-23",
   "notes": [
     "This file is the only place cash, total_debt, delta_nwc and ebit are defined. python/fetch.py reads the vendor rows from it, python/fetch_sec.py the us-gaap tags, and every record's fiscal periods carry a composition per field naming the definition and the components summed; the valuation refuses a record whose composition names a definition this file does not.",
     "Within each list the first present entry wins; 'first complete' means every entry of an alternative must be present. A component absent on both providers is absent, never a substituted zero; only the optional components (short-term investments, short-term borrowings, the current portion of debt on the vendor) may be missing without failing the field.",
@@ -88,14 +88,16 @@
       ],
       "noncurrent": [
         "LongTermDebtNoncurrent",
-        "LongTermDebtAndCapitalLeaseObligations"
+        "LongTermDebtAndCapitalLeaseObligations",
+        "ConvertibleDebtNoncurrent"
       ],
       "current_total": [
         "DebtCurrent"
       ],
       "current_long_term": [
         "LongTermDebtCurrent",
-        "LongTermDebtAndCapitalLeaseObligationsCurrent"
+        "LongTermDebtAndCapitalLeaseObligationsCurrent",
+        "ConvertibleDebtCurrent"
       ],
       "short_term_borrowings": [
         "ShortTermBorrowings",
@@ -116,13 +118,15 @@
         "InterestExpenseDebt",
         "InterestAndDebtExpense",
         "InterestPaidNet",
-        "InterestPaid"
+        "InterestPaid",
+        "InterestExpenseBorrowings"
       ],
       "notes": [
         "Recipes, first complete wins: (0) aggregate, the filer's own long-and-short-term debt total (DebtLongtermAndShorttermCombinedAmount), plus convertible notes when tagged beside it (25); (1) noncurrent + current_total, when the filer tags all debt due within a year as one line (Johnson & Johnson 39.438 + 8.500bn, Chevron 39.781 + 10.918bn); (2) noncurrent + current_long_term, plus short_term_borrowings when tagged (Apple 78.328 + 12.350 + 7.979bn, Microsoft 31.067 + 9.227bn, Coca-Cola 42.119 + 1.822 + 1.495bn); (3) total_including_current, plus short_term_borrowings when tagged. DebtCurrent is the us-gaap sum of the current portion of long-term debt, finance leases due within a year and short-term borrowings, so it is never combined with the other current tags.",
         "aggregate and convertible verified 2026-09-19 on Super Micro, whose bank debt is the aggregate and whose convertible notes sit beside it: FY2026 4.056 + 4.664 = 8.720bn, FY2025 0.113 + 4.645 = 4.758bn, FY2024 0.476 + 1.698 = 2.174bn, matching the vendor's Long Term Debt + Current Debt within the threshold; AMD tags the aggregate (FY2025 3.222bn, matching the vendor's line within the threshold) beside a current portion (0.874bn) it also tags as ShortTermBorrowings, which recipe (2) double-counted to 4.096bn. Valero's aggregate (FY2025 8.261bn) excludes the finance leases its LongTermDebtAndCapitalLeaseObligations folds in, so against the vendor's row the aggregate reads low by those leases: a known residual under the operating-lease exclusion's own logic, since the definition keeps finance leases only when the filer folds them into the debt tag it is read from.",
         "absent is zero only when the filing says so twice (25): when no debt tag is present for the period and none of interest_evidence is present for the period, total debt is 0 with the source 'no debt line filed and no interest expense filed; taken as 0'; either present without the other leaves the field null, as before, because a filer paying interest owes something. Palantir files no debt tag in any year and no interest tag since FY2023 (InterestExpense 3.5m), so FY2024 and FY2025 are 0 and FY2023 and earlier stay null; the vendor carries no debt row for Palantir either.",
-        "component sum (31), recipe (4): when no aggregate is filed and none of recipes (1) to (3) is complete, total debt is the sum of every debt component present in the period, one per list (noncurrent, current_long_term, short_term_borrowings, convertible), recorded with the components summed; a filer with fewer instruments is not missing data. ServiceNow files ConvertibleLongTermNotesPayable alone (FY2025 1.491bn, matching the vendor's Long Term Debt within the threshold); Caterpillar files LongTermDebtNoncurrent 30.696bn and ShortTermBorrowings 5.514bn with no balance-sheet current portion (36.210bn, short of the vendor's row: the residual is the current portion Caterpillar discloses only as next-twelve-months maturities, a disclosure not a balance-sheet line, recorded not adjusted). The absent-is-zero rule applies only when no component and no interest tag is present. Ford files no standard debt instant in any namespace (its automotive and Ford Credit debt sit under extension elements), so Ford stays without total debt: a filer limitation."
+        "component sum (31), recipe (4): when no aggregate is filed and none of recipes (1) to (3) is complete, total debt is the sum of every debt component present in the period, one per list (noncurrent, current_long_term, short_term_borrowings, convertible), recorded with the components summed; a filer with fewer instruments is not missing data. ServiceNow files ConvertibleLongTermNotesPayable alone (FY2025 1.491bn, matching the vendor's Long Term Debt within the threshold); Caterpillar files LongTermDebtNoncurrent 30.696bn and ShortTermBorrowings 5.514bn with no balance-sheet current portion (36.210bn, short of the vendor's row: the residual is the current portion Caterpillar discloses only as next-twelve-months maturities, a disclosure not a balance-sheet line, recorded not adjusted). The absent-is-zero rule applies only when no component and no interest tag is present. Ford files no standard debt instant in any namespace (its automotive and Ford Credit debt sit under extension elements), so Ford stays without total debt: a filer limitation.",
+        "convertible debt as its own balance (54): ConvertibleDebtNoncurrent (the carrying amount of long-term convertible debt net of the amount due within a year) joins noncurrent and ConvertibleDebtCurrent (the portion scheduled to be repaid within a year) joins current_long_term, both appended after the existing tags so a filer tagging LongTermDebtNoncurrent or LongTermDebtCurrent takes those as before. Verified on Okta, which tags no other debt balance: the two summed matched the vendor's total-debt row within the threshold on FY2025, and on FY2026 the noncurrent tag is filed at zero beside a current balance. interest_evidence gains InterestExpenseBorrowings, interest on borrowings by definition, so a filer that tags it is not debt-free; Robinhood tags no debt balance for FY2025 and does tag interest, so its debt stays missing rather than taken as 0."
       ]
     },
     "vendor": {
@@ -208,7 +212,12 @@
         "IncreaseDecreaseInMaterialsAndSupplies",
         "IncreaseDecreaseInFinanceReceivables",
         "IncreaseDecreaseInMarginDepositsOutstanding",
-        "IncreaseDecreaseInRestrictedCashAndInvestmentsForOperatingActivities"
+        "IncreaseDecreaseInRestrictedCashAndInvestmentsForOperatingActivities",
+        "IncreaseDecreaseInIncomeTaxesReceivable",
+        "IncreaseDecreaseInInventoriesAndOtherOperatingAssets",
+        "IncreaseDecreaseInBrokerageReceivables",
+        "IncreaseDecreaseInDepositOtherAssets",
+        "IncreaseDecreaseInSecuritiesBorrowed"
       ],
       "liability_components": [
         "IncreaseDecreaseInAccountsPayable",
@@ -238,7 +247,11 @@
         "IncreaseDecreaseInAirTrafficLiability1",
         "IncreaseDecreaseInFrequentFlyerLiability",
         "IncreaseDecreaseInInterestPayableNet",
-        "IncreaseDecreaseInCustomerAdvances"
+        "IncreaseDecreaseInCustomerAdvances",
+        "IncreaseDecreaseInDeferredCompensation",
+        "IncreaseDecreaseInPayablesToCustomers",
+        "IncreaseDecreaseInSecuritiesLoanedTransactions",
+        "IncreaseDecreaseInOtherDeferredLiability"
       ],
       "net_components": [
         "IncreaseDecreaseInOtherOperatingCapitalNet",
@@ -261,7 +274,9 @@
         "excluded added 2026-09-19: EquitySecuritiesFvNi is the change in fair value of equity securities through net income, a non-cash gain adjustment in the operating section, not a working-capital balance; AMD FY2022 sums to 1.833bn without it, matching the vendor's line within the threshold, and to 1.771bn with it as an asset. AssetRetirementObligations is the accretion of a noncurrent decommissioning liability, a non-cash charge; ConocoPhillips FY2022 to FY2025 matches the vendor's line within the threshold without it (0.234, 1.382, 0.181, 0.076bn) and misses by its size with it as a liability. Intel FY2022 is a known residual: the classified sum is 4.508bn, far from the vendor's line, with EquitySecuritiesFvNi (4.254bn, the Mobileye and McAfee marks) excluded; the vendor carries no working-capital line for Intel or AMD on FY2023 to FY2025, so those years are unchecked.",
         "Apple, Microsoft, Alphabet, Johnson & Johnson and Costco tag components only; Coca-Cola and Chevron tag the aggregate. Chevron's aggregate (0.718bn) excludes the deferred charges and long-term receivables the vendor bundles into its line, a known residual; the aggregate is the filed operating working capital line and wins.",
         "Tags left unclassified on purpose, seen only on years no vendor column can verify: Valero's IncomeTaxesReceivable and OtherCurrentAssetsAndLiabilitiesNet (FY2020 and earlier), AMD's DueToRelatedPartiesCurrent (FY2016 and earlier), Intel's TradingSecurities (FY2011), Super Micro's related-party receivables and payables (FY2022 and earlier); those periods carry no working capital, which only the mid-cycle window can reach. excluded also keeps deferred tax and pension movements, restricted cash, and Costco's FY2021 IncreaseDecreaseInOutstandingChecksFinancingActivities (a financing flow by its own name), recognised so they do not block the sum and never entering it.",
-        "Added 2026-09-19 from the first universe growth batch, each checked against its us-gaap definition and the vendor's working-capital line (or, where the vendor's snapshot column carries no such line, its component rows fetched live): assets RetailRelatedInventories (merchandise inventory; Home Depot FY2026 filed +1.498bn, the vendor's Change In Inventory carrying the same figure with the statement's sign, an outflow, and the sum 2.892bn near the vendor's line, a known residual of the rows it bundles), MaterialsAndSupplies (capitalised materials not in inventory; Union Pacific FY2025 +0.018bn, the vendor's inventory row carrying the same figure with the statement's sign; the sum 0.554bn against the vendor's line, the residual in its other-working-capital row), FinanceReceivables (outstanding loans; Cisco FY2026 sum 4.351bn and Ford FY2025 -12.843bn, both matching the vendor's line within the threshold), MarginDepositsOutstanding and RestrictedCashAndInvestmentsForOperatingActivities (deposits placed and pledged investments, on Delta's FY2011 to FY2017 filings where no vendor column exists, by definition); liabilities AccountsPayableAndOtherOperatingLiabilities (Oracle FY2023 to FY2025 to the million, Ford FY2025), OperatingLiabilities (Ford FY2011 to FY2021, by definition), AccruedSalaries (Texas Instruments FY2025 0.242bn, near the vendor's line, a known residual), AirTrafficLiability1 and FrequentFlyerLiability (unearned ticket and mileage revenue, Delta's old years, by definition), InterestPayableNet (interest owed; American Tower, Southern, Vistra, whose vendor lines bundle other items), CustomerAdvances (prepayments by customers; Caterpillar FY2022 to FY2025 to the million with the tag on its earlier years, Micron); excluded PensionAndPostretirementObligations (Lockheed Martin, Texas Instruments): pension funding is the financing of a long-term obligation, not working capital, and Lockheed's vendor line (against the sum 0.568bn) carries other items either way."
+        "Added 2026-09-19 from the first universe growth batch, each checked against its us-gaap definition and the vendor's working-capital line (or, where the vendor's snapshot column carries no such line, its component rows fetched live): assets RetailRelatedInventories (merchandise inventory; Home Depot FY2026 filed +1.498bn, the vendor's Change In Inventory carrying the same figure with the statement's sign, an outflow, and the sum 2.892bn near the vendor's line, a known residual of the rows it bundles), MaterialsAndSupplies (capitalised materials not in inventory; Union Pacific FY2025 +0.018bn, the vendor's inventory row carrying the same figure with the statement's sign; the sum 0.554bn against the vendor's line, the residual in its other-working-capital row), FinanceReceivables (outstanding loans; Cisco FY2026 sum 4.351bn and Ford FY2025 -12.843bn, both matching the vendor's line within the threshold), MarginDepositsOutstanding and RestrictedCashAndInvestmentsForOperatingActivities (deposits placed and pledged investments, on Delta's FY2011 to FY2017 filings where no vendor column exists, by definition); liabilities AccountsPayableAndOtherOperatingLiabilities (Oracle FY2023 to FY2025 to the million, Ford FY2025), OperatingLiabilities (Ford FY2011 to FY2021, by definition), AccruedSalaries (Texas Instruments FY2025 0.242bn, near the vendor's line, a known residual), AirTrafficLiability1 and FrequentFlyerLiability (unearned ticket and mileage revenue, Delta's old years, by definition), InterestPayableNet (interest owed; American Tower, Southern, Vistra, whose vendor lines bundle other items), CustomerAdvances (prepayments by customers; Caterpillar FY2022 to FY2025 to the million with the tag on its earlier years, Micron); excluded PensionAndPostretirementObligations (Lockheed Martin, Texas Instruments): pension funding is the financing of a long-term obligation, not working capital, and Lockheed's vendor line (against the sum 0.568bn) carries other items either way.",
+        "components added 2026-09-23 (54), each classified by its us-gaap definition and checked against the vendor's grouping of the same tags on two fiscal years. Assets: IncomeTaxesReceivable (amounts due from tax authorities for refunds of overpayments) on Cboe, which the vendor groups with accounts receivable, the two filed tags reproducing that grouped line within the threshold on FY2024 and FY2025; InventoriesAndOtherOperatingAssets (inventory and assets classified as other) on HCA, matching the vendor's inventory line within the threshold on both years, with HCA's whole component sum matching the vendor's working-capital line within the threshold on both; BrokerageReceivables (amounts due from other broker-dealers and clearing organisations), DepositOtherAssets (moneys or securities given as security, including deposits with clearing organisations, collateral and margin deposits) and SecuritiesBorrowed (amounts due from securities borrowed transactions) on Robinhood. Liabilities: DeferredCompensation (the obligation created by employee agreements whereby earned compensation will be paid in the future) on Okta, where the asset kind would put the sum a multiple away from the vendor's line and the liability kind lands within it; PayablesToCustomers (amounts payable to customers) and SecuritiesLoanedTransactions (the liability arising from securities loaned transactions) on Robinhood, whose filed tags reproduce the vendor's grouped receivables and payables lines within the threshold on FY2024 and FY2025 with the borrow and loan balances inside them; OtherDeferredLiability (deferred obligations classified as other) on VICI.",
+        "Cboe's aggregate is not a usable cross-check: the vendor's working-capital line is dominated by its own other-working-capital residual, a plug rather than a filed line, so the new tag was checked against the vendor's receivables grouping instead. A broker-dealer's segregated customer cash stays outside working capital under the existing IncreaseDecreaseInRestrictedCash exclusion, but its customer margin lending is tagged IncreaseDecreaseInAccountsReceivable by the filer and is therefore inside the sum: for such a filer the working-capital figure is the growth of a lending book, which the entity's scope limit states and the DCF does not read as trade credit."
       ]
     },
     "vendor": {
@@ -367,7 +382,10 @@
       "equity_method": [
         "ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod"
       ]
-    }
+    },
+    "notes": [
+      "interest_expense, probed and refused (54): Robinhood tags no operating-income line and none of the four interest-expense tags, so the derived recipe cannot run and the record fails on ebit. InterestExpenseBorrowings, which it does tag, was tried and rejected: it is interest on borrowings only, so on a deposit-taking filer it is a component and not the line (PNC files it at about a third of its interest paid, Morgan Stanley at a hundred times its net non-operating interest), and a tag that is the whole line on one filer and a part of it on another cannot sit in a first-present list. It stays in total_debt's interest_evidence, where being a part is enough to say the filer owes something. Robinhood's is a filer limitation, like Chevron's, not a gap in the table."
+    ]
   },
   "refinement_policy": {
     "max_refinements_per_field": 1,
@@ -392,18 +410,31 @@
       "gains": [
         "GainLossOnSaleOfProperties",
         "GainsLossesOnSalesOfInvestmentRealEstate"
+      ],
+      "financing_lease_evidence": [
+        "NetInvestmentInLeaseExcludingAccruedInterestAfterAllowanceForCreditLoss",
+        "NetInvestmentInLeaseExcludingAccruedInterestBeforeAllowanceForCreditLoss",
+        "NetInvestmentInLease",
+        "DirectFinancingLeaseNetInvestmentInLease"
+      ],
+      "financing_lease_income": [
+        "SalesTypeLeaseInterestIncome",
+        "DirectFinancingLeaseInterestIncome"
       ]
     },
     "ifrs": {
       "net_income": [],
       "depreciation": [],
       "impairment": [],
-      "gains": []
+      "gains": [],
+      "financing_lease_evidence": [],
+      "financing_lease_income": []
     },
     "notes": [
       "ifrs-full tags are not mapped: no IFRS REIT is in the universe; a filer with none of the net-income tags leaves ffo null and the model fails naming it.",
       "The distribution rule is recorded, not used: a U.S. REIT must distribute at least 90% of its REIT taxable income excluding net capital gain, jurisdiction-specific; the payout is observed, so the rule is not an input.",
-      "depreciation (31): DepreciationAmortizationAndAccretionNet joins the list (American Tower files its D&A under it alone: FY2025 2.042bn, matching the vendor's line within the threshold), and the largest-total rule of the depreciation_amortization definition applies inside the recipe exactly as on the DCF path: every total present is a candidate and the largest is taken. Equinix files two totals (FY2025 2.050bn and 2.066bn, the larger matching the vendor's line within the threshold) and moves by the difference."
+      "depreciation (31): DepreciationAmortizationAndAccretionNet joins the list (American Tower files its D&A under it alone: FY2025 2.042bn, matching the vendor's line within the threshold), and the largest-total rule of the depreciation_amortization definition applies inside the recipe exactly as on the DCF path: every total present is a candidate and the largest is taken. Equinix files two totals (FY2025 2.050bn and 2.066bn, the larger matching the vendor's line within the threshold) and moves by the difference.",
+      "financing leases (54): a triple-net REIT may account for its properties as sales-type or direct-financing leases, in which case they are net investments in leases on the balance sheet, earn interest rather than rent, and carry no real-estate depreciation to add back. NAREIT FFO is then not the measure: net income plus nothing is net income, and calling it FFO would dress a financing receivable as property. Both conditions are required beside the absent depreciation total, because the balance alone is not evidence: MetLife carries direct-financing leases inside an insurance investment portfolio and files no depreciation total in FY2021 or FY2022, and it is not a REIT and never asks for FFO. The interest income filed beside the balance is what says the filer's property income is interest. VICI is the case: its accumulated real-estate depreciation is filed at zero, its net investment in leases is the bulk of its real-estate investments, and its lease income is filed as sales-type lease interest income. The field is then left null with the reason \"the filer's leases are financing receivables; NAREIT FFO does not apply\", and the REIT model fails with that string rather than naming an absent tag."
     ]
   },
   "shares_for_flows": {
@@ -446,6 +477,9 @@
         "DepreciationDepletionAndAmortization",
         "DepreciationAndAmortization",
         "DepreciationAmortizationAndAccretionNet"
+      ],
+      "last_resort": [
+        "OtherDepreciationAndAmortization"
       ]
     },
     "ifrs": {
@@ -483,7 +517,8 @@
     "notes": [
       "Verified 2026-09-19 across the 43-name universe's snapshot: Valero is the only filer carrying two totals in one period where the first by list order was not the largest (FY2016 to FY2025, 0.043 to 0.063bn against 1.894 to 3.158bn); from FY2011 to FY2015 its two or three totals agree. Every other filer carries one total per period, so the rule changes nothing there. The total tags are the same list as xbrl_tags.json's depreciation_amortization field, which the per-period selection still reads; a test holds the two equal.",
       "IFRS verified 2026-09-19 on Shell and BP against the vendor's D&A row, which excludes impairments net of reversals: Shell files the pure tag through FY2018 only and the inclusive one since, and inclusive 25.299 - impairment 3.175 + reversal 0.042 = 22.166bn for FY2025, FY2024 26.872 - 4.502 + 0.333 = 22.703bn, FY2022 18.529 - 2.313 + 6.177 = 22.393bn and FY2023 31.290 - 8.947 + 0.762 = 23.105bn, each matching the vendor's row within the threshold. Shell's AdjustmentsForDepreciationAndAmortisationExpense carries the inclusive amount, so it is a plain total only when neither the pure nor the inclusive tag is filed (TSMC, SAP, Sony, whose vendor rows it matched in brief 13). BP files the pure tag every year (FY2025 17.822bn), matching the vendor's row within the threshold, and does not move.",
-      "IFRS component sum verified 2026-09-20 on TSMC, which files DepreciationExpense and AmortisationExpense and no total: FY2024 653,610.5 + 9,186.1 = 662,796.6m TWD and FY2023 522,932.7 + 9,258.2 = 532,190.9m, both matching the vendor's row within the threshold; adding DepreciationRightofuseAssets (3,679.5m, 3,459.0m) overshoots by that amount, so it is inside DepreciationExpense and is not added. SAP, Sony, HDFC Bank, Itau, Nu and BP resolve on an earlier branch and do not move."
+      "IFRS component sum verified 2026-09-20 on TSMC, which files DepreciationExpense and AmortisationExpense and no total: FY2024 653,610.5 + 9,186.1 = 662,796.6m TWD and FY2023 522,932.7 + 9,258.2 = 532,190.9m, both matching the vendor's row within the threshold; adding DepreciationRightofuseAssets (3,679.5m, 3,459.0m) overshoots by that amount, so it is inside DepreciationExpense and is not added. SAP, Sony, HDFC Bank, Itau, Nu and BP resolve on an earlier branch and do not move.",
+      "last_resort (54): OtherDepreciationAndAmortization is defined as depreciation and amortisation of tangible and intangible assets classified as other, a sub-line and not a total, so it is not a candidate under the largest-total rule and cannot displace a filed total. It stands as the period's D&A only when the filer files no total and none of the components, which is Veeva from FY2025: it is that filer's whole cash-flow depreciation and amortisation line and matched the vendor's D&A row within the threshold on FY2025 and FY2026."
     ]
   },
   "required_on_latest_period": {

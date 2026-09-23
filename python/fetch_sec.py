@@ -313,12 +313,18 @@ def depreciation(facts: "Facts", selected: Selected, tags: reference.XbrlTags, d
         v, r = value_of(selected, field, end)
         if v is None:
             if i == 0:
-                return None, None, None, None, None
+                break
             continue
         parts.append((v, r or field))
-    if not parts:
-        return None, None, None, None, None
-    return sum(v for v, _ in parts), " + ".join(r for _, r in parts), None, None, None
+    if parts:
+        return sum(v for v, _ in parts), " + ".join(r for _, r in parts), None, None, None
+    # (54) an element the taxonomy calls a sub-line stands as the period's total only when
+    # the filer files no total and none of the components: then it is demonstrably the
+    # whole line. Never a candidate under the largest rule, so it cannot displace a total.
+    last = facts.first(definition.xbrl.last_resort, end, instant=False)
+    if last is not None:
+        return last[0], last[1], [boundary.Component(name="last_resort", value=last[0], row=last[1])], "last_resort", None
+    return None, None, None, None, None
 
 
 class Facts:
@@ -577,23 +583,35 @@ def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: floa
     return sum(p.value for p in parts), _label(parts), "pretax_plus_interest_less_nonoperating", _composition(defs.ebit.name, parts)
 
 
-def ffo(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> Derived:
+FINANCING_LEASES = "the filer's leases are financing receivables; NAREIT FFO does not apply"
+
+
+def ffo(facts: Facts, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> tuple[float | None, str | None, boundary.Composition | None, str | None]:
     """FFO per NAREIT: net income + real-estate depreciation + impairment - gains on property
-    sales; the first two required, the last two taken as 0 when not filed and recorded so."""
+    sales; the first two required, the last two taken as 0 when not filed and recorded so.
+    (54) A filer whose properties are net investments in leases files no real-estate
+    depreciation to add back, so the measure does not apply and the absence carries that
+    reason rather than the name of a tag. (value, row, composition, unavailable)."""
     d = defs.ffo.ifrs if taxonomy == "ifrs-full" else defs.ffo.xbrl
     net_income = facts.first(d.net_income, end, instant=False)
     # the largest filed total (27), inside the recipe as on the dcf path (31)
     candidates = [(v, tag) for tag in d.depreciation if (v := facts.at(tag, end, instant=False)) is not None]
     depreciation = max(candidates, key=lambda c: c[0]) if candidates else None
+    # (54) the balance and the interest earned on it, both required: a lessor position
+    # alone is something any investor may hold.
+    balance = any(facts.at(tag, end, instant=True) is not None for tag in d.financing_lease_evidence)
+    income = facts.first(d.financing_lease_income, end, instant=False) is not None
+    if depreciation is None and balance and income:
+        return None, None, None, FINANCING_LEASES
     if net_income is None or depreciation is None:
-        return None, None, None
+        return None, None, None, None
     parts = [boundary.Component(name="net_income", value=net_income[0], row=net_income[1]),
              boundary.Component(name="real_estate_depreciation", value=depreciation[0], row=depreciation[1])]
     impairment = facts.first(d.impairment, end, instant=False)
     parts.append(boundary.Component(name="real_estate_impairment", value=impairment[0] if impairment else 0.0, row=impairment[1] if impairment else "not filed, taken as 0"))
     gains = facts.first(d.gains, end, instant=False)
     parts.append(boundary.Component(name="gain_on_property_sales", value=-gains[0] if gains else 0.0, row=gains[1] if gains else "not filed, taken as 0"))
-    return sum(p.value for p in parts), _label(parts), _composition(defs.ffo.name, parts)
+    return sum(p.value for p in parts), _label(parts), _composition(defs.ffo.name, parts), None
 
 
 def aoci(facts: Facts, defs: reference.FieldDefinitions, end: date, filed: tuple[float | None, str | None]) -> tuple[float | None, str | None, str | None, boundary.Composition | None]:
@@ -661,7 +679,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
             debt, debt_row, debt_composition = total_debt(facts, defs, end)
             nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
-        ffo_value, _, ffo_composition = ffo(facts, defs, end, taxonomy=taxonomy)
+        ffo_value, _, ffo_composition, ffo_unavailable = ffo(facts, defs, end, taxonomy=taxonomy)
         shares = weighted_shares(facts, defs, end, taxonomy=taxonomy)
         interest_value, interest_row, interest_recipe = interest_expense(facts, defs, end, taxonomy=taxonomy)
         aoci_value, aoci_row, aoci_recipe, aoci_composition = aoci(facts, defs, end, (v["aoci"], r["aoci"]))
@@ -695,7 +713,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 interest_expense=interest_value, interest_expense_row=interest_row, interest_recipe=interest_recipe,
                 cash_composition=cash_composition,
                 total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,
-                ffo=ffo_value, ffo_composition=ffo_composition,
+                ffo=ffo_value, ffo_composition=ffo_composition, ffo_unavailable=ffo_unavailable,
                 weighted_shares=None if shares is None else shares[0], weighted_shares_tag=None if shares is None else shares[1],
             )
         )

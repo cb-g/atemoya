@@ -16,7 +16,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?claims_liability ?claims_liability_row ?total_revenue_row ?ebit_row ?pretax_income_row
     ?tax_provision_row ?capex_row ?delta_nwc_row ?cash_row ?book_equity_row ?net_income_row
     ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
-    ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?weighted_shares
+    ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?ffo_unavailable ?weighted_shares
     ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates ?aoci_recipe ?aoci_composition
     ?interest_recipe ?depreciation_amortization_recipe ?depreciation_amortization_composition () : Boundary_t.fiscal_period =
   {
@@ -71,6 +71,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     net_interest_income_row;
     ffo;
     ffo_composition;
+    ffo_unavailable;
     weighted_shares;
     weighted_shares_tag;
     ebit_recipe;
@@ -225,11 +226,11 @@ let params : Params.t =
     equity_risk_premiums =
       Reference_j.country_table_of_string
         (country_table_json ~source:"Damodaran Jan 2026"
-           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423, "South Korea": 0.0487, "Brazil": 0.0747}|});
+           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423, "South Korea": 0.0487, "Brazil": 0.0747, "Uruguay": 0.0680}|});
     tax_rates =
       Reference_j.country_table_of_string
         (country_table_json ~source:"PwC 2026"
-           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30, "South Korea": 0.275, "Brazil": 0.34}|});
+           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30, "South Korea": 0.275, "Brazil": 0.34, "Uruguay": 0.25}|});
     industry_betas =
       Reference_j.industry_table_of_string
         {|{"source": "sector betas 2026", "as_of": "2026-01-01", "max_age_days": 400,
@@ -253,6 +254,11 @@ let params : Params.t =
            "currencies": {"BRL": {"series": "DEXBZUS", "direction": "units_per_usd"},
                           "EUR": {"series": "DEXUSEU", "direction": "usd_per_unit"},
                           "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit"}}}|};
+    rate_sources =
+      Reference_j.rate_sources_of_string
+        {|{"source": "test", "as_of": "2026-09-18", "max_age_days": 45, "tenors": ["5y"],
+           "no_curve_fallback": ["Uruguay"],
+           "countries": {"United States": {"tier": "official", "source": "FRED", "parser": "fred_dgs", "tenors": ["5y"]}}}|};
     xbrl_tags =
       Reference_j.xbrl_tags_of_string
         {|{"source": "test", "as_of": "2026-09-19", "cross_check_threshold": 0.02, "max_filing_age_days": 400,
@@ -1709,7 +1715,7 @@ let test_flow_chart_names_every_reason () =
       "financial currency disagreement"; "no point-in-time statements"; "no point-in-time shares";
       "rate source has no history for"; "ffo growth needs two periods"; "is not positive";
       "no options data"; "no expiry >= 365 days with >= 8 quoted strikes on each side"; "smile fit failed";
-      "no options snapshot within" ];
+      "no options snapshot within"; "the filer's leases are financing receivables; NAREIT FFO does not apply" ];
   (* (51) the chart is one SVG rendered from docs/flow.mmd; the pair changes together *)
   Alcotest.(check bool) "docs/flow.svg exists" true (Sys.file_exists "../../docs/flow.svg");
   Alcotest.(check bool) "docs/flow.mmd exists" true (Sys.file_exists "../../docs/flow.mmd");
@@ -2315,7 +2321,7 @@ let test_summary_definitions_and_cross_check_listing () =
   let primary = run (filed ~cross_check:a_cross_check (history ())) in
   let s = Batch.summary ~definitions:params.field_definitions [ primary ] in
   check_mentions "summary" s
-    [ "field definitions (reference/field_definitions.json, as_of 2026-09-21): cash = cash_and_short_term_investments; total_debt = financial_debt_excluding_operating_leases; delta_nwc = cash_flow_statement_change_in_operating_working_capital; ebit = operating_income_else_pretax_plus_interest";
+    [ "field definitions (reference/field_definitions.json, as_of 2026-09-23): cash = cash_and_short_term_investments; total_debt = financial_debt_excluding_operating_leases; delta_nwc = cash_flow_statement_change_in_operating_working_capital; ebit = operating_income_else_pretax_plus_interest";
       "cross-check: 1 of 1 filed-statement records disagree";
       "  on a field the routed model reads: 1 of 1 (TEST)";
       "  TEST       cash filed 36 vendor 54.7 (34.2%)" ];
@@ -2802,6 +2808,65 @@ let test_reit_covered_dividend_and_guards () =
   check_error "no ffo" (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ~ffo_now:None ()))) [ "missing statement fields"; "ffo" ];
   check_error "no dividends" (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ~dividends:None ()))) [ "missing statement fields"; "dividends_paid" ]
 
+let test_reit_refuses_a_financing_lease_filer () =
+  (* (54) The definition left ffo null for a structural reason, not a missing tag: the
+     model says so, and says nothing about the field it could not find. *)
+  let reason = "the filer's leases are financing receivables; NAREIT FFO does not apply" in
+  let periods =
+    match reit_history ~ffo_now:None () with
+    | latest :: rest -> { latest with ffo_unavailable = Some reason } :: rest
+    | [] -> []
+  in
+  check_error "the structural reason is the failure"
+    (Reit.value reit_assumptions ~country:"T" (reit_financials periods))
+    [ "financing receivables"; "NAREIT FFO does not apply" ];
+  (match Reit.value reit_assumptions ~country:"T" (reit_financials periods) with
+  | Error e -> Alcotest.(check string) "and nothing else" reason e
+  | Ok _ -> Alcotest.fail "expected the refusal");
+  (* without the reason the absent field is named, as before *)
+  check_error "an ordinary absence still names the field"
+    (Reit.value reit_assumptions ~country:"T" (reit_financials (reit_history ~ffo_now:None ())))
+    [ "missing statement fields"; "ffo" ];
+  (* and a reason beside a present ffo changes nothing *)
+  let with_ffo =
+    match reit_history () with
+    | latest :: rest -> { latest with ffo_unavailable = Some reason } :: rest
+    | [] -> []
+  in
+  Alcotest.(check bool) "a present ffo values" true
+    (Result.is_ok (Reit.value reit_assumptions ~country:"T" (reit_financials with_ffo)))
+
+let test_no_curve_domicile_takes_the_trading_currency () =
+  (* (54) Uruguay is declared in rate_sources.json's no_curve_fallback and has no curve, so
+     a record whose statements and price are both in dollars discounts at the dollar curve
+     and keeps Uruguay's own country risk premium. *)
+  Alcotest.(check bool) "no curve for the domicile" false (Params.has_curve params.risk_free ~country:"Uruguay");
+  Alcotest.(check bool) "declared" true (Params.no_curve_declared params.rate_sources ~country:"Uruguay");
+  Alcotest.(check bool) "Brazil is not declared" false (Params.no_curve_declared params.rate_sources ~country:"Brazil");
+  Alcotest.(check bool) "Singapore has a curve, so the question does not arise" true
+    (Params.has_curve params.risk_free ~country:"Singapore");
+  let v = run { (filed (history ())) with country = Some "Uruguay" } in
+  Alcotest.(check (option string)) "it values" None v.failed_reason;
+  Alcotest.check status "it values" `Ok v.status;
+  (match v.inputs with
+  | Some (`Dcf i) ->
+      check_float "the dollar curve's 7y" 0.0468 i.risk_free_rate.value;
+      Alcotest.(check string) "and its key" "United States/7y" i.risk_free_rate.key;
+      check_mentions "the source says where it came from" i.risk_free_rate.source
+        [ "trading currency"; "domicile curve unavailable" ];
+      check_float "the mature base is the erp" 0.0423 i.equity_risk_premium.value;
+      (match i.country_risk_premium with
+      | Some crp ->
+          check_float "crp is the domicile's, less the base" (0.0680 -. 0.0423) crp.value;
+          Alcotest.(check string) "crp key is the domicile" "Uruguay" crp.key
+      | None -> Alcotest.fail "no country risk premium");
+      check_float "tax from the domicile" 0.25 i.statutory_tax_rate.value
+  | _ -> Alcotest.fail "expected a dcf");
+  (* a domicile with no curve and no declaration still fails naming the curve *)
+  let v = run { (filed (history ())) with country = Some "Peru" } in
+  Alcotest.check status "undeclared domicile fails" `Failed v.status;
+  check_mentions "and names the curve" (Option.value v.failed_reason ~default:"") [ "risk-free curve"; "Peru" ]
+
 let test_reit_routes_and_implied () =
   let v = run ~declared:(Some (declaration `Reit)) (reit_financials (reit_history ())) in
   Alcotest.(check (option string)) "a reit values" None v.failed_reason;
@@ -3257,6 +3322,7 @@ let () =
           case "growth on the weighted count, never a point count" test_reit_growth_uses_the_weighted_count_not_a_point_count;
           case "covered dividend, growth needs two periods, guards" test_reit_covered_dividend_and_guards;
           case "routes, floors, implied g0 and horizon" test_reit_routes_and_implied;
+          case "a financing-lease filer is refused with the structural reason" test_reit_refuses_a_financing_lease_filer;
         ] );
       ( "point-in-time",
         [ case "gates name the missing history; held vintages declared" test_point_in_time_gates_and_vintages ] );
@@ -3282,6 +3348,7 @@ let () =
           case "fx rate through usd, dated by the older leg" test_fx_rate_through_usd;
           case "conversion scales totals, not price" test_fx_convert_scales_totals_only;
           case "international capm decomposes; domestic form untouched" test_international_capm;
+          case "a declared no-curve domicile takes the trading currency's rate" test_no_curve_domicile_takes_the_trading_currency;
           case "adr ratio invariance" test_adr_ratio_invariance;
           case "minor-unit price guard" test_minor_unit_guard;
           case "currency gate failures name the field or pair" test_currency_gate_failures;

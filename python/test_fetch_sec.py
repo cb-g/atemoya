@@ -754,3 +754,108 @@ def test_ifrs_depreciation_excludes_impairment_by_recipe() -> None:
     assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (17822e6, "pure")
     p = ifrs_dna_period({**f("DepreciationExpense", 653610.5e6), **f("AmortisationExpense", 9186.1e6), **f("AdjustmentsForDepreciationAndAmortisationExpense", 1311e6)})
     assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (1311e6, "total")
+
+
+def test_delta_nwc_batch_two_kinds() -> None:
+    """(54) Each tag the second growth batch's gaps needed carries its verified kind, and a
+    broker-dealer's operating-section balances sum with the sign the vendor groups them by."""
+    d = DEFS.delta_nwc.xbrl
+    for tag in ("IncreaseDecreaseInIncomeTaxesReceivable", "IncreaseDecreaseInInventoriesAndOtherOperatingAssets",
+                "IncreaseDecreaseInBrokerageReceivables", "IncreaseDecreaseInDepositOtherAssets",
+                "IncreaseDecreaseInSecuritiesBorrowed"):
+        assert tag in d.asset_components
+    for tag in ("IncreaseDecreaseInDeferredCompensation", "IncreaseDecreaseInPayablesToCustomers",
+                "IncreaseDecreaseInSecuritiesLoanedTransactions", "IncreaseDecreaseInOtherDeferredLiability"):
+        assert tag in d.liability_components
+    # HCA FY2025 by hand: receivables and inventories-and-other grew (outflows, added),
+    # payables and accrued liabilities grew (an inflow, subtracted).
+    hca = {"IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", 94e6, start="2025-01-01")),
+           "IncreaseDecreaseInInventoriesAndOtherOperatingAssets": usd(fact("2025-12-31", 154e6, start="2025-01-01")),
+           "IncreaseDecreaseInAccountsPayableAndAccruedLiabilities": usd(fact("2025-12-31", 666e6, start="2025-01-01"))}
+    p = period(hca)
+    assert p.delta_nwc is not None and math.isclose(p.delta_nwc, 94e6 + 154e6 - 666e6)
+    # Robinhood FY2025 by hand: the customer and counterparty balances on both sides.
+    hood = {"IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", 9106e6, start="2025-01-01")),
+            "IncreaseDecreaseInBrokerageReceivables": usd(fact("2025-12-31", -62e6, start="2025-01-01")),
+            "IncreaseDecreaseInDepositOtherAssets": usd(fact("2025-12-31", 213e6, start="2025-01-01")),
+            "IncreaseDecreaseInSecuritiesBorrowed": usd(fact("2025-12-31", -828e6, start="2025-01-01")),
+            "IncreaseDecreaseInPayablesToCustomers": usd(fact("2025-12-31", 3423e6, start="2025-01-01")),
+            "IncreaseDecreaseInSecuritiesLoanedTransactions": usd(fact("2025-12-31", 4163e6, start="2025-01-01"))}
+    p = period(hood)
+    assert p.delta_nwc is not None and math.isclose(p.delta_nwc, (9106 - 62 + 213 - 828 - 3423 - 4163) * 1e6)
+    # Okta FY2026 by hand: the deferred-compensation obligation fell, so cash left.
+    okta = {"IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", 70e6, start="2025-01-01")),
+            "IncreaseDecreaseInDeferredCompensation": usd(fact("2025-12-31", -245e6, start="2025-01-01"))}
+    p = period(okta)
+    assert p.delta_nwc is not None and math.isclose(p.delta_nwc, 70e6 + 245e6)
+
+
+def test_debt_convertible_balance_tags_are_appended_after_the_existing_ones() -> None:
+    """(54) Okta tags no debt but its convertible notes; a filer tagging the ordinary
+    long-term pair takes that pair, because the convertible tags sit after it."""
+    okta = {"ConvertibleDebtNoncurrent": usd(fact("2025-12-31", 0.0)),
+            "ConvertibleDebtCurrent": usd(fact("2025-12-31", 350e6))}
+    p = period(okta)
+    assert p.total_debt is not None and math.isclose(p.total_debt, 350e6)
+    assert p.total_debt_source == "ConvertibleDebtNoncurrent + ConvertibleDebtCurrent"
+    both = {**okta, "LongTermDebtNoncurrent": usd(fact("2025-12-31", 31e9)), "DebtCurrent": usd(fact("2025-12-31", 9e9))}
+    p = period(both)
+    assert p.total_debt is not None and math.isclose(p.total_debt, 40e9)
+    assert p.total_debt_source == "LongTermDebtNoncurrent + DebtCurrent"
+
+
+def test_interest_on_borrowings_blocks_the_absent_is_zero_rule() -> None:
+    """(54) A filer that tags interest on borrowings is not debt-free, so an absent debt
+    line stays absent; with neither, debt is 0 as before."""
+    assert period({"InterestExpenseBorrowings": usd(fact("2025-12-31", 32e6, start="2025-01-01"))}).total_debt is None
+    p = period({})
+    assert p.total_debt == 0.0 and p.total_debt_source == fetch_sec.DEBT_FREE
+    # evidence only: interest on borrowings is a component on a deposit-taking filer, so it
+    # is never the filer's interest-expense line and never derives an EBIT
+    assert "InterestExpenseBorrowings" in DEFS.total_debt.xbrl.interest_evidence
+    assert "InterestExpenseBorrowings" not in DEFS.ebit.xbrl.interest_expense
+    only_borrowings = {"InterestExpenseBorrowings": usd(fact("2025-12-31", 32e6, start="2025-01-01")),
+                       "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest": usd(fact("2025-12-31", 2108e6, start="2025-01-01"))}
+    assert period(only_borrowings).ebit is None
+
+
+def test_depreciation_last_resort_only_when_no_total_and_no_component() -> None:
+    """(54) OtherDepreciationAndAmortization is a sub-line by definition: it stands as the
+    period's D&A only where the filer files nothing else, and never displaces a total."""
+    other = {"OtherDepreciationAndAmortization": usd(fact("2025-12-31", 37.972e6, start="2025-01-01"))}
+    p = period(other)
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 37.972e6)
+    assert p.depreciation_amortization_row == "OtherDepreciationAndAmortization"
+    assert p.depreciation_amortization_recipe == "last_resort"
+    # a filed total wins even when it is smaller, because the sub-line is not a candidate
+    p = period({**other, "DepreciationDepletionAndAmortization": usd(fact("2025-12-31", 20e6, start="2025-01-01"))})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 20e6)
+    assert p.depreciation_amortization_recipe is None
+    # so does the components fallback
+    p = period({**other, "Depreciation": usd(fact("2025-12-31", 6e6, start="2025-01-01"))})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 6e6)
+
+
+def test_capex_takes_capitalised_software_only_when_nothing_else_is_filed() -> None:
+    """(54) Veeva's only investing capital outflow is capitalised internal-use software."""
+    assert period({"PaymentsForSoftware": usd(fact("2025-12-31", 29.131e6, start="2025-01-01"))}).capex == 29.131e6
+    both = {"PaymentsForSoftware": usd(fact("2025-12-31", 29.131e6, start="2025-01-01")),
+            "PaymentsToAcquirePropertyPlantAndEquipment": usd(fact("2025-12-31", 9.633e6, start="2025-01-01"))}
+    assert period(both).capex == 9.633e6
+
+
+def test_ffo_is_refused_when_the_filers_leases_are_financing_receivables() -> None:
+    """(54) VICI: no real-estate depreciation to add back because the properties are net
+    investments in leases earning interest. The balance alone is not enough — MetLife holds
+    one inside an insurance portfolio and never asks for FFO."""
+    vici = {"NetIncomeLoss": usd(fact("2025-12-31", 2775.493e6, start="2025-01-01")),
+            "NetInvestmentInLeaseExcludingAccruedInterestAfterAllowanceForCreditLoss": usd(fact("2025-12-31", 23706.563e6)),
+            "SalesTypeLeaseInterestIncome": usd(fact("2025-12-31", 2125.367e6, start="2025-01-01"))}
+    p = period(vici)
+    assert p.ffo is None and p.ffo_composition is None
+    assert p.ffo_unavailable == fetch_sec.FINANCING_LEASES
+    balance_only = {k: v for k, v in vici.items() if k != "SalesTypeLeaseInterestIncome"}
+    assert period(balance_only).ffo_unavailable is None
+    # a filer that does file real-estate depreciation computes FFO and carries no reason
+    p = period({**vici, "DepreciationDepletionAndAmortization": usd(fact("2025-12-31", 1000e6, start="2025-01-01"))})
+    assert p.ffo is not None and p.ffo_unavailable is None

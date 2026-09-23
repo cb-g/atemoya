@@ -25,6 +25,9 @@ type t = {
   fx_sources : Reference_t.fx_sources;
   fx_rates : Reference_t.fx_rates option;
       (** fetched by python/refresh_fx.py to data/reference, never tracked (29); [None] when absent *)
+  rate_sources : Reference_t.rate_sources;
+      (** the tracked curve registry: where each country's curve comes from, and which
+          domiciles are declared to have none (54) *)
   xbrl_tags : Reference_t.xbrl_tags;
   field_definitions : Reference_t.field_definitions;
       (** the one definition per composed statement field, applied by both fetchers *)
@@ -61,8 +64,19 @@ val resolve :
     alternate country spellings to the canonical key. The risk-free tenor is
     ["<projection_years>y"]. *)
 
+val has_curve : Reference_t.risk_free_rates option -> country:string -> bool
+(** Whether a risk-free curve exists for the domicile at all. *)
+
+val no_curve_declared : Reference_t.rate_sources -> country:string -> bool
+(** (54) Whether reference/rate_sources.json declares the domicile in [no_curve_fallback]:
+    a domicile with no reachable official curve, whose single-currency records take the
+    trading currency's risk-free rate and keep the domicile's country risk premium. The
+    declaration is inert while the domicile does have a curve, and a domicile not named
+    there still fails. *)
+
 val resolve_cross :
   ?hold_vintage:bool ->
+  ?rf_note:string ->
   t ->
   today:string ->
   domicile:string ->
@@ -74,4 +88,6 @@ val resolve_cross :
     [domicile], and the international CAPM's components (a declared required return,
     resolved by the valuation per name, replaces them above the risk-free rate, 34): [equity_risk_premium]
     is the mature-market base and [country_risk_premium] the domicile's total
-    ERP less that base. Beta from the industry table as always. *)
+    ERP less that base. Beta from the industry table as always. [rf_note] is appended to
+    the risk-free parameter's source when the rate came from somewhere the domicile did
+    not choose (54). *)

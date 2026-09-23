@@ -32,6 +32,14 @@ let value (a : Dcf.assumptions) ~country (fin : financials) =
     | None -> Error "no fiscal periods in statements"
     | Some p -> Ok p
   in
+  (* (54) A structural absence is reported as itself: when the definition left ffo null
+     because the filer's properties are lease receivables, NAREIT FFO is not the measure,
+     and naming the tag it could not find would say the opposite of what happened. *)
+  let* () =
+    match (p.ffo, p.ffo_unavailable) with
+    | None, Some reason -> Error reason
+    | _ -> Ok ()
+  in
   let market =
     List.filter_map Fun.id
       [ absent "currency" fin.currency; absent "price" fin.price; absent "market_cap" fin.market_cap ]

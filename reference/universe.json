@@ -1,6 +1,7 @@
 {
   "notes": [
-    "The one universe, growing to every name anyone classifies. A declaration, nothing else: the ticker, the class a human declared for it (never inferred), why that class in words meant to hold for years, and what no model can see for the name. No outcome, number, date, tag or parameter lives here; the run records those per record, and whether anything changed since the last run is the baseline diff. The loader is strict: an unknown field is a load error. An entry may declare the SEC filer to read by cik when the ticker map points elsewhere, with the reason in why."
+    "The one universe, growing to every name anyone classifies. A declaration, nothing else: the ticker, the class a human declared for it (never inferred), why that class in words meant to hold for years, and what no model can see for the name. No outcome, number, date, tag or parameter lives here; the run records those per record, and whether anything changed since the last run is the baseline diff. The loader is strict: an unknown field is a load error. An entry may declare the SEC filer to read by cik when the ticker map points elsewhere, with the reason in why.",
+    "Reclassified 2026-09-23 (54) by the user: Amazon and Venture Global move from OperatingCompany and Unprofitable to Cyclical, both for the same reason Oracle carries, a capacity build-out inside the growth window that the latest year's free cash flow cannot speak for; Robinhood stays under the software lens with the interest-revenue scope limit written down, so the bank signature its filing fires is a recorded disagreement and not a misclassification. The class judgments drafted in batch 2 were confirmed by the user on the same day."
   ],
   "tickers": [
     {
@@ -449,8 +450,11 @@
     },
     {
       "ticker": "AMZN",
-      "entity_class": "OperatingCompany",
-      "why": "Retail, logistics and cloud under one filer; an operating company whose cash flows the DCF reads directly."
+      "entity_class": "Cyclical",
+      "why": "retail and cloud; a capacity build-out inside the growth window makes the latest year's free cash flow negative; through-cycle return on today's capital is the question",
+      "scope_limits": [
+        "structural: a capacity build-out whose returns are not yet in the window"
+      ]
     },
     {
       "ticker": "ABT",
@@ -570,15 +574,16 @@
     {
       "ticker": "HOOD",
       "entity_class": "HighGrowthSoftware",
-      "why": "A retail broker-dealer with transaction and subscription revenue; declared under the software lens, with net interest revenue a large share that the bank signature may read as a bank: a judgment to confirm.",
+      "why": "A retail broker-dealer with transaction and subscription revenue; the software lens, confirmed by the user against the bank signature the filing fires.",
       "scope_limits": [
-        "Net interest revenue on customer balances and margin is a rate-driven line the software lens does not model."
+        "interest-driven revenue (net interest on customer cash, margin and securities lending) is about a third of the total and moves with rates and balances, which the DCF cannot see; the bank signature fires by design and is not a misclassification",
+        "the filed change in working capital is the growth of the margin and customer-payable book, which the filer tags under trade receivables and payables; the DCF reads it as working capital because that is what the filing says"
       ]
     },
     {
       "ticker": "GRAB",
       "entity_class": "HighGrowthSoftware",
-      "why": "Mobility, delivery and financial services filing a 20-F from Singapore; platform revenue with GAAP profit only recently turned positive, so the software lens applies if the filing shows profit, else Unprofitable: a judgment to confirm; adr_ratio: one American depositary share is one Class A ordinary share (20-F, deposit agreement).",
+      "why": "Mobility, delivery and financial services filing a 20-F from Singapore; platform revenue, GAAP-profitable on the latest filing, so the software lens, confirmed by the user; adr_ratio: one American depositary share is one Class A ordinary share (20-F, deposit agreement).",
       "adr_ratio": 1
     },
     {
@@ -642,17 +647,20 @@
     {
       "ticker": "TAC",
       "entity_class": "MerchantPower",
-      "why": "TransAlta, a Canadian power generator filing a 40-F, selling into the Alberta merchant market; the merchant-power class by its text, refused by design: a judgment to confirm against the brief's oil-field-services reading."
+      "why": "TransAlta, a Canadian power generator filing a 40-F, selling into the Alberta merchant market; the merchant-power class by its text, refused by design, confirmed by the user against the brief's oil-field-services reading."
     },
     {
       "ticker": "RKLB",
       "entity_class": "Unprofitable",
-      "why": "Launch and space systems, GAAP loss-making on the filing; the runway lens; if free cash flow has turned positive on the filing the operating-company class is the right one: a judgment to confirm."
+      "why": "Launch and space systems, GAAP loss-making on the filing; the runway lens; if free cash flow has turned positive on the filing the operating-company class is the right one, confirmed by the user."
     },
     {
       "ticker": "VG",
-      "entity_class": "Unprofitable",
-      "why": "LNG exporter newly listed as a 10-K filer, its second terminal still commissioning on the filing; declared Unprofitable pending the filing's own figures, Cyclical if producing at scale, ConstructionStage if not: a judgment to confirm."
+      "entity_class": "Cyclical",
+      "why": "LNG export; producing and earning at scale, with a build-out inside the window larger than its earnings",
+      "scope_limits": [
+        "structural: a capacity build-out whose returns are not yet in the window"
+      ]
     },
     {
       "ticker": "JAAA",

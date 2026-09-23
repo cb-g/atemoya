@@ -38,6 +38,7 @@ type rate_sources = {
   tenors : string list;
   ~aliases : (string * string) list <json repr="object">;
   ~notes : string list;
+  ~no_curve_fallback : string list;                     (* (54) domiciles with no reachable official curve whose records take the trading currency's risk-free rate and keep the domicile's country risk premium; a domicile not named here still fails *)
   countries : (string * rate_source) list <json repr="object">;
 }
 
@@ -431,6 +432,8 @@ type ffo_tags = {
   depreciation : string list;
   impairment : string list;
   gains : string list;
+  ~financing_lease_evidence : string list;   (* (54) the net-investment-in-lease balance: necessary, not sufficient, since any investor may hold one *)
+  ~financing_lease_income : string list;     (* (54) interest earned on that net investment: with the balance beside it, and no depreciation total filed, the properties are receivables and NAREIT FFO does not apply *)
 }
 
 type ffo_definition = {
@@ -474,6 +477,7 @@ type shares_for_market_cap = {
    total is filed. *)
 type dna_totals = {
   totals : string list;                 (* every total tag evaluated per period; the largest present wins *)
+  ~last_resort : string list;           (* (54) an element the taxonomy defines as a sub-line, standing as the period's total only when no total and no component is filed *)
 }
 
 (* IFRS (32): depreciation and amortisation excluding impairment. The pure tag first; where

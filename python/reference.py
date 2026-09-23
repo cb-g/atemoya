@@ -1044,6 +1044,7 @@ class RateSources:
     countries: List[Tuple[str, RateSource]]
     aliases: List[Tuple[str, str]] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
+    no_curve_fallback: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'RateSources':
@@ -1056,6 +1057,7 @@ class RateSources:
                 countries=_atd_read_assoc_object_into_list(RateSource.from_json)(x['countries']) if 'countries' in x else _atd_missing_json_field('RateSources', 'countries'),
                 aliases=_atd_read_assoc_object_into_list(_atd_read_string)(x['aliases']) if 'aliases' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                no_curve_fallback=_atd_read_list(_atd_read_string)(x['no_curve_fallback']) if 'no_curve_fallback' in x else [],
             )
         else:
             _atd_bad_json('RateSources', x)
@@ -1069,6 +1071,7 @@ class RateSources:
         res['countries'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.countries)
         res['aliases'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.aliases)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        res['no_curve_fallback'] = _atd_write_list(_atd_write_string)(self.no_curve_fallback)
         return res
 
     @classmethod
@@ -1973,6 +1976,8 @@ class FfoTags:
     depreciation: List[str]
     impairment: List[str]
     gains: List[str]
+    financing_lease_evidence: List[str] = field(default_factory=lambda: [])
+    financing_lease_income: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'FfoTags':
@@ -1982,6 +1987,8 @@ class FfoTags:
                 depreciation=_atd_read_list(_atd_read_string)(x['depreciation']) if 'depreciation' in x else _atd_missing_json_field('FfoTags', 'depreciation'),
                 impairment=_atd_read_list(_atd_read_string)(x['impairment']) if 'impairment' in x else _atd_missing_json_field('FfoTags', 'impairment'),
                 gains=_atd_read_list(_atd_read_string)(x['gains']) if 'gains' in x else _atd_missing_json_field('FfoTags', 'gains'),
+                financing_lease_evidence=_atd_read_list(_atd_read_string)(x['financing_lease_evidence']) if 'financing_lease_evidence' in x else [],
+                financing_lease_income=_atd_read_list(_atd_read_string)(x['financing_lease_income']) if 'financing_lease_income' in x else [],
             )
         else:
             _atd_bad_json('FfoTags', x)
@@ -1992,6 +1999,8 @@ class FfoTags:
         res['depreciation'] = _atd_write_list(_atd_write_string)(self.depreciation)
         res['impairment'] = _atd_write_list(_atd_write_string)(self.impairment)
         res['gains'] = _atd_write_list(_atd_write_string)(self.gains)
+        res['financing_lease_evidence'] = _atd_write_list(_atd_write_string)(self.financing_lease_evidence)
+        res['financing_lease_income'] = _atd_write_list(_atd_write_string)(self.financing_lease_income)
         return res
 
     @classmethod
@@ -2134,12 +2143,14 @@ class DnaTotals:
     """
 
     totals: List[str]
+    last_resort: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'DnaTotals':
         if isinstance(x, dict):
             return cls(
                 totals=_atd_read_list(_atd_read_string)(x['totals']) if 'totals' in x else _atd_missing_json_field('DnaTotals', 'totals'),
+                last_resort=_atd_read_list(_atd_read_string)(x['last_resort']) if 'last_resort' in x else [],
             )
         else:
             _atd_bad_json('DnaTotals', x)
@@ -2147,6 +2158,7 @@ class DnaTotals:
     def to_json(self) -> Any:
         res: Dict[str, Any] = {}
         res['totals'] = _atd_write_list(_atd_write_string)(self.totals)
+        res['last_resort'] = _atd_write_list(_atd_write_string)(self.last_resort)
         return res
 
     @classmethod

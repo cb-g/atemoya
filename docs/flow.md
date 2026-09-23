@@ -31,6 +31,7 @@ file.
 | FX | fx for (code) (as_of date) is N days old, older than its max_age_days M |
 | parameters | risk-free curve not fetched for (country): run python/refresh_rates.py with your FRED key |
 | parameters | no risk-free curve for country (country) |
+| parameters | *(no reason: a domicile declared in `rate_sources.json`'s `no_curve_fallback`, whose statements and price are in one currency, takes that currency's curve and keeps its own country risk premium; the risk-free parameter's source says "trading currency; domicile curve unavailable")* |
 | parameters | no (equity_risk_premium, statutory_tax_rate or terminal_growth_rate) for country (country) |
 | parameters | risk-free curve for (key) has no (tenor) tenor |
 | parameters | (parameter) for (key) (as_of date) is N days old, older than its max_age_days M |
@@ -53,6 +54,7 @@ file.
 | residual income guards | payout not derivable: need 2 fiscal periods with positive net income and dividends paid, have (n) |
 | residual income value | fair value is not finite (equity value (e), shares (n)) |
 | insurer | insurer model requires filed-statement data; (why: no SEC filings for (ticker), or the period carries no AOCI or premiums earned) |
+| REIT guards | the filer's leases are financing receivables; NAREIT FFO does not apply |
 | REIT guards | ffo (f) is not positive |
 | REIT guards | ffo growth needs two periods with ffo and weighted-average shares, have (n) |
 | REIT guards | cost of equity (ke) does not exceed terminal growth (g) |
@@ -260,7 +262,24 @@ at all:
    absent-is-zero applies only when no component and no interest tag is present.
 7. **AOCI by components.** When the aggregate is absent the filed components are summed,
    recorded as `sum_of_components` with each component.
-8. **Interest stand-ins on the mid-cycle path only.** When no interest-expense line is
+8. **FFO does not apply to a financing lease.** A triple-net REIT may account for its
+   properties as sales-type or direct-financing leases: they are then net investments in
+   leases, they earn interest rather than rent, and there is no real-estate depreciation
+   to add back, so NAREIT FFO is not the measure and net income under its name would be a
+   receivable dressed as property. When the period files no depreciation total and the
+   filer carries both the net-investment-in-lease balance and the interest earned on it,
+   `ffo` is null with the reason "the filer's leases are financing receivables; NAREIT FFO
+   does not apply", and the REIT model fails with that string instead of naming a tag it
+   could not find. The balance alone is not evidence: an insurer may hold direct-financing
+   leases inside an investment portfolio and never ask for FFO.
+9. **A sub-line stands as a total only where nothing else is filed.** `OtherDepreciation-
+   AndAmortization` is defined as D&A classified as other, so it is never a candidate
+   under the largest-total rule and cannot displace a filed total; it is read only when
+   the filer files no total and none of the components, where it is demonstrably the whole
+   line. Capitalised internal-use software is read as capex on the same footing, last in
+   the tag order, so a filer tagging purchases of property, plant and equipment is
+   untouched.
+10. **Interest stand-ins on the mid-cycle path only.** When no interest-expense line is
    filed, a net non-operating interest figure negated, else cash interest paid, stands
    in, recorded as `net_nonoperating_interest` or `interest_paid_stands_in` on the period
    and on every observation; the DCF path's EBIT policy never reads a stand-in.
@@ -392,6 +411,22 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- batch 2's gaps and reclassifications (54): nine working-capital component tags, the
+  convertible-debt balances, interest on borrowings as debt evidence, capitalised software
+  as capex and a last-resort D&A sub-line join the definitions, each classified by its
+  us-gaap definition and checked against the vendor's grouping of the same tags on two
+  fiscal years; a REIT whose properties are net investments in leases earning interest is
+  refused with one new `Failed` string, "the filer's leases are financing receivables;
+  NAREIT FFO does not apply", carried on the period by the definition and read only by the
+  REIT model; `reference/rate_sources.json` gains `no_curve_fallback`, a declaration that
+  a named domicile with no reachable official curve discounts at the currency its
+  statements and price are both in while keeping its own country risk premium, which
+  removes a `Failed` path rather than adding one; Amazon and Venture Global are
+  reclassified `Cyclical` and Robinhood keeps the software lens with its interest-revenue
+  scope limit declared. `InterestExpenseBorrowings` enters the debt definition's
+  interest evidence only: it is a component on a deposit-taking filer, never the
+  interest-expense line, so it derives no EBIT and a filer that tags nothing else
+  fails on `ebit` as a filer limitation. No currently-Ok record moves.
 - stretch (52): six measures from closes and volume with own-history percentiles, two
   counts against declared thresholds and the summary's lines for every name at or above
   three on either side; computed at fetch time and point-in-time, copied through by the batch. No

@@ -1,5 +1,8 @@
 open Boundary_t
 
+(* (54) What the record says when the risk-free rate is not the domicile's own. *)
+let no_curve_rf_note = "trading currency; domicile curve unavailable"
+
 type thresholds = { buy_above : float; sell_below : float; sanity_bound : float }
 
 let default_thresholds = { buy_above = 0.25; sell_below = -0.25; sanity_bound = 5.0 }
@@ -488,7 +491,22 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     | Ok (), _, None, _ -> failed "missing market data: financial_currency"
     | Ok (), _, _, None -> failed "missing market data: trading_currency"
     | Ok (), _, Some financial, Some trading when financial = trading -> (
-        match Params.resolve ~hold_vintage params ~today ~country ~industry:original.industry with
+        (* (54) A domicile reference/rate_sources.json declares to have no reachable
+           official curve, and that indeed has none, discounts at the currency its
+           statements and price are both in and keeps its own country risk premium; the
+           risk-free parameter's source records that the rate is the trading currency's.
+           Any other domicile without a curve fails naming the curve, as before. *)
+        let resolved =
+          if
+            (not (Params.has_curve params.risk_free ~country))
+            && Params.no_curve_declared params.rate_sources ~country
+          then
+            Result.bind (Fx.country_of params.fx_sources trading) (fun rate_country ->
+                Params.resolve_cross ~hold_vintage ~rf_note:no_curve_rf_note params ~today
+                  ~domicile:country ~rate_country ~industry:original.industry)
+          else Params.resolve ~hold_vintage params ~today ~country ~industry:original.industry
+        in
+        match resolved with
         | Error reason -> failed reason
         | Ok assumptions ->
             run_model ~fin:original ~model ~class_check ~rule ~country (with_required_return assumptions))

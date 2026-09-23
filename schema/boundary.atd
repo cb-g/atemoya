@@ -102,6 +102,7 @@ type fiscal_period = {
   (* REIT (18): funds from operations per the definition, filed statements only. *)
   ?ffo : float option;
   ?ffo_composition : composition option;
+  ?ffo_unavailable : string option;           (* (54) why the definition left ffo null when the reason is structural, not a missing tag: the REIT model fails with this string instead of naming the absent field *)
   ?weighted_shares : float option;            (* the period's weighted-average diluted (else basic) share count, the only count a flow per share may use (19) *)
   ?weighted_shares_tag : string option;
   ?ebit_recipe : string option;               (* "operating_income" | "pretax_plus_interest" *)
