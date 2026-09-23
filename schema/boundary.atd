@@ -965,13 +965,15 @@ type build_out_row = {
 
 type build_out_contour = {
   lag_years : int;
-  return_required : float nullable;     (* the return at which value equals price at this lag *)
+  return_required : float nullable;     (* (63) the ACCOUNTING return at which value equals price at this lag *)
   ?contour_reason : string option;      (* present iff return_required is null: no return in the declared range reaches the price *)
 }
 
 type build_out = {
-  declared_return : build_out_declaration;
+  declared_return : build_out_declaration;       (* (63) the after-tax ACCOUNTING return on new capital, after depreciation: the units a filing and a reader use *)
   declared_lag_years : build_out_declaration;
+  cash_return : float;                           (* (63) the declaration converted: the accounting return plus depreciation_to_capital, the cash yield the tranche earns before the maintenance this readout charges it *)
+  conversion_note : string;                      (* (63) how the two relate, on the record *)
   maintenance_note : string;
   tranches : build_out_tranche list;    (* the last three filed years, newest first *)
   standing_business_per_share : float;  (* the standing business alone, after net debt, per effective share *)
@@ -981,7 +983,7 @@ type build_out = {
   tax_rate : float;
   terminal_growth_rate : float;
   depreciation_to_capital : float;      (* the latest depreciation over the latest invested capital: each tranche's own maintenance *)
-  returns : float list;                 (* the return axis: declared - 0.15 to declared + 0.15 in 1 pp steps *)
+  returns : float list;                 (* (63) the return axis in ACCOUNTING terms, as the declaration is: declared - 0.15 to declared + 0.15 in 1 pp steps *)
   surface : build_out_row list;         (* one row per lag 0 .. 6 *)
   price_contour : build_out_contour list;
   scope_limits : string list;           (* what this map cannot see, carried onto the record *)

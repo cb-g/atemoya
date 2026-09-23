@@ -49,6 +49,14 @@ the probability is the belief's CDF at the implied long-run growth, in closed fo
    its cost of equity. The record names which parameter it is in `belief_parameter`, and
    the fourth readout is `implied_roe_target` rather than `implied_terminal_growth`.
 
+   **The ceilings are eight points for a bank and five for an insurer** (63). The first
+   drafts were three and two, which said a large bank cannot sustain more than three points
+   over its cost of equity in the long run; that is not what anyone who follows banks
+   believes, since franchise banks have held five to eight points over for decades. The
+   revision is made on that argument and on nothing the readout produces: a belief is
+   revised because its statement about the world was wrong, never because of the
+   probability it assigns to a price. The centre, the width and the floor are unchanged.
+
 ## Running with a further beliefs file
 
 ```sh

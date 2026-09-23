@@ -3719,6 +3719,8 @@ class BuildOut:
 
     declared_return: BuildOutDeclaration
     declared_lag_years: BuildOutDeclaration
+    cash_return: float
+    conversion_note: str
     maintenance_note: str
     tranches: List[BuildOutTranche]
     standing_business_per_share: float
@@ -3739,6 +3741,8 @@ class BuildOut:
             return cls(
                 declared_return=BuildOutDeclaration.from_json(x['declared_return']) if 'declared_return' in x else _atd_missing_json_field('BuildOut', 'declared_return'),
                 declared_lag_years=BuildOutDeclaration.from_json(x['declared_lag_years']) if 'declared_lag_years' in x else _atd_missing_json_field('BuildOut', 'declared_lag_years'),
+                cash_return=_atd_read_float(x['cash_return']) if 'cash_return' in x else _atd_missing_json_field('BuildOut', 'cash_return'),
+                conversion_note=_atd_read_string(x['conversion_note']) if 'conversion_note' in x else _atd_missing_json_field('BuildOut', 'conversion_note'),
                 maintenance_note=_atd_read_string(x['maintenance_note']) if 'maintenance_note' in x else _atd_missing_json_field('BuildOut', 'maintenance_note'),
                 tranches=_atd_read_list(BuildOutTranche.from_json)(x['tranches']) if 'tranches' in x else _atd_missing_json_field('BuildOut', 'tranches'),
                 standing_business_per_share=_atd_read_float(x['standing_business_per_share']) if 'standing_business_per_share' in x else _atd_missing_json_field('BuildOut', 'standing_business_per_share'),
@@ -3760,6 +3764,8 @@ class BuildOut:
         res: Dict[str, Any] = {}
         res['declared_return'] = (lambda x: x.to_json())(self.declared_return)
         res['declared_lag_years'] = (lambda x: x.to_json())(self.declared_lag_years)
+        res['cash_return'] = _atd_write_float(self.cash_return)
+        res['conversion_note'] = _atd_write_string(self.conversion_note)
         res['maintenance_note'] = _atd_write_string(self.maintenance_note)
         res['tranches'] = _atd_write_list((lambda x: x.to_json()))(self.tranches)
         res['standing_business_per_share'] = _atd_write_float(self.standing_business_per_share)

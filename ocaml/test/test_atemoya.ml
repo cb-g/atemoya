@@ -3577,6 +3577,9 @@ let test_build_out_split_and_tranches () =
       check_float "prior growth capex" 200. (List.nth b.tranches 1).growth_capex;
       (* invested capital 400 + 1700 - 100 = 2000; depreciation 200 over it *)
       check_float "depreciation to capital" 0.10 b.depreciation_to_capital;
+      (* (63) the declaration is the accounting return; the cash return adds that ratio *)
+      check_float "cash return" 0.30 b.cash_return;
+      Alcotest.(check bool) "the conversion is stated" true (contains b.conversion_note "declared after depreciation");
       Alcotest.(check int) "returns axis" 31 (List.length b.returns);
       check_float "axis centre" 0.20 (List.nth b.returns 15);
       check_float "axis floor" 0.05 (List.nth b.returns 0);
@@ -3599,18 +3602,23 @@ let test_build_out_standing_business_and_tranche_arithmetic () =
           ~depreciation_to_capital:0.10 ~wacc:0.10 ~net_debt:300. ~shares ~build_out_return
           ~lag_years
       in
-      (* At lag 0 both tranches earn at once: (0.20 - 0.10) x (300 + 200) / 0.10 = 500. *)
-      check_float "lag 0 by hand" ((8750. +. 500. -. 300.) /. shares) (at ~build_out_return:0.20 ~lag_years:0);
+      (* (63) the axis is in accounting terms: a declared 0.20 is 0.30 of cash yield against a
+         0.10 maintenance charge, so each tranche's free cash flow is 0.20 on its cost. At
+         lag 0 both tranches earn at once: 0.20 x (300 + 200) / 0.10 = 1000. *)
+      check_float "lag 0 by hand" ((8750. +. 1000. -. 300.) /. shares) (at ~build_out_return:0.20 ~lag_years:0);
       (* At lag 2 the latest tranche waits two years and the prior one waits one:
-         30 / 0.10 / 1.1^2 + 20 / 0.10 / 1.1 = 247.933884... + 181.818181... *)
-      let expected = (30. /. 0.10 /. (1.1 ** 2.)) +. (20. /. 0.10 /. 1.1) in
+         60 / 0.10 / 1.1^2 + 40 / 0.10 / 1.1 *)
+      let expected = (60. /. 0.10 /. (1.1 ** 2.)) +. (40. /. 0.10 /. 1.1) in
       check_float "lag 2 by hand" ((8750. +. expected -. 300.) /. shares) (at ~build_out_return:0.20 ~lag_years:2);
       (* and the grid draws the same arithmetic *)
       check_float "grid agrees at the centre, lag 2"
         (at ~build_out_return:0.20 ~lag_years:2)
         (List.nth (List.nth b.surface 2).value_per_share 15);
-      (* a return exactly at the maintenance ratio makes the build-out worth nothing *)
-      check_float "nothing above maintenance" ((8750. -. 300.) /. shares) (at ~build_out_return:0.10 ~lag_years:3)
+      (* (63) a declared return of zero, not one at the maintenance ratio, is what leaves the
+         build-out worth nothing: the conversion and the charge cancel by construction *)
+      check_float "nothing at a zero return" ((8750. -. 300.) /. shares) (at ~build_out_return:0. ~lag_years:3);
+      check_float "the conversion is the ratio" 0.35
+        (Build_out.cash_return ~accounting_return:0.22 ~depreciation_to_capital:0.13)
 
 let test_build_out_contour_recovers_a_known_return () =
   match build_out_block () with
@@ -3621,7 +3629,8 @@ let test_build_out_contour_recovers_a_known_return () =
         Build_out.value_per_share ~standing:8750. ~tranches:b.tranches ~depreciation_to_capital:0.10
           ~wacc:0.10 ~net_debt:300. ~shares ~build_out_return ~lag_years
       in
-      (* Price the surface exactly at 0.26 and a two-year lag, and the contour finds it. *)
+      (* Price the surface exactly at 0.26 accounting and a two-year lag: the contour finds it
+         in the same units the declaration is in (63). *)
       let price = at ~build_out_return:0.26 ~lag_years:2 in
       (match
          Build_out.of_record

@@ -24,8 +24,13 @@ def test_tracked_class_defaults_load() -> None:
     for name in ("Bank", "Insurer"):
         b = dict(table.classes)[name]
         assert b.mean == 0.0 and b.floor == -2.0 and b.sd == 1.0
-    assert dict(table.classes)["Bank"].ceiling == 3.0
-    assert dict(table.classes)["Insurer"].ceiling == 2.0
+    # (63) the ceilings admit the franchise the first drafts denied: eight points over the
+    # cost of equity for a bank, five for an insurer, on the observed pattern and not on any
+    # readout. The centre, the width and the floor are untouched, as above.
+    assert dict(table.classes)["Bank"].ceiling == 8.0
+    assert dict(table.classes)["Insurer"].ceiling == 5.0
+    assert "five to eight points" in dict(table.classes)["Bank"].why
+    assert "three to five points" in dict(table.classes)["Insurer"].why
 
 
 def test_loader_is_strict() -> None:

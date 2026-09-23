@@ -48,11 +48,15 @@ def draw(ticker: str, price: float, block: boundary.BuildOut, png: Path) -> None
                label=f"declared return ({block.declared_return.value * 100:.1f}%)")
     ax.axhline(block.declared_lag_years.value, color="orange", linestyle=":", linewidth=1.5,
                label=f"declared lag ({block.declared_lag_years.value:.0f} years)")
-    ax.set_xlabel("after-tax return on the new capital, % per year")
+    # (63) the axis is in the units the declaration is in: after depreciation, as a filing states it
+    ax.set_xlabel("after-tax return on the new capital, after depreciation, % per year")
     ax.set_ylabel("years from spend to first earning")
     growth = sum(t.growth_capex for t in block.tranches)
     ax.set_title(f"{ticker}: {growth / 1e9:,.1f}bn of growth capex over {len(block.tranches)} year(s); "
-                 f"standing business {block.standing_business_per_share:,.2f} per share")
+                 f"standing business {block.standing_business_per_share:,.2f} per share\n"
+                 f"declared {block.declared_return.value * 100:.0f}% after depreciation = "
+                 f"{block.cash_return * 100:.1f}% of cash yield against a "
+                 f"{block.depreciation_to_capital * 100:.1f}% maintenance charge", fontsize=10)
     ax.legend(loc="lower right")
     fig.tight_layout()
     fig.savefig(png, dpi=120)

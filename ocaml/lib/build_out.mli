@@ -18,6 +18,11 @@ val growth_capex : capex:float -> depreciation_amortization:float -> float
 (** Capex less depreciation where positive, else zero: depreciation is the proxy for
     maintenance because no filer discloses the split. *)
 
+val cash_return : accounting_return:float -> depreciation_to_capital:float -> float
+(** (63) The declaration is an after-tax return on capital AFTER depreciation, the units a
+    filing and a reader use; this is the cash yield before the maintenance the readout
+    charges, which is the same ratio. Both figures go on the record. *)
+
 val value_per_share :
   standing:float ->
   tranches:Boundary_t.build_out_tranche list ->
@@ -28,11 +33,11 @@ val value_per_share :
   build_out_return:float ->
   lag_years:int ->
   float
-(** The standing business plus the build-out, less net debt, per effective share. Each
-    tranche earns [build_out_return] on its cost from [lag_years] after the year it was
-    spent, less its own maintenance at [depreciation_to_capital], as a flat perpetuity
-    discounted at [wacc]; a tranche whose earning year has already arrived is not
-    discounted further. *)
+(** The standing business plus the build-out, less net debt, per effective share.
+    [build_out_return] is the accounting return, as declared (63): each tranche earns the
+    cash yield it converts to on its cost from [lag_years] after the year it was spent,
+    less its own maintenance at [depreciation_to_capital], as a flat perpetuity discounted
+    at [wacc]; a tranche whose earning year has already arrived is not discounted further. *)
 
 val of_record :
   declared_return:Reference_t.declared_build_out ->
@@ -48,7 +53,10 @@ val of_record :
   terminal_growth_rate:float ->
   scope_limits:string list ->
   (Boundary_t.build_out, string) result
-(** The whole block from one record's latest periods, or the reason there is none. *)
+(** The whole block from one record's latest periods, or the reason there is none.
+    [declared_return] is the accounting return (63); the block carries the cash return it
+    converts to beside it, and the return axis and the price contour are in accounting
+    terms, as the declaration is. *)
 
 val gate :
   entity_class:Boundary_t.entity_class option ->

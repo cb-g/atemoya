@@ -108,8 +108,11 @@ operating income is not positive, a field is missing, or the two declarations ar
 a date, both or neither: `build_out_return`, the after-tax return the new capital earns once
 earning, and `build_out_lag_years`, whole years from spend to first earning. The name's own
 recent return on capital is the natural citation in the `why` and is **never** the input.
-Note the units: the readout charges each tranche its own maintenance, so the declared return
-is a cash return on capital before that charge, not an accounting return after depreciation.
+**A declaration is in the units its holder reasons in** (63): the return is declared *after*
+depreciation, as every filing states one, and the readout converts it to the cash yield it
+needs by adding the same depreciation-to-capital ratio it then charges as maintenance. Both
+figures and the ratio go on the record, the return axis and the contour are in accounting
+terms, and a tranche's free cash flow is exactly the declared return on its cost.
 
 **The split is the depreciation rule, stated.** Growth capex in a year is capex less
 depreciation where positive; maintenance is depreciation, because no filer discloses the
@@ -117,9 +120,9 @@ split. The surface runs the return from fifteen points under the declaration to 
 in one-point steps, and the lag from zero to six years. At each point the value is the
 standing business — the latest free cash flow with maintenance capex in place of the capex
 actually spent, held flat, as a perpetuity at the settled terminal growth — plus the last
-three years' growth capex as tranches, each earning the return on its cost from the lag
-after its spend, less its own maintenance at the company's depreciation-to-capital ratio,
-as a flat perpetuity; less net debt, per effective share. The WACC, the tax rate and the
+three years' growth capex as tranches, each earning the converted cash return on its cost
+from the lag after its spend, less its own maintenance at the company's
+depreciation-to-capital ratio, as a flat perpetuity; less net debt, per effective share. The WACC, the tax rate and the
 terminal growth are the ones the DCF resolves for the name, from the same functions.
 
 The readout is the **price contour**: per lag, the return at which the value equals the
@@ -576,6 +579,14 @@ in this order:
   distributions shift up with their anchor** — by design, and no belief was adjusted to
   offset it. Residual-income records are untouched: that path has carried no terminal
   growth since the terminal spread was removed. No new `Failed` string.
+- declarations in the holder's units, and the bank and insurer ceilings (63): the build-out
+  return is declared as an after-tax accounting return on new capital, after depreciation,
+  the units a filing states and a reader compares against, and the readout converts it to the
+  cash yield it charges maintenance against, both figures and the ratio on the record; the
+  two drafts are confirmed at 0.22 with a two-year lag and 0.14 with four. The `Bank` belief's
+  ceiling goes to eight points over the cost of equity and the `Insurer`'s to five, the centre,
+  the width and the floor unchanged, on the argument that franchise banks have held five to
+  eight points over for decades — not on the readout it produces. No headline moves.
 - the build-out readout (60): a record that refuses because it is investing more than it
   earns gains `build_out`, the surface of value across what the new capital earns and how
   long it takes to earn it, with the price as a contour per lag. A readout, not a model: no

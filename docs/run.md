@@ -165,23 +165,28 @@ evidence for it and a date:
   "ticker": "AMZN",
   "entity_class": "Cyclical",
   "why": "retail and cloud; a capacity build-out ...",
-  "build_out_return":    { "value": 0.40, "why": "...", "as_of": "2026-09-23" },
+  "build_out_return":    { "value": 0.22, "why": "...", "as_of": "2026-09-23" },
   "build_out_lag_years": { "value": 2,    "why": "...", "as_of": "2026-09-23" }
 }
 ```
 
-`build_out_return` is the after-tax return the new capital earns once earning, **before**
-the maintenance the readout charges it — not an accounting return on capital after
-depreciation; cite the name's own recent return in the `why` and convert. `build_out_lag_years`
+`build_out_return` is the after-tax **accounting** return on the new capital once earning,
+after depreciation — the units a filing states and a reader reasons in, directly comparable
+to the name's own recent return on capital, which the `why` cites as evidence (63). The
+readout converts it to the cash yield it needs, adding the same depreciation-to-capital ratio
+it then charges as maintenance, and carries both figures with the ratio on the record; a
+tranche's free cash flow is therefore the declared return on its cost. `build_out_lag_years`
 is whole years from spend to first earning (a data-centre campus one to two, an LNG train
 four). A name with one and not the other fails the universe loader; a name with neither
 carries `build_out_reason: "build-out return and lag not declared"`.
 
-On the record: the two declarations, the maintenance sentence, the last three years' capex,
+On the record: the two declarations, the cash return they convert to with the sentence saying
+how, the maintenance sentence, the last three years' capex,
 depreciation and growth capex as tranches, the standing business alone per share, the WACC,
 tax rate, terminal growth and depreciation-to-capital ratio the map runs on, the return axis
-(31 values, the declaration in the middle, ±15 points in 1-point steps), the surface (one
-row per lag 0..6) and the price contour. A lag whose contour is null says why — no return in
+(31 values in accounting terms, as the declaration is, the declaration in the middle, ±15
+points in 1-point steps), the surface (one row per lag 0..6) and the price contour, whose
+`return_required` is an accounting return too. A lag whose contour is null says why — no return in
 the range reaches the price, or the price is below the whole range — with the figure at that
 end, and that is itself the readout.
 

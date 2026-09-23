@@ -22,6 +22,20 @@ let maintenance_note =
   "growth capex in a year is capex less depreciation where positive, and maintenance is \
    depreciation: no filer discloses the split, so depreciation is the proxy"
 
+(* (63) A declaration belongs in the units its holder reasons in. Every filing and every
+   reader states a return on capital after depreciation, so that is what is declared; the
+   readout needs the cash yield before the maintenance it charges, and converting between
+   them is the tool's job, not the declarer's. The ratio it adds is the same one it charges
+   as maintenance, so the two are consistent by construction and a tranche's free cash flow
+   is exactly the declared return on its cost. *)
+let cash_return ~accounting_return ~depreciation_to_capital =
+  accounting_return +. depreciation_to_capital
+
+let conversion_note =
+  "the return is declared after depreciation, as a filing states it; the readout adds the \
+   depreciation-to-capital ratio to reach the cash yield it then charges that same ratio \
+   against, so the tranche's free cash flow is the declared return on its cost"
+
 let scope_limits_of_readout =
   [ "the maintenance split is a proxy: depreciation stands in for maintenance capex, which no filer discloses";
     "the standing business is held flat, which understates a growing one and overstates a fading one";
@@ -74,13 +88,15 @@ let perpetuity ~flow ~wacc ~start =
 
 let value_per_share ~standing ~tranches ~depreciation_to_capital ~wacc ~net_debt ~shares
     ~build_out_return ~lag_years =
+  (* [build_out_return] is the accounting return, as declared (63). *)
+  let cash = cash_return ~accounting_return:build_out_return ~depreciation_to_capital in
   let build_out =
     List.fold_left
       (fun acc (t : build_out_tranche) ->
         (* The tranche starts earning [lag_years] after the year it was spent; a year that
            has already passed is not discounted again, never negatively. *)
         let start = max 0 (lag_years - t.years_before_latest) in
-        let flow = (build_out_return -. depreciation_to_capital) *. t.growth_capex in
+        let flow = (cash -. depreciation_to_capital) *. t.growth_capex in
         acc +. perpetuity ~flow ~wacc ~start)
       0. tranches
   in
@@ -207,6 +223,9 @@ let of_record ~(declared_return : Reference_t.declared_build_out)
                         why = declared_lag_years.why;
                         as_of = declared_lag_years.as_of;
                       };
+                    cash_return =
+                      cash_return ~accounting_return:declared_return.value ~depreciation_to_capital;
+                    conversion_note;
                     maintenance_note;
                     tranches;
                     standing_business_per_share = (standing -. net_debt) /. shares;
