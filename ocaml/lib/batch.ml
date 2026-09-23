@@ -227,7 +227,7 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
     let at_one = List.filter (fun (r : belief_readout) -> r.probability_overpaid >= 1.) readouts in
     let past_rate = List.filter (fun (r : belief_readout) -> Option.is_some r.probability_reason) at_one in
     Printf.bprintf b
-      "probability_overpaid (24), across %d Ok names with a declared belief: %s; at 1.0: %d (%d where the price needs long-run growth at or above the discount rate, %d where the implied long-run growth is at or above the belief's ceiling); no belief on %d Ok names (%s)\n"
+      "probability_overpaid (24), across %d Ok names with a declared belief: %s; at 1.0: %d (%d where the price needs more than the top of the belief's domain, %d where the implied value is at or above the belief's ceiling); no belief on %d Ok names (%s)\n"
       np
       (if np = 0 then "none"
        else

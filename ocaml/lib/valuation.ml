@@ -290,31 +290,45 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       required_return =
         Required_returns.resolve params.required_returns ?names:name_required_returns ~ticker:original.ticker ~entity_class () }
   in
-  (* The declared belief (24) on a growth-then-terminal path: the fourth readout and the
-     probability of overpaying under it; the residual-income paths and an undeclared class
-     carry the reason instead. *)
-  let terminal_and_f (inputs : model_inputs) =
+  (* The declared belief (24): the fourth readout and the probability of overpaying under
+     it. On a growth-then-terminal path the parameter is long-run growth, anchored on the
+     country's terminal growth; on the residual-income path it is (58) the long-run return
+     on equity the ROE path reverts to, anchored on the cost of equity, where a zero offset
+     is brief 15's anchor and grants nothing. An undeclared class carries the reason. *)
+  let axis_of (inputs : model_inputs) =
+      let dcf_axis (i : Boundary_t.inputs) =
+        (Beliefs.growth_axis, i.terminal_growth_rate.value, "the country's terminal growth", i.wacc,
+         (fun terminal_growth_rate -> Implied.dcf_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value))
+      in
+      let roe_axis (i : Boundary_t.residual_income_inputs) =
+        (Beliefs.roe_axis, i.cost_of_equity, "the cost of equity", i.cost_of_equity,
+         (fun roe_target -> Implied.residual_income_fair_value i ~roe_0:i.roe_0 ~lambda:i.mean_reversion_lambda.value ~roe_target))
+      in
       match inputs with
-      | `Dcf i ->
-          Some (i.terminal_growth_rate.value, i.wacc,
-                fun terminal_growth_rate -> Implied.dcf_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value)
-      | `Dcf_midcycle m ->
-          let i = m.dcf in
-          Some (i.terminal_growth_rate.value, i.wacc,
-                fun terminal_growth_rate -> Implied.dcf_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value)
+      | `Dcf i -> Some (dcf_axis i)
+      | `Dcf_midcycle m -> Some (dcf_axis m.dcf)
       | `Reit_ffo_dividend i ->
-          Some (i.terminal_growth_rate.value, i.cost_of_equity,
+          Some (Beliefs.growth_axis, i.terminal_growth_rate.value, "the country's terminal growth", i.cost_of_equity,
                 fun terminal_growth_rate -> Implied.reit_fair_value i ~terminal_growth_rate ~g0:i.g0 ~lambda:i.mean_reversion_lambda.value)
-      | `Residual_income _ | `Residual_income_insurer _ -> None
+      | `Residual_income i -> Some (roe_axis i)
+      | `Residual_income_insurer i -> Some (roe_axis i.core)
+  in
+  (* The market-implied readout maps option quantiles onto long-run GROWTH, so it stays on
+     the growth-then-terminal paths only: the residual-income path has no growth axis, and
+     (58) giving it a belief did not give it one. *)
+  let growth_axis_of (inputs : model_inputs) =
+      match axis_of inputs with
+      | Some (axis, _, _, rate, f) when axis = Beliefs.growth_axis -> Some (rate, f)
+      | _ -> None
   in
   let belief_of ~price ~fair_value (inputs : model_inputs) =
-    match terminal_and_f inputs with
-    | None -> Error "the residual-income path has no terminal growth; the belief parameter is undefined there"
-    | Some (terminal_growth_rate, rate, f) -> (
+    match axis_of inputs with
+    | None -> Error "this path has no parameter for a belief to be about"
+    | Some (axis, anchor, anchor_name, rate, f) -> (
         let entity_class = match declared with Some c -> Admissibility.class_name c | None -> "" in
         match
           Beliefs.resolve ~classes:params.beliefs ?names:name_beliefs ~ticker:original.ticker ~entity_class
-            ~terminal_growth_rate ()
+            ~anchor ~anchor_name ()
         with
         | None ->
             Error
@@ -322,7 +336,13 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                  entity_class)
         | Some (b, source) ->
             let source_kind = if String.length source >= 8 && String.sub source 0 8 = "per-name" then "name" else "class" in
-            Ok (Beliefs.readout b ~source ~source_kind ~f ~price ~rate ~fair_value, Beliefs.surplus_curve b ~f ~price))
+            let implied, implied_domain, outcome =
+              if axis = Beliefs.roe_axis then Beliefs.implied_roe_target ~f ~price ~cost_of_equity:anchor
+              else Beliefs.implied_terminal_growth ~f ~price ~rate
+            in
+            Ok
+              ( Beliefs.readout b ~source ~source_kind ~axis ~implied ~implied_domain ~outcome ~price ~fair_value,
+                Beliefs.surplus_curve b ~f ~price ))
   in
   (* The market-implied readout (36), only under --options: the chain for the name on the
      latest snapshot date, or the reason there is none. *)
@@ -342,8 +362,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         | Error r -> (None, Some r)
         | Ok chain -> (
             let growth =
-              match terminal_and_f inputs with
-              | Some (_, rate, f) -> Ok (rate, f)
+              match growth_axis_of inputs with
+              | Some (rate, f) -> Ok (rate, f)
               | None -> Error "the residual-income path has no terminal growth; the growth axis is undefined there"
             in
             match Market_implied.of_chain chain ~rf:(rf_of inputs) ~ke ~fair_value ~growth with

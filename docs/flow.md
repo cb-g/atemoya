@@ -296,6 +296,24 @@ at all:
    in, recorded as `net_nonoperating_interest` or `interest_paid_stands_in` on the period
    and on every observation; the DCF path's EBIT policy never reads a stand-in.
 
+### The belief's parameter, per path
+
+Every belief is a declaration about the one thing the long run turns on, and which thing
+that is depends on the model. On the DCF, mid-cycle and REIT paths it is long-run growth,
+offset around the country's terminal growth. On the residual-income path there is no
+terminal growth — by design, since a bank whose return on equity equals its cost of equity
+is worth exactly book — so the belief sits on **the long-run return on equity the ROE path
+reverts to**, offset around the name's cost of equity.
+
+That reversion target is a parameter of the model, defaulting to the cost of equity, which
+is why every bank and insurer number is unchanged by its arrival. The fourth readout is
+`implied_roe_target`: the long-run return on equity at which fair value equals price,
+everything else held, bisected over ten points under the cost of equity to thirty over it.
+Fair value rises with it, because the excess return the path settles at is the target less
+the cost of equity and the explicit sum carries it with nothing after. `probability_overpaid`
+is the belief's CDF there, and the surplus curve sweeps the same parameter, so those names
+enter the frontier like any other.
+
 ### Where terminal growth comes from
 
 The anchor every growth path reverts to is the country's long-run nominal growth in its
@@ -445,6 +463,15 @@ in this order:
   distributions shift up with their anchor** — by design, and no belief was adjusted to
   offset it. Residual-income records are untouched: that path has carried no terminal
   growth since the terminal spread was removed. No new `Failed` string.
+- a belief for banks and insurers (58): the residual-income model's ROE reversion target
+  becomes a parameter defaulting to the cost of equity, which leaves every number where it
+  was and gives the path something a belief can be about; `reference/beliefs.json` gains
+  Bank and Insurer as offsets over the cost of equity with a zero centre, so the long run
+  grants no franchise value unless the width and the ceiling say so; `implied_roe_target`
+  is the fourth readout there, `probability_overpaid` follows from the belief's CDF at it,
+  and the surplus curve sweeps the same parameter so those names enter the frontier. The
+  belief block names its parameter and carries the implied readout under the matching name.
+  No new `Failed` string; no headline moves.
 - Uruguay's rows and the mid-cycle scale rule (55): Uruguay joins the equity-risk-premium
   and statutory-tax tables from the vintages those files already cite, so MercadoLibre
   resolves its country risk premium and its tax rate and values on the dollar curve the

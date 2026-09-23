@@ -1,9 +1,15 @@
 open Boundary_t
 
-let roe_path ~roe_0 ~cost_of_equity ~lambda ~projection_years =
+(* (58) The reversion target is a parameter. It defaults to the cost of equity at every
+   call site, which is brief 15's anchor and leaves every number where it was; it is a
+   parameter so the belief on this path has something to be about, the long-run return on
+   equity, and so the implied solver has something to sweep. The discounting and the
+   excess return are still measured against the cost of equity: only the level the path
+   reverts to moves. *)
+let roe_path ~roe_0 ~roe_target ~lambda ~projection_years =
   List.init (max 0 projection_years) (fun i ->
       let t = float_of_int (i + 1) in
-      cost_of_equity +. ((roe_0 -. cost_of_equity) *. exp (-.lambda *. t)))
+      roe_target +. ((roe_0 -. roe_target) *. exp (-.lambda *. t)))
 
 type schedule = {
   book_value_path : float list;
@@ -45,7 +51,7 @@ let mean_ratio rows ~min_periods =
 
 let absent name opt = if Option.is_none opt then Some name else None
 
-let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumptions) ~country
+let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumptions) ~country
     (fin : financials) =
   let ( let* ) = Result.bind in
   let* p =
@@ -132,8 +138,9 @@ let value ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumption
             (Printf.sprintf "projection horizon %d years is negative" a.projection_years.value)
         else
           let projection_years = a.projection_years.value in
+          let roe_target = Option.value roe_target ~default:cost_of_equity in
           let roe_path =
-            roe_path ~roe_0 ~cost_of_equity ~lambda:a.mean_reversion_lambda.value
+            roe_path ~roe_0 ~roe_target ~lambda:a.mean_reversion_lambda.value
               ~projection_years
           in
           let s = schedule ~book_equity ~cost_of_equity ~retention ~roe_path in

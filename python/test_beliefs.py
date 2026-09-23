@@ -16,9 +16,16 @@ OK = {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 2, "why": "near the economy'
 def test_tracked_class_defaults_load() -> None:
     table = beliefs.load_classes(ROOT / "reference" / "beliefs.json")
     names = [name for name, _ in table.classes]
-    assert names == ["OperatingCompany", "HighGrowthSoftware", "Cyclical", "Reit"]
+    # (58) Bank and Insurer join, as offsets over the cost of equity rather than over growth
+    assert names == ["OperatingCompany", "HighGrowthSoftware", "Cyclical", "Reit", "Bank", "Insurer"]
     assert all(b.sd > 0 and b.floor < b.ceiling and b.why for _, b in table.classes)
-    assert "Bank" not in names and "Insurer" not in names
+    # the two new ones are centred on zero: the offset is over the cost of equity, and a
+    # zero centre is the declaration that the long run grants no franchise value
+    for name in ("Bank", "Insurer"):
+        b = dict(table.classes)[name]
+        assert b.mean == 0.0 and b.floor == -2.0 and b.sd == 1.0
+    assert dict(table.classes)["Bank"].ceiling == 3.0
+    assert dict(table.classes)["Insurer"].ceiling == 2.0
 
 
 def test_loader_is_strict() -> None:

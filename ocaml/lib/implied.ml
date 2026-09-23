@@ -42,11 +42,13 @@ let dcf_fair_value ?projection_years ?fcff ?wacc ?terminal_growth_rate (i : inpu
   let ev = Dcf.enterprise_value ~fcff ~wacc ~growth_path ~terminal_growth_rate in
   (ev -. i.net_debt) /. i.shares
 
-let residual_income_fair_value ?projection_years ?book_equity ?cost_of_equity (i : residual_income_inputs) ~roe_0 ~lambda =
+let residual_income_fair_value ?projection_years ?book_equity ?cost_of_equity ?roe_target (i : residual_income_inputs) ~roe_0 ~lambda =
   let projection_years = Option.value projection_years ~default:i.projection_years.value in
   let book_equity = Option.value book_equity ~default:i.book_equity in
   let cost_of_equity = Option.value cost_of_equity ~default:i.cost_of_equity in
-  let roe_path = Residual_income.roe_path ~roe_0 ~cost_of_equity ~lambda ~projection_years in
+  (* (58) the target defaults to the cost of equity, so every existing readout is unmoved *)
+  let roe_target = Option.value roe_target ~default:cost_of_equity in
+  let roe_path = Residual_income.roe_path ~roe_0 ~roe_target ~lambda ~projection_years in
   let s = Residual_income.schedule ~book_equity ~cost_of_equity ~retention:i.retention ~roe_path in
   (book_equity +. s.pv_excess_returns) /. i.shares
 
@@ -60,6 +62,11 @@ let reit_fair_value ?projection_years ?dividend_per_share ?cost_of_equity ?termi
   let pv, _, pv_terminal = Reit.present_value ~dividend_path ~cost_of_equity ~terminal_growth_rate in
   pv +. pv_terminal
 
+(* (58) The long-run return on equity the belief is about: ten points under the cost of
+   equity to thirty over it. Value rises with the target, since the excess return the
+   path reverts to is (target - ke) and the explicit sum carries it. *)
+let roe_target_domain ~cost_of_equity = (cost_of_equity -. 0.10, cost_of_equity +. 0.30)
+
 let readout value = { value = Some value; reason = None }
 let null reason = { value = None; reason = Some reason }
 
@@ -70,6 +77,15 @@ let solve_level ~what ~f ~price ~domain:(lo, hi) =
   | Beyond_high -> null (Printf.sprintf "the price needs a %s above %.2f, the top of the domain" what hi)
   | Beyond_low -> null (Printf.sprintf "the price needs a %s below %.2f, the bottom of the domain" what lo)
   | Flat -> null (Printf.sprintf "fair value does not vary with the %s" what)
+
+(* (58) The long-run return on equity at which fair value equals price, everything else
+   held. The reasons name the domain in the words the belief's null mapping reads. *)
+let solve_roe_target ~f ~price ~domain:(lo, hi) ~cost_of_equity =
+  match bisect ~f ~target:price ~lo ~hi ~tolerance with
+  | Root x -> readout x
+  | Beyond_high -> null (Printf.sprintf "the price needs a long-run return above the domain, %.2f points over the cost of equity" ((hi -. cost_of_equity) *. 100.))
+  | Beyond_low -> null (Printf.sprintf "the price is below the value at a long-run return %.0f points under the cost of equity" ((cost_of_equity -. lo) *. 100.))
+  | Flat -> null "fair value does not vary with the long-run return on equity"
 
 (* The half-life readout, holding the observed start: the lambda at which fair value equals
    price, as ln 2 / lambda, only where the start lies above its target. *)
@@ -117,7 +133,7 @@ let solve_horizon ~driver ~target_name ~start ~target ~(f : int -> float) ~price
 
 let rf_tenor_note = "held at the recorded 7y point, not re-selected per horizon"
 
-let block ~level_name ~level ~level_domain:(lo, hi) ~half_life_years ~horizon ~guard ~guard_rule ~held =
+let block ~implied_roe_target ~roe_target_domain ~level_name ~level ~level_domain:(lo, hi) ~half_life_years ~horizon ~guard ~guard_rule ~held =
   let llo, lhi = lambda_domain in
   let meaningful, rule =
     if not guard then ("level", guard_rule ^ ": level")
@@ -130,6 +146,8 @@ let block ~level_name ~level ~level_domain:(lo, hi) ~half_life_years ~horizon ~g
     level_name;
     level;
     level_domain = [ lo; hi ];
+    implied_roe_target;
+    roe_target_domain;
     half_life_years;
     lambda_domain = [ llo; lhi ];
     horizon_years = Some horizon.years;
@@ -161,7 +179,7 @@ let dcf_block (i : inputs) ~price =
     solve_horizon ~driver:"growth" ~target_name:"terminal" ~start:i.g0 ~target:terminal ~price
       ~f:(fun n -> dcf_fair_value ~projection_years:n i ~g0:i.g0 ~lambda)
   in
-  block ~level_name:"implied_g0" ~level ~level_domain ~half_life_years ~horizon ~guard:above
+  block ~implied_roe_target:None ~roe_target_domain:None ~level_name:"implied_g0" ~level ~level_domain ~half_life_years ~horizon ~guard:above
     ~guard_rule:(Printf.sprintf "g0 %.4f %s terminal growth %.4f" i.g0 (if above then ">" else "<=") terminal)
     ~held:
       [ ("fcff", i.fcff); ("wacc", i.wacc); ("terminal_growth_rate", terminal);
@@ -188,7 +206,7 @@ let of_inputs (m : model_inputs) ~price =
         solve_horizon ~driver:"growth" ~target_name:"terminal" ~start:i.g0 ~target:terminal ~price
           ~f:(fun n -> reit_fair_value ~projection_years:n i ~g0:i.g0 ~lambda)
       in
-      block ~level_name:"implied_g0" ~level ~level_domain ~half_life_years ~horizon ~guard:above
+      block ~implied_roe_target:None ~roe_target_domain:None ~level_name:"implied_g0" ~level ~level_domain ~half_life_years ~horizon ~guard:above
         ~guard_rule:(Printf.sprintf "g0 %.4f %s terminal growth %.4f" i.g0 (if above then ">" else "<=") terminal)
         ~held:
           [ ("dividend_per_share", i.dividend_per_share); ("cost_of_equity", i.cost_of_equity);
@@ -209,7 +227,13 @@ let of_inputs (m : model_inputs) ~price =
         solve_horizon ~driver:"roe" ~target_name:"the cost of equity" ~start:i.roe_0 ~target:i.cost_of_equity ~price
           ~f:(fun n -> residual_income_fair_value ~projection_years:n i ~roe_0:i.roe_0 ~lambda)
       in
-      block ~level_name:"implied_roe0" ~level ~level_domain:roe_domain ~half_life_years ~horizon ~guard:above
+      let tlo, thi = roe_target_domain ~cost_of_equity:i.cost_of_equity in
+      let implied_roe_target =
+        solve_roe_target ~price ~domain:(tlo, thi) ~cost_of_equity:i.cost_of_equity
+          ~f:(fun roe_target -> residual_income_fair_value i ~roe_0:i.roe_0 ~lambda ~roe_target)
+      in
+      block ~implied_roe_target:(Some implied_roe_target) ~roe_target_domain:(Some [ tlo; thi ])
+        ~level_name:"implied_roe0" ~level ~level_domain:roe_domain ~half_life_years ~horizon ~guard:above
         ~guard_rule:(Printf.sprintf "roe_0 %.4f %s cost of equity %.4f" i.roe_0 (if above then ">" else "<=") i.cost_of_equity)
         ~held:
           [ ("book_equity", i.book_equity); ("retention", i.retention); ("cost_of_equity", i.cost_of_equity);

@@ -113,8 +113,12 @@ let load_names path = read path load_names_string
 let tidy x = Float.round (x *. 1e10) /. 1e10
 let pp x = tidy (x /. 100.)
 
+(* (58) The belief's parameter. On the DCF-shaped paths it is long-run growth and the class
+   offsets are measured around the country's terminal growth; on the residual-income path it
+   is the long-run return on equity and they are measured around the cost of equity. The
+   anchor and its name are given by the caller so one resolver serves both. *)
 let resolve ~(classes : Reference_t.class_beliefs) ?(names : Reference_t.name_beliefs option) ~ticker ~entity_class
-    ~terminal_growth_rate () =
+    ~anchor ~anchor_name () =
   let of_name (b : Reference_t.belief) : belief =
     { mean = pp b.mean; sd = pp b.sd; floor = pp b.floor; ceiling = pp b.ceiling; why = b.why; as_of = b.as_of }
   in
@@ -126,12 +130,11 @@ let resolve ~(classes : Reference_t.class_beliefs) ?(names : Reference_t.name_be
       match List.assoc_opt entity_class classes.classes with
       | Some b ->
           (* offsets applied in percentage points, so 3% - 2 pp is exactly 1% *)
-          let around offset = tidy (((terminal_growth_rate *. 100.) +. offset) /. 100.) in
+          let around offset = tidy (((anchor *. 100.) +. offset) /. 100.) in
           Some
             ( { mean = around b.mean; sd = pp b.sd; floor = around b.floor; ceiling = around b.ceiling; why = b.why;
                 as_of = b.as_of },
-              Printf.sprintf "class default for %s: offsets around the country's terminal growth %.4f" entity_class
-                terminal_growth_rate )
+              Printf.sprintf "class default for %s: offsets around %s %.4f" entity_class anchor_name anchor )
       | None -> None)
 
 let version (b : belief) ~source_kind =
@@ -149,16 +152,35 @@ let cdf (b : belief) x =
     if hi -. lo <= 0. then if x < Float.min b.ceiling (Float.max b.floor b.mean) then 0. else 1.
     else Float.min 1. (Float.max 0. ((phi (z x) -. lo) /. (hi -. lo)))
 
+(* (58) Which end the solver came out of, so the probability mapping below reads a tag
+   rather than comparing reason strings, and serves both parameters. *)
+type outcome = Solved | Above | Below | Flat
+
 let implied_terminal_growth ~f ~price ~rate =
   let lo = -0.10 and hi = rate -. 0.0005 in
-  let r =
+  let r, outcome =
     match Implied.bisect ~f ~target:price ~lo ~hi ~tolerance:Implied.tolerance with
-    | Implied.Root g -> { value = Some g; reason = None }
-    | Implied.Beyond_high -> { value = None; reason = Some "the price needs long-run growth at or above the discount rate" }
-    | Implied.Beyond_low -> { value = None; reason = Some "the price is below the value at -10% long-run growth" }
-    | Implied.Flat -> { value = None; reason = Some "fair value does not vary with long-run growth" }
+    | Implied.Root g -> ({ value = Some g; reason = None }, Solved)
+    | Implied.Beyond_high -> ({ value = None; reason = Some "the price needs long-run growth at or above the discount rate" }, Above)
+    | Implied.Beyond_low -> ({ value = None; reason = Some "the price is below the value at -10% long-run growth" }, Below)
+    | Implied.Flat -> ({ value = None; reason = Some "fair value does not vary with long-run growth" }, Flat)
   in
-  (r, [ lo; hi ])
+  (r, [ lo; hi ], outcome)
+
+(* (58) The same, in the long-run return on equity, over ten points under the cost of equity
+   to thirty over it. *)
+let implied_roe_target ~f ~price ~cost_of_equity =
+  let lo, hi = Implied.roe_target_domain ~cost_of_equity in
+  let r, outcome =
+    match Implied.bisect ~f ~target:price ~lo ~hi ~tolerance:Implied.tolerance with
+    | Implied.Root x -> ({ value = Some x; reason = None }, Solved)
+    | Implied.Beyond_high ->
+        ({ value = None; reason = Some (Printf.sprintf "the price needs a long-run return above the domain, %.0f points over the cost of equity" ((hi -. cost_of_equity) *. 100.)) }, Above)
+    | Implied.Beyond_low ->
+        ({ value = None; reason = Some (Printf.sprintf "the price is below the value at a long-run return %.0f points under the cost of equity" ((cost_of_equity -. lo) *. 100.)) }, Below)
+    | Implied.Flat -> ({ value = None; reason = Some "fair value does not vary with the long-run return on equity" }, Flat)
+  in
+  (r, [ lo; hi ], outcome)
 
 let surplus_points = 41
 
@@ -172,23 +194,35 @@ let note =
    price needs) under the truncated normal beside it; revise the belief by a dated declaration when evidence \
    warrants, never because of what this number looks like"
 
-let readout (b : belief) ~source ~source_kind ~f ~price ~rate ~fair_value =
-  let implied, domain = implied_terminal_growth ~f ~price ~rate in
+let roe_note =
+  "probability_overpaid is a statement of the declared belief, not a frequency: P(the long-run return on equity \
+   below what the price needs) under the truncated normal beside it; the belief is centred on the cost of equity, \
+   where the long run grants no franchise value; revise it by a dated declaration when evidence warrants, never \
+   because of what this number looks like"
+
+let growth_axis = "long_run_growth"
+let roe_axis = "long_run_return_on_equity"
+
+let readout (b : belief) ~source ~source_kind ~axis ~(implied : readout) ~implied_domain ~outcome ~price ~fair_value =
   let probability, reason =
-    match (implied.value, implied.reason) with
-    | Some g, _ -> (cdf b g, None)
-    | None, Some r when r = "the price is below the value at -10% long-run growth" -> (0., Some r)
-    | None, Some r when r = "fair value does not vary with long-run growth" -> ((if fair_value < price then 1. else 0.), Some r)
-    | None, r -> (1., r)
+    match (outcome, implied.value) with
+    | Solved, Some x -> (cdf b x, None)
+    | Solved, None -> (1., implied.reason)
+    | Below, _ -> (0., implied.reason)
+    | Flat, _ -> ((if fair_value < price then 1. else 0.), implied.reason)
+    | Above, _ -> (1., implied.reason)
   in
+  let on_roe = axis = roe_axis in
   {
     declared = b;
     source;
     belief_version = version b ~source_kind;
-    implied_terminal_growth = implied;
-    implied_domain = domain;
+    belief_parameter = axis;
+    implied_terminal_growth = (if on_roe then None else Some implied);
+    implied_roe_target = (if on_roe then Some implied else None);
+    implied_domain;
     probability_overpaid = probability;
     probability_reason = reason;
     value_surplus = (fair_value -. price) /. price;
-    note;
+    note = (if on_roe then roe_note else note);
   }

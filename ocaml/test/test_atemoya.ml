@@ -282,7 +282,9 @@ let params : Params.t =
         {|{"classes": {
             "OperatingCompany": {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 2, "why": "near the economy's", "as_of": "2026-09-19"},
             "Cyclical": {"mean": 0, "sd": 1.0, "floor": -3, "ceiling": 2, "why": "wider below", "as_of": "2026-09-19"},
-            "Reit": {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 1, "why": "rent tracks inflation", "as_of": "2026-09-19"}}}|};
+            "Reit": {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 1, "why": "rent tracks inflation", "as_of": "2026-09-19"},
+            "Bank": {"mean": 0, "sd": 1.0, "floor": -2, "ceiling": 3, "why": "the long run converges to the cost of equity", "as_of": "2026-09-23"},
+            "Insurer": {"mean": 0, "sd": 1.0, "floor": -2, "ceiling": 2, "why": "the same, narrower above", "as_of": "2026-09-23"}}}|};
     required_returns = Reference_j.required_returns_of_string {|{"classes": {}, "names": {}}|};
   }
 
@@ -995,9 +997,9 @@ let test_ri_schedule () =
 let test_ri_roe_path () =
   Alcotest.(check (list (float 1e-12))) "reverts toward the cost of equity"
     [ 0.1 +. 0.1 *. exp (-0.25); 0.1 +. 0.1 *. exp (-0.5); 0.1 +. 0.1 *. exp (-0.75) ]
-    (Residual_income.roe_path ~roe_0:0.20 ~cost_of_equity:0.10 ~lambda:0.25 ~projection_years:3);
+    (Residual_income.roe_path ~roe_0:0.20 ~roe_target:0.10 ~lambda:0.25 ~projection_years:3);
   Alcotest.(check (list approx)) "lambda 0 holds ROE" [ 0.2; 0.2 ]
-    (Residual_income.roe_path ~roe_0:0.20 ~cost_of_equity:0.10 ~lambda:0. ~projection_years:2)
+    (Residual_income.roe_path ~roe_0:0.20 ~roe_target:0.10 ~lambda:0. ~projection_years:2)
 
 let test_ri_value_by_hand () =
   let inputs, fair_value =
@@ -1475,19 +1477,19 @@ let test_beliefs_loader_and_resolution () =
   Alcotest.(check bool) "the tracked file loads strictly" true (Result.is_ok (Beliefs.load_classes "../../reference/beliefs.json"));
   let classes = get (Beliefs.load_classes_string (belief_json ())) in
   (* offsets around two countries' settled terminal growth *)
-  let us, source = Option.get (Beliefs.resolve ~classes ~ticker:"TEST" ~entity_class:"OperatingCompany" ~terminal_growth_rate:0.02 ()) in
+  let us, source = Option.get (Beliefs.resolve ~classes ~ticker:"TEST" ~entity_class:"OperatingCompany" ~anchor:0.02 ~anchor_name:"the country's terminal growth" ()) in
   Alcotest.(check (list approx)) "United States: 2% centre" [ 0.02; 0.005; 0.0; 0.04 ] [ us.mean; us.sd; us.floor; us.ceiling ];
   check_mentions "source" source [ "class default for OperatingCompany"; "0.0200" ];
-  let de, _ = Option.get (Beliefs.resolve ~classes ~ticker:"TEST" ~entity_class:"OperatingCompany" ~terminal_growth_rate:0.015 ()) in
+  let de, _ = Option.get (Beliefs.resolve ~classes ~ticker:"TEST" ~entity_class:"OperatingCompany" ~anchor:0.015 ~anchor_name:"the country's terminal growth" ()) in
   Alcotest.(check (list approx)) "Germany: 1.5% centre" [ 0.015; 0.005; -0.005; 0.035 ] [ de.mean; de.sd; de.floor; de.ceiling ];
   Alcotest.(check bool) "an undeclared class has no belief" true
-    (Option.is_none (Beliefs.resolve ~classes ~ticker:"TEST" ~entity_class:"Wrapper" ~terminal_growth_rate:0.02 ()));
+    (Option.is_none (Beliefs.resolve ~classes ~ticker:"TEST" ~entity_class:"Wrapper" ~anchor:0.02 ~anchor_name:"the country's terminal growth" ()));
   (* a per-name entry, absolute, beats the class default *)
   let names = get (Beliefs.load_names_string {|{"tickers": {"TEST": {"mean": 3, "sd": 1, "floor": 1, "ceiling": 5, "why": "a name I know", "as_of": "2026-09-01"}}}|}) in
-  let own, source = Option.get (Beliefs.resolve ~classes ~names ~ticker:"TEST" ~entity_class:"OperatingCompany" ~terminal_growth_rate:0.02 ()) in
+  let own, source = Option.get (Beliefs.resolve ~classes ~names ~ticker:"TEST" ~entity_class:"OperatingCompany" ~anchor:0.02 ~anchor_name:"the country's terminal growth" ()) in
   Alcotest.(check (list approx)) "per-name, absolute" [ 0.03; 0.01; 0.01; 0.05 ] [ own.mean; own.sd; own.floor; own.ceiling ];
   check_mentions "per-name source" source [ "per-name entry for TEST" ];
-  let other, _ = Option.get (Beliefs.resolve ~classes ~names ~ticker:"OTHER" ~entity_class:"OperatingCompany" ~terminal_growth_rate:0.02 ()) in
+  let other, _ = Option.get (Beliefs.resolve ~classes ~names ~ticker:"OTHER" ~entity_class:"OperatingCompany" ~anchor:0.02 ~anchor_name:"the country's terminal growth" ()) in
   check_float "another name keeps the class default" 0.02 other.mean;
   (* the version stamp changes with any of the six fields *)
   let base = Beliefs.version us ~source_kind:"class" in
@@ -1502,6 +1504,91 @@ let test_beliefs_loader_and_resolution () =
 
 (* Phi(1) = 0.8413447461, Phi(4) = 0.9999683288, Phi(-4) = 0.0000316712: on mean 2%, sd 0.5%,
    floor 0, ceiling 4%, F(2.5%) = (0.8413447461 - 0.0000316712) / (0.9999683288 - 0.0000316712). *)
+let test_roe_target_is_inert_at_the_cost_of_equity () =
+  (* (58) The one code change to the model. At the default the path, the schedule and the
+     fair value are what they were, to the bit; away from it the value is monotone in the
+     target, which is what makes the implied solver and the curve well posed. *)
+  let ke = 0.10 and lambda = 0.25 and n = 5 in
+  let at target = Residual_income.roe_path ~roe_0:0.20 ~roe_target:target ~lambda ~projection_years:n in
+  let old_formula =
+    List.init n (fun i -> let t = float_of_int (i + 1) in ke +. ((0.20 -. ke) *. exp (-.lambda *. t)))
+  in
+  Alcotest.(check (list approx)) "the default target reproduces the old path exactly" old_formula (at ke);
+  (* a target above the cost of equity leaves a permanent excess; below, a permanent deficit *)
+  let last l = List.nth l (n - 1) in
+  Alcotest.(check bool) "reverts to the target, not to ke" true (Float.abs (last (at 0.14) -. 0.14) < Float.abs (last (at 0.14) -. ke));
+  let flat, flat_fv = get (Residual_income.value bank_assumptions ~country:"T" (bank_financials (bank_history ()))) in
+  let _, flat_explicit = get (Residual_income.value ~roe_target:flat.cost_of_equity bank_assumptions ~country:"T" (bank_financials (bank_history ()))) in
+  check_float "value at the default target equals value with it passed explicitly" flat_fv flat_explicit;
+  (* the fixture's lambda is zero, so the path never approaches any target and the value
+     cannot vary with it: the solver must say so rather than invent a root *)
+  let flat_f roe_target = Implied.residual_income_fair_value flat ~roe_0:flat.roe_0 ~lambda:0. ~roe_target in
+  Alcotest.(check (list approx)) "with no reversion the path never approaches the target, so the value cannot vary with it"
+    [ flat_fv; flat_fv; flat_fv ]
+    [ flat_f (flat.cost_of_equity -. 0.05); flat_f flat.cost_of_equity; flat_f (flat.cost_of_equity +. 0.20) ];
+  (* everything below on a reverting path, as every real record has *)
+  let reverting = { bank_assumptions with mean_reversion_lambda = param 0.25 } in
+  let inputs, fv = get (Residual_income.value reverting ~country:"T" (bank_financials (bank_history ()))) in
+  (* monotone: fair value rises with the long-run return on equity *)
+  let values =
+    List.map
+      (fun d -> Implied.residual_income_fair_value inputs ~roe_0:inputs.roe_0 ~lambda:inputs.mean_reversion_lambda.value
+                  ~roe_target:(inputs.cost_of_equity +. d))
+      [ -0.10; -0.05; 0.; 0.05; 0.15; 0.30 ]
+  in
+  Alcotest.(check bool) "monotone increasing in the target" true
+    (List.for_all2 ( < ) (List.filteri (fun k _ -> k < 5) values) (List.tl values));
+  check_float "and at a zero offset it is the recorded fair value" fv (List.nth values 2);
+  (* the implied solver recovers a known target *)
+  let f roe_target = Implied.residual_income_fair_value inputs ~roe_0:inputs.roe_0 ~lambda:inputs.mean_reversion_lambda.value ~roe_target in
+  let known = inputs.cost_of_equity +. 0.04 in
+  let r, domain, outcome = Beliefs.implied_roe_target ~f ~price:(f known) ~cost_of_equity:inputs.cost_of_equity in
+  (match r.value with
+  | Some x -> Alcotest.(check bool) "recovers the known target" true (Float.abs (x -. known) < 1e-5)
+  | None -> Alcotest.failf "no root: %s" (Option.value r.reason ~default:""));
+  Alcotest.(check bool) "solved" true (outcome = Beliefs.Solved);
+  Alcotest.(check (list approx)) "domain is ke - 10pp to ke + 30pp"
+    [ inputs.cost_of_equity -. 0.10; inputs.cost_of_equity +. 0.30 ] domain;
+  (* both ends, and the probability they map to under a belief centred on ke *)
+  (* symmetric, as the Insurer default is, so the CDF at the centre is exactly one half *)
+  let b : Boundary_t.belief =
+    { mean = inputs.cost_of_equity; sd = 0.01; floor = inputs.cost_of_equity -. 0.02;
+      ceiling = inputs.cost_of_equity +. 0.02; why = "w"; as_of = "2026-09-23" }
+  in
+  let at_price price =
+    let implied, implied_domain, outcome = Beliefs.implied_roe_target ~f ~price ~cost_of_equity:inputs.cost_of_equity in
+    Beliefs.readout b ~source:"s" ~source_kind:"class" ~axis:Beliefs.roe_axis ~implied ~implied_domain ~outcome
+      ~price ~fair_value:fv
+  in
+  let above = at_price 1e9 in
+  check_float "past the top of the domain is certainty" 1. above.probability_overpaid;
+  check_mentions "with the reason" (Option.value above.probability_reason ~default:"") [ "long-run return above the domain" ];
+  let below = at_price (f (inputs.cost_of_equity -. 0.10) /. 2.) in
+  check_float "below the bottom is zero" 0. below.probability_overpaid;
+  check_mentions "with the reason" (Option.value below.probability_reason ~default:"")
+    [ "the price is below the value at a long-run return 10 points under the cost of equity" ];
+  let centre = at_price (f inputs.cost_of_equity) in
+  Alcotest.(check bool) "a price needing exactly the cost of equity is a coin flip under a symmetric belief" true
+    (Float.abs (centre.probability_overpaid -. 0.5) < 1e-4);
+  (* the Bank default is not symmetric: three points of ceiling above, two of floor below,
+     so the same price reads a shade under a half, which is the franchise the ceiling grants *)
+  let asym = { b with ceiling = inputs.cost_of_equity +. 0.03 } in
+  let p_asym = Beliefs.cdf asym inputs.cost_of_equity in
+  Alcotest.(check bool) "a wider ceiling pulls the centre's probability below a half" true (p_asym < 0.5 && p_asym > 0.45);
+  Alcotest.(check string) "and the axis is named on the record" Beliefs.roe_axis centre.belief_parameter;
+  (* the loader takes the two new classes, and resolve anchors them on the cost of equity *)
+  let classes = get (Beliefs.load_classes_string {|{"classes": {
+      "Bank": {"mean": 0, "sd": 1.0, "floor": -2, "ceiling": 3, "why": "converges to ke", "as_of": "2026-09-23"},
+      "Insurer": {"mean": 0, "sd": 1.0, "floor": -2, "ceiling": 2, "why": "narrower above", "as_of": "2026-09-23"}}}|}) in
+  let resolved, source =
+    Option.get (Beliefs.resolve ~classes ~ticker:"T" ~entity_class:"Insurer" ~anchor:0.09 ~anchor_name:"the cost of equity" ())
+  in
+  check_float "centre at the anchor" 0.09 resolved.mean;
+  check_float "floor two points under" 0.07 resolved.floor;
+  check_float "ceiling two over" 0.11 resolved.ceiling;
+  check_float "sd is a width, never offset" 0.01 resolved.sd;
+  check_mentions "the source names the anchor" source [ "class default for Insurer"; "offsets around the cost of equity" ]
+
 let test_beliefs_cdf_and_probability () =
   let b : Boundary_t.belief = { mean = 0.02; sd = 0.005; floor = 0.; ceiling = 0.04; why = "w"; as_of = today } in
   check_float "the centre" 0.5 (Beliefs.cdf b 0.02);
@@ -1520,17 +1607,24 @@ let test_beliefs_cdf_and_probability () =
   Alcotest.(check bool) "monotone" true (List.for_all2 (fun a c -> a < c) (List.filteri (fun k _ -> k < 5) values) (List.tl values));
   check_float "the recorded terminal reproduces the anchor" fv (f 0.);
   (* the implied solver recovers a known terminal growth *)
-  let r, domain = Beliefs.implied_terminal_growth ~f ~price:(f 0.03) ~rate:i.wacc in
+  let r, domain, outcome = Beliefs.implied_terminal_growth ~f ~price:(f 0.03) ~rate:i.wacc in
   (match r.value with Some g -> Alcotest.(check bool) "recovers 3%" true (Float.abs (g -. 0.03) < 1e-5) | None -> Alcotest.fail "no root");
+  Alcotest.(check bool) "solved" true (outcome = Beliefs.Solved);
   Alcotest.(check (list approx)) "domain" [ -0.10; i.wacc -. 0.0005 ] domain;
-  let above = Beliefs.readout b ~source:"s" ~source_kind:"class" ~f ~price:1e9 ~rate:i.wacc ~fair_value:fv in
+  let growth_readout ~price =
+    let implied, implied_domain, outcome = Beliefs.implied_terminal_growth ~f ~price ~rate:i.wacc in
+    Beliefs.readout b ~source:"s" ~source_kind:"class" ~axis:Beliefs.growth_axis ~implied ~implied_domain ~outcome
+      ~price ~fair_value:fv
+  in
+  let above = growth_readout ~price:1e9 in
   check_float "null above is 1.0" 1. above.probability_overpaid;
   Alcotest.(check (option string)) "with the reason" (Some "the price needs long-run growth at or above the discount rate") above.probability_reason;
-  Alcotest.(check (option approx)) "no implied" None above.implied_terminal_growth.value;
-  let below = Beliefs.readout b ~source:"s" ~source_kind:"class" ~f ~price:(f (-0.10) -. 1.) ~rate:i.wacc ~fair_value:fv in
+  Alcotest.(check (option approx)) "no implied" None (Option.get above.implied_terminal_growth).value;
+  Alcotest.(check (option string)) "the axis is growth" (Some Beliefs.growth_axis) (Some above.belief_parameter);
+  let below = growth_readout ~price:(f (-0.10) -. 1.) in
   check_float "null below is 0.0" 0. below.probability_overpaid;
   Alcotest.(check (option string)) "with the reason" (Some "the price is below the value at -10% long-run growth") below.probability_reason;
-  let mid = Beliefs.readout b ~source:"s" ~source_kind:"class" ~f ~price:(f 0.02) ~rate:i.wacc ~fair_value:fv in
+  let mid = growth_readout ~price:(f 0.02) in
   Alcotest.(check bool) "implied at the belief's centre: one half (to the solver's tolerance)" true (Float.abs (mid.probability_overpaid -. 0.5) < 1e-4);
   check_float "the value surplus is the margin of safety" ((fv -. f 0.02) /. f 0.02) mid.value_surplus;
   (* on the record: the class default on the dcf, the reason on the residual-income path and on an undeclared class *)
@@ -1545,14 +1639,27 @@ let test_beliefs_cdf_and_probability () =
   let own = Valuation.run ~name_beliefs:named params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
   check_mentions "per-name beats the class default" (Option.get own.belief).source [ "per-name entry for TEST" ];
   Alcotest.(check bool) "different belief, different version" true (own.belief_version <> v.belief_version);
+  (* (58) the residual-income path now carries a belief, centred on the cost of equity *)
   let bank = run ~declared:(Some (declaration `Bank)) (bank_financials (bank_history ())) in
   Alcotest.check status "bank Ok" `Ok bank.status;
-  Alcotest.(check (option string)) "no version on the residual-income path" None bank.belief_version;
-  check_mentions "with the reason" (Option.value bank.belief_reason ~default:"") [ "the residual-income path has no terminal growth; the belief parameter is undefined there" ];
+  Alcotest.(check bool) "a version on the residual-income path" true (Option.is_some bank.belief_version);
+  (match (bank.belief, bank.inputs) with
+  | Some r, Some (`Residual_income i) ->
+      Alcotest.(check string) "the axis is the return on equity" Beliefs.roe_axis r.belief_parameter;
+      check_mentions "anchored on the cost of equity" r.source [ "class default for Bank"; "offsets around the cost of equity" ];
+      check_float "the centre is the cost of equity: the long run grants nothing" i.cost_of_equity r.declared.mean;
+      check_float "the floor is two points under it" (i.cost_of_equity -. 0.02) r.declared.floor;
+      check_float "the ceiling three over" (i.cost_of_equity +. 0.03) r.declared.ceiling;
+      Alcotest.(check bool) "the implied readout is the roe target, not a growth" true
+        (Option.is_some r.implied_roe_target && Option.is_none r.implied_terminal_growth);
+      Alcotest.(check bool) "and it is on the implied block too" true
+        (match bank.implied with Some im -> Option.is_some im.implied_roe_target | None -> false);
+      Alcotest.(check bool) "with a curve to enter the frontier with" true (Option.is_some bank.surplus_curve)
+  | _ -> Alcotest.failf "no belief on the bank record: %s" (Option.value bank.belief_reason ~default:""));
   let software = run ~declared:(Some (declaration `HighGrowthSoftware)) (financials (history ())) in
   check_mentions "an undeclared class" (Option.value software.belief_reason ~default:"") [ "no belief declared for HighGrowthSoftware" ];
   (* the summary and the run diff say so *)
-  check_mentions "summary line" (Batch.summary [ v; bank ]) [ "probability_overpaid (24), across 1 Ok names with a declared belief: median"; "no belief on 1 Ok names (1 the residual-income path" ];
+  check_mentions "summary line" (Batch.summary [ v; bank ]) [ "probability_overpaid (24), across 2 Ok names with a declared belief: median"; "no belief on 0 Ok names" ];
   check_mentions "two runs under different beliefs are different runs" (Batch.run_diff ~baseline:[ v ] [ own ]) [ "belief_version 2026-09-19-"; "-class -> 2026-09-01-"; "-name" ];
   let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation own) in
   Alcotest.check valuation "json round trip" own again;
@@ -1571,8 +1678,17 @@ let test_beliefs_cdf_and_probability () =
         (List.for_all2 (fun (p : Boundary_t.surplus_point) (q : Boundary_t.surplus_point) -> Float.abs ((q.growth -. p.growth) -. ((r.declared.ceiling -. r.declared.floor) /. 40.)) < 1e-12)
            (List.filteri (fun k _ -> k < 40) curve) (List.tl curve))
   | _ -> Alcotest.fail "no curve on the dcf record");
-  Alcotest.(check bool) "no curve on the residual-income path" true (Option.is_none bank.surplus_curve);
-  check_mentions "with the reason" (Option.value bank.surplus_curve_reason ~default:"") [ "no surplus curve: the residual-income path has no terminal growth" ];
+  (* (58) the residual-income path has a curve now: 41 points in the long-run return on
+     equity from the belief's floor to its ceiling, so those names enter the frontier *)
+  (match (bank.surplus_curve, bank.belief) with
+  | Some curve, Some b ->
+      Alcotest.(check int) "41 points on the residual-income curve" 41 (List.length curve);
+      check_float "from the belief's floor" b.declared.floor (List.hd curve).growth;
+      check_float "to its ceiling" b.declared.ceiling (List.nth curve 40).growth;
+      Alcotest.(check bool) "and the surplus rises with the long-run return" true
+        ((List.hd curve).surplus < (List.nth curve 40).surplus)
+  | _ -> Alcotest.fail "no curve on the residual-income path");
+  Alcotest.(check (option string)) "and no reason instead" None bank.surplus_curve_reason;
   (* the correlation section (35) loads strictly *)
   let reject text needles = match Beliefs.load_classes_string text with Ok _ -> Alcotest.fail "loaded" | Error e -> check_mentions "load error" e needles in
   let with_corr corr = Printf.sprintf {|{"classes": {"OperatingCompany": {"mean": 0, "sd": 0.5, "floor": -2, "ceiling": 2, "why": "w", "as_of": "2026-09-19"}}, "correlation": %s}|} corr in
@@ -1944,7 +2060,7 @@ let test_market_implied_chain () =
           Alcotest.(check int) "five" 5 (List.length gs);
           List.iter2
             (fun (g : Boundary_t.growth_quantile) (q : Boundary_t.price_quantile) ->
-              let expected, _ = Beliefs.implied_terminal_growth ~f ~price:(q.price /. ((1. +. ke) ** m.horizon_years)) ~rate:i.wacc in
+              let expected, _, _ = Beliefs.implied_terminal_growth ~f ~price:(q.price /. ((1. +. ke) ** m.horizon_years)) ~rate:i.wacc in
               Alcotest.(check (option approx)) (Printf.sprintf "growth at %.2f" g.p) expected.value g.growth.value)
             gs m.price_quantiles
       | None -> Alcotest.fail "no growth quantiles on the dcf path")
@@ -1962,7 +2078,7 @@ let test_market_implied_chain () =
   let short = Valuation.run ~options:(fun _ -> Ok (synthetic_chain ~expiries:[ ("2027-03-19", 23) ] ())) params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (history ())) in
   check_mentions "no expiry" (Option.value short.market_implied_reason ~default:"") [ "no expiry >= 365 days" ];
   (* the summary line and the JSON round trip *)
-  check_mentions "summary" (Batch.summary [ v; bank; none ]) [ "market-implied (36), across 2 Ok names with an options chain: median p_below_anchor_path"; "against median probability_overpaid"; "on the 1 names with both; none on 1 Ok names (1 no options data)" ];
+  check_mentions "summary" (Batch.summary [ v; bank; none ]) [ "market-implied (36), across 2 Ok names with an options chain: median p_below_anchor_path"; "against median probability_overpaid"; "on the 2 names with both; none on 1 Ok names (1 no options data)" ];
   Alcotest.(check bool) "no line without --options" false (contains (Batch.summary [ plain ]) "market-implied (36)");
   let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
   Alcotest.check valuation "json round trip" v again
@@ -3459,6 +3575,7 @@ let () =
           case "belief map model, contour, grid, ri null (23)" test_belief_map;
           case "beliefs: strict loader, offsets, override, version (24)" test_beliefs_loader_and_resolution;
           case "beliefs: cdf, monotone terminal, implied, probability (24)" test_beliefs_cdf_and_probability;
+          case "the roe target is inert at the cost of equity; implied, ends and loader (58)" test_roe_target_is_inert_at_the_cost_of_equity;
           case "required return: loader, resolution, version (34)" test_required_return_loader_and_resolution;
           case "required return: record, paths, readouts (34)" test_required_return_on_the_record_and_the_paths;
         ] );

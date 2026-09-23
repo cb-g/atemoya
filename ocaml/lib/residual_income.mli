@@ -16,8 +16,11 @@
     ratios are recorded for the reader and gate nothing. *)
 
 val roe_path :
-  roe_0:float -> cost_of_equity:float -> lambda:float -> projection_years:int -> float list
-(** [ROE_t = ke + (roe_0 - ke) * exp (-lambda * t)] for t = 1..N. *)
+  roe_0:float -> roe_target:float -> lambda:float -> projection_years:int -> float list
+(** [ROE_t = roe_target + (roe_0 - roe_target) * exp (-lambda * t)] for t = 1..N. (58)
+    [roe_target] is the long-run return on equity the path reverts to; every caller passes
+    the cost of equity unless it is deliberately sweeping the target, so the path, the
+    schedule and every number on the record are what they were. *)
 
 type schedule = {
   book_value_path : float list;  (** start-of-year book for years 1..N *)
@@ -36,6 +39,7 @@ val mean_ratio :
     fewer than [min_periods] usable. The periods used, most recent first. *)
 
 val value :
+  ?roe_target:float ->
   ?book:(Boundary_t.fiscal_period -> float option) ->
   Dcf.assumptions ->
   country:string ->

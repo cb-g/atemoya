@@ -2668,6 +2668,8 @@ class Implied:
     solver: str
     tolerance: float
     held: List[HeldInput]
+    implied_roe_target: Optional[Readout] = None
+    roe_target_domain: Optional[List[float]] = None
     horizon_years: Optional[Readout] = None
     horizon_bracket: List[float] = field(default_factory=lambda: [])
     fair_value_at_40: Optional[float] = None
@@ -2687,6 +2689,8 @@ class Implied:
                 solver=_atd_read_string(x['solver']) if 'solver' in x else _atd_missing_json_field('Implied', 'solver'),
                 tolerance=_atd_read_float(x['tolerance']) if 'tolerance' in x else _atd_missing_json_field('Implied', 'tolerance'),
                 held=_atd_read_list(HeldInput.from_json)(x['held']) if 'held' in x else _atd_missing_json_field('Implied', 'held'),
+                implied_roe_target=Readout.from_json(x['implied_roe_target']) if 'implied_roe_target' in x else None,
+                roe_target_domain=_atd_read_list(_atd_read_float)(x['roe_target_domain']) if 'roe_target_domain' in x else None,
                 horizon_years=Readout.from_json(x['horizon_years']) if 'horizon_years' in x else None,
                 horizon_bracket=_atd_read_list(_atd_read_float)(x['horizon_bracket']) if 'horizon_bracket' in x else [],
                 fair_value_at_40=_atd_read_float(x['fair_value_at_40']) if 'fair_value_at_40' in x else None,
@@ -2707,6 +2711,10 @@ class Implied:
         res['solver'] = _atd_write_string(self.solver)
         res['tolerance'] = _atd_write_float(self.tolerance)
         res['held'] = _atd_write_list((lambda x: x.to_json()))(self.held)
+        if self.implied_roe_target is not None:
+            res['implied_roe_target'] = (lambda x: x.to_json())(self.implied_roe_target)
+        if self.roe_target_domain is not None:
+            res['roe_target_domain'] = _atd_write_list(_atd_write_float)(self.roe_target_domain)
         if self.horizon_years is not None:
             res['horizon_years'] = (lambda x: x.to_json())(self.horizon_years)
         res['horizon_bracket'] = _atd_write_list(_atd_write_float)(self.horizon_bracket)
@@ -3441,11 +3449,13 @@ class BeliefReadout:
     declared: Belief
     source: str
     belief_version: str
-    implied_terminal_growth: Readout
     implied_domain: List[float]
     probability_overpaid: float
     value_surplus: float
     note: str
+    belief_parameter: str = field(default_factory=lambda: "")
+    implied_terminal_growth: Optional[Readout] = None
+    implied_roe_target: Optional[Readout] = None
     probability_reason: Optional[str] = None
 
     @classmethod
@@ -3455,11 +3465,13 @@ class BeliefReadout:
                 declared=Belief.from_json(x['declared']) if 'declared' in x else _atd_missing_json_field('BeliefReadout', 'declared'),
                 source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('BeliefReadout', 'source'),
                 belief_version=_atd_read_string(x['belief_version']) if 'belief_version' in x else _atd_missing_json_field('BeliefReadout', 'belief_version'),
-                implied_terminal_growth=Readout.from_json(x['implied_terminal_growth']) if 'implied_terminal_growth' in x else _atd_missing_json_field('BeliefReadout', 'implied_terminal_growth'),
                 implied_domain=_atd_read_list(_atd_read_float)(x['implied_domain']) if 'implied_domain' in x else _atd_missing_json_field('BeliefReadout', 'implied_domain'),
                 probability_overpaid=_atd_read_float(x['probability_overpaid']) if 'probability_overpaid' in x else _atd_missing_json_field('BeliefReadout', 'probability_overpaid'),
                 value_surplus=_atd_read_float(x['value_surplus']) if 'value_surplus' in x else _atd_missing_json_field('BeliefReadout', 'value_surplus'),
                 note=_atd_read_string(x['note']) if 'note' in x else _atd_missing_json_field('BeliefReadout', 'note'),
+                belief_parameter=_atd_read_string(x['belief_parameter']) if 'belief_parameter' in x else "",
+                implied_terminal_growth=Readout.from_json(x['implied_terminal_growth']) if 'implied_terminal_growth' in x else None,
+                implied_roe_target=Readout.from_json(x['implied_roe_target']) if 'implied_roe_target' in x else None,
                 probability_reason=_atd_read_string(x['probability_reason']) if 'probability_reason' in x else None,
             )
         else:
@@ -3470,11 +3482,15 @@ class BeliefReadout:
         res['declared'] = (lambda x: x.to_json())(self.declared)
         res['source'] = _atd_write_string(self.source)
         res['belief_version'] = _atd_write_string(self.belief_version)
-        res['implied_terminal_growth'] = (lambda x: x.to_json())(self.implied_terminal_growth)
         res['implied_domain'] = _atd_write_list(_atd_write_float)(self.implied_domain)
         res['probability_overpaid'] = _atd_write_float(self.probability_overpaid)
         res['value_surplus'] = _atd_write_float(self.value_surplus)
         res['note'] = _atd_write_string(self.note)
+        res['belief_parameter'] = _atd_write_string(self.belief_parameter)
+        if self.implied_terminal_growth is not None:
+            res['implied_terminal_growth'] = (lambda x: x.to_json())(self.implied_terminal_growth)
+        if self.implied_roe_target is not None:
+            res['implied_roe_target'] = (lambda x: x.to_json())(self.implied_roe_target)
         if self.probability_reason is not None:
             res['probability_reason'] = _atd_write_string(self.probability_reason)
         return res

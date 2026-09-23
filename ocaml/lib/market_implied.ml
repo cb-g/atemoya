@@ -339,7 +339,7 @@ let of_chain (chain : option_chain) ~rf ~ke ~fair_value ~growth =
                     (List.map
                        (fun (q : price_quantile) ->
                          let today = q.price /. ((1. +. ke) ** t) in
-                         let readout, _ = Beliefs.implied_terminal_growth ~f ~price:today ~rate in
+                         let readout, _, _ = Beliefs.implied_terminal_growth ~f ~price:today ~rate in
                          { p = q.p; growth = readout })
                        price_quantiles),
                   None )

@@ -79,15 +79,52 @@ def test_a_name_without_a_belief_is_excluded_with_its_reason(tmp_path: Path) -> 
     if not lines:
         pytest.skip("no run to read")
     records = {v.ticker: v for v in (boundary.Valuation.from_json_string(l) for l in lines)}
-    bank = next((t for t, v in records.items() if v.status.kind == "Ok" and v.belief is None), None)
+    no_belief = next((t for t, v in records.items() if v.status.kind == "Ok" and v.belief is None), None)
     with_belief = next((t for t, v in records.items() if v.status.kind == "Ok" and v.surplus_curve is not None), None)
-    if bank is None or with_belief is None:
-        pytest.skip("run lacks the two kinds of record")
+    if with_belief is None:
+        pytest.skip("run lacks a record with a curve")
+    names: list[dict[str, object]] = [{"ticker": with_belief, "weight": 1.0}, {"ticker": "NOPE"}]
+    if no_belief is not None:
+        names.insert(0, {"ticker": no_belief})
     f = tmp_path / "cands.json"
-    f.write_text(json.dumps({"names": [{"ticker": bank}, {"ticker": with_belief, "weight": 1.0}, {"ticker": "NOPE"}]}))
+    f.write_text(json.dumps({"names": names}))
     kept, excluded = fr.load_candidates(f, records)
     assert [c.ticker for c in kept] == [with_belief] and len(kept[0].growth) == 41
-    assert dict(excluded)["NOPE"] == "not in the latest run" and "residual-income" in dict(excluded)[bank]
+    assert dict(excluded)["NOPE"] == "not in the latest run"
+    if no_belief is not None:
+        assert dict(excluded)[no_belief]  # excluded with whatever reason the record carries
+
+
+def test_residual_income_names_enter_the_frontier(tmp_path: Path) -> None:
+    """(58) Banks and insurers used to be excluded for having no belief. They have one now,
+    on the long-run return on equity, and their curve is the same 41 points, so the frontier
+    takes them like any other name."""
+    import boundary
+    run = Path(__file__).resolve().parent.parent / "output" / "valuations.jsonl"
+    lines = [l for l in run.read_text().splitlines() if l.strip()] if run.exists() else []
+    if not lines:
+        pytest.skip("no run to read")
+    records = {v.ticker: v for v in (boundary.Valuation.from_json_string(l) for l in lines)}
+    banks = [t for t, v in records.items()
+             if v.status.kind == "Ok" and v.model is not None
+             and v.model.kind in ("ResidualIncome_", "ResidualIncomeInsurer")]
+    if len(banks) < 2:
+        pytest.skip("run lacks two residual-income records")
+    for t in banks:
+        v = records[t]
+        assert v.belief is not None and v.surplus_curve is not None, t
+        assert v.belief.belief_parameter == "long_run_return_on_equity", t
+        assert v.belief.implied_roe_target is not None and v.belief.implied_terminal_growth is None, t
+        assert len(v.surplus_curve) == 41, t
+        # the curve is swept over the belief's own floor-to-ceiling range
+        assert v.surplus_curve[0].growth == pytest.approx(v.belief.declared.floor)
+        assert v.surplus_curve[-1].growth == pytest.approx(v.belief.declared.ceiling)
+        # and the surplus rises with the long-run return, so the interpolation is well posed
+        assert v.surplus_curve[0].surplus < v.surplus_curve[-1].surplus, t
+    f = tmp_path / "cands.json"
+    f.write_text(json.dumps({"names": [{"ticker": banks[0], "weight": 0.5}, {"ticker": banks[1], "weight": 0.5}]}))
+    kept, excluded = fr.load_candidates(f, records)
+    assert [c.ticker for c in kept] == banks[:2] and excluded == []
 
 
 def test_correlation_section_loads_strictly() -> None:

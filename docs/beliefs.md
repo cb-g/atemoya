@@ -32,13 +32,22 @@ the probability is the belief's CDF at the implied long-run growth, in closed fo
    different runs, and the run diff says so on every record whose version changed. A run
    without a belief for a name records no version and no probability, with the reason.
 6. **Every belief is tracked.** `reference/beliefs.json` holds one default per entity
-   class as offsets around the country's settled terminal growth — which since the
-   terminal-growth table got a source is the IMF World Economic Outlook's last projected
-   year of nominal GDP growth in the country's own currency, so a belief's centre moves
-   when the vintage does — and, beside them under
-   `names`, per-name absolute beliefs that override the default. A further file of
-   per-name beliefs may be given as `--beliefs`; it overrides the tracked ones. Banks and
-   insurers carry no belief: their model has no terminal growth.
+   class as offsets around an anchor and, beside them under `names`, per-name absolute
+   beliefs that override the default. A further file of per-name beliefs may be given as
+   `--beliefs`; it overrides the tracked ones.
+
+   On the DCF-shaped classes the anchor is the country's settled terminal growth — which
+   since the terminal-growth table got a source is the IMF World Economic Outlook's last
+   projected year of nominal GDP growth in the country's own currency, so a belief's
+   centre moves when the vintage does.
+
+   **Banks and insurers have a belief too, on a different parameter.** Their model has no
+   terminal growth, so the belief sits on the long-run return on equity the ROE path
+   reverts to, and the anchor is the name's own cost of equity. A zero centre is therefore
+   the statement that the long run grants no franchise value, which is exactly what that
+   model already assumed; only the width and the ceiling say a franchise might hold above
+   its cost of equity. The record names which parameter it is in `belief_parameter`, and
+   the fourth readout is `implied_roe_target` rather than `implied_terminal_growth`.
 
 ## Running with a further beliefs file
 

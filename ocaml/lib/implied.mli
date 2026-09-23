@@ -23,6 +23,11 @@ val level_domain : float * float
 val roe_domain : float * float
 (** [-0.50, 1.00] for the residual-income implied_roe0. *)
 
+val roe_target_domain : cost_of_equity:float -> float * float
+(** (58) [ke - 0.10, ke + 0.30] for implied_roe_target: the long-run return on equity the
+    ROE path reverts to. Fair value rises with it, since the excess return the path settles
+    at is [target - ke] and the explicit sum carries it with no terminal after. *)
+
 val lambda_domain : float * float
 (** [0.01, 5.0]: half-lives from about 69 years down to about 0.14. *)
 
@@ -35,7 +40,7 @@ val dcf_fair_value :
   ?projection_years:int -> ?fcff:float -> ?wacc:float -> ?terminal_growth_rate:float ->
   Boundary_t.inputs -> g0:float -> lambda:float -> float
 val residual_income_fair_value :
-  ?projection_years:int -> ?book_equity:float -> ?cost_of_equity:float ->
+  ?projection_years:int -> ?book_equity:float -> ?cost_of_equity:float -> ?roe_target:float ->
   Boundary_t.residual_income_inputs -> roe_0:float -> lambda:float -> float
 (** [projection_years] defaults to the recorded horizon; the risk-free rate stays the
     recorded one whatever the horizon. The other optional arguments override one held
