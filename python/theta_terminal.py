@@ -9,7 +9,14 @@ start reads THETADATA_EMAIL and THETADATA_PASSWORD from the environment (direnv 
 .env), writes them to tools/thetaterminal/creds.txt with mode 600, launches the jar with
 --creds-file in a clean environment that does not carry the two variables, waits for the
 terminal's port, and removes the creds file whether or not the terminal came up. Nothing
-here prints a credential or the environment, on any path."""
+here prints a credential or the environment, on any path.
+
+stop's job (56) is that the port ends closed, so it signals whatever holds the port, not
+whatever the pid file names: the jar launches a second JVM that outlives its launcher, so
+killing the recorded pid leaves the terminal serving. The pid file is used when it is
+there and the port is the fallback when it is not, both sets are signalled, and the wait
+is on the port closing rather than on a pid disappearing. The exit code says whether the
+port is closed at the end."""
 
 from __future__ import annotations
 
@@ -19,7 +26,7 @@ import socket
 import subprocess
 import sys
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -104,26 +111,101 @@ def start(env: Mapping[str, str], *, tools: Path = TOOLS, java: str = "java", po
         creds.unlink(missing_ok=True)
 
 
-def stop(*, tools: Path = TOOLS) -> int:
-    pid_file = tools / "terminal.pid"
-    if not pid_file.exists():
-        print("no terminal.pid: nothing started from here" + (" (something else answers on the port)" if port_open() else ""))
-        return 1
-    pid = int(pid_file.read_text().strip())
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except ProcessLookupError:
-        print(f"pid {pid} is not running; removing terminal.pid")
-        pid_file.unlink()
-        return 0
-    for _ in range(30):
+def listening_pids(port: int = PORT, *, proc: Path = Path("/proc")) -> list[int]:
+    """Every pid holding a listening socket on [port], found through /proc: the listening
+    sockets' inodes from net/tcp and net/tcp6, then the processes whose open descriptors
+    point at one of them. A pid whose descriptors cannot be read is skipped, not guessed
+    at; an unreadable /proc gives an empty list and the caller falls back to the pid file."""
+    inodes: set[str] = set()
+    for name in ("net/tcp", "net/tcp6"):
         try:
-            os.kill(pid, 0)
+            lines = (proc / name).read_text().splitlines()[1:]
+        except OSError:
+            continue
+        for line in lines:
+            fields = line.split()
+            if len(fields) < 10:
+                continue
+            local, state, inode = fields[1], fields[3], fields[9]
+            if state != "0A":  # LISTEN
+                continue
+            _, _, hex_port = local.rpartition(":")
+            try:
+                if int(hex_port, 16) == port:
+                    inodes.add(inode)
+            except ValueError:
+                continue
+    if not inodes:
+        return []
+    wanted = {f"socket:[{i}]" for i in inodes}
+    found: list[int] = []
+    try:
+        entries = list(proc.iterdir())
+    except OSError:
+        return []
+    for entry in entries:
+        if not entry.name.isdigit():
+            continue
+        try:
+            for fd in (entry / "fd").iterdir():
+                if os.readlink(fd) in wanted:
+                    found.append(int(entry.name))
+                    break
+        except OSError:
+            continue  # not ours, or gone between the listing and the read
+    return sorted(found)
+
+
+def stop(*, tools: Path = TOOLS, port: int = PORT, wait: float = 30.0,
+         proc: Path = Path("/proc"), kill: Callable[[int, int], None] = os.kill,
+         is_open: Callable[[], bool] = port_open) -> int:
+    """Stop the terminal: signal every process holding the port, and the pid file's process
+    when it names one, then wait for the port to close. Success is the port being closed,
+    so a terminal that was never running is success and a survivor is not."""
+    pid_file = tools / "terminal.pid"
+    targets: list[int] = []
+    recorded: int | None = None
+    if pid_file.exists():
+        try:
+            recorded = int(pid_file.read_text().strip())
+            targets.append(recorded)
+        except ValueError:
+            print(f"{pid_file.name} does not name a pid; falling back to the port")
+    holders = listening_pids(port, proc=proc)
+    source = "the pid file" if recorded is not None else "the port"
+    targets += [pid for pid in holders if pid not in targets]
+    if not targets:
+        if not is_open():
+            print("terminal is not running")
+            pid_file.unlink(missing_ok=True)
+            return 0
+        print(f"something answers on port {port} and no process holding it could be found; nothing was signalled", file=sys.stderr)
+        return 1
+    signalled: list[int] = []
+    for pid in targets:
+        try:
+            kill(pid, signal.SIGTERM)
+            signalled.append(pid)
         except ProcessLookupError:
-            break
+            continue
+        except PermissionError:
+            print(f"pid {pid} is not ours to signal", file=sys.stderr)
+    deadline = time.monotonic() + wait
+    while is_open() and time.monotonic() < deadline:
         time.sleep(1.0)
+        for pid in listening_pids(port, proc=proc):
+            if pid not in signalled:
+                try:
+                    kill(pid, signal.SIGTERM)  # a survivor the first pass did not see
+                    signalled.append(pid)
+                except (ProcessLookupError, PermissionError):
+                    pass
+    if is_open():
+        print(f"sent SIGTERM to {', '.join(str(p) for p in signalled) or 'nothing'}; port {port} is still answering after {wait:.0f}s", file=sys.stderr)
+        return 1
     pid_file.unlink(missing_ok=True)
-    print(f"sent SIGTERM to pid {pid}")
+    named = ", ".join(str(p) for p in signalled) or "nothing"
+    print(f"terminal stopped: sent SIGTERM to {named} (found through {source}); port {port} is closed")
     return 0
 
 
