@@ -30,6 +30,7 @@ type assumptions = {
   statutory_tax_rate : Boundary_t.parameter;
       (** used when no effective rate in [0, max_effective_tax_rate] is derivable *)
   midcycle_window_years : Boundary_t.int_parameter;
+  midcycle_scale_floor : Boundary_t.parameter;
       (** the mid-cycle DCF's window (22); unused by this module *)
   required_return : declared_return option;
       (** a declared required return (34): its premium over the risk-free rate replaces

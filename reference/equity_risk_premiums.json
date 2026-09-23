@@ -8,7 +8,8 @@
   "notes": [
     "Annual source, published each January; refresh due January 2027.",
     "as_of is the first day of the vintage month so ages are conservative.",
-    "Stored as the country's TOTAL premium. Layer 2 (international CAPM) splits mature-market base from country risk premium."
+    "Stored as the country's TOTAL premium. Layer 2 (international CAPM) splits mature-market base from country risk premium.",
+    "Uruguay added 2026-09-23 (55) from the same January 2026 vintage the file already carries: rated Baa1, adjusted default spread 1.36%, country risk premium 2.07%, total equity risk premium 6.30%, which is the mature-market base of 4.23% plus that country risk premium. Stored as the total, as every other row is; the international CAPM splits it back."
   ],
   "values": {
     "United States": 0.0446,
@@ -34,6 +35,7 @@
     "Israel": 0.063,
     "Ireland": 0.0501,
     "Sweden": 0.0423,
-    "Kazakhstan": 0.063
+    "Kazakhstan": 0.063,
+    "Uruguay": 0.063
   }
 }

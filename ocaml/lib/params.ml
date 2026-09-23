@@ -200,6 +200,9 @@ let resolve ?hold_vintage t ~today ~country ~industry =
   let* midcycle_window_years =
     int_scalar ?hold_vintage t.params.midcycle_window_years ~today ~name:"midcycle_window_years"
   in
+  let* midcycle_scale_floor =
+    scalar ?hold_vintage t.params.midcycle_scale_floor ~today ~name:"midcycle_scale_floor"
+  in
   let tenor = Printf.sprintf "%dy" projection_years.value in
   let* risk_free_rate = risk_free ?hold_vintage t.risk_free ~today ~country ~tenor in
   let* equity_risk_premium =
@@ -239,6 +242,7 @@ let resolve ?hold_vintage t ~today ~country ~industry =
       projection_years;
       statutory_tax_rate;
       midcycle_window_years;
+      midcycle_scale_floor;
       required_return = None;
     }
 
@@ -246,6 +250,9 @@ let resolve_cross ?hold_vintage ?rf_note t ~today ~domicile ~rate_country ~indus
   let* projection_years = int_scalar ?hold_vintage t.params.projection_years ~today ~name:"projection_years" in
   let* midcycle_window_years =
     int_scalar ?hold_vintage t.params.midcycle_window_years ~today ~name:"midcycle_window_years"
+  in
+  let* midcycle_scale_floor =
+    scalar ?hold_vintage t.params.midcycle_scale_floor ~today ~name:"midcycle_scale_floor"
   in
   let tenor = Printf.sprintf "%dy" projection_years.value in
   let* risk_free_rate = risk_free ?hold_vintage t.risk_free ~today ~country:rate_country ~tenor in
@@ -300,5 +307,6 @@ let resolve_cross ?hold_vintage ?rf_note t ~today ~domicile ~rate_country ~indus
       projection_years;
       statutory_tax_rate;
       midcycle_window_years;
+      midcycle_scale_floor;
       required_return = None;
     }

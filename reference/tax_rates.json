@@ -6,7 +6,8 @@
     "USA": "United States"
   },
   "notes": [
-    "Annual source; refresh due January 2027 alongside the ERP table."
+    "Annual source; refresh due January 2027 alongside the ERP table.",
+    "Uruguay added 2026-09-23 (55) from PwC's Worldwide Tax Summaries: the corporate income tax rate on net income from business activities is 25%, and the summary states that no taxes on corporate income may be levied by municipal or other local authorities, so the combined-including-local figure the file records is the same 25%."
   ],
   "values": {
     "United States": 0.21,
@@ -32,6 +33,7 @@
     "British Virgin Islands": 0.0,
     "Finland": 0.2,
     "Israel": 0.23,
-    "Kazakhstan": 0.2
+    "Kazakhstan": 0.2,
+    "Uruguay": 0.25
   }
 }

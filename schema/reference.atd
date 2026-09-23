@@ -109,6 +109,7 @@ type params = {
   mean_reversion_lambda : scalar;     (* growth, and a bank's ROE, decay toward their anchor at exp(-lambda * t) *)
   mature_market_erp : scalar;         (* the international CAPM's mature-market base; a domicile's total ERP less this is its country risk premium *)
   midcycle_window_years : int_scalar; (* the mid-cycle DCF's window (22): annual periods normalised over, and the period depth the fetch keeps for the class *)
+  midcycle_scale_floor : scalar;      (* (55) the smallest opening invested capital, as a fraction of the latest period's, that lets a year into the mid-cycle return average; the reinvestment sums are untouched *)
   sensitivity_steps : sensitivity_steps;   (* (23) *)
   frontier_draws : int_scalar;        (* (35) draws from the joint belief distribution; a change is a decision *)
   frontier_seed : int_scalar;         (* (35) the sampler's seed; a change is a decision *)

@@ -859,3 +859,23 @@ def test_ffo_is_refused_when_the_filers_leases_are_financing_receivables() -> No
     # a filer that does file real-estate depreciation computes FFO and carries no reason
     p = period({**vici, "DepreciationDepletionAndAmortization": usd(fact("2025-12-31", 1000e6, start="2025-01-01"))})
     assert p.ffo is not None and p.ffo_unavailable is None
+
+
+def test_a_derivative_position_is_not_working_capital() -> None:
+    """(55) MercadoLibre's one unclassified tag: the net carrying value of derivative
+    instruments is a financial position, excluded like equity securities at fair value, so
+    it is neither summed nor allowed to leave the field null."""
+    assert "IncreaseDecreaseInDerivativeAssetsAndLiabilities" in DEFS.delta_nwc.xbrl.excluded
+    meli = {"IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", 1508e6, start="2025-01-01")),
+            "IncreaseDecreaseInInventories": usd(fact("2025-12-31", 235e6, start="2025-01-01")),
+            "IncreaseDecreaseInOtherOperatingAssets": usd(fact("2025-12-31", 491e6, start="2025-01-01")),
+            "IncreaseDecreaseInAccountsPayableAndAccruedLiabilities": usd(fact("2025-12-31", 1487e6, start="2025-01-01")),
+            "IncreaseDecreaseInOperatingLeaseLiability": usd(fact("2025-12-31", -408e6, start="2025-01-01")),
+            "IncreaseDecreaseInOtherOperatingLiabilities": usd(fact("2025-12-31", 145e6, start="2025-01-01")),
+            "IncreaseDecreaseInDerivativeAssetsAndLiabilities": usd(fact("2025-12-31", -117e6, start="2025-01-01"))}
+    notes: list[str] = []
+    p = period(meli, notes)
+    assert p.delta_nwc is not None and math.isclose(p.delta_nwc, (1508 + 235 + 491 - 1487 + 408 - 145) * 1e6)
+    assert notes == []  # it no longer leaves the field null naming itself
+    rows = [c.row for c in (p.delta_nwc_composition.components if p.delta_nwc_composition else [])]
+    assert "IncreaseDecreaseInDerivativeAssetsAndLiabilities" not in rows  # excluded, never summed

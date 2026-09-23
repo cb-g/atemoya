@@ -74,3 +74,32 @@ def test_periods_needed_and_the_declared_cik() -> None:
     assert entry.cik == "0000000001"
     with pytest.raises(universe.UniverseError, match="unknown field"):
         universe.load_text(json.dumps({"tickers": [{"ticker": "X", "entity_class": "Cyclical", "why": "cyclical", "CIK": "1"}]}))
+
+
+def test_uruguay_rows_and_the_declared_scale_floor() -> None:
+    """(55) MercadoLibre's domicile needs two of the three country tables, each row carrying
+    its source; the terminal-growth table has no Uruguay row by decision and says why. The
+    mid-cycle scale floor is a dated declaration beside the window it trims."""
+    import reference
+
+    erp = reference.CountryTable.from_json_string((ROOT / "reference" / "equity_risk_premiums.json").read_text())
+    tax = reference.CountryTable.from_json_string((ROOT / "reference" / "tax_rates.json").read_text())
+    params = reference.Params.from_json_string((ROOT / "reference" / "params.json").read_text())
+
+    # the total premium, as every other row is stored: the mature base plus the country's own
+    assert dict(erp.values)["Uruguay"] == 0.063
+    mature = params.mature_market_erp.value
+    assert round(dict(erp.values)["Uruguay"] - mature, 4) == 0.0207
+    assert any("Uruguay" in n and "6.30%" in n for n in erp.notes)
+
+    assert dict(tax.values)["Uruguay"] == 0.25
+    assert any("Uruguay" in n and "PwC" in n for n in tax.notes)
+
+    # the row that could not be transcribed, absent on purpose and explained
+    assert "Uruguay" not in dict(params.terminal_growth_rate.values)
+    assert any("Uruguay is deliberately absent" in n for n in params.terminal_growth_rate.notes)
+
+    floor = params.midcycle_scale_floor
+    assert floor.value == 0.10 and floor.as_of == "2026-09-23"
+    assert "different business" in floor.source
+    assert any("reinvestment rate is untouched" in n for n in floor.notes)

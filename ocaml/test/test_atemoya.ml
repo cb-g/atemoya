@@ -174,6 +174,7 @@ let assumptions : Dcf.assumptions =
     statutory_tax_rate = param 0.21;
     midcycle_window_years =
       { value = 15; key = "global"; source = "test"; as_of = today; age_days = 0 };
+    midcycle_scale_floor = param 0.10;
     required_return = None;
   }
 
@@ -213,7 +214,7 @@ let params_json =
   "growth_clamp_upper": {"value": 0.5, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mature_market_erp": {"value": 0.0423, "source": "Damodaran mature base", "as_of": "2026-01-01", "max_age_days": 400},
-  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
+  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
     "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03, "Brazil": 0.035}},
@@ -1175,6 +1176,58 @@ let test_midcycle_arithmetic () =
   | None -> Alcotest.failf "no level: %s" (Option.value readouts.level.reason ~default:""));
   Alcotest.(check string) "the readout is the dcf's" "implied_g0" readouts.level_name
 
+let test_midcycle_scale_floor () =
+  (* (55) The same ten years (2025 back to 2016), but the oldest was a hundredth of today's
+     business: its capital is 90 against 9000 today, under the tenth the floor declares. The
+     observation that opens on it -- 2017's return -- leaves the average and is named on the
+     record, while the reinvestment sums, which are sums and not a mean of ratios, do not
+     move at all. *)
+  let small = [ "2016-12-31" ] in
+  let shrink (p : Boundary_t.fiscal_period) =
+    if List.mem p.period_end small then { p with book_equity = Some 50.; total_debt = Some 50.; cash = Some 10. } else p
+  in
+  let full = midcycle_periods () in
+  let scaled = List.map shrink full in
+  let baseline = match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials full) with
+    | Ok (m, _) -> m | Error e -> Alcotest.failf "baseline failed: %s" e
+  in
+  let m, _ = match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials scaled) with
+    | Ok (m, fv) -> (m, fv) | Error e -> Alcotest.failf "scaled fixture failed: %s" e
+  in
+  (* the year AFTER a shrunken one is the observation that loses its opening capital *)
+  Alcotest.(check int) "one observation drops" 8 (List.length m.observations);
+  Alcotest.(check bool) "and none of the survivors opens below the floor" true
+    (List.for_all (fun (o : Boundary_t.roic_observation) -> o.invested_capital_prior >= 0.10 *. 9000.) m.observations);
+  let dropped = List.filter (fun (e : Boundary_t.midcycle_exclusion) -> e.missing = "opening capital below the scale floor") m.exclusions in
+  Alcotest.(check int) "named once, as an exclusion" 1 (List.length dropped);
+  Alcotest.(check string) "against the roic sum" "roic" (List.hd dropped).sum;
+  Alcotest.(check string) "and the year whose opening capital it is" "2017-12-31" (List.hd dropped).period_end;
+  (* the sums are untouched: the shrunken years still carry all five flows *)
+  check_float "reinvestment sum unchanged" baseline.reinvestment_sum m.reinvestment_sum;
+  check_float "nopat sum unchanged" baseline.nopat_sum m.nopat_sum;
+  check_float "reinvestment rate unchanged" baseline.reinvestment_rate_mid m.reinvestment_rate_mid;
+  Alcotest.(check int) "and the reinvestment periods are all of them" (List.length baseline.reinvestment_periods)
+    (List.length m.reinvestment_periods);
+  (* the return average is the mean of what remains, nothing weighted or fitted *)
+  let roics = List.map (fun (o : Boundary_t.roic_observation) -> o.roic) m.observations in
+  check_float "roic_mid is the plain mean of the survivors"
+    (List.fold_left ( +. ) 0. roics /. float_of_int (List.length roics)) m.roic_mid;
+  (* the eight-observation guard counts what remains: drop one more and the record fails *)
+  let smaller = List.map (fun (p : Boundary_t.fiscal_period) ->
+    if p.period_end = "2017-12-31" then { p with book_equity = Some 50.; total_debt = Some 50.; cash = Some 10. } else p) scaled in
+  (match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials smaller) with
+  | Ok _ -> Alcotest.fail "expected the observation guard to refuse"
+  | Error e -> check_mentions "the guard counts what the floor left" e
+                 [ "at least 8 annual return observations"; "have 7" ]);
+  (* a floor of zero leaves every observation where it was *)
+  let unfloored = { assumptions with midcycle_scale_floor = param 0.0 } in
+  (match Dcf_midcycle.value unfloored ~country:"United States" ~required:balance_sheet (financials scaled) with
+  | Ok (m0, _) ->
+      Alcotest.(check int) "nine observations with the floor off" 9 (List.length m0.observations);
+      Alcotest.(check bool) "and no scale exclusion" true
+        (List.for_all (fun (e : Boundary_t.midcycle_exclusion) -> e.missing <> "opening capital below the scale floor") m0.exclusions)
+  | Error e -> Alcotest.failf "unfloored fixture failed: %s" e)
+
 let test_midcycle_guards () =
   let fail periods needles =
     match Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials periods) with
@@ -2098,7 +2151,7 @@ let test_minor_unit_guard () =
       "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-      "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400}, "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
+      "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400}, "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
       "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400, "values": {"United States": 0.02, "United Kingdom": 0.0}},
       "unwired": {}}|} ]) } in
   let run_gbp fin = Valuation.run uk_rates ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) fin in
@@ -3095,7 +3148,7 @@ let test_wacc_below_terminal_growth () =
                "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
-               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
+               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
                "unwired": {}}|} }
@@ -3379,6 +3432,7 @@ let () =
           case "json round trip" test_json_round_trip;
           case "mid-cycle dcf arithmetic (22)" test_midcycle_arithmetic;
           case "mid-cycle dcf guards, window, vendor path, scope limits (22)" test_midcycle_guards;
+          case "the scale floor drops a year that was a different business (55)" test_midcycle_scale_floor;
           case "sensitivity by hand, ranking, guard crossing (23)" test_sensitivity_by_hand;
           case "belief map model, contour, grid, ri null (23)" test_belief_map;
           case "beliefs: strict loader, offsets, override, version (24)" test_beliefs_loader_and_resolution;

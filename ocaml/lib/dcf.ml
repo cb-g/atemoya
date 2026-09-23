@@ -14,6 +14,7 @@ type assumptions = {
   projection_years : int_parameter;
   statutory_tax_rate : parameter;
   midcycle_window_years : int_parameter;
+  midcycle_scale_floor : parameter;
   required_return : declared_return option;
 }
 

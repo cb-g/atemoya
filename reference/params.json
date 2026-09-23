@@ -57,6 +57,17 @@
       "The reinvestment floor (33): a reinvestment rate of about -0.10 over ten to fifteen years is capital roughly maintained, with depreciation and working-capital release slightly ahead of capex, not a business selling itself off; a guard cannot tell the two apart and any threshold that could would be a tuned parameter. A negative measured rate is therefore read as no net reinvestment through the cycle: mid-cycle free cash flow equals mid-cycle profit and growth from reinvestment is zero. It drops the disinvestment cash entirely, conservative in the one direction that matters, and the reversion from zero starting growth to the terminal rate is the simplification every DCF path already makes for a name whose capex equals its depreciation. The measured rate stays on the record beside the floored one."
     ]
   },
+  "midcycle_scale_floor": {
+    "value": 0.1,
+    "source": "a year in which the business was under a tenth of its present capital is a different business; two commodity cycles fit inside a tenfold range, a hundredfold does not",
+    "as_of": "2026-09-23",
+    "max_age_days": 400,
+    "notes": [
+      "The mid-cycle return average takes NOPAT_t over the prior period's invested capital. A period whose opening invested capital is below this fraction of the latest period's is left out of that average and listed on the record as an exclusion reading \"opening capital below the scale floor\"; the eight-observation guard then counts what remains, so a name with too little comparable history fails with the count rather than valuing on a ratio about a smaller company.",
+      "The reinvestment rate is untouched: it is a ratio of sums over the window, and a year whose flows were a hundredth of today's barely enters either sum, so the distortion the floor corrects does not arise there.",
+      "Changing the floor is a dated declaration, not a tuning knob: the value was set once, from the shape of the window (fifteen years, meant to hold two commodity cycles), not from any name's output."
+    ]
+  },
   "sensitivity_steps": {
     "growth": 0.02,
     "lambda": 0.1,
@@ -90,7 +101,8 @@
       "USA": "United States"
     },
     "notes": [
-      "The 'default' entry is kept from the original table and is never used as a fallback: a country absent from this table fails the valuation."
+      "The 'default' entry is kept from the original table and is never used as a fallback: a country absent from this table fails the valuation.",
+      "Uruguay is deliberately absent (55). The brief asked for its row, but this table names no external source with country rows to transcribe from -- it is a set of declared long-run estimates carried over from the previous implementation, and its own United States entry (2.0%) is well below that country's nominal GDP growth, so the values are judgements rather than readings and there is no documented method to apply to a country not already here. Inventing one would be a number with no provenance in a table where every other row at least has a vintage. MercadoLibre does not need it: its statements and price are both in dollars, so under the no_curve_fallback declaration it resolves terminal growth from the trading currency's country. A Uruguayan filer reporting in pesos would need the row and would fail naming it, which is the correct outcome until the table gets a declared source and method."
     ],
     "values": {
       "default": 0.02,

@@ -53,6 +53,23 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
     | _ -> ([], [])
   in
   let observations, roic_exclusions = pairs window in
+  (* (55) The scale floor. The return average is NOPAT_t over the prior period's capital;
+     when the company was a fraction of its present size that ratio is a number about a
+     different business, and the window was meant to hold two commodity cycles, not two
+     corporate lifetimes. A year whose opening capital is below the declared fraction of
+     today's leaves the average, named on the record exactly as any other exclusion. The
+     reinvestment sums below are untouched: they are ratios of sums, and those years'
+     flows barely enter either one. *)
+  let observations, scale_exclusions =
+    match invested_capital latest with
+    | Some ic_latest when ic_latest > 0. ->
+        let floor = a.midcycle_scale_floor.value *. ic_latest in
+        let kept, dropped =
+          List.partition (fun (o : roic_observation) -> o.invested_capital_prior >= floor) observations
+        in
+        (kept, List.map (fun (o : roic_observation) -> exclude o.period_end "roic" "opening capital below the scale floor") dropped)
+    | _ -> (observations, [])
+  in
   let n_obs = List.length observations in
   (* The reinvestment sums over the window periods carrying all five flows; a period lacking
      one is excluded from the sums and named (27). *)
@@ -68,7 +85,7 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
               @ excl ))
       window ([], 0., 0., [])
   in
-  let exclusions = roic_exclusions @ reinvestment_exclusions in
+  let exclusions = roic_exclusions @ scale_exclusions @ reinvestment_exclusions in
   if n_obs < minimum_observations then
     Error
       (Printf.sprintf

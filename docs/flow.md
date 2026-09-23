@@ -246,6 +246,18 @@ at all:
    today's capital). Inside the mid-cycle window a period lacking a flow is excluded from
    the sum it cannot serve, named on the record, and the guards count what remains: at
    least 8 return observations and at least 8 periods in the reinvestment sums.
+   **A year the company was too small to compare leaves the return average too.** The
+   through-cycle return is `NOPAT_t / IC_{t-1}`; when the business was a fraction of its
+   present size that ratio describes a different firm, and the window is there to hold two
+   commodity cycles, not two corporate lifetimes. A period whose opening invested capital
+   is below `midcycle_scale_floor` (declared and dated in `params.json`, a tenth of the
+   latest period's capital) is dropped from the average and listed on the record as
+   `{period_end, sum: "roic", missing: "opening capital below the scale floor"}`, exactly
+   as any other exclusion; the eight-observation guard then counts what remains, so a name
+   with too little comparable history fails with the count instead of valuing on the wrong
+   ratio. The reinvestment sums are untouched, because a ratio of sums over the window is
+   not distorted the way a mean of ratios is: those years' flows barely enter either sum.
+   Changing the floor is a dated declaration, never a tuning.
 5. **D&A is the largest filed total**, inside the FFO recipe too. **Under IFRS it
    excludes impairment**: the pure tag first; where absent, the inclusive tag less the
    impairment filed (the total, else its components) plus the reversal filed, recorded as
@@ -411,6 +423,16 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- Uruguay's rows and the mid-cycle scale rule (55): Uruguay joins the equity-risk-premium
+  and statutory-tax tables from the vintages those files already cite, so MercadoLibre
+  resolves its country risk premium and its tax rate and values on the dollar curve the
+  no-curve declaration routes it to; the terminal-growth table gets no Uruguay row and says
+  why, because it names no external source to transcribe from and MercadoLibre does not
+  need one. `params.json` gains `midcycle_scale_floor`, a declared tenth: a year whose
+  opening invested capital is below that fraction of the latest period's leaves the
+  mid-cycle return average with an exclusion reading "opening capital below the scale
+  floor", the observation guard counting what remains and the reinvestment sums untouched.
+  No new `Failed` string.
 - batch 2's gaps and reclassifications (54): nine working-capital component tags, the
   convertible-debt balances, interest on borrowings as debt evidence, capitalised software
   as capex and a last-resort D&A sub-line join the definitions, each classified by its

@@ -1180,6 +1180,7 @@ class Params:
     mean_reversion_lambda: Scalar
     mature_market_erp: Scalar
     midcycle_window_years: IntScalar
+    midcycle_scale_floor: Scalar
     sensitivity_steps: SensitivitySteps
     frontier_draws: IntScalar
     frontier_seed: IntScalar
@@ -1198,6 +1199,7 @@ class Params:
                 mean_reversion_lambda=Scalar.from_json(x['mean_reversion_lambda']) if 'mean_reversion_lambda' in x else _atd_missing_json_field('Params', 'mean_reversion_lambda'),
                 mature_market_erp=Scalar.from_json(x['mature_market_erp']) if 'mature_market_erp' in x else _atd_missing_json_field('Params', 'mature_market_erp'),
                 midcycle_window_years=IntScalar.from_json(x['midcycle_window_years']) if 'midcycle_window_years' in x else _atd_missing_json_field('Params', 'midcycle_window_years'),
+                midcycle_scale_floor=Scalar.from_json(x['midcycle_scale_floor']) if 'midcycle_scale_floor' in x else _atd_missing_json_field('Params', 'midcycle_scale_floor'),
                 sensitivity_steps=SensitivitySteps.from_json(x['sensitivity_steps']) if 'sensitivity_steps' in x else _atd_missing_json_field('Params', 'sensitivity_steps'),
                 frontier_draws=IntScalar.from_json(x['frontier_draws']) if 'frontier_draws' in x else _atd_missing_json_field('Params', 'frontier_draws'),
                 frontier_seed=IntScalar.from_json(x['frontier_seed']) if 'frontier_seed' in x else _atd_missing_json_field('Params', 'frontier_seed'),
@@ -1217,6 +1219,7 @@ class Params:
         res['mean_reversion_lambda'] = (lambda x: x.to_json())(self.mean_reversion_lambda)
         res['mature_market_erp'] = (lambda x: x.to_json())(self.mature_market_erp)
         res['midcycle_window_years'] = (lambda x: x.to_json())(self.midcycle_window_years)
+        res['midcycle_scale_floor'] = (lambda x: x.to_json())(self.midcycle_scale_floor)
         res['sensitivity_steps'] = (lambda x: x.to_json())(self.sensitivity_steps)
         res['frontier_draws'] = (lambda x: x.to_json())(self.frontier_draws)
         res['frontier_seed'] = (lambda x: x.to_json())(self.frontier_seed)

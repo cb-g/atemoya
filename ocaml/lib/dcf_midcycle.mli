@@ -8,8 +8,14 @@
     bottom-up from filed lines (25: no operating-income line is needed and the EBIT
     policy does not apply on this path; the through-cycle mean is what dampens
     one-offs), [ROIC_t = NOPAT_t / IC_(t-1)] on beginning capital, so N periods give at
-    most N-1 observations. Fewer than 8
-    observations is an [Error] naming the count and the periods the provider carries:
+    most N-1 observations. A period whose opening capital is below
+    [midcycle_scale_floor * IC_latest] is left out of the return average and listed as an
+    exclusion reading "opening capital below the scale floor" (55): the ratio would be a
+    number about a business a fraction of the present one's size, and the window is there
+    to hold two commodity cycles, not two corporate lifetimes. The reinvestment sums are
+    untouched by the floor, being sums rather than a mean of ratios. Fewer than 8
+    observations, counting what the floor left, is an [Error] naming the count and the
+    periods the provider carries:
     the vendor path's four or five can never serve this model. [ROIC_mid] is the
     arithmetic mean, the bad years included on purpose (the median is recorded, not
     used); [NOPAT_mid = ROIC_mid * IC_latest]; the reinvestment rate is
