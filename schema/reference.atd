@@ -289,6 +289,7 @@ type cash_xbrl = {
   restricted_inclusive : string list;       (* cash_equivalents tags that include restricted cash *)
   restricted_cash : string list list;       (* deducted when a restricted_inclusive tag supplied the value: first complete alternative *)
   short_term_investments : string list;     (* optional component *)
+  ~investments_inclusive : string list;     (* (62) searched after cash_equivalents: an aggregate that already carries the short-term investments, so the component is not added again *)
 }
 
 type cash_vendor = {
@@ -475,10 +476,15 @@ type shares_for_market_cap = {
    the field is the largest, because a total is never smaller than any of its components
    and every candidate is a non-negative aggregate of the same kind; the components fallback
    (depreciation + amortisation of intangibles, tags in xbrl_tags.json) applies only when no
-   total is filed. *)
+   total is filed. (62) Below the totals, the filer's own cash-flow lines: the combined
+   depreciation-and-amortisation line plus the intangible-amortisation line where either is
+   filed, then the note pair, which needs both parts or a filing that carries no finite-lived
+   intangibles at all. *)
 type dna_totals = {
   totals : string list;                 (* every total tag evaluated per period; the largest present wins *)
-  ~last_resort : string list;           (* (54) an element the taxonomy defines as a sub-line, standing as the period's total only when no total and no component is filed *)
+  ~combined_line : string list;         (* (62) the filer's own depreciation-and-amortisation line in the cash-flow reconciliation, taken with amortization_line beside it *)
+  ~amortization_line : string list;     (* (62) the amortisation line in the same reconciliation, preferred over the note element in the component pair *)
+  ~finite_lived_intangibles : string list;  (* (62) an instant: with none of these filed, a filer that tags no intangible amortisation has none to tag, and depreciation alone is the period's total *)
 }
 
 (* IFRS (32): depreciation and amortisation excluding impairment. The pure tag first; where

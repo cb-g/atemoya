@@ -376,36 +376,51 @@ def depreciation_ifrs(facts: "Facts", defs: reference.FieldDefinitions, end: dat
 
 def depreciation(facts: "Facts", selected: Selected, tags: reference.XbrlTags, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> DnaResult:
     """D&A per the definition (27): every total tag present for the period is a candidate and
-    the field is the largest, candidates recorded; the components fallback only when no
-    total is filed; under IFRS the recipe excludes impairment (32). (value, row, candidates,
-    recipe, composition)."""
+    the field is the largest, candidates recorded; under IFRS the recipe excludes impairment
+    (32). (62) Below the totals, the filer's own cash-flow reconciliation before its notes,
+    and the note pair only where it is complete or the filer has no intangibles to amortise.
+    (value, row, candidates, recipe, composition)."""
     definition = defs.depreciation_amortization
     if definition is None:
         raise ValueError("field_definitions.json carries no depreciation_amortization definition")
     if taxonomy == "ifrs-full":
         return depreciation_ifrs(facts, defs, end)
-    totals = definition.xbrl.totals
-    candidates = [boundary.Component(name="total", value=v, row=tag) for tag in totals if (v := facts.at(tag, end, instant=False)) is not None]
+    d = definition.xbrl
+    candidates = [boundary.Component(name="total", value=v, row=tag) for tag in d.totals if (v := facts.at(tag, end, instant=False)) is not None]
     if candidates:
         taken = max(candidates, key=lambda c: c.value)
         return taken.value, taken.row, candidates, None, None
-    parts: list[tuple[float, str]] = []
-    for i, field in enumerate(tags.depreciation_components):
-        v, r = value_of(selected, field, end)
-        if v is None:
-            if i == 0:
-                break
-            continue
-        parts.append((v, r or field))
-    if parts:
-        return sum(v for v, _ in parts), " + ".join(r for _, r in parts), None, None, None
-    # (54) an element the taxonomy calls a sub-line stands as the period's total only when
-    # the filer files no total and none of the components: then it is demonstrably the
-    # whole line. Never a candidate under the largest rule, so it cannot displace a total.
-    last = facts.first(definition.xbrl.last_resort, end, instant=False)
-    if last is not None:
-        return last[0], last[1], [boundary.Component(name="last_resort", value=last[0], row=last[1])], "last_resort", None
-    return None, None, None, None, None
+    # (62) with no total filed, the filer's own cash-flow reconciliation before its notes:
+    # the combined depreciation-and-amortisation line, with the amortisation line beside it
+    # when that is filed separately. Never a candidate under the largest rule, so it cannot
+    # displace a total.
+    amortization_line = facts.first(d.amortization_line, end, instant=False)
+    combined = facts.first(d.combined_line, end, instant=False)
+    if combined is not None:
+        cash_flow = [boundary.Component(name="combined_line", value=combined[0], row=combined[1])]
+        if amortization_line is not None:
+            cash_flow.append(boundary.Component(name="amortization_line", value=amortization_line[0], row=amortization_line[1]))
+        return sum(p.value for p in cash_flow), _label(cash_flow), None, "cash_flow_lines", _composition(definition.name, cash_flow)
+    # The note pair. Depreciation alone is the whole field only for a filer with no
+    # intangibles to amortise: with a finite-lived intangibles balance filed and no
+    # amortisation tagged anywhere, the line exists and is untagged, and the period fails.
+    declared = list(tags.depreciation_components)
+    depreciation_field = declared[0] if declared else ""
+    amortization_field = declared[1] if len(declared) > 1 else ""
+    value, row = value_of(selected, depreciation_field, end) if depreciation_field else (None, None)
+    if value is None:
+        return None, None, None, None, None
+    parts = [boundary.Component(name="depreciation", value=value, row=row or depreciation_field)]
+    note = value_of(selected, amortization_field, end) if amortization_field else (None, None)
+    if amortization_line is not None:
+        parts.append(boundary.Component(name="amortization_line", value=amortization_line[0], row=amortization_line[1]))
+    elif note[0] is not None:
+        parts.append(boundary.Component(name="amortization", value=note[0], row=note[1] or amortization_field))
+    elif facts.first(d.finite_lived_intangibles, end, instant=True) is not None:
+        return None, None, None, None, None
+    # The note pair carries no recipe: the row names both elements and there is nothing a
+    # recipe would add, and a period whose value does not move must not grow a field.
+    return sum(p.value for p in parts), _label(parts), None, None, None
 
 
 class Facts:
@@ -482,18 +497,24 @@ def cash(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
     """Cash and equivalents (less the restricted components when only the restricted-inclusive
     total is tagged) plus the first present short-term investments tag."""
     d = defs.cash.xbrl
+    # (62) the aggregate that already carries the short-term investments is searched last, so
+    # no period that resolves on a cash-equivalents element moves; where it supplies the
+    # value the component is not added again, and the part says so.
     equivalents = facts.first(d.cash_equivalents, end, instant=True)
+    inclusive = equivalents is None
+    if inclusive:
+        equivalents = facts.first(d.investments_inclusive, end, instant=True)
     if equivalents is None:
         return None, None, None
     value, tag = equivalents
-    parts = [boundary.Component(name="cash_equivalents", value=value, row=tag)]
+    parts = [boundary.Component(name="cash_and_investments" if inclusive else "cash_equivalents", value=value, row=tag)]
     if tag in d.restricted_inclusive:
         for alternative in d.restricted_cash:
             found = [(facts.at(t, end, instant=True), t) for t in alternative]
             if all(v is not None for v, _ in found):
                 parts.extend(boundary.Component(name="restricted_cash", value=-v, row=t) for v, t in found if v is not None)
                 break
-    investments = facts.first(d.short_term_investments, end, instant=True)
+    investments = None if inclusive else facts.first(d.short_term_investments, end, instant=True)
     if investments is not None:
         parts.append(boundary.Component(name="short_term_investments", value=investments[0], row=investments[1]))
     return sum(p.value for p in parts), _label(parts), _composition(defs.cash.name, parts)

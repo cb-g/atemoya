@@ -820,21 +820,74 @@ def test_interest_on_borrowings_blocks_the_absent_is_zero_rule() -> None:
     assert period(only_borrowings).ebit is None
 
 
-def test_depreciation_last_resort_only_when_no_total_and_no_component() -> None:
-    """(54) OtherDepreciationAndAmortization is a sub-line by definition: it stands as the
-    period's D&A only where the filer files nothing else, and never displaces a total."""
+def test_depreciation_reads_the_cash_flow_lines_before_the_notes() -> None:
+    """(54, 62) OtherDepreciationAndAmortization is the filer's own depreciation-and-amortisation
+    line in the cash-flow reconciliation, read with the amortisation line beside it and never
+    displacing a filed total; the note pair is below both."""
     other = {"OtherDepreciationAndAmortization": usd(fact("2025-12-31", 37.972e6, start="2025-01-01"))}
     p = period(other)
     assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 37.972e6)
     assert p.depreciation_amortization_row == "OtherDepreciationAndAmortization"
-    assert p.depreciation_amortization_recipe == "last_resort"
-    # a filed total wins even when it is smaller, because the sub-line is not a candidate
+    assert p.depreciation_amortization_recipe == "cash_flow_lines"
+    # a filed total wins even when it is smaller, because the line is not a candidate
     p = period({**other, "DepreciationDepletionAndAmortization": usd(fact("2025-12-31", 20e6, start="2025-01-01"))})
     assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 20e6)
     assert p.depreciation_amortization_recipe is None
-    # so does the components fallback
-    p = period({**other, "Depreciation": usd(fact("2025-12-31", 6e6, start="2025-01-01"))})
-    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 6e6)
+    # (62) but the note figures do not: a filer tagging both takes the combined line, with the
+    # amortisation line added, and the note pair is not what the reconciliation says
+    p = period({**other, "Depreciation": usd(fact("2025-12-31", 6e6, start="2025-01-01")),
+                "AmortizationOfIntangibleAssets": usd(fact("2025-12-31", 9e6, start="2025-01-01")),
+                "AdjustmentForAmortization": usd(fact("2025-12-31", 22.5e6, start="2025-01-01"))})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 60.472e6)
+    assert p.depreciation_amortization_row == "OtherDepreciationAndAmortization + AdjustmentForAmortization"
+    assert components(p.depreciation_amortization_composition) == [
+        ("combined_line", 37.972e6, "OtherDepreciationAndAmortization"),
+        ("amortization_line", 22.5e6, "AdjustmentForAmortization")]
+
+
+def test_the_note_pair_needs_both_parts_or_a_filer_with_no_intangibles() -> None:
+    """(62) Depreciation alone is a filer's whole D&A only where it has no intangibles to
+    amortise. With a finite-lived intangibles balance filed and no amortisation tagged, the
+    line exists and is untagged, so the field is missing rather than understated."""
+    depreciation = {"Depreciation": usd(fact("2025-12-31", 441e6, start="2025-01-01"))}
+    # no intangibles balance: the escape, and the row names the one element read
+    p = period(depreciation)
+    assert p.depreciation_amortization == 441e6 and p.depreciation_amortization_row == "Depreciation"
+    # a finite-lived intangibles balance and no amortisation anywhere: refused
+    p = period({**depreciation, "FiniteLivedIntangibleAssetsNet": usd(fact("2025-12-31", 21.143e9))})
+    assert p.depreciation_amortization is None and p.depreciation_amortization_row is None
+    # the note element completes the pair
+    p = period({**depreciation, "FiniteLivedIntangibleAssetsNet": usd(fact("2025-12-31", 21.143e9)),
+                "AmortizationOfIntangibleAssets": usd(fact("2025-12-31", 2.8e9, start="2025-01-01"))})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 3.241e9)
+    assert p.depreciation_amortization_row == "Depreciation + AmortizationOfIntangibleAssets"
+    # the reconciliation's own amortisation line is preferred over the note element
+    p = period({**depreciation, "FiniteLivedIntangibleAssetsNet": usd(fact("2025-12-31", 21.143e9)),
+                "AmortizationOfIntangibleAssets": usd(fact("2025-12-31", 2.8e9, start="2025-01-01")),
+                "AdjustmentForAmortization": usd(fact("2025-12-31", 1.721e9, start="2025-01-01"))})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 2.162e9)
+    assert p.depreciation_amortization_row == "Depreciation + AdjustmentForAmortization"
+    # the gross balance counts as much as the net one
+    assert period({**depreciation, "FiniteLivedIntangibleAssetsGross": usd(fact("2025-12-31", 27.5e9))}).depreciation_amortization is None
+
+
+def test_the_cash_aggregate_that_already_carries_the_investments() -> None:
+    """(62) A filer presenting one balance-sheet line for cash, equivalents and short-term
+    investments tags CashCashEquivalentsAndShortTermInvestments and nothing beside it; the
+    investments component is not added again, and the element never displaces one that resolves."""
+    aggregate = {"CashCashEquivalentsAndShortTermInvestments": usd(fact("2025-12-31", 8.261e9))}
+    p = period(aggregate)
+    assert p.cash is not None and math.isclose(p.cash, 8.261e9)
+    assert p.cash_row == "CashCashEquivalentsAndShortTermInvestments"
+    assert components(p.cash_composition) == [("cash_and_investments", 8.261e9, "CashCashEquivalentsAndShortTermInvestments")]
+    # a short-term investments tag beside it is NOT added: the aggregate already carries it
+    p = period({**aggregate, "ShortTermInvestments": usd(fact("2025-12-31", 1.2e9))})
+    assert p.cash is not None and math.isclose(p.cash, 8.261e9)
+    # and a cash-equivalents element resolves first, with the investments added as before
+    p = period({**aggregate, "CashAndCashEquivalentsAtCarryingValue": usd(fact("2025-12-31", 7.0e9)),
+                "ShortTermInvestments": usd(fact("2025-12-31", 1.2e9))})
+    assert p.cash is not None and math.isclose(p.cash, 8.2e9)
+    assert p.cash_row == "CashAndCashEquivalentsAtCarryingValue + ShortTermInvestments"
 
 
 def test_capex_takes_capitalised_software_only_when_nothing_else_is_filed() -> None:

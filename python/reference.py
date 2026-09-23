@@ -2146,14 +2146,18 @@ class DnaTotals:
     """
 
     totals: List[str]
-    last_resort: List[str] = field(default_factory=lambda: [])
+    combined_line: List[str] = field(default_factory=lambda: [])
+    amortization_line: List[str] = field(default_factory=lambda: [])
+    finite_lived_intangibles: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'DnaTotals':
         if isinstance(x, dict):
             return cls(
                 totals=_atd_read_list(_atd_read_string)(x['totals']) if 'totals' in x else _atd_missing_json_field('DnaTotals', 'totals'),
-                last_resort=_atd_read_list(_atd_read_string)(x['last_resort']) if 'last_resort' in x else [],
+                combined_line=_atd_read_list(_atd_read_string)(x['combined_line']) if 'combined_line' in x else [],
+                amortization_line=_atd_read_list(_atd_read_string)(x['amortization_line']) if 'amortization_line' in x else [],
+                finite_lived_intangibles=_atd_read_list(_atd_read_string)(x['finite_lived_intangibles']) if 'finite_lived_intangibles' in x else [],
             )
         else:
             _atd_bad_json('DnaTotals', x)
@@ -2161,7 +2165,9 @@ class DnaTotals:
     def to_json(self) -> Any:
         res: Dict[str, Any] = {}
         res['totals'] = _atd_write_list(_atd_write_string)(self.totals)
-        res['last_resort'] = _atd_write_list(_atd_write_string)(self.last_resort)
+        res['combined_line'] = _atd_write_list(_atd_write_string)(self.combined_line)
+        res['amortization_line'] = _atd_write_list(_atd_write_string)(self.amortization_line)
+        res['finite_lived_intangibles'] = _atd_write_list(_atd_write_string)(self.finite_lived_intangibles)
         return res
 
     @classmethod
@@ -2466,6 +2472,7 @@ class CashXbrl:
     restricted_inclusive: List[str]
     restricted_cash: List[List[str]]
     short_term_investments: List[str]
+    investments_inclusive: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'CashXbrl':
@@ -2475,6 +2482,7 @@ class CashXbrl:
                 restricted_inclusive=_atd_read_list(_atd_read_string)(x['restricted_inclusive']) if 'restricted_inclusive' in x else _atd_missing_json_field('CashXbrl', 'restricted_inclusive'),
                 restricted_cash=_atd_read_list(_atd_read_list(_atd_read_string))(x['restricted_cash']) if 'restricted_cash' in x else _atd_missing_json_field('CashXbrl', 'restricted_cash'),
                 short_term_investments=_atd_read_list(_atd_read_string)(x['short_term_investments']) if 'short_term_investments' in x else _atd_missing_json_field('CashXbrl', 'short_term_investments'),
+                investments_inclusive=_atd_read_list(_atd_read_string)(x['investments_inclusive']) if 'investments_inclusive' in x else [],
             )
         else:
             _atd_bad_json('CashXbrl', x)
@@ -2485,6 +2493,7 @@ class CashXbrl:
         res['restricted_inclusive'] = _atd_write_list(_atd_write_string)(self.restricted_inclusive)
         res['restricted_cash'] = _atd_write_list(_atd_write_list(_atd_write_string))(self.restricted_cash)
         res['short_term_investments'] = _atd_write_list(_atd_write_string)(self.short_term_investments)
+        res['investments_inclusive'] = _atd_write_list(_atd_write_string)(self.investments_inclusive)
         return res
 
     @classmethod

@@ -273,6 +273,19 @@ at all:
    D&A total tags are filed in one period the field is the largest, since a total is
    never smaller than any of its components; every candidate is recorded with the tag
    taken. The components fallback applies only when no total is filed.
+
+   **Below the totals the chain reads the filer's own cash-flow reconciliation, not its
+   notes** (62). Brief 61's own-year rule made the difference visible: where a filer files
+   no total, `Depreciation` and `AmortizationOfIntangibleAssets` are often the property and
+   intangible note figures, while the reconciliation's own lines are `OtherDepreciation-
+   AndAmortization` and `AdjustmentForAmortization`. So the combined line is read first,
+   with the amortisation line added when it is filed separately, as `cash_flow_lines`;
+   the note pair is below it, and the amortisation line is preferred inside the pair too.
+   **The note pair needs both parts.** Depreciation alone is a filer's whole D&A only when
+   it has no intangibles to amortise, so the pair stands when both are filed and otherwise
+   only when the filing carries no finite-lived intangibles balance at all; a filer with
+   intangibles that tags no amortisation anywhere has a line it did not tag, and the period
+   carries no D&A rather than a depreciation figure standing in for a total.
 6. **Debt components are summed when no aggregate or complete pair is filed.** A filer
    with fewer instruments is not missing data: one component per kind, recorded;
    absent-is-zero applies only when no component and no interest tag is present.
@@ -290,11 +303,15 @@ at all:
    leases inside an investment portfolio and never ask for FFO.
 9. **A sub-line stands as a total only where nothing else is filed.** `OtherDepreciation-
    AndAmortization` is defined as D&A classified as other, so it is never a candidate
-   under the largest-total rule and cannot displace a filed total; it is read only when
-   the filer files no total and none of the components, where it is demonstrably the whole
-   line. Capitalised internal-use software is read as capex on the same footing, last in
-   the tag order, so a filer tagging purchases of property, plant and equipment is
-   untouched.
+   under the largest-total rule and cannot displace a filed total; below the totals it is
+   the filer's own combined line and is read there (62, rule 5 above). Capitalised
+   internal-use software is read as capex on the same footing, last in the tag order, so a
+   filer tagging purchases of property, plant and equipment is untouched. **An aggregate
+   that already carries what a component would add is read whole**: a filer presenting one
+   balance-sheet line for cash, equivalents and short-term investments tags
+   `CashCashEquivalentsAndShortTermInvestments`, which is searched after the two
+   cash-equivalents elements so no period that resolves moves, and the short-term
+   investments component is not added again.
 10. **Interest stand-ins on the mid-cycle path only.** When no interest-expense line is
    filed, a net non-operating interest figure negated, else cash interest paid, stands
    in, recorded as `net_nonoperating_interest` or `interest_paid_stands_in` on the period
@@ -516,6 +533,18 @@ in this order:
   distributions shift up with their anchor** — by design, and no belief was adjusted to
   offset it. Residual-income records are untouched: that path has carried no terminal
   growth since the terminal spread was removed. No new `Failed` string.
+- the tags an own-year filing uses (62): brief 61's rule reads each period from the filer's
+  own-year filing, which is internally consistent but sometimes tags less than the filings
+  after it, and 136 value cells went null. Three elements answer for almost all of what
+  mattered. `CashCashEquivalentsAndShortTermInvestments` is a balance-sheet line that
+  already carries the investments, searched after the two cash-equivalents elements so no
+  period that resolves moves; Caterpillar regains cash on seven periods and its mid-cycle
+  window goes from seven observations to fourteen. Below the D&A totals the chain now reads
+  the filer's own cash-flow reconciliation — `OtherDepreciationAndAmortization` with
+  `AdjustmentForAmortization` beside it — before the note pair, which itself needs both
+  parts or a filing with no finite-lived intangibles at all; the note figures were standing
+  in for a total on filers that never tagged one. Seven records move and 126 are
+  byte-identical. No new `Failed` string.
 - a period's statement comes from one filing (61): the fetcher chose the newest fact per
   tag independently, so a period assembled its components from several filings whose
   presentations differ and double counted a line a later filing had folded into another;
