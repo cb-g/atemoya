@@ -296,6 +296,18 @@ at all:
    in, recorded as `net_nonoperating_interest` or `interest_paid_stands_in` on the period
    and on every observation; the DCF path's EBIT policy never reads a stand-in.
 
+### Where terminal growth comes from
+
+The anchor every growth path reverts to is the country's long-run nominal growth in its
+own currency, because that is the currency the terminal cash flow is in. The table is
+`params.json`'s `terminal_growth_rate`, transcribed from the IMF World Economic Outlook —
+the nominal GDP series in national currency, percent change at the last year of the
+projection horizon, deliberately not the current year, which carries the cycle. The
+vintage and its release date are on the table, `max_age_days` fails it when no newer
+vintage is transcribed, and **there is no default row**: a country the table does not
+carry fails the record naming the field. A cross-currency name takes the row of the
+trading currency's country, not its domicile's.
+
 ## Beliefs
 
 The belief parameter is terminal growth, fixed on the merits. This choice may be revisited
@@ -423,6 +435,16 @@ in this order:
 - the value-surplus frontier (35): the surplus curve on every record with a belief, the
   declared correlation section (a draft at 0.20), the frontier parameters, and
   `python/frontier.py` with its measures and plot. No new `Failed` string; no number moves.
+- terminal growth gets a source (57): `params.json`'s `terminal_growth_rate` stops being
+  a set of undocumented judgements and becomes a transcription of the IMF World Economic
+  Outlook's nominal GDP growth in national currency at the last projected year, with the
+  vintage and release date on the table; the `default` row goes, because a table with a
+  source has no default, and British Virgin Islands goes with it, having no series in a
+  database it is not a member of. Every row rises, because the old values sat at roughly
+  half of nominal growth, so **every DCF, mid-cycle and REIT record moves and the belief
+  distributions shift up with their anchor** — by design, and no belief was adjusted to
+  offset it. Residual-income records are untouched: that path has carried no terminal
+  growth since the terminal spread was removed. No new `Failed` string.
 - Uruguay's rows and the mid-cycle scale rule (55): Uruguay joins the equity-risk-premium
   and statutory-tax tables from the vintages those files already cite, so MercadoLibre
   resolves its country risk premium and its tax rate and values on the dollar curve the

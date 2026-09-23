@@ -32,7 +32,10 @@ the probability is the belief's CDF at the implied long-run growth, in closed fo
    different runs, and the run diff says so on every record whose version changed. A run
    without a belief for a name records no version and no probability, with the reason.
 6. **Every belief is tracked.** `reference/beliefs.json` holds one default per entity
-   class as offsets around the country's settled terminal growth and, beside them under
+   class as offsets around the country's settled terminal growth — which since the
+   terminal-growth table got a source is the IMF World Economic Outlook's last projected
+   year of nominal GDP growth in the country's own currency, so a belief's centre moves
+   when the vintage does — and, beside them under
    `names`, per-name absolute beliefs that override the default. A further file of
    per-name beliefs may be given as `--beliefs`; it overrides the tracked ones. Banks and
    insurers carry no belief: their model has no terminal growth.

@@ -95,11 +95,36 @@ def test_uruguay_rows_and_the_declared_scale_floor() -> None:
     assert dict(tax.values)["Uruguay"] == 0.25
     assert any("Uruguay" in n and "PwC" in n for n in tax.notes)
 
-    # the row that could not be transcribed, absent on purpose and explained
-    assert "Uruguay" not in dict(params.terminal_growth_rate.values)
-    assert any("Uruguay is deliberately absent" in n for n in params.terminal_growth_rate.notes)
+    # (57) the third row exists now that the table has a source
+    assert dict(params.terminal_growth_rate.values)["Uruguay"] == 0.0750
 
     floor = params.midcycle_scale_floor
     assert floor.value == 0.10 and floor.as_of == "2026-09-23"
     assert "different business" in floor.source
     assert any("reinvestment rate is untouched" in n for n in floor.notes)
+
+
+def test_terminal_growth_is_sourced_with_no_default() -> None:
+    """(57) The table names its vintage and its series, carries no default row, and holds
+    one row per country the other two country tables carry, less the one the World Economic
+    Outlook has no series for."""
+    import reference
+
+    params = reference.Params.from_json_string((ROOT / "reference" / "params.json").read_text())
+    erp = reference.CountryTable.from_json_string((ROOT / "reference" / "equity_risk_premiums.json").read_text())
+    tg = params.terminal_growth_rate
+    values = dict(tg.values)
+
+    assert "default" not in values  # a table with a source has no default
+    assert "IMF World Economic Outlook" in tg.source and "April 2026" in tg.source
+    assert "NGDP" in tg.source and "national currency" in tg.source and "2031" in tg.source
+    assert tg.as_of == "2026-04-14" and tg.max_age_days == 400
+
+    # every country the ERP table carries, except the one with no WEO series
+    assert set(values) == set(dict(erp.values)) - {"British Virgin Islands"}
+    assert len(values) == 24
+    assert any("not an IMF member" in n for n in tg.notes)
+
+    # nominal growth, so every row sits above the old declared judgements it replaced
+    assert values["United States"] == 0.0359 and values["Japan"] == 0.0271
+    assert all(0.0 < v < 0.15 for v in values.values())

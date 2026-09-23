@@ -196,7 +196,9 @@ let risk_free_json =
       "rates": {"1y": 0.015, "3y": 0.016, "5y": 0.017, "7y": 0.018, "10y": 0.019},
       "estimated": ["3y", "7y"]},
     "Germany": {"source": "copied", "as_of": "2026-06-05",
-      "rates": {"1y": 0.025, "3y": 0.026, "5y": 0.027, "7y": 0.028, "10y": 0.030}}
+      "rates": {"1y": 0.025, "3y": 0.026, "5y": 0.027, "7y": 0.028, "10y": 0.030}},
+    "Japan": {"source": "copied", "as_of": "2026-09-08",
+      "rates": {"1y": 0.005, "3y": 0.007, "5y": 0.009, "7y": 0.011, "10y": 0.013}}
   }}|}
 
 let country_table_json ~source values =
@@ -227,11 +229,11 @@ let params : Params.t =
     equity_risk_premiums =
       Reference_j.country_table_of_string
         (country_table_json ~source:"Damodaran Jan 2026"
-           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423, "South Korea": 0.0487, "Brazil": 0.0747, "Uruguay": 0.0680}|});
+           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423, "South Korea": 0.0487, "Brazil": 0.0747, "Uruguay": 0.0680, "Japan": 0.0514}|});
     tax_rates =
       Reference_j.country_table_of_string
         (country_table_json ~source:"PwC 2026"
-           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30, "South Korea": 0.275, "Brazil": 0.34, "Uruguay": 0.25}|});
+           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30, "South Korea": 0.275, "Brazil": 0.34, "Uruguay": 0.25, "Japan": 0.3152}|});
     industry_betas =
       Reference_j.industry_table_of_string
         {|{"source": "sector betas 2026", "as_of": "2026-01-01", "max_age_days": 400,
@@ -618,6 +620,25 @@ let test_resolve_provenance () =
   Alcotest.check beta_source "beta_source" `Industry_table a.beta_source;
   Alcotest.(check int) "projection_years" 7 a.projection_years.value;
   Alcotest.(check int) "projection_years age" 101 a.projection_years.age_days
+
+let test_terminal_growth_comes_from_the_table_or_the_record_fails () =
+  (* (57) The table is sourced now, so there is no default to fall back on: the value is the
+     country's row, and a country the table does not carry is a refusal naming the field. *)
+  let a = get (Params.resolve params ~today ~country:"Singapore" ~industry:None) in
+  check_float "the country's own row" 0.025 a.terminal_growth_rate.value;
+  Alcotest.(check string) "keyed to the country" "Singapore" a.terminal_growth_rate.key;
+  let b = get (Params.resolve params ~today ~country:"South Korea" ~industry:None) in
+  check_float "a different country, a different row" 0.03 b.terminal_growth_rate.value;
+  (* Japan has a curve, an equity risk premium and a tax rate in the fixture, and no
+     terminal-growth row: the refusal names that field and no other. *)
+  (match Params.resolve params ~today ~country:"Japan" ~industry:None with
+  | Ok _ -> Alcotest.fail "expected a refusal for a country with no terminal-growth row"
+  | Error e ->
+      check_mentions "names the field and the country" e [ "no terminal_growth_rate for country Japan" ]);
+  (* and on the cross-currency path the row is the trading currency's country, not the domicile *)
+  let c = get (Params.resolve_cross params ~today ~domicile:"Brazil" ~rate_country:"United States" ~industry:None) in
+  check_float "terminal growth from the rate country" 0.02 c.terminal_growth_rate.value;
+  Alcotest.(check string) "keyed to it" "United States" c.terminal_growth_rate.key
 
 let test_resolve_tenor_substitution () =
   let a = get (Params.resolve params ~today ~country:"South Korea" ~industry:None) in
@@ -3302,6 +3323,7 @@ let () =
           case "estimated cells round-trip" test_estimated_round_trip;
           case "resolve carries provenance" test_resolve_provenance;
           case "resolve records a tenor substitution and tier" test_resolve_tenor_substitution;
+          case "terminal growth is the table's row, or a refusal naming it (57)" test_terminal_growth_comes_from_the_table_or_the_record_fails;
           case "resolve follows aliases" test_resolve_alias;
           case "unknown country is an error naming it" test_resolve_unknown_country;
           case "stale parameter is an error naming it and its age" test_resolve_stale;
