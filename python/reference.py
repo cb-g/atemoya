@@ -384,6 +384,41 @@ class XbrlTags:
 
 
 @dataclass
+class DeclaredBuildOut:
+    """Original type: declared_build_out = { ... }
+    """
+
+    value: float
+    why: str
+    as_of: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DeclaredBuildOut':
+        if isinstance(x, dict):
+            return cls(
+                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('DeclaredBuildOut', 'value'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('DeclaredBuildOut', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('DeclaredBuildOut', 'as_of'),
+            )
+        else:
+            _atd_bad_json('DeclaredBuildOut', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['value'] = _atd_write_float(self.value)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DeclaredBuildOut':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class UniverseEntry:
     """Original type: universe_entry = { ... }
     """
@@ -394,6 +429,8 @@ class UniverseEntry:
     scope_limits: List[str] = field(default_factory=lambda: [])
     cik: Optional[str] = None
     adr_ratio: Optional[float] = None
+    build_out_return: Optional[DeclaredBuildOut] = None
+    build_out_lag_years: Optional[DeclaredBuildOut] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'UniverseEntry':
@@ -405,6 +442,8 @@ class UniverseEntry:
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
                 cik=_atd_read_string(x['cik']) if 'cik' in x else None,
                 adr_ratio=_atd_read_float(x['adr_ratio']) if 'adr_ratio' in x else None,
+                build_out_return=DeclaredBuildOut.from_json(x['build_out_return']) if 'build_out_return' in x else None,
+                build_out_lag_years=DeclaredBuildOut.from_json(x['build_out_lag_years']) if 'build_out_lag_years' in x else None,
             )
         else:
             _atd_bad_json('UniverseEntry', x)
@@ -419,6 +458,10 @@ class UniverseEntry:
             res['cik'] = _atd_write_string(self.cik)
         if self.adr_ratio is not None:
             res['adr_ratio'] = _atd_write_float(self.adr_ratio)
+        if self.build_out_return is not None:
+            res['build_out_return'] = (lambda x: x.to_json())(self.build_out_return)
+        if self.build_out_lag_years is not None:
+            res['build_out_lag_years'] = (lambda x: x.to_json())(self.build_out_lag_years)
         return res
 
     @classmethod

@@ -185,6 +185,17 @@ type stretch_thresholds = {
   ~notes : string list;
 }
 
+(* (60) A build-out declaration: what the new capital will earn once earning, or the whole
+   years from spend to first earning. The value is a judgement about this name, the why
+   cites the evidence for it (the record's own recent return on capital is the natural
+   citation and is never the input), and as_of dates it. Both or neither: a name with one
+   of the two gets no readout. *)
+type declared_build_out = {
+  value : float;
+  why : string;
+  as_of : string;
+}
+
 type universe_entry = {
   ticker : string;
   entity_class : string;                (* a constructor of the boundary's entity_class; validated at load *)
@@ -192,6 +203,8 @@ type universe_entry = {
   ~scope_limits : string list;          (* durable: what the models cannot see for this name; carried verbatim *)
   ?cik : string option;                 (* an identifier, not a number (22): the SEC filer to read instead of the ticker map's, with the reason in why *)
   ?adr_ratio : float option;            (* (42) ordinary shares per depositary receipt, positive, from the 20-F's deposit-agreement disclosure cited in why; absent means 1 *)
+  ?build_out_return : declared_build_out option;      (* (60) the after-tax return the new capital earns once earning, a decimal *)
+  ?build_out_lag_years : declared_build_out option;   (* (60) whole years from spend to first earning *)
 }
 
 

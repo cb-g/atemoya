@@ -16,6 +16,8 @@ type declaration = {
   entity_class : entity_class;
   scope_limits : string list;
   adr_ratio : float option;
+  build_out_return : Reference_t.declared_build_out option;
+  build_out_lag_years : Reference_t.declared_build_out option;
 }
 
 let receipt_tolerance = 0.03
@@ -242,7 +244,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   in
   (* [fin] is the record the model saw: the original, or its converted copy. *)
   let record ~(fin : financials) ?model ?class_check ?inputs ?fair_value ?margin_of_safety
-      ?signal ?failed_reason ~price ~status ~floor () =
+      ?signal ?failed_reason ?build_out ?build_out_reason ~price ~status ~floor () =
     {
       ticker = fin.ticker;
       as_of = fin.as_of;
@@ -292,6 +294,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       receipt_check = receipt;
       stretch = original.stretch;
       stretch_reason = original.stretch_reason;
+      build_out;
+      build_out_reason;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,
@@ -387,9 +391,54 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
             | Ok m -> (Some m, None)
             | Error r -> (None, Some r)))
   in
-  let failed ?(fin = original) ?model ?class_check ?inputs ~floor reason =
-    record ~fin ?model ?class_check ?inputs ~price:fin.price ~status:`Failed
-      ~failed_reason:reason ~floor ()
+  let failed ?(fin = original) ?model ?class_check ?inputs ?build_out ?build_out_reason ~floor reason =
+    record ~fin ?model ?class_check ?inputs ?build_out ?build_out_reason ~price:fin.price
+      ~status:`Failed ~failed_reason:reason ~floor ()
+  in
+  (* (60) Both declarations or neither: a number with no lag says nothing, and a lag with no
+     return says less. The universe loader refuses one without the other; this says so again
+     on the record for an ad-hoc run that has neither. *)
+  let declaration_build_out () =
+    match Option.bind declaration (fun d -> d.build_out_return),
+          Option.bind declaration (fun d -> d.build_out_lag_years) with
+    | Some r, Some l -> Ok (r, l)
+    | _ -> Error "build-out return and lag not declared"
+  in
+  (* (60) The build-out readout on a record that has already failed: never a fair value, a
+     signal or an input to anything, and the record's own reason stands. The rates are the
+     ones the DCF would have used for this name, resolved by the same functions. *)
+  let build_out_of ~(fin : financials) ~(a : Dcf.assumptions) reason =
+    match Build_out.gate ~entity_class:declared ~failed_reason:reason ~periods:fin.periods with
+    | None -> (None, None)
+    | Some (Error why) -> (None, Some why)
+    | Some (Ok ()) -> (
+        match (fin.periods, fin.price, fin.market_cap) with
+        | [], _, _ | _, None, _ | _, _, None -> (None, Some "no price, market cap or fiscal period")
+        | (p : fiscal_period) :: _, Some price, Some market_cap -> (
+            match (p.cash, p.total_debt, p.book_equity) with
+            | None, _, _ -> (None, Some "the latest fiscal period carries no cash")
+            | _, None, _ -> (None, Some "the latest fiscal period carries no total debt")
+            | _, _, None -> (None, Some "the latest fiscal period carries no book equity")
+            | Some cash, Some total_debt, Some book_equity -> (
+                let tax_rate, _ =
+                  Dcf.tax_rate ~statutory:a.statutory_tax_rate.value ~pretax_income:p.pretax_income
+                    ~tax_provision:p.tax_provision
+                in
+                let wacc =
+                  Dcf.wacc ~cost_of_equity:(Dcf.cost_of_equity a)
+                    ~cost_of_debt:(a.risk_free_rate.value +. a.debt_spread.value) ~tax_rate
+                    ~market_cap ~total_debt
+                in
+                match (declaration_build_out ()) with
+                | Error why -> (None, Some why)
+                | Ok (declared_return, declared_lag_years) -> (
+                    match
+                      Build_out.of_record ~declared_return ~declared_lag_years ~periods:fin.periods
+                        ~price ~market_cap ~cash ~total_debt ~book_equity ~wacc ~tax_rate
+                        ~terminal_growth_rate:a.terminal_growth_rate.value ~scope_limits
+                    with
+                    | Ok block -> (Some block, None)
+                    | Error why -> (None, Some why)))))
   in
   let floor_default () =
     match
@@ -472,6 +521,12 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   in
   let run_model ~fin ?conversion ~model ~class_check ~rule ~country assumptions =
     let failed = failed ~fin ~model ~class_check ~floor:(floor_of_rule rule) in
+    (* (60) A refusal on one of the two build-out classes carries the readout, or the reason
+       it has none; every other refusal carries neither field. *)
+    let failed_with_build_out reason =
+      let build_out, build_out_reason = build_out_of ~fin ~a:assumptions reason in
+      failed ?build_out ?build_out_reason reason
+    in
     let finish ~price inputs fair_value =
       let inputs =
         match conversion with Some c -> with_conversion c inputs | None -> inputs
@@ -484,7 +539,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         | Error reason -> failed reason
         | Ok () -> (
             match Dcf.value ~declared:(match declared with Some c -> Admissibility.class_name c | None -> "") assumptions ~country fin with
-            | Error reason -> failed reason
+            | Error reason -> failed_with_build_out reason
             | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Dcf inputs) fair_value))
     | `Residual_income -> (
         match Residual_income.value assumptions ~country fin with
@@ -509,7 +564,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         | None -> failed "field_definitions.json carries no required_on_latest_period for dcf_midcycle"
         | Some required -> (
             match Dcf_midcycle.value assumptions ~country ~required fin with
-            | Error reason -> failed reason
+            | Error reason -> failed_with_build_out reason
             | Ok (inputs, fair_value) -> finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value))
     | `Bdc_nav -> (
         (* (59) No EBIT policy and no parameter: the anchor is the filed mark. *)

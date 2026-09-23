@@ -3569,6 +3569,221 @@ class ClassCheck:
 
 
 @dataclass
+class BuildOutTranche:
+    """Original type: build_out_tranche = { ... }
+    """
+
+    period_end: str
+    years_before_latest: int
+    capex: float
+    depreciation_amortization: float
+    growth_capex: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BuildOutTranche':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('BuildOutTranche', 'period_end'),
+                years_before_latest=_atd_read_int(x['years_before_latest']) if 'years_before_latest' in x else _atd_missing_json_field('BuildOutTranche', 'years_before_latest'),
+                capex=_atd_read_float(x['capex']) if 'capex' in x else _atd_missing_json_field('BuildOutTranche', 'capex'),
+                depreciation_amortization=_atd_read_float(x['depreciation_amortization']) if 'depreciation_amortization' in x else _atd_missing_json_field('BuildOutTranche', 'depreciation_amortization'),
+                growth_capex=_atd_read_float(x['growth_capex']) if 'growth_capex' in x else _atd_missing_json_field('BuildOutTranche', 'growth_capex'),
+            )
+        else:
+            _atd_bad_json('BuildOutTranche', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['years_before_latest'] = _atd_write_int(self.years_before_latest)
+        res['capex'] = _atd_write_float(self.capex)
+        res['depreciation_amortization'] = _atd_write_float(self.depreciation_amortization)
+        res['growth_capex'] = _atd_write_float(self.growth_capex)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BuildOutTranche':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BuildOutRow:
+    """Original type: build_out_row = { ... }
+    """
+
+    lag_years: int
+    value_per_share: List[float]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BuildOutRow':
+        if isinstance(x, dict):
+            return cls(
+                lag_years=_atd_read_int(x['lag_years']) if 'lag_years' in x else _atd_missing_json_field('BuildOutRow', 'lag_years'),
+                value_per_share=_atd_read_list(_atd_read_float)(x['value_per_share']) if 'value_per_share' in x else _atd_missing_json_field('BuildOutRow', 'value_per_share'),
+            )
+        else:
+            _atd_bad_json('BuildOutRow', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['lag_years'] = _atd_write_int(self.lag_years)
+        res['value_per_share'] = _atd_write_list(_atd_write_float)(self.value_per_share)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BuildOutRow':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BuildOutDeclaration:
+    """Original type: build_out_declaration = { ... }
+    """
+
+    value: float
+    why: str
+    as_of: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BuildOutDeclaration':
+        if isinstance(x, dict):
+            return cls(
+                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('BuildOutDeclaration', 'value'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('BuildOutDeclaration', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('BuildOutDeclaration', 'as_of'),
+            )
+        else:
+            _atd_bad_json('BuildOutDeclaration', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['value'] = _atd_write_float(self.value)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BuildOutDeclaration':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BuildOutContour:
+    """Original type: build_out_contour = { ... }
+    """
+
+    lag_years: int
+    return_required: Optional[float]
+    contour_reason: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BuildOutContour':
+        if isinstance(x, dict):
+            return cls(
+                lag_years=_atd_read_int(x['lag_years']) if 'lag_years' in x else _atd_missing_json_field('BuildOutContour', 'lag_years'),
+                return_required=_atd_read_nullable(_atd_read_float)(x['return_required']) if 'return_required' in x else _atd_missing_json_field('BuildOutContour', 'return_required'),
+                contour_reason=_atd_read_string(x['contour_reason']) if 'contour_reason' in x else None,
+            )
+        else:
+            _atd_bad_json('BuildOutContour', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['lag_years'] = _atd_write_int(self.lag_years)
+        res['return_required'] = _atd_write_nullable(_atd_write_float)(self.return_required)
+        if self.contour_reason is not None:
+            res['contour_reason'] = _atd_write_string(self.contour_reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BuildOutContour':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BuildOut:
+    """Original type: build_out = { ... }
+    """
+
+    declared_return: BuildOutDeclaration
+    declared_lag_years: BuildOutDeclaration
+    maintenance_note: str
+    tranches: List[BuildOutTranche]
+    standing_business_per_share: float
+    net_debt: float
+    shares: float
+    wacc: float
+    tax_rate: float
+    terminal_growth_rate: float
+    depreciation_to_capital: float
+    returns: List[float]
+    surface: List[BuildOutRow]
+    price_contour: List[BuildOutContour]
+    scope_limits: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BuildOut':
+        if isinstance(x, dict):
+            return cls(
+                declared_return=BuildOutDeclaration.from_json(x['declared_return']) if 'declared_return' in x else _atd_missing_json_field('BuildOut', 'declared_return'),
+                declared_lag_years=BuildOutDeclaration.from_json(x['declared_lag_years']) if 'declared_lag_years' in x else _atd_missing_json_field('BuildOut', 'declared_lag_years'),
+                maintenance_note=_atd_read_string(x['maintenance_note']) if 'maintenance_note' in x else _atd_missing_json_field('BuildOut', 'maintenance_note'),
+                tranches=_atd_read_list(BuildOutTranche.from_json)(x['tranches']) if 'tranches' in x else _atd_missing_json_field('BuildOut', 'tranches'),
+                standing_business_per_share=_atd_read_float(x['standing_business_per_share']) if 'standing_business_per_share' in x else _atd_missing_json_field('BuildOut', 'standing_business_per_share'),
+                net_debt=_atd_read_float(x['net_debt']) if 'net_debt' in x else _atd_missing_json_field('BuildOut', 'net_debt'),
+                shares=_atd_read_float(x['shares']) if 'shares' in x else _atd_missing_json_field('BuildOut', 'shares'),
+                wacc=_atd_read_float(x['wacc']) if 'wacc' in x else _atd_missing_json_field('BuildOut', 'wacc'),
+                tax_rate=_atd_read_float(x['tax_rate']) if 'tax_rate' in x else _atd_missing_json_field('BuildOut', 'tax_rate'),
+                terminal_growth_rate=_atd_read_float(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('BuildOut', 'terminal_growth_rate'),
+                depreciation_to_capital=_atd_read_float(x['depreciation_to_capital']) if 'depreciation_to_capital' in x else _atd_missing_json_field('BuildOut', 'depreciation_to_capital'),
+                returns=_atd_read_list(_atd_read_float)(x['returns']) if 'returns' in x else _atd_missing_json_field('BuildOut', 'returns'),
+                surface=_atd_read_list(BuildOutRow.from_json)(x['surface']) if 'surface' in x else _atd_missing_json_field('BuildOut', 'surface'),
+                price_contour=_atd_read_list(BuildOutContour.from_json)(x['price_contour']) if 'price_contour' in x else _atd_missing_json_field('BuildOut', 'price_contour'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('BuildOut', 'scope_limits'),
+            )
+        else:
+            _atd_bad_json('BuildOut', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['declared_return'] = (lambda x: x.to_json())(self.declared_return)
+        res['declared_lag_years'] = (lambda x: x.to_json())(self.declared_lag_years)
+        res['maintenance_note'] = _atd_write_string(self.maintenance_note)
+        res['tranches'] = _atd_write_list((lambda x: x.to_json()))(self.tranches)
+        res['standing_business_per_share'] = _atd_write_float(self.standing_business_per_share)
+        res['net_debt'] = _atd_write_float(self.net_debt)
+        res['shares'] = _atd_write_float(self.shares)
+        res['wacc'] = _atd_write_float(self.wacc)
+        res['tax_rate'] = _atd_write_float(self.tax_rate)
+        res['terminal_growth_rate'] = _atd_write_float(self.terminal_growth_rate)
+        res['depreciation_to_capital'] = _atd_write_float(self.depreciation_to_capital)
+        res['returns'] = _atd_write_list(_atd_write_float)(self.returns)
+        res['surface'] = _atd_write_list((lambda x: x.to_json()))(self.surface)
+        res['price_contour'] = _atd_write_list((lambda x: x.to_json()))(self.price_contour)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BuildOut':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Belief:
     """Original type: belief = { ... }
     """
@@ -3795,6 +4010,8 @@ class Valuation:
     receipt_check: Optional[ReceiptCheck] = None
     stretch: Optional[Stretch] = None
     stretch_reason: Optional[str] = None
+    build_out: Optional[BuildOut] = None
+    build_out_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -3845,6 +4062,8 @@ class Valuation:
                 receipt_check=ReceiptCheck.from_json(x['receipt_check']) if 'receipt_check' in x else None,
                 stretch=Stretch.from_json(x['stretch']) if 'stretch' in x else None,
                 stretch_reason=_atd_read_string(x['stretch_reason']) if 'stretch_reason' in x else None,
+                build_out=BuildOut.from_json(x['build_out']) if 'build_out' in x else None,
+                build_out_reason=_atd_read_string(x['build_out_reason']) if 'build_out_reason' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -3920,6 +4139,10 @@ class Valuation:
             res['stretch'] = (lambda x: x.to_json())(self.stretch)
         if self.stretch_reason is not None:
             res['stretch_reason'] = _atd_write_string(self.stretch_reason)
+        if self.build_out is not None:
+            res['build_out'] = (lambda x: x.to_json())(self.build_out)
+        if self.build_out_reason is not None:
+            res['build_out_reason'] = _atd_write_string(self.build_out_reason)
         return res
 
     @classmethod

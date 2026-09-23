@@ -89,6 +89,49 @@ and the acceptance of any change is the run diff against the previous run
 (`--baseline`), with every moved input classified against the previous snapshot
 (`--baseline-snapshot`).
 
+## The build-out readout
+
+A record that refused because it is investing more than it earns says nothing else today.
+The build-out readout (60) says the one thing that can be said, and **it is not a model**:
+the record stays `Failed` with its own reason, gains no fair value, no margin of safety and
+no signal, and nothing downstream — frontier, hedges, panel — reads it. **It adds no
+`Failed` string and can never fail a record.**
+
+It appears on a record declared `Cyclical` or `OperatingCompany` that failed the mid-cycle
+observation guard or the non-positive-free-cash-flow guard, whose latest capex exceeds its
+depreciation and whose latest operating income is positive; any other record carries neither
+`build_out` nor `build_out_reason`. A record the readout is about but cannot draw carries
+`build_out_reason` instead: the latest capex does not exceed depreciation, the latest
+operating income is not positive, a field is missing, or the two declarations are absent.
+
+**Two declarations per name, in the universe entry**, each a value, the evidence for it and
+a date, both or neither: `build_out_return`, the after-tax return the new capital earns once
+earning, and `build_out_lag_years`, whole years from spend to first earning. The name's own
+recent return on capital is the natural citation in the `why` and is **never** the input.
+Note the units: the readout charges each tranche its own maintenance, so the declared return
+is a cash return on capital before that charge, not an accounting return after depreciation.
+
+**The split is the depreciation rule, stated.** Growth capex in a year is capex less
+depreciation where positive; maintenance is depreciation, because no filer discloses the
+split. The surface runs the return from fifteen points under the declaration to fifteen over
+in one-point steps, and the lag from zero to six years. At each point the value is the
+standing business — the latest free cash flow with maintenance capex in place of the capex
+actually spent, held flat, as a perpetuity at the settled terminal growth — plus the last
+three years' growth capex as tranches, each earning the return on its cost from the lag
+after its spend, less its own maintenance at the company's depreciation-to-capital ratio,
+as a flat perpetuity; less net debt, per effective share. The WACC, the tax rate and the
+terminal growth are the ones the DCF resolves for the name, from the same functions.
+
+The readout is the **price contour**: per lag, the return at which the value equals the
+price. Where no return in the declared range reaches the price, or the price is below the
+whole range, the contour is null and says which, with the figure at that end — and that is
+itself the readout, not a gap.
+
+Its scope limits go on every block: the maintenance split is a proxy; the standing business
+is held flat, which understates a growing name and overstates a fading one; every dollar of
+growth capex is valued as if it becomes earning capital, which no build-out achieves. It is
+a map of what the price requires, not a value.
+
 ## Fetched data
 
 Nothing obtained from a data provider is tracked. `reference/` holds declarations and
@@ -533,6 +576,13 @@ in this order:
   distributions shift up with their anchor** — by design, and no belief was adjusted to
   offset it. Residual-income records are untouched: that path has carried no terminal
   growth since the terminal spread was removed. No new `Failed` string.
+- the build-out readout (60): a record that refuses because it is investing more than it
+  earns gains `build_out`, the surface of value across what the new capital earns and how
+  long it takes to earn it, with the price as a contour per lag. A readout, not a model: no
+  fair value, no signal, no new `Failed` string, and the record stays `Failed` with its own
+  reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
+  marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
+  carries neither field and is byte-identical.
 - the tags an own-year filing uses (62): brief 61's rule reads each period from the filer's
   own-year filing, which is internally consistent but sometimes tags less than the filings
   after it, and 136 value cells went null. Three elements answer for almost all of what

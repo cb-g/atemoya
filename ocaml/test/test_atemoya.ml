@@ -300,7 +300,8 @@ let params : Params.t =
     required_returns = Reference_j.required_returns_of_string {|{"classes": {}, "names": {}}|};
   }
 
-let declaration ?(scope_limits = []) ?adr_ratio entity_class = { Valuation.entity_class; scope_limits; adr_ratio }
+let declaration ?(scope_limits = []) ?adr_ratio ?build_out_return ?build_out_lag_years entity_class =
+  { Valuation.entity_class; scope_limits; adr_ratio; build_out_return; build_out_lag_years }
 
 (* Most valuation tests declare an operating company; the class tests declare otherwise. *)
 let run ?(declared = Some (declaration `OperatingCompany)) fin =
@@ -3534,6 +3535,182 @@ let test_valeros_subtotal_tag_stays_unclassified () =
   Alcotest.(check bool) "the refusal is recorded in the notes with its years" true
     (List.exists (fun n -> contains n "IT STAYS UNCLASSIFIED" && contains n "FY2011-FY2019") d.notes)
 
+
+(* --- the build-out readout (60) --- *)
+
+let declared value why = { Reference_t.value; why; as_of = "2026-09-23" }
+
+let build_out_periods =
+  [
+    period ~period_end:"2025-12-31" ~ebit:1000. ~pretax_income:1000. ~tax_provision:250.
+      ~depreciation_amortization:200. ~capex:500. ~delta_nwc:50. ~cash:100. ~total_debt:400.
+      ~book_equity:1700. ~net_income:750. ();
+    period ~period_end:"2024-12-31" ~ebit:900. ~depreciation_amortization:180. ~capex:380.
+      ~delta_nwc:40. ~cash:80. ~total_debt:300. ~book_equity:1500. ~net_income:650. ();
+    period ~period_end:"2023-12-31" ~ebit:800. ~depreciation_amortization:160. ~capex:160.
+      ~delta_nwc:30. ~cash:60. ~total_debt:200. ~book_equity:1300. ~net_income:550. ();
+  ]
+
+let build_out_block ?(return_value = 0.20) ?(lag = 2.) () =
+  Build_out.of_record
+    ~declared_return:(declared return_value "the record's own recent return, cited not used")
+    ~declared_lag_years:(declared lag "a campus is powered in two years")
+    ~periods:build_out_periods ~price:50. ~market_cap:5000. ~cash:100. ~total_debt:400.
+    ~book_equity:1700. ~wacc:0.10 ~tax_rate:0.25 ~terminal_growth_rate:0.02 ~scope_limits:[ "declared" ]
+
+let test_build_out_split_and_tranches () =
+  (* Growth capex is capex less depreciation where positive, and never negative: the third
+     year spent exactly its depreciation and contributes nothing. *)
+  check_float "growth capex" 300. (Build_out.growth_capex ~capex:500. ~depreciation_amortization:200.);
+  check_float "no growth capex" 0. (Build_out.growth_capex ~capex:120. ~depreciation_amortization:200.);
+  match build_out_block () with
+  | Error e -> Alcotest.failf "block: %s" e
+  | Ok b ->
+      (* the year whose capex equals its depreciation is not a tranche *)
+      Alcotest.(check (list string))
+        "tranche years" [ "2025-12-31"; "2024-12-31" ]
+        (List.map (fun (t : Boundary_t.build_out_tranche) -> t.period_end) b.tranches);
+      Alcotest.(check (list int))
+        "years before latest" [ 0; 1 ]
+        (List.map (fun (t : Boundary_t.build_out_tranche) -> t.years_before_latest) b.tranches);
+      check_float "latest growth capex" 300. (List.nth b.tranches 0).growth_capex;
+      check_float "prior growth capex" 200. (List.nth b.tranches 1).growth_capex;
+      (* invested capital 400 + 1700 - 100 = 2000; depreciation 200 over it *)
+      check_float "depreciation to capital" 0.10 b.depreciation_to_capital;
+      Alcotest.(check int) "returns axis" 31 (List.length b.returns);
+      check_float "axis centre" 0.20 (List.nth b.returns 15);
+      check_float "axis floor" 0.05 (List.nth b.returns 0);
+      check_float "axis ceiling" 0.35 (List.nth b.returns 30);
+      Alcotest.(check (list int))
+        "lags" [ 0; 1; 2; 3; 4; 5; 6 ]
+        (List.map (fun (r : Boundary_t.build_out_row) -> r.lag_years) b.surface)
+
+let test_build_out_standing_business_and_tranche_arithmetic () =
+  match build_out_block () with
+  | Error e -> Alcotest.failf "block: %s" e
+  | Ok b ->
+      (* The standing business is the same free cash flow the DCF computes with maintenance
+         capex in place of the capex actually spent: 1000 x 0.75 + 200 - 200 - 50 = 700,
+         a perpetuity at 0.10 - 0.02 = 8750, less net debt 300, over 100 shares. *)
+      check_float "standing per share" 84.5 b.standing_business_per_share;
+      let shares = 5000. /. 50. in
+      let at ~build_out_return ~lag_years =
+        Build_out.value_per_share ~standing:8750. ~tranches:b.tranches
+          ~depreciation_to_capital:0.10 ~wacc:0.10 ~net_debt:300. ~shares ~build_out_return
+          ~lag_years
+      in
+      (* At lag 0 both tranches earn at once: (0.20 - 0.10) x (300 + 200) / 0.10 = 500. *)
+      check_float "lag 0 by hand" ((8750. +. 500. -. 300.) /. shares) (at ~build_out_return:0.20 ~lag_years:0);
+      (* At lag 2 the latest tranche waits two years and the prior one waits one:
+         30 / 0.10 / 1.1^2 + 20 / 0.10 / 1.1 = 247.933884... + 181.818181... *)
+      let expected = (30. /. 0.10 /. (1.1 ** 2.)) +. (20. /. 0.10 /. 1.1) in
+      check_float "lag 2 by hand" ((8750. +. expected -. 300.) /. shares) (at ~build_out_return:0.20 ~lag_years:2);
+      (* and the grid draws the same arithmetic *)
+      check_float "grid agrees at the centre, lag 2"
+        (at ~build_out_return:0.20 ~lag_years:2)
+        (List.nth (List.nth b.surface 2).value_per_share 15);
+      (* a return exactly at the maintenance ratio makes the build-out worth nothing *)
+      check_float "nothing above maintenance" ((8750. -. 300.) /. shares) (at ~build_out_return:0.10 ~lag_years:3)
+
+let test_build_out_contour_recovers_a_known_return () =
+  match build_out_block () with
+  | Error e -> Alcotest.failf "block: %s" e
+  | Ok b ->
+      let shares = 5000. /. 50. in
+      let at ~build_out_return ~lag_years =
+        Build_out.value_per_share ~standing:8750. ~tranches:b.tranches ~depreciation_to_capital:0.10
+          ~wacc:0.10 ~net_debt:300. ~shares ~build_out_return ~lag_years
+      in
+      (* Price the surface exactly at 0.26 and a two-year lag, and the contour finds it. *)
+      let price = at ~build_out_return:0.26 ~lag_years:2 in
+      (match
+         Build_out.of_record
+           ~declared_return:(declared 0.20 "cited") ~declared_lag_years:(declared 2. "cited")
+           ~periods:build_out_periods ~price ~market_cap:(price *. shares) ~cash:100.
+           ~total_debt:400. ~book_equity:1700. ~wacc:0.10 ~tax_rate:0.25
+           ~terminal_growth_rate:0.02 ~scope_limits:[]
+       with
+      | Error e -> Alcotest.failf "block at the priced point: %s" e
+      | Ok priced -> (
+          let c = List.nth priced.price_contour 2 in
+          Alcotest.(check int) "lag" 2 c.lag_years;
+          match c.return_required with
+          | None -> Alcotest.failf "no contour: %s" (Option.value c.contour_reason ~default:"")
+          | Some r -> check_float "recovers the return" 0.26 r));
+      (* Past either end of the axis the contour is null and says which end. *)
+      let far = List.nth b.price_contour 0 in
+      Alcotest.(check bool) "no contour at this price" true (far.return_required = None);
+      Alcotest.(check bool) "and it says why" true (far.contour_reason <> None)
+
+let test_build_out_gate_and_null_reasons () =
+  let latest = List.hd build_out_periods in
+  let guard = "mid-cycle normalisation needs at least 8 annual return observations, have 5" in
+  (* out of scope: another class, or a refusal that says nothing about a build-out *)
+  Alcotest.(check bool) "another class is out of scope" true
+    (Build_out.gate ~entity_class:(Some `Bank) ~failed_reason:guard ~periods:build_out_periods = None);
+  Alcotest.(check bool) "another refusal is out of scope" true
+    (Build_out.gate ~entity_class:(Some `Cyclical) ~failed_reason:"fx not available for KZT/USD"
+       ~periods:build_out_periods
+    = None);
+  (* in scope and readable on both guards *)
+  Alcotest.(check bool) "the observation guard qualifies" true
+    (Build_out.gate ~entity_class:(Some `Cyclical) ~failed_reason:guard ~periods:build_out_periods
+    = Some (Ok ()));
+  Alcotest.(check bool) "the free-cash-flow guard qualifies" true
+    (Build_out.gate ~entity_class:(Some `OperatingCompany)
+       ~failed_reason:"non-positive free cash flow (-1.2e+09): the DCF is not applicable"
+       ~periods:build_out_periods
+    = Some (Ok ()));
+  (* in scope but not readable: the reasons name what is not so *)
+  let reason periods =
+    match Build_out.gate ~entity_class:(Some `Cyclical) ~failed_reason:guard ~periods with
+    | Some (Error e) -> e
+    | _ -> "no reason"
+  in
+  Alcotest.(check bool) "a loss-making latest year is refused" true
+    (contains (reason ({ latest with ebit = Some (-1.) } :: List.tl build_out_periods)) "is not positive");
+  Alcotest.(check bool) "capex at or under depreciation is refused" true
+    (contains (reason ({ latest with capex = Some 100. } :: List.tl build_out_periods))
+       "does not exceed depreciation");
+  (* and a name with no year of growth capex has no block *)
+  let flat = List.map (fun (p : Boundary_t.fiscal_period) -> { p with capex = Some 10. }) build_out_periods in
+  match
+    Build_out.of_record ~declared_return:(declared 0.20 "cited") ~declared_lag_years:(declared 2. "cited")
+      ~periods:flat ~price:50. ~market_cap:5000. ~cash:100. ~total_debt:400. ~book_equity:1700.
+      ~wacc:0.10 ~tax_rate:0.25 ~terminal_growth_rate:0.02 ~scope_limits:[]
+  with
+  | Ok _ -> Alcotest.fail "a name with no growth capex should have no block"
+  | Error e -> Alcotest.(check bool) "and says so" true (contains e "capex above depreciation")
+
+let test_build_out_on_the_record () =
+  (* The readout rides on a Failed record and changes nothing else about it: no fair value,
+     no margin of safety, no signal. *)
+  let fin =
+    financials ~price:(Some 50.) ~market_cap:(Some 5000.) ~provider:"SEC XBRL companyfacts"
+      build_out_periods
+  in
+  let declared_entry =
+    declaration ~build_out_return:(declared 0.20 "cited") ~build_out_lag_years:(declared 2. "cited")
+      `Cyclical
+  in
+  let v = run ~declared:(Some declared_entry) fin in
+  Alcotest.(check bool) "still failed" true (v.status = `Failed);
+  Alcotest.(check bool) "no fair value" true (v.fair_value = None);
+  Alcotest.(check bool) "no signal" true (v.signal = None);
+  match v.build_out with
+  | None -> Alcotest.failf "no readout: %s" (Option.value v.build_out_reason ~default:"(none)")
+  | Some b ->
+      Alcotest.(check bool) "the declarations are carried" true
+        (b.declared_return.value = 0.20 && b.declared_lag_years.value = 2.);
+      Alcotest.(check bool) "the maintenance proxy is stated" true (contains b.maintenance_note "depreciation");
+      Alcotest.(check bool) "the scope limits are on it" true (List.length b.scope_limits >= 4);
+      Alcotest.(check bool) "no reason beside the block" true (v.build_out_reason = None);
+      (* and a record with no declaration carries the reason instead *)
+      let bare = run ~declared:(Some (declaration `Cyclical)) fin in
+      Alcotest.(check bool) "the undeclared reason" true
+        (bare.build_out = None && bare.build_out_reason = Some "build-out return and lag not declared")
+
+
 let () =
   let case name f = Alcotest.test_case name `Quick f in
   Alcotest.run "atemoya"
@@ -3650,6 +3827,14 @@ let () =
           case "routes, refuses the projection readouts, never enters the frontier (59)" test_bdc_routes_refuses_the_projection_readouts_and_never_enters_the_frontier;
           case "Valero's subtotal tag stays unclassified (59)" test_valeros_subtotal_tag_stays_unclassified;
           case "a financing-lease filer is refused with the structural reason" test_reit_refuses_a_financing_lease_filer;
+        ] );
+      ( "build-out",
+        [
+          case "the split, the tranches and the axes (60)" test_build_out_split_and_tranches;
+          case "the standing business and the tranche arithmetic by hand (60)" test_build_out_standing_business_and_tranche_arithmetic;
+          case "the contour recovers a known return, else says which end (60)" test_build_out_contour_recovers_a_known_return;
+          case "the gate is silent out of scope and names what is not so (60)" test_build_out_gate_and_null_reasons;
+          case "it rides on a Failed record and adds no value or signal (60)" test_build_out_on_the_record;
         ] );
       ( "point-in-time",
         [ case "gates name the missing history; held vintages declared" test_point_in_time_gates_and_vintages ] );

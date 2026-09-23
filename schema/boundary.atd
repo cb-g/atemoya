@@ -939,6 +939,54 @@ type market_implied = {
   note : string;
 }
 
+(* (60) The build-out readout: what the new capital must earn for the price to be right.
+   A map, never a value. It appears on a record that is already Failed, carries no fair
+   value, no margin of safety and no signal, and nothing downstream reads it. Growth capex
+   in a year is capex less depreciation where positive; depreciation is the proxy for
+   maintenance because no filer discloses the split. *)
+type build_out_declaration = {
+  value : float;
+  why : string;
+  as_of : string;
+}
+
+type build_out_tranche = {
+  period_end : string;
+  years_before_latest : int;            (* 0 for the latest filed year *)
+  capex : float;
+  depreciation_amortization : float;
+  growth_capex : float;                 (* capex - depreciation where positive, else zero *)
+}
+
+type build_out_row = {
+  lag_years : int;
+  value_per_share : float list;         (* one per return on the returns axis, in that order *)
+}
+
+type build_out_contour = {
+  lag_years : int;
+  return_required : float nullable;     (* the return at which value equals price at this lag *)
+  ?contour_reason : string option;      (* present iff return_required is null: no return in the declared range reaches the price *)
+}
+
+type build_out = {
+  declared_return : build_out_declaration;
+  declared_lag_years : build_out_declaration;
+  maintenance_note : string;
+  tranches : build_out_tranche list;    (* the last three filed years, newest first *)
+  standing_business_per_share : float;  (* the standing business alone, after net debt, per effective share *)
+  net_debt : float;
+  shares : float;
+  wacc : float;
+  tax_rate : float;
+  terminal_growth_rate : float;
+  depreciation_to_capital : float;      (* the latest depreciation over the latest invested capital: each tranche's own maintenance *)
+  returns : float list;                 (* the return axis: declared - 0.15 to declared + 0.15 in 1 pp steps *)
+  surface : build_out_row list;         (* one row per lag 0 .. 6 *)
+  price_contour : build_out_contour list;
+  scope_limits : string list;           (* what this map cannot see, carried onto the record *)
+}
+
 type valuation = {
   ticker : string;
   as_of : string;                     (* the fetch timestamp, from financials *)
@@ -985,4 +1033,6 @@ type valuation = {
   ?receipt_check : receipt_check option;        (* (42) present iff the financials carry cover_page_shares and the name has a declared ratio or a cross-currency listing *)
   ?stretch : stretch option;                    (* (52) copied from the financials; never fails a record *)
   ?stretch_reason : string option;
+  ?build_out : build_out option;                (* (60) on a Cyclical or OperatingCompany record that failed the observation or free-cash-flow guard with capex above depreciation and positive EBIT; never a fair value *)
+  ?build_out_reason : string option;            (* (60) present instead on such a record: why there is no readout *)
 }

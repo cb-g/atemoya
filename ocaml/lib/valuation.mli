@@ -50,6 +50,8 @@ type declaration = {
   entity_class : Boundary_t.entity_class;
   scope_limits : string list;
   adr_ratio : float option;  (** (42) ordinary shares per depositary receipt, declared on the universe entry *)
+  build_out_return : Reference_t.declared_build_out option;     (** (60) what the new capital earns once earning *)
+  build_out_lag_years : Reference_t.declared_build_out option;  (** (60) whole years from spend to first earning *)
 }
 
 val receipt_tolerance : float

@@ -142,6 +142,57 @@ The block is computed at fetch time and point-in-time from closes on or before t
 to a snapshot's records), and `python/plot_stretch.py PLTR` draws two years of closes with
 the averages, shaded where either count reached 3, to `output/stretch/PLTR.png`.
 
+## The build-out readout
+
+A name whose reported cash flow is negative because it is investing more than it earns, and
+whose earning history at scale is too short for the mid-cycle window, refuses honestly and
+today says nothing else. The build-out readout (60) says the one thing that can be said: for
+a `Cyclical` or `OperatingCompany` record that failed the observation guard or the
+non-positive-free-cash-flow guard, whose latest capex exceeds its depreciation and whose
+latest operating income is positive, `build_out` carries the surface of value per share
+across what the new capital earns and how long it takes to earn it, with the price drawn as
+a contour per lag.
+
+It is a map of what the price requires, not a value. The record stays `Failed` with its own
+reason; the block adds no fair value, no margin of safety and no signal, nothing downstream
+reads it, and it never fails a record.
+
+The two declarations live on the universe entry, both or neither, each exactly a value, the
+evidence for it and a date:
+
+```json
+{
+  "ticker": "AMZN",
+  "entity_class": "Cyclical",
+  "why": "retail and cloud; a capacity build-out ...",
+  "build_out_return":    { "value": 0.40, "why": "...", "as_of": "2026-09-23" },
+  "build_out_lag_years": { "value": 2,    "why": "...", "as_of": "2026-09-23" }
+}
+```
+
+`build_out_return` is the after-tax return the new capital earns once earning, **before**
+the maintenance the readout charges it — not an accounting return on capital after
+depreciation; cite the name's own recent return in the `why` and convert. `build_out_lag_years`
+is whole years from spend to first earning (a data-centre campus one to two, an LNG train
+four). A name with one and not the other fails the universe loader; a name with neither
+carries `build_out_reason: "build-out return and lag not declared"`.
+
+On the record: the two declarations, the maintenance sentence, the last three years' capex,
+depreciation and growth capex as tranches, the standing business alone per share, the WACC,
+tax rate, terminal growth and depreciation-to-capital ratio the map runs on, the return axis
+(31 values, the declaration in the middle, ±15 points in 1-point steps), the surface (one
+row per lag 0..6) and the price contour. A lag whose contour is null says why — no return in
+the range reaches the price, or the price is below the whole range — with the figure at that
+end, and that is itself the readout.
+
+```sh
+uv run python/plot_build_out.py AMZN --out output   # -> output/build_out/AMZN.png
+```
+
+The picture is the surface with the contour, a vertical line at the declared return and a
+horizontal one at the declared lag; where the contour is empty the legend says the price is
+outside the map at every lag.
+
 ## Build, test, type-check
 
 ```sh

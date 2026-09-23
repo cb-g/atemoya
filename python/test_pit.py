@@ -13,6 +13,7 @@ import fetch
 import pit
 import pytest
 import refresh_rates as rr
+from pathlib import Path
 from test_fetch_sec import DEFS, TAGS, fact, usd
 
 
@@ -241,3 +242,57 @@ def test_universe_loader_accepts_a_positive_receipt_ratio_only() -> None:
     for bad in ("0", "-2", '"5"', "true"):
         with pytest.raises(universe.UniverseError, match="adr_ratio must be a positive number"):
             universe.load_text('{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": ' + bad + "}]}")
+
+
+def test_universe_loader_takes_both_build_out_declarations_or_neither() -> None:
+    """(60) A build-out declaration is exactly a value, the evidence for it and a date, and
+    a return without a lag says nothing: the readout needs both."""
+    import universe
+
+    entry = '{"ticker": "AMZN", "entity_class": "Cyclical", "why": "a build-out"'
+    ret = '"build_out_return": {"value": 0.4, "why": "the record\'s own recent return, cited", "as_of": "2026-09-23"}'
+    lag = '"build_out_lag_years": {"value": 2, "why": "a campus is powered in two years", "as_of": "2026-09-23"}'
+
+    def load(*parts: str) -> object:
+        return universe.load_text('{"tickers": [' + ", ".join((entry, *parts)) + "}]}")
+
+    u = universe.load_text('{"tickers": [' + ", ".join((entry, ret, lag)) + "}]}")
+    assert u.tickers[0].build_out_return is not None and u.tickers[0].build_out_return.value == 0.4
+    assert u.tickers[0].build_out_lag_years is not None and u.tickers[0].build_out_lag_years.value == 2
+    assert universe.load_text('{"tickers": [' + entry + "}]}").tickers[0].build_out_return is None
+    with pytest.raises(universe.UniverseError, match="is declared without the other"):
+        load(ret)
+    with pytest.raises(universe.UniverseError, match="is declared without the other"):
+        load(lag)
+    # a number with no why is not a declaration, and neither is one with a field of its own
+    for bad, message in (
+        ('{"value": 0.4, "as_of": "2026-09-23"}', "lacks why"),
+        ('{"value": 0.4, "why": " ", "as_of": "2026-09-23"}', "lacks why"),
+        ('{"value": 0.4, "why": "cited"}', "lacks as_of"),
+        ('{"why": "cited", "as_of": "2026-09-23"}', "lacks a numeric value"),
+        ('{"value": 0.4, "why": "cited", "as_of": "2026-09-23", "measured": 0.26}', "unknown field"),
+        ('{"value": 0.4, "why": "cited", "as_of": "last year"}', "is not an ISO date"),
+        ("0.4", "is not an object"),
+    ):
+        with pytest.raises(universe.UniverseError, match=message):
+            load('"build_out_return": ' + bad, lag)
+    # the lag is whole years
+    for bad in ("1.5", "-1"):
+        with pytest.raises(universe.UniverseError, match="whole number of years"):
+            load(ret, '"build_out_lag_years": {"value": ' + bad + ', "why": "cited", "as_of": "2026-09-23"}')
+
+
+def test_the_tracked_universe_carries_the_two_drafted_build_outs() -> None:
+    """(60) AMZN and VG are the two names the readout is drafted for; both declarations
+    are marked as drafts until the user confirms them, as the beliefs were."""
+    import universe
+
+    u = universe.load(Path(__file__).resolve().parent.parent / "reference" / "universe.json")
+    declared = {e.ticker: e for e in u.tickers if e.build_out_return is not None}
+    assert sorted(declared) == ["AMZN", "VG"]
+    for entry in declared.values():
+        assert entry.build_out_lag_years is not None
+        for d in (entry.build_out_return, entry.build_out_lag_years):
+            assert d is not None and "DRAFT" in d.why and d.as_of == "2026-09-23"
+    assert declared["AMZN"].build_out_lag_years is not None and declared["AMZN"].build_out_lag_years.value == 2
+    assert declared["VG"].build_out_lag_years is not None and declared["VG"].build_out_lag_years.value == 4

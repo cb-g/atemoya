@@ -455,7 +455,17 @@
       "why": "retail and cloud; a capacity build-out inside the growth window makes the latest year's free cash flow negative; through-cycle return on today's capital is the question",
       "scope_limits": [
         "structural: a capacity build-out whose returns are not yet in the window"
-      ]
+      ],
+      "build_out_return": {
+        "value": 0.4,
+        "why": "DRAFT for the user to confirm, and note the units: the readout charges each tranche its own maintenance at the company's depreciation-to-capital ratio, so this is an after-tax cash return on new capital BEFORE that charge, not an accounting return on capital after depreciation. The record's own after-tax return on opening capital is 0.2650 for FY2025, 0.3262 for FY2024 and 0.2043 for FY2023, and its depreciation is 0.1842 of invested capital, so the FY2025 figure in these units is about 0.449. The declaration sits under that: the capital being spent now is data-centre shell, power and accelerators bought into a shortage and written off over six years or less, and it earns less than a base built over twenty years.",
+        "as_of": "2026-09-23"
+      },
+      "build_out_lag_years": {
+        "value": 2,
+        "why": "DRAFT for the user to confirm. A data-centre campus is sited, powered and populated over roughly eighteen months to two years from the first dollar, and a shell without power earns nothing; two whole years from spend to first earning is the round number that covers both the build and the ramp.",
+        "as_of": "2026-09-23"
+      }
     },
     {
       "ticker": "ABT",
@@ -661,7 +671,17 @@
       "why": "LNG export; producing and earning at scale, with a build-out inside the window larger than its earnings",
       "scope_limits": [
         "structural: a capacity build-out whose returns are not yet in the window"
-      ]
+      ],
+      "build_out_return": {
+        "value": 0.16,
+        "why": "DRAFT for the user to confirm, and note the units: this is an after-tax cash return on new capital before the maintenance charge the readout applies, not an accounting return after depreciation. The record's own after-tax return on opening capital is 0.1467 for FY2025, earned while two of the three trains were still commissioning, and its depreciation is 0.0244 of invested capital, so that figure in these units is about 0.171. An LNG plant sells most of its capacity on twenty-year take-or-pay contracts at a fixed liquefaction fee, so the return on new capital is a contracted spread rather than a market one; the declaration sits just under the realised figure because the commissioning cargoes that lifted it were sold at spot.",
+        "as_of": "2026-09-23"
+      },
+      "build_out_lag_years": {
+        "value": 4,
+        "why": "DRAFT for the user to confirm. An LNG train is a four-year build from final investment decision to first cargo and the spend runs from the first year; four whole years from spend to first earning is the industry's own schedule.",
+        "as_of": "2026-09-23"
+      }
     },
     {
       "ticker": "JAAA",
