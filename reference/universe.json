@@ -446,6 +446,283 @@
       "ticker": "SNOW",
       "entity_class": "Unprofitable",
       "why": "GAAP losses with positive free cash flow; declared unprofitable rather than software, exactly the judgment the class text settles"
+    },
+    {
+      "ticker": "AMZN",
+      "entity_class": "OperatingCompany",
+      "why": "Retail, logistics and cloud under one filer; an operating company whose cash flows the DCF reads directly."
+    },
+    {
+      "ticker": "ABT",
+      "entity_class": "OperatingCompany",
+      "why": "Diagnostics, devices and nutrition; a diversified operating company on filed statements."
+    },
+    {
+      "ticker": "HCA",
+      "entity_class": "OperatingCompany",
+      "why": "Hospital operator; an operating company with debt, valued on free cash flow to the firm.",
+      "scope_limits": [
+        "The lease-heavy hospital estate is read at the debt definition's exclusion of operating leases; the estate's replacement cost is not assessed."
+      ]
+    },
+    {
+      "ticker": "ACM",
+      "entity_class": "OperatingCompany",
+      "why": "Engineering and design services; project revenue with pass-through subcontract costs, an operating company all the same."
+    },
+    {
+      "ticker": "XYL",
+      "entity_class": "OperatingCompany",
+      "why": "Water technology; an industrial operating company."
+    },
+    {
+      "ticker": "GILD",
+      "entity_class": "OperatingCompany",
+      "why": "Pharmaceuticals; an operating company whose growth depends on a pipeline the model does not see."
+    },
+    {
+      "ticker": "TEVA",
+      "entity_class": "OperatingCompany",
+      "why": "Generic and specialty pharmaceuticals filing a 20-F from Israel; an operating company; adr_ratio: one American depositary share is one ordinary share (20-F, deposit agreement).",
+      "scope_limits": [
+        "A debt-heavy balance sheet under a generic-pricing cycle: the DCF holds the latest year's cash flow and does not model the cycle or the deleveraging path."
+      ],
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "BIIB",
+      "entity_class": "OperatingCompany",
+      "why": "Biotechnology with marketed products; an operating company.",
+      "scope_limits": [
+        "A product transition inside the growth window: the starting growth read from filings carries a franchise in decline and a launch not yet in the statements."
+      ]
+    },
+    {
+      "ticker": "CI",
+      "entity_class": "Insurer",
+      "why": "Managed care and health services; premiums earned are the largest line, the insurer signature fires as it did for UnitedHealth, so the residual-income model on AOCI-adjusted book from filed statements applies."
+    },
+    {
+      "ticker": "ICE",
+      "entity_class": "OperatingCompany",
+      "why": "Exchanges, clearing and mortgage technology; a fee business with no net-interest signature, an operating company.",
+      "scope_limits": [
+        "Clearing member balances pass through the balance sheet and are not the company's own cash or debt; the cash and debt definitions read the reported totals."
+      ]
+    },
+    {
+      "ticker": "CME",
+      "entity_class": "OperatingCompany",
+      "why": "Derivatives exchanges and clearing; a fee business, an operating company.",
+      "scope_limits": [
+        "Clearing member performance bonds pass through the balance sheet and are not the company's own cash; the cash definition reads the reported totals."
+      ]
+    },
+    {
+      "ticker": "CBOE",
+      "entity_class": "OperatingCompany",
+      "why": "Options and equities exchanges; a fee business, an operating company."
+    },
+    {
+      "ticker": "MA",
+      "entity_class": "OperatingCompany",
+      "why": "A payments network; fees on volume, no net-interest signature, an operating company."
+    },
+    {
+      "ticker": "INTU",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Subscription software with recurring revenue; profitable, valued on the DCF under the software lens."
+    },
+    {
+      "ticker": "WDAY",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Cloud enterprise software with subscription revenue; the software lens."
+    },
+    {
+      "ticker": "VEEV",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Vertical cloud software for life sciences; subscription revenue, profitable; the software lens."
+    },
+    {
+      "ticker": "OKTA",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Identity software with subscription revenue; the software lens, its GAAP profit recent and thin."
+    },
+    {
+      "ticker": "GWRE",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Insurance-industry cloud software with subscription revenue; the software lens."
+    },
+    {
+      "ticker": "SE",
+      "entity_class": "HighGrowthSoftware",
+      "why": "E-commerce, gaming and payments filing a 20-F from Singapore under IFRS; recurring platform revenue, profitable; the software lens; adr_ratio: one American depositary share is one Class A ordinary share (20-F, deposit agreement).",
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "MELI",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Marketplace, payments and credit in Latin America, a 10-K filer under us-gaap despite the listing; profitable platform revenue; the software lens.",
+      "scope_limits": [
+        "The credit book inside the payments business carries interest income and provisions the software lens does not read."
+      ]
+    },
+    {
+      "ticker": "HOOD",
+      "entity_class": "HighGrowthSoftware",
+      "why": "A retail broker-dealer with transaction and subscription revenue; declared under the software lens, with net interest revenue a large share that the bank signature may read as a bank: a judgment to confirm.",
+      "scope_limits": [
+        "Net interest revenue on customer balances and margin is a rate-driven line the software lens does not model."
+      ]
+    },
+    {
+      "ticker": "GRAB",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Mobility, delivery and financial services filing a 20-F from Singapore; platform revenue with GAAP profit only recently turned positive, so the software lens applies if the filing shows profit, else Unprofitable: a judgment to confirm; adr_ratio: one American depositary share is one Class A ordinary share (20-F, deposit agreement).",
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "TEM",
+      "entity_class": "Unprofitable",
+      "why": "Diagnostics and data platform, GAAP loss-making on the filing; the runway lens, no model."
+    },
+    {
+      "ticker": "FSLR",
+      "entity_class": "Cyclical",
+      "why": "Solar module manufacturing; earnings swing with module pricing and policy, so the through-cycle model applies.",
+      "scope_limits": [
+        "Manufacturing tax credits inside the earnings window are policy-set and not assessed as durable."
+      ]
+    },
+    {
+      "ticker": "LEU",
+      "entity_class": "Cyclical",
+      "why": "Uranium enrichment services; earnings swing with contract pricing and utility demand; the through-cycle model."
+    },
+    {
+      "ticker": "CEG",
+      "entity_class": "MerchantPower",
+      "why": "Merchant nuclear and gas generation selling into power markets; the merchant-power class by its text, refused by design and judged on its capacity and price lens instead."
+    },
+    {
+      "ticker": "VICI",
+      "entity_class": "Reit",
+      "why": "Gaming and hospitality triple-net REIT; the FFO-covered dividend model."
+    },
+    {
+      "ticker": "STAG",
+      "entity_class": "Reit",
+      "why": "Industrial REIT; the FFO-covered dividend model."
+    },
+    {
+      "ticker": "DNN",
+      "entity_class": "ConstructionStage",
+      "why": "Uranium developer with no production, a 40-F filer from Canada; construction-stage by the filing, refused by design; Miner once production starts."
+    },
+    {
+      "ticker": "PDN.TO",
+      "entity_class": "Miner",
+      "why": "Uranium producer restarting production, listed in Toronto with Australian-dollar financials and no SEC facts; the miner class, refused by design, and a vendor-path, cross-currency case."
+    },
+    {
+      "ticker": "NEXT",
+      "entity_class": "ConstructionStage",
+      "why": "LNG export terminal under construction with no operating revenue; construction-stage, refused by design."
+    },
+    {
+      "ticker": "BEAM",
+      "entity_class": "Unprofitable",
+      "why": "Pre-revenue gene-editing biotech; the runway lens, no model."
+    },
+    {
+      "ticker": "DYN",
+      "entity_class": "Unprofitable",
+      "why": "Pre-revenue biotech; the runway lens, no model."
+    },
+    {
+      "ticker": "TAC",
+      "entity_class": "MerchantPower",
+      "why": "TransAlta, a Canadian power generator filing a 40-F, selling into the Alberta merchant market; the merchant-power class by its text, refused by design: a judgment to confirm against the brief's oil-field-services reading."
+    },
+    {
+      "ticker": "RKLB",
+      "entity_class": "Unprofitable",
+      "why": "Launch and space systems, GAAP loss-making on the filing; the runway lens; if free cash flow has turned positive on the filing the operating-company class is the right one: a judgment to confirm."
+    },
+    {
+      "ticker": "VG",
+      "entity_class": "Unprofitable",
+      "why": "LNG exporter newly listed as a 10-K filer, its second terminal still commissioning on the filing; declared Unprofitable pending the filing's own figures, Cyclical if producing at scale, ConstructionStage if not: a judgment to confirm."
+    },
+    {
+      "ticker": "JAAA",
+      "entity_class": "Wrapper",
+      "why": "A CLO ETF; a wrapper, refused by design."
+    },
+    {
+      "ticker": "GLDM",
+      "entity_class": "Wrapper",
+      "why": "A gold ETF; a wrapper, refused by design."
+    },
+    {
+      "ticker": "IBDS",
+      "entity_class": "Wrapper",
+      "why": "A term bond ETF; a wrapper, refused by design."
+    },
+    {
+      "ticker": "PFFA",
+      "entity_class": "Wrapper",
+      "why": "A preferred-stock ETF; a wrapper, refused by design."
+    },
+    {
+      "ticker": "BSTZ",
+      "entity_class": "Wrapper",
+      "why": "A closed-end fund; a wrapper, refused by design."
+    },
+    {
+      "ticker": "BST",
+      "entity_class": "Wrapper",
+      "why": "A closed-end fund; a wrapper, refused by design."
+    },
+    {
+      "ticker": "AIO",
+      "entity_class": "Wrapper",
+      "why": "A closed-end fund; a wrapper, refused by design."
+    },
+    {
+      "ticker": "BUI",
+      "entity_class": "Wrapper",
+      "why": "A closed-end fund of utilities and infrastructure, not a REIT; a wrapper, refused by design."
+    },
+    {
+      "ticker": "IDE",
+      "entity_class": "Wrapper",
+      "why": "A closed-end fund; a wrapper, refused by design."
+    },
+    {
+      "ticker": "FDUS",
+      "entity_class": "Wrapper",
+      "why": "A business development company; declared a wrapper for now, refused by design; a BDC lens would be net asset value and net investment income, a later class."
+    },
+    {
+      "ticker": "MAIN",
+      "entity_class": "Wrapper",
+      "why": "A business development company; declared a wrapper for now, refused by design; a BDC lens would be net asset value and net investment income, a later class."
+    },
+    {
+      "ticker": "GBDC",
+      "entity_class": "Wrapper",
+      "why": "A business development company; declared a wrapper for now, refused by design; a BDC lens would be net asset value and net investment income, a later class."
+    },
+    {
+      "ticker": "SPCX",
+      "entity_class": "Wrapper",
+      "why": "A SPAC-strategy ETF; a wrapper, refused by design."
+    },
+    {
+      "ticker": "ROP.SW",
+      "entity_class": "OperatingCompany",
+      "why": "Roche, pharmaceuticals and diagnostics, on the vendor's Swiss listing ROP.SW in francs; an operating company on vendor statements, since Roche files no SEC facts; the non-voting Genussschein RO.SW is the more traded line and a choice for the holder."
     }
   ]
 }
