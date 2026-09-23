@@ -540,7 +540,15 @@ def _is_empty(period: boundary.FiscalPeriod) -> bool:
         "ebit_row", "ebit_recipe", "ebit_composition", "delta_nwc_row", "delta_nwc_composition",
         "cash_row", "cash_composition", "total_debt_composition",
     }
-    return all(getattr(period, f.name) is None for f in fields(period) if f.name not in labels)
+
+    def empty(name: str) -> bool:
+        value = getattr(period, name)
+        # (61) restated_from is provenance the vendor path never fills, and an empty list
+        # of restatements is as empty as a None; every other field is empty only at None,
+        # because a filed zero is a value.
+        return value is None or (name == "restated_from" and not value)
+
+    return all(empty(f.name) for f in fields(period) if f.name not in labels)
 
 
 def vendor_periods(ticker: yf.Ticker, notes: list[str]) -> list[boundary.FiscalPeriod]:
@@ -810,6 +818,11 @@ def main(argv: list[str]) -> int:
     sec = SecContext()
     entries = {e.ticker.upper(): e for e in universe_file.load(universe_path).tickers} if universe_path else {}
 
+    # (61) The filer's own reconciliation of the working-capital components against the
+    # aggregate it also tags, counted over the run and never gating anything: a filer whose
+    # two presentations disagree is a finding to look at, not a record to refuse.
+    reconciled: list[tuple[str, str, bool]] = []
+
     for symbol in tickers:
         entry = entries.get(symbol)
         financials, shadow = fetch(symbol, as_of, sec,
@@ -834,7 +847,17 @@ def main(argv: list[str]) -> int:
             summary += f", cross-check {financials.cross_check.disagreements} of {len(financials.cross_check.fields)} fields disagree"
         if financials.provider != fetch_sec.PROVIDER:
             summary += f" ({financials.provider_reason})"
+        checked = [p for p in financials.periods if p.working_capital_reconciled is not None]
+        reconciled += [(symbol, p.period_end, bool(p.working_capital_reconciled)) for p in checked]
+        if checked:
+            summary += f", working capital reconciles on {sum(1 for p in checked if p.working_capital_reconciled)} of {len(checked)} period(s)"
         print(f"{summary} -> {path}")
+    if reconciled:
+        filers = sorted({t for t, _, _ in reconciled})
+        gapped = sorted({t for t, _, ok in reconciled if not ok})
+        print(f"working-capital reconciliation: {len(reconciled)} period(s) over {len(filers)} filer(s) tag both the components and the aggregate; "
+              f"{sum(1 for _, _, ok in reconciled if ok)} reconcile, {sum(1 for _, _, ok in reconciled if not ok)} do not"
+              + (f" ({', '.join(gapped)})" if gapped else ""))
     return 0
 
 

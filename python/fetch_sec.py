@@ -172,9 +172,88 @@ def latest_annual_submission(index: Mapping[str, object] | None) -> tuple[bounda
 # --- annual facts and per-period tag selection ------------------------------------------
 
 
-def annual_facts(entries: Iterable[object], *, instant: bool, tags: reference.XbrlTags, notes: list[str], tag: str) -> dict[date, Fact]:
-    """The latest-filed annual fact per fiscal year end: annual-form facts marked FY whose
-    duration spans about a year (or, for balances, carry no start)."""
+class Accessions:
+    """(61) Which filing a fiscal period's statement is read from.
+
+    A period's values come from ONE accession, and the choice is the filing whose own
+    fiscal year it is: the latest filing whose newest annual duration fact ends at that
+    period. Comparative columns in a later filing are regrouped to that later year's
+    presentation, and the tag map is per period, so taking the latest fact per tag
+    independently mixes two presentations and double counts a line the newer filing
+    folded into another (Apple FY2021: the FY2023 10-K's combined other-liabilities line
+    taken beside the standalone contract-liability line the FY2022 10-K still carried).
+
+    A period no filing reports as its own year -- a quarter end that leaks in as an
+    instant, or a year whose filing is not in companyfacts -- falls back to the latest
+    filing that carries it at all, which is the behaviour this replaces.
+
+    [primary] is computed from duration facts only: a fact spanning about a year and
+    ending at the period end belongs unambiguously to that year, while an instant may be
+    dated after it (a subsequent event, a cover page).
+    """
+
+    def __init__(self, taxonomy_facts: Mapping[str, object], tags: reference.XbrlTags) -> None:
+        lo, hi = tags.annual_span_days
+        primary: dict[str, date] = {}          # accession -> the newest year it reports
+        carried: dict[date, dict[str, str]] = {}   # period end -> accession -> filing date
+        for node in taxonomy_facts.values():
+            for entries in _as_dict(_as_dict(node).get("units")).values():
+                for raw in cast(list[object], entries):
+                    e = _as_dict(raw)
+                    if str(e.get("form", "")) not in tags.annual_forms or e.get("fp") != "FY":
+                        continue
+                    try:
+                        end = date.fromisoformat(str(e["end"]))
+                        accn, filed = str(e["accn"]), str(e["filed"])
+                    except (KeyError, ValueError):
+                        continue
+                    carried.setdefault(end, {})[accn] = filed
+                    start = e.get("start")
+                    if start is None:
+                        continue
+                    try:
+                        span = (end - date.fromisoformat(str(start))).days
+                    except ValueError:
+                        continue
+                    if lo <= span <= hi and (accn not in primary or end > primary[accn]):
+                        primary[accn] = end
+        self._primary = primary
+        self._carried = carried
+        self._chosen: dict[date, str] = {}
+        self._fallback: set[date] = set()
+        for end, accns in carried.items():
+            own = [a for a in accns if primary.get(a) == end]
+            if own:
+                self._chosen[end] = max(own, key=lambda a: accns[a])
+            else:
+                self._chosen[end] = max(accns, key=lambda a: accns[a])
+                self._fallback.add(end)
+
+    def chosen(self, end: date) -> str | None:
+        return self._chosen.get(end)
+
+    def is_fallback(self, end: date) -> bool:
+        """True when no filing reports the period as its own year, so the latest that
+        carries it was taken instead."""
+        return end in self._fallback
+
+    def later_than(self, end: date) -> list[tuple[str, str]]:
+        """Every accession filed after the chosen one that also carries the period, oldest
+        first, as (accession, filing date)."""
+        chosen = self._chosen.get(end)
+        if chosen is None:
+            return []
+        at = self._carried[end]
+        return sorted(((a, f) for a, f in at.items() if f > at[chosen]), key=lambda x: x[1])
+
+
+def annual_facts(entries: Iterable[object], *, instant: bool, tags: reference.XbrlTags, notes: list[str], tag: str,
+                 accessions: "Accessions | None" = None) -> dict[date, Fact]:
+    """The annual fact per fiscal year end: annual-form facts marked FY whose duration spans
+    about a year (or, for balances, carry no start). (61) With [accessions], the fact from
+    that period's chosen filing and no other, so one period's values never mix two
+    presentations; without it, the latest filed wins per end, which is what point-in-time
+    passes when it has already narrowed the facts to a date."""
     lo, hi = tags.annual_span_days
     out: dict[date, Fact] = {}
     rejected = 0
@@ -191,6 +270,8 @@ def annual_facts(entries: Iterable[object], *, instant: bool, tags: reference.Xb
                 continue
         elif fact.start is None or not (lo <= (fact.end - fact.start).days <= hi):
             continue
+        if accessions is not None and accessions.chosen(fact.end) != fact.accn:
+            continue
         if fact.end not in out or fact.filed > out[fact.end].filed:
             out[fact.end] = fact
     if rejected:
@@ -202,7 +283,7 @@ def taxonomy_fields(tags: reference.XbrlTags, taxonomy: str) -> list[tuple[str, 
     return tags.ifrs_full_fields if taxonomy == "ifrs-full" else tags.fields
 
 
-def select(gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD") -> dict[str, dict[date, tuple[Fact, str]]]:
+def select(gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD", accessions: "Accessions | None" = None) -> dict[str, dict[date, tuple[Fact, str]]]:
     """Per canonical field, per fiscal year end: the first candidate tag with an annual fact
     in the filer's unit."""
     out: dict[str, dict[date, tuple[Fact, str]]] = {}
@@ -212,7 +293,7 @@ def select(gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str
             entries = _entries(gaap.get(tag), unit)
             if not entries:
                 continue
-            for end, fact in annual_facts(entries, instant=spec.kind == "instant", tags=tags, notes=notes, tag=tag).items():
+            for end, fact in annual_facts(entries, instant=spec.kind == "instant", tags=tags, notes=notes, tag=tag, accessions=accessions).items():
                 per_end.setdefault(end, (fact, tag))
         out[field] = per_end
     return out
@@ -331,11 +412,13 @@ class Facts:
     """A filer's us-gaap facts with annual selection per tag, memoised, for the fields
     reference/field_definitions.json assembles from more than one tag."""
 
-    def __init__(self, gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str], *, unit: str = "USD") -> None:
+    def __init__(self, gaap: Mapping[str, object], tags: reference.XbrlTags, notes: list[str], *, unit: str = "USD",
+                 accessions: "Accessions | None" = None) -> None:
         self._gaap = gaap
         self._tags = tags
         self._notes = notes
         self._unit = unit
+        self._accessions = accessions   # (61) one filing per period, or None to take the latest filed
         self._memo: dict[tuple[str, bool, str], dict[date, Fact]] = {}
 
     def annual(self, tag: str, *, instant: bool, unit: str | None = None) -> dict[date, Fact]:
@@ -343,7 +426,8 @@ class Facts:
         key = (tag, instant, unit or self._unit)
         if key not in self._memo:
             entries = _entries(self._gaap.get(tag), unit or self._unit)
-            self._memo[key] = annual_facts(entries, instant=instant, tags=self._tags, notes=self._notes, tag=tag)
+            self._memo[key] = annual_facts(entries, instant=instant, tags=self._tags, notes=self._notes, tag=tag,
+                                           accessions=self._accessions)
         return self._memo[key]
 
     def at(self, tag: str, end: date, *, instant: bool, unit: str | None = None) -> float | None:
@@ -707,11 +791,111 @@ def weighted_shares(facts: Facts, defs: reference.FieldDefinitions, end: date, *
     return facts.first(tags, end, instant=False, unit="shares")
 
 
-def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD", depth: int = PERIODS_DEFAULT) -> list[boundary.FiscalPeriod]:
+_read_tags: frozenset[str] | None = None
+
+
+def read_tag_names() -> frozenset[str]:
+    """(61) Every XBRL element the two tracked reference files name, harvested once. A
+    restatement is worth recording only for a tag the record actually reads, and the two
+    files are where every such tag is declared, so harvesting them keeps the set correct
+    as the tables grow rather than needing a third list to maintain."""
+    global _read_tags
+    if _read_tags is None:
+        found: set[str] = set()
+
+        def walk(node: object) -> None:
+            if isinstance(node, dict):
+                for v in cast(dict[str, object], node).values():
+                    walk(v)
+            elif isinstance(node, list):
+                for v in cast(list[object], node):
+                    walk(v)
+            elif isinstance(node, str) and node[:1].isupper() and node.isalnum() and len(node) > 6:
+                found.add(node)
+
+        for path in (TAGS_PATH, DEFINITIONS_PATH):
+            walk(cast(object, json.loads(path.read_text())))
+        _read_tags = frozenset(found)
+    return _read_tags
+
+
+def restatements(taxonomy_facts: Mapping[str, object], accessions: Accessions, end: date, unit: str) -> list[boundary.Restatement]:
+    """(61) Every tag the record reads where a filing later than the chosen one carries this
+    period with a different value. Recorded, never taken."""
+    later = accessions.later_than(end)
+    if not later:
+        return []
+    filed_of = dict(later)
+    chosen = accessions.chosen(end)
+    out: list[boundary.Restatement] = []
+    for tag in sorted(read_tag_names()):
+        node = taxonomy_facts.get(tag)
+        if node is None:
+            continue
+        taken: float | None = None
+        others: dict[str, float] = {}
+        for entries in _as_dict(_as_dict(node).get("units")).values():
+            for raw in cast(list[object], entries):
+                e = _as_dict(raw)
+                if str(e.get("end", "")) != end.isoformat() or e.get("fp") != "FY":
+                    continue
+                try:
+                    value, accn = float(cast(float, e["val"])), str(e["accn"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if accn == chosen:
+                    taken = value
+                elif accn in filed_of:
+                    others[accn] = value
+        if taken is None:
+            continue
+        for accn, value in sorted(others.items(), key=lambda kv: filed_of[kv[0]]):
+            if value != taken:
+                out.append(boundary.Restatement(tag=tag, taken=taken, later=value, accession=accn, filed=filed_of[accn]))
+    return out
+
+
+RECONCILES_EXACTLY = 0.005   # the components and the filer's own aggregate agree to within half a per cent
+
+
+def reconciled_to_aggregate(facts: Facts, defs: reference.FieldDefinitions, end: date) -> tuple[bool | None, float | None]:
+    """(61) Where a filer tags BOTH its own working-capital aggregate and the components
+    that make it up, the two must agree. Both numbers are the filer's own, for the same
+    period, out of the same filing, so the check needs no knowledge of the statement's
+    structure — and it is exactly the identity a period assembled from two filings breaks,
+    which is the class of defect this brief fixed.
+
+    The record takes the aggregate where there is one, so the component sum is computed
+    here only to check it and is never used as a value. Absent where the filer tags no
+    aggregate, or tags no components beside it, or carries a working-capital tag the table
+    does not classify. Never a gate."""
+    d = defs.delta_nwc.xbrl
+    aggregate = facts.first(d.aggregate, end, instant=False)
+    if aggregate is None:
+        return (None, None)
+    present = facts.duration_tags_with_prefix("IncreaseDecreaseIn", end)
+    classified = set(d.aggregate) | set(d.asset_components) | set(d.liability_components) | set(d.net_components) | set(d.excluded)
+    components = [t for t in present if t not in d.aggregate and t not in d.excluded]
+    if not components or any(t not in classified for t in present):
+        return (None, None)
+    total = 0.0
+    for tag in components:
+        value = facts.at(tag, end, instant=False)
+        if value is None:
+            continue
+        total += -value if tag in d.liability_components else value
+    gap = total - aggregate[0]
+    return (abs(gap) <= RECONCILES_EXACTLY * max(abs(aggregate[0]), 1.0), gap)
+
+
+def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD", depth: int = PERIODS_DEFAULT, one_accession: bool = True) -> list[boundary.FiscalPeriod]:
     """[depth] is the number of annual periods kept, newest first: the model's need (periods_needed), never a constant."""
     ifrs = taxonomy == "ifrs-full"
-    selected = select(gaap, tags, notes, taxonomy=taxonomy, unit=unit)
-    facts = Facts(gaap, tags, notes, unit=unit)
+    # (61) one filing per fiscal period, chosen before any tag is read. [one_accession] is
+    # False only to reproduce the superseded latest-filed-per-tag rule for a diff.
+    accessions = Accessions(gaap, tags) if one_accession else None
+    selected = select(gaap, tags, notes, taxonomy=taxonomy, unit=unit, accessions=accessions)
+    facts = Facts(gaap, tags, notes, unit=unit, accessions=accessions)
     # The fiscal year ends the filer anchors. Net income with book equity for every filer
     # that reports one; (59) a business development company's net asset value per share
     # stands in beside it, because two of the three verified stop tagging net income (and
@@ -755,6 +939,10 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
         ffo_value, _, ffo_composition, ffo_unavailable = ffo(facts, defs, end, taxonomy=taxonomy)
         nav_line, nii_line, dps_line = bdc_lines(facts, defs, end) if not ifrs else (None, None, None)
+        # (61) what a later filing says about this period, recorded and not taken; and
+        # whether the filed operating section adds up as this tool reads it
+        restated = restatements(gaap, accessions, end, unit) if (not ifrs and accessions is not None) else []
+        reconciled, wc_gap = reconciled_to_aggregate(facts, defs, end) if not ifrs else (None, None)
         shares = weighted_shares(facts, defs, end, taxonomy=taxonomy)
         interest_value, interest_row, interest_recipe = interest_expense(facts, defs, end, taxonomy=taxonomy)
         aoci_value, aoci_row, aoci_recipe, aoci_composition = aoci(facts, defs, end, (v["aoci"], r["aoci"]))
@@ -773,6 +961,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 provision_for_credit_losses=None, provision_for_credit_losses_row=None,
                 net_loans=None, net_loans_row=None,
                 filed=anchor.filed.isoformat(), accession=anchor.accn,
+                restated_from=restated, working_capital_reconciled=reconciled, working_capital_gap=wc_gap,
                 aoci=aoci_value, aoci_row=aoci_row, aoci_recipe=aoci_recipe, aoci_composition=aoci_composition,
                 claims_incurred=v["claims_incurred"], claims_incurred_row=r["claims_incurred"],
                 benefits_losses_and_expenses=v["benefits_losses_and_expenses"], benefits_losses_and_expenses_row=r["benefits_losses_and_expenses"],

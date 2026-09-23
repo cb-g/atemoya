@@ -43,6 +43,22 @@ type composition = {
   components : component list;
 }
 
+(* (61) A later filing carries this fiscal period with a different value for a tag the
+   record reads. The value taken is always the one from the filing whose own fiscal year
+   the period is, because that filing presents the year under the tags the filer used
+   then and its component set is internally consistent; a later filing's comparative
+   column is regrouped to the later year's presentation, and mixing the two is the double
+   count this rule exists to stop. The later value is recorded and never used: a
+   restatement is a finding, and which of the two a reader should believe is a judgement
+   this tool does not make for them. *)
+type restatement = {
+  tag : string;
+  taken : float;                 (* the own-year filing's value, which the record uses *)
+  later : float;                 (* the later filing's value for the same period *)
+  accession : string;            (* the later filing *)
+  filed : string;                (* its filing date *)
+}
+
 type fiscal_period = {
   period_end : string;                        (* ISO 8601 date, fiscal year end *)
   ebit : float nullable;                      (* operating income, else pretax income + interest expense (ebit_recipe says which); any sign *)
@@ -69,6 +85,9 @@ type fiscal_period = {
   net_loans_row : string nullable;
   (* Present only when the provider is filed statements (optional fields: omitted otherwise). *)
   ?filed : string option;                     (* filing date of the statement this period came from *)
+  ~restated_from : restatement list;          (* (61) empty unless a later filing disagrees on a tag the record reads *)
+  ?working_capital_reconciled : bool option;  (* (61) whether the filed operating section adds up as this tool reads it: net income, the adjustments the table names, and this period's working-capital change against the filed operating cash flow. A pointer for a reader and never a gate: false can mean an adjustment tag the table does not name rather than a wrong working-capital number *)
+  ?working_capital_gap : float option;        (* (61) the residual when it does not close, in the statement's currency *)
   ?accession : string option;
   ?aoci : float option;                       (* accumulated other comprehensive income, net of tax; any sign *)
   ?aoci_row : string option;

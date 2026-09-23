@@ -122,8 +122,13 @@ def balance_sheet_shares(facts: Mapping[str, object], d: date, tags: list[str], 
     all_facts = fetch_sec._as_dict(facts.get("facts"))  # pyright: ignore[reportPrivateUsage]
     for taxonomy in ("us-gaap", "ifrs-full"):
         gaap = fetch_sec._as_dict(all_facts.get(taxonomy))  # pyright: ignore[reportPrivateUsage]
+        # (61) one filing per period here too: the count comes from the filing whose own
+        # fiscal year the period is, out of the filings on or before the date. Main Street's
+        # FY2023 10-K swapped the two columns of its share count, so the latest-filed rule
+        # read its 2022 column off the wrong filing.
+        accessions = fetch_sec.Accessions(gaap, xbrl_tags)
         for tag in tags:
-            annual = fetch_sec.annual_facts(fetch_sec._entries(gaap.get(tag), "shares"), instant=True, tags=xbrl_tags, notes=[], tag=tag)  # pyright: ignore[reportPrivateUsage]
+            annual = fetch_sec.annual_facts(fetch_sec._entries(gaap.get(tag), "shares"), instant=True, tags=xbrl_tags, notes=[], tag=tag, accessions=accessions)  # pyright: ignore[reportPrivateUsage]
             if not annual:
                 continue
             end = at if at is not None else max(annual)

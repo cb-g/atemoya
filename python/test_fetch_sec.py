@@ -8,6 +8,7 @@ import dataclasses
 import math
 from collections.abc import Mapping
 from datetime import date
+from typing import cast
 
 import fetch
 import fetch_sec
@@ -879,3 +880,111 @@ def test_a_derivative_position_is_not_working_capital() -> None:
     assert notes == []  # it no longer leaves the field null naming itself
     rows = [c.row for c in (p.delta_nwc_composition.components if p.delta_nwc_composition else [])]
     assert "IncreaseDecreaseInDerivativeAssetsAndLiabilities" not in rows  # excluded, never summed
+
+
+# --- one accession per period (61) ---
+
+def two_filings() -> dict[str, object]:
+    """The Apple shape: an own-year filing that tags a line standalone, and a later filing
+    whose comparative column folds it into another line. Anchors in both so both accessions
+    report their own year."""
+    own, later = "2022-10-28", "2023-11-03"
+    def anchors(end: str, start: str, filed: str) -> dict[str, dict[str, object]]:
+        return {"NetIncomeLoss": usd(fact(end, 100e9, start=start, filed=filed)),
+                "StockholdersEquity": usd(fact(end, 50e9, filed=filed))}
+    a21 = anchors("2021-09-25", "2020-09-27", own)
+    a22 = anchors("2022-09-24", "2021-09-26", later)
+    def rows(node: dict[str, object]) -> list[dict[str, object]]:
+        return cast(list[dict[str, object]], cast(dict[str, object], node["units"])["USD"])
+
+    return {
+        "NetIncomeLoss": usd(*rows(a21["NetIncomeLoss"]), *rows(a22["NetIncomeLoss"])),
+        "StockholdersEquity": usd(*rows(a21["StockholdersEquity"]), *rows(a22["StockholdersEquity"])),
+        # FY2021, as its own filing tags it: the two lines stand apart
+        "IncreaseDecreaseInOtherOperatingLiabilities": usd(
+            fact("2021-09-25", 5799e6, start="2020-09-27", filed=own),
+            fact("2021-09-25", 7475e6, start="2020-09-27", filed=later),   # the later filing folded the next line in
+            fact("2022-09-24", 6110e6, start="2021-09-26", filed=later)),
+        "IncreaseDecreaseInContractWithCustomerLiability": usd(
+            fact("2021-09-25", 1676e6, start="2020-09-27", filed=own)),     # dropped by the later filing
+        "IncreaseDecreaseInAccountsReceivable": usd(
+            fact("2021-09-25", 10125e6, start="2020-09-27", filed=own),
+            fact("2021-09-25", 10125e6, start="2020-09-27", filed=later),
+            fact("2022-09-24", 1000e6, start="2021-09-26", filed=later)),
+    }
+
+
+def periods_of(gaap: Mapping[str, object], notes: list[str] | None = None) -> list[fetch.boundary.FiscalPeriod]:
+    return fetch_sec.periods_from_facts(dict(gaap), TAGS, DEFS, notes if notes is not None else [])
+
+
+def test_a_period_is_read_from_one_filing() -> None:
+    """(61) The regrouped-line shape. The own-year filing's values are taken and the later
+    filing's are not, so the line it folded in is counted once, not twice."""
+    ps = {p.period_end: p for p in periods_of(two_filings())}
+    fy21 = ps["2021-09-25"]
+    assert fy21.accession == "acc-2022-10-28" and fy21.filed == "2022-10-28"
+    # 10,125 added, 5,799 and 1,676 subtracted: the own-year presentation
+    assert fy21.delta_nwc is not None and math.isclose(fy21.delta_nwc, (10125 - 5799 - 1676) * 1e6)
+    # the latest-filed-per-tag rule would have taken 7,475 beside the 1,676 and been 1,676 low
+    assert not math.isclose(fy21.delta_nwc, (10125 - 7475 - 1676) * 1e6)
+    # and the later filing's disagreement is recorded, never taken
+    restated = {r.tag: r for r in fy21.restated_from}
+    assert "IncreaseDecreaseInOtherOperatingLiabilities" in restated
+    r = restated["IncreaseDecreaseInOtherOperatingLiabilities"]
+    assert r.taken == 5799e6 and r.later == 7475e6 and r.filed == "2023-11-03"
+    # a tag both filings agree on is not a restatement
+    assert "IncreaseDecreaseInAccountsReceivable" not in restated
+    # the later filing's own year reads from itself
+    assert ps["2022-09-24"].accession == "acc-2023-11-03"
+
+
+def test_a_restatement_is_recorded_not_taken() -> None:
+    """(61) A genuine restatement — the same tag, a different number in a later filing — is
+    a finding on the record and never the value."""
+    gaap = {
+        "NetIncomeLoss": usd(fact("2024-12-31", 10e9, start="2024-01-01", filed="2025-02-20"),
+                             fact("2025-12-31", 11e9, start="2025-01-01", filed="2026-02-20")),
+        "StockholdersEquity": usd(fact("2024-12-31", 50e9, filed="2025-02-20"), fact("2025-12-31", 55e9, filed="2026-02-20")),
+        "IncreaseDecreaseInAccountsReceivable": usd(
+            fact("2024-12-31", 500e6, start="2024-01-01", filed="2025-02-20"),
+            fact("2024-12-31", 620e6, start="2024-01-01", filed="2026-02-20")),
+    }
+    fy24 = {p.period_end: p for p in periods_of(gaap)}["2024-12-31"]
+    assert fy24.delta_nwc == 500e6, "the own-year value, not the restated one"
+    assert [(r.tag, r.taken, r.later) for r in fy24.restated_from] == [
+        ("IncreaseDecreaseInAccountsReceivable", 500e6, 620e6)]
+
+
+def test_the_working_capital_flag_where_the_filer_tags_both() -> None:
+    """(61) Where a filer tags its own aggregate AND the components, the two must agree; the
+    flag is absent where it tags only one of them, because there is nothing to compare."""
+    def build(components_sum_to: float) -> dict[str, object]:
+        return {
+            "NetIncomeLoss": usd(fact("2025-12-31", 10e9, start="2025-01-01")),
+            "StockholdersEquity": usd(fact("2025-12-31", 50e9)),
+            "IncreaseDecreaseInOperatingCapital": usd(fact("2025-12-31", 1000e6, start="2025-01-01")),
+            "IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", components_sum_to, start="2025-01-01")),
+        }
+    closes = periods_of(build(1000e6))[0]
+    assert closes.working_capital_reconciled is True and closes.working_capital_gap == 0.0
+    assert closes.delta_nwc == 1000e6, "the aggregate is still the value; the components only check it"
+    gaps = periods_of(build(1400e6))[0]
+    assert gaps.working_capital_reconciled is False and gaps.working_capital_gap == 400e6
+    # no aggregate: nothing to reconcile against
+    alone = periods_of({k: v for k, v in build(1000e6).items() if k != "IncreaseDecreaseInOperatingCapital"})[0]
+    assert alone.working_capital_reconciled is None and alone.working_capital_gap is None
+
+
+def test_point_in_time_takes_the_filing_on_or_before_the_date() -> None:
+    """(61) The same rule under a point-in-time date: the chosen filing is the own-year one
+    among the filings on or before it, so a later restatement is invisible, as it was."""
+    import pit
+    gaap = two_filings()
+    facts = {"facts": {"us-gaap": gaap}}
+    filtered = pit.filed_on_or_before(facts, date(2023, 1, 1))
+    before = cast(Mapping[str, object], cast(dict[str, object], filtered["facts"])["us-gaap"])
+    fy21 = {p.period_end: p for p in periods_of(before)}["2021-09-25"]
+    assert fy21.accession == "acc-2022-10-28"
+    assert fy21.delta_nwc is not None and math.isclose(fy21.delta_nwc, (10125 - 5799 - 1676) * 1e6)
+    assert fy21.restated_from == [], "the later filing does not exist on that date"

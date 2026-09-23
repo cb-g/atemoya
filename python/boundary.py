@@ -3931,6 +3931,47 @@ class Valuation:
 
 
 @dataclass
+class Restatement:
+    """Original type: restatement = { ... }
+    """
+
+    tag: str
+    taken: float
+    later: float
+    accession: str
+    filed: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Restatement':
+        if isinstance(x, dict):
+            return cls(
+                tag=_atd_read_string(x['tag']) if 'tag' in x else _atd_missing_json_field('Restatement', 'tag'),
+                taken=_atd_read_float(x['taken']) if 'taken' in x else _atd_missing_json_field('Restatement', 'taken'),
+                later=_atd_read_float(x['later']) if 'later' in x else _atd_missing_json_field('Restatement', 'later'),
+                accession=_atd_read_string(x['accession']) if 'accession' in x else _atd_missing_json_field('Restatement', 'accession'),
+                filed=_atd_read_string(x['filed']) if 'filed' in x else _atd_missing_json_field('Restatement', 'filed'),
+            )
+        else:
+            _atd_bad_json('Restatement', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['tag'] = _atd_write_string(self.tag)
+        res['taken'] = _atd_write_float(self.taken)
+        res['later'] = _atd_write_float(self.later)
+        res['accession'] = _atd_write_string(self.accession)
+        res['filed'] = _atd_write_string(self.filed)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Restatement':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class OptionQuote:
     """Original type: option_quote = { ... }
     """
@@ -4068,6 +4109,9 @@ class FiscalPeriod:
     net_loans: Optional[float]
     net_loans_row: Optional[str]
     filed: Optional[str] = None
+    restated_from: List[Restatement] = field(default_factory=lambda: [])
+    working_capital_reconciled: Optional[bool] = None
+    working_capital_gap: Optional[float] = None
     accession: Optional[str] = None
     aoci: Optional[float] = None
     aoci_row: Optional[str] = None
@@ -4148,6 +4192,9 @@ class FiscalPeriod:
                 net_loans=_atd_read_nullable(_atd_read_float)(x['net_loans']) if 'net_loans' in x else _atd_missing_json_field('FiscalPeriod', 'net_loans'),
                 net_loans_row=_atd_read_nullable(_atd_read_string)(x['net_loans_row']) if 'net_loans_row' in x else _atd_missing_json_field('FiscalPeriod', 'net_loans_row'),
                 filed=_atd_read_string(x['filed']) if 'filed' in x else None,
+                restated_from=_atd_read_list(Restatement.from_json)(x['restated_from']) if 'restated_from' in x else [],
+                working_capital_reconciled=_atd_read_bool(x['working_capital_reconciled']) if 'working_capital_reconciled' in x else None,
+                working_capital_gap=_atd_read_float(x['working_capital_gap']) if 'working_capital_gap' in x else None,
                 accession=_atd_read_string(x['accession']) if 'accession' in x else None,
                 aoci=_atd_read_float(x['aoci']) if 'aoci' in x else None,
                 aoci_row=_atd_read_string(x['aoci_row']) if 'aoci_row' in x else None,
@@ -4230,6 +4277,11 @@ class FiscalPeriod:
         res['net_loans_row'] = _atd_write_nullable(_atd_write_string)(self.net_loans_row)
         if self.filed is not None:
             res['filed'] = _atd_write_string(self.filed)
+        res['restated_from'] = _atd_write_list((lambda x: x.to_json()))(self.restated_from)
+        if self.working_capital_reconciled is not None:
+            res['working_capital_reconciled'] = _atd_write_bool(self.working_capital_reconciled)
+        if self.working_capital_gap is not None:
+            res['working_capital_gap'] = _atd_write_float(self.working_capital_gap)
         if self.accession is not None:
             res['accession'] = _atd_write_string(self.accession)
         if self.aoci is not None:

@@ -9,7 +9,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?depreciation_amortization ?depreciation_amortization_row ?capex ?delta_nwc
     ?cash ?total_debt ?total_debt_source ?book_equity ?net_income ?dividends_paid
     ?dividends_paid_row ?provision_for_credit_losses ?provision_for_credit_losses_row
-    ?net_loans ?net_loans_row ?filed ?accession ?aoci ?aoci_row ?claims_incurred
+    ?net_loans ?net_loans_row ?filed ?accession ?(restated_from = []) ?working_capital_reconciled ?working_capital_gap ?aoci ?aoci_row ?claims_incurred
     ?claims_incurred_row ?benefits_losses_and_expenses ?benefits_losses_and_expenses_row
     ?policy_acquisition_expense ?policy_acquisition_expense_row ?operating_expense
     ?operating_expense_row ?future_policy_benefits ?future_policy_benefits_row
@@ -45,6 +45,9 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     net_loans_row;
     filed;
     accession;
+    restated_from;
+    working_capital_reconciled;
+    working_capital_gap;
     aoci;
     aoci_row;
     claims_incurred;

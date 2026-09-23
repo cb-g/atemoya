@@ -300,6 +300,33 @@ at all:
    in, recorded as `net_nonoperating_interest` or `interest_paid_stands_in` on the period
    and on every observation; the DCF path's EBIT policy never reads a stand-in.
 
+### A period's statement comes from one filing
+
+A filer's companyfacts carry every filing that ever reported a fiscal year, and the same
+period appears in the year's own 10-K and again as a comparative column in the next two or
+three. Those columns are **regrouped to the later year's presentation**: a line the filer
+once tagged on its own may be folded into another. Taking the newest fact per tag, tag by
+tag, therefore mixes two presentations inside one period and counts a folded line twice —
+Apple's FY2021 other-liabilities line reads 5,799m in its own 10-K and 7,475m in the FY2023
+one, the difference being exactly the contract-liability line the FY2023 filing absorbed and
+the FY2022 filing still tagged separately.
+
+So **a period's values all come from one accession**: the filing whose own fiscal year the
+period is, identified as the filing whose newest annual duration fact ends at that period.
+A period no filing reports as its own year falls back to the latest filing that carries it.
+
+A later filing that disagrees about a tag the record reads is recorded on the period as
+`restated_from` — the tag, the value taken, the value not taken, and which filing it came
+from — and **never used**. A restatement is a finding; which of two numbers to believe is a
+judgement this tool leaves to its reader.
+
+Where a filer tags both its own working-capital aggregate and the components that make it
+up, the two must agree, and the period carries `working_capital_reconciled` with the gap.
+Both numbers are the filer's own, out of the same filing, so the check needs nothing about
+the statement's structure — and it is exactly the identity a period assembled from two
+filings breaks. The fetch run tallies how many of those periods reconcile and names the
+filers that do not. It gates nothing.
+
 ### A lens that discounts nothing
 
 Most classes here end in a model that projects something and discounts it. The BDC lens
@@ -489,6 +516,15 @@ in this order:
   distributions shift up with their anchor** — by design, and no belief was adjusted to
   offset it. Residual-income records are untouched: that path has carried no terminal
   growth since the terminal spread was removed. No new `Failed` string.
+- a period's statement comes from one filing (61): the fetcher chose the newest fact per
+  tag independently, so a period assembled its components from several filings whose
+  presentations differ and double counted a line a later filing had folded into another;
+  confirmed on Apple FY2021 and FY2022 and on Oracle. Now every tag for a period comes from
+  the filing whose own fiscal year it is, a later filing's different value is recorded as
+  `restated_from` and never taken, and point-in-time inherits the rule from the filings on
+  or before the date, which also fixes the share count a filer's own column swap corrupted.
+  Where a filer tags both the working-capital aggregate and its components the two are
+  checked against each other and the gap recorded, gating nothing. No new `Failed` string.
 - a BDC lens, and Valero's old years refused (59): a `Bdc` class and a `bdc_nav` model
   whose fair value is the net asset value per share the filing states, with the premium to
   it, the yield on it, the distribution yield and the coverage of the distribution beside
