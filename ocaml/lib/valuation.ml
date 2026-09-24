@@ -294,6 +294,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       receipt_check = receipt;
       stretch = original.stretch;
       stretch_reason = original.stretch_reason;
+      insiders = original.insiders;
+      insiders_reason = original.insiders_reason;
       build_out;
       build_out_reason;
     }

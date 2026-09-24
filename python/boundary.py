@@ -2776,6 +2776,206 @@ class MarketImplied:
 
 
 @dataclass
+class InsiderTransaction:
+    """Original type: insider_transaction = { ... }
+    """
+
+    owner: str
+    relationship: str
+    transaction_date: str
+    code: str
+    shares: float
+    price_per_share: float
+    dollars: float
+    accession: str
+    filed: str
+    shares_owned_after: Optional[float] = None
+    plan_10b5_1: bool = field(default_factory=lambda: False)
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'InsiderTransaction':
+        if isinstance(x, dict):
+            return cls(
+                owner=_atd_read_string(x['owner']) if 'owner' in x else _atd_missing_json_field('InsiderTransaction', 'owner'),
+                relationship=_atd_read_string(x['relationship']) if 'relationship' in x else _atd_missing_json_field('InsiderTransaction', 'relationship'),
+                transaction_date=_atd_read_string(x['transaction_date']) if 'transaction_date' in x else _atd_missing_json_field('InsiderTransaction', 'transaction_date'),
+                code=_atd_read_string(x['code']) if 'code' in x else _atd_missing_json_field('InsiderTransaction', 'code'),
+                shares=_atd_read_float(x['shares']) if 'shares' in x else _atd_missing_json_field('InsiderTransaction', 'shares'),
+                price_per_share=_atd_read_float(x['price_per_share']) if 'price_per_share' in x else _atd_missing_json_field('InsiderTransaction', 'price_per_share'),
+                dollars=_atd_read_float(x['dollars']) if 'dollars' in x else _atd_missing_json_field('InsiderTransaction', 'dollars'),
+                accession=_atd_read_string(x['accession']) if 'accession' in x else _atd_missing_json_field('InsiderTransaction', 'accession'),
+                filed=_atd_read_string(x['filed']) if 'filed' in x else _atd_missing_json_field('InsiderTransaction', 'filed'),
+                shares_owned_after=_atd_read_float(x['shares_owned_after']) if 'shares_owned_after' in x else None,
+                plan_10b5_1=_atd_read_bool(x['plan_10b5_1']) if 'plan_10b5_1' in x else False,
+            )
+        else:
+            _atd_bad_json('InsiderTransaction', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['owner'] = _atd_write_string(self.owner)
+        res['relationship'] = _atd_write_string(self.relationship)
+        res['transaction_date'] = _atd_write_string(self.transaction_date)
+        res['code'] = _atd_write_string(self.code)
+        res['shares'] = _atd_write_float(self.shares)
+        res['price_per_share'] = _atd_write_float(self.price_per_share)
+        res['dollars'] = _atd_write_float(self.dollars)
+        res['accession'] = _atd_write_string(self.accession)
+        res['filed'] = _atd_write_string(self.filed)
+        if self.shares_owned_after is not None:
+            res['shares_owned_after'] = _atd_write_float(self.shares_owned_after)
+        res['plan_10b5_1'] = _atd_write_bool(self.plan_10b5_1)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'InsiderTransaction':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class InsiderWindow:
+    """Original type: insider_window = { ... }
+    """
+
+    days: int
+    buyers: int
+    sellers: int
+    dollars_bought: float
+    dollars_sold: float
+    net_dollars: float
+    ceo_or_cfo_bought: bool
+    largest_purchase: Optional[InsiderTransaction] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'InsiderWindow':
+        if isinstance(x, dict):
+            return cls(
+                days=_atd_read_int(x['days']) if 'days' in x else _atd_missing_json_field('InsiderWindow', 'days'),
+                buyers=_atd_read_int(x['buyers']) if 'buyers' in x else _atd_missing_json_field('InsiderWindow', 'buyers'),
+                sellers=_atd_read_int(x['sellers']) if 'sellers' in x else _atd_missing_json_field('InsiderWindow', 'sellers'),
+                dollars_bought=_atd_read_float(x['dollars_bought']) if 'dollars_bought' in x else _atd_missing_json_field('InsiderWindow', 'dollars_bought'),
+                dollars_sold=_atd_read_float(x['dollars_sold']) if 'dollars_sold' in x else _atd_missing_json_field('InsiderWindow', 'dollars_sold'),
+                net_dollars=_atd_read_float(x['net_dollars']) if 'net_dollars' in x else _atd_missing_json_field('InsiderWindow', 'net_dollars'),
+                ceo_or_cfo_bought=_atd_read_bool(x['ceo_or_cfo_bought']) if 'ceo_or_cfo_bought' in x else _atd_missing_json_field('InsiderWindow', 'ceo_or_cfo_bought'),
+                largest_purchase=InsiderTransaction.from_json(x['largest_purchase']) if 'largest_purchase' in x else None,
+            )
+        else:
+            _atd_bad_json('InsiderWindow', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['days'] = _atd_write_int(self.days)
+        res['buyers'] = _atd_write_int(self.buyers)
+        res['sellers'] = _atd_write_int(self.sellers)
+        res['dollars_bought'] = _atd_write_float(self.dollars_bought)
+        res['dollars_sold'] = _atd_write_float(self.dollars_sold)
+        res['net_dollars'] = _atd_write_float(self.net_dollars)
+        res['ceo_or_cfo_bought'] = _atd_write_bool(self.ceo_or_cfo_bought)
+        if self.largest_purchase is not None:
+            res['largest_purchase'] = (lambda x: x.to_json())(self.largest_purchase)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'InsiderWindow':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class InsiderCluster:
+    """Original type: insider_cluster = { ... }
+    """
+
+    window_start: str
+    window_end: str
+    buyers: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'InsiderCluster':
+        if isinstance(x, dict):
+            return cls(
+                window_start=_atd_read_string(x['window_start']) if 'window_start' in x else _atd_missing_json_field('InsiderCluster', 'window_start'),
+                window_end=_atd_read_string(x['window_end']) if 'window_end' in x else _atd_missing_json_field('InsiderCluster', 'window_end'),
+                buyers=_atd_read_list(_atd_read_string)(x['buyers']) if 'buyers' in x else _atd_missing_json_field('InsiderCluster', 'buyers'),
+            )
+        else:
+            _atd_bad_json('InsiderCluster', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['window_start'] = _atd_write_string(self.window_start)
+        res['window_end'] = _atd_write_string(self.window_end)
+        res['buyers'] = _atd_write_list(_atd_write_string)(self.buyers)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'InsiderCluster':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Insiders:
+    """Original type: insiders = { ... }
+    """
+
+    as_of: str
+    cik: str
+    window_90: InsiderWindow
+    window_365: InsiderWindow
+    filings_read: int
+    cluster_buy: bool = field(default_factory=lambda: False)
+    cluster: Optional[InsiderCluster] = None
+    excluded_by_code: List[Tuple[str, int]] = field(default_factory=lambda: [])
+    scope_limits: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Insiders':
+        if isinstance(x, dict):
+            return cls(
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('Insiders', 'as_of'),
+                cik=_atd_read_string(x['cik']) if 'cik' in x else _atd_missing_json_field('Insiders', 'cik'),
+                window_90=InsiderWindow.from_json(x['window_90']) if 'window_90' in x else _atd_missing_json_field('Insiders', 'window_90'),
+                window_365=InsiderWindow.from_json(x['window_365']) if 'window_365' in x else _atd_missing_json_field('Insiders', 'window_365'),
+                filings_read=_atd_read_int(x['filings_read']) if 'filings_read' in x else _atd_missing_json_field('Insiders', 'filings_read'),
+                cluster_buy=_atd_read_bool(x['cluster_buy']) if 'cluster_buy' in x else False,
+                cluster=InsiderCluster.from_json(x['cluster']) if 'cluster' in x else None,
+                excluded_by_code=_atd_read_assoc_object_into_list(_atd_read_int)(x['excluded_by_code']) if 'excluded_by_code' in x else [],
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
+            )
+        else:
+            _atd_bad_json('Insiders', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['cik'] = _atd_write_string(self.cik)
+        res['window_90'] = (lambda x: x.to_json())(self.window_90)
+        res['window_365'] = (lambda x: x.to_json())(self.window_365)
+        res['filings_read'] = _atd_write_int(self.filings_read)
+        res['cluster_buy'] = _atd_write_bool(self.cluster_buy)
+        if self.cluster is not None:
+            res['cluster'] = (lambda x: x.to_json())(self.cluster)
+        res['excluded_by_code'] = _atd_write_assoc_list_to_object(_atd_write_int)(self.excluded_by_code)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Insiders':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class HeldInput:
     """Original type: held_input = { ... }
     """
@@ -4019,6 +4219,8 @@ class Valuation:
     receipt_check: Optional[ReceiptCheck] = None
     stretch: Optional[Stretch] = None
     stretch_reason: Optional[str] = None
+    insiders: Optional[Insiders] = None
+    insiders_reason: Optional[str] = None
     build_out: Optional[BuildOut] = None
     build_out_reason: Optional[str] = None
 
@@ -4071,6 +4273,8 @@ class Valuation:
                 receipt_check=ReceiptCheck.from_json(x['receipt_check']) if 'receipt_check' in x else None,
                 stretch=Stretch.from_json(x['stretch']) if 'stretch' in x else None,
                 stretch_reason=_atd_read_string(x['stretch_reason']) if 'stretch_reason' in x else None,
+                insiders=Insiders.from_json(x['insiders']) if 'insiders' in x else None,
+                insiders_reason=_atd_read_string(x['insiders_reason']) if 'insiders_reason' in x else None,
                 build_out=BuildOut.from_json(x['build_out']) if 'build_out' in x else None,
                 build_out_reason=_atd_read_string(x['build_out_reason']) if 'build_out_reason' in x else None,
             )
@@ -4148,6 +4352,10 @@ class Valuation:
             res['stretch'] = (lambda x: x.to_json())(self.stretch)
         if self.stretch_reason is not None:
             res['stretch_reason'] = _atd_write_string(self.stretch_reason)
+        if self.insiders is not None:
+            res['insiders'] = (lambda x: x.to_json())(self.insiders)
+        if self.insiders_reason is not None:
+            res['insiders_reason'] = _atd_write_string(self.insiders_reason)
         if self.build_out is not None:
             res['build_out'] = (lambda x: x.to_json())(self.build_out)
         if self.build_out_reason is not None:
@@ -4665,6 +4873,8 @@ class Financials:
     cover_page_split_factor: Optional[float] = None
     cover_page_split_record: Optional[str] = None
     stretch: Optional[Stretch] = None
+    insiders: Optional[Insiders] = None
+    insiders_reason: Optional[str] = None
     stretch_reason: Optional[str] = None
 
     @classmethod
@@ -4701,6 +4911,8 @@ class Financials:
                 cover_page_split_factor=_atd_read_float(x['cover_page_split_factor']) if 'cover_page_split_factor' in x else None,
                 cover_page_split_record=_atd_read_string(x['cover_page_split_record']) if 'cover_page_split_record' in x else None,
                 stretch=Stretch.from_json(x['stretch']) if 'stretch' in x else None,
+                insiders=Insiders.from_json(x['insiders']) if 'insiders' in x else None,
+                insiders_reason=_atd_read_string(x['insiders_reason']) if 'insiders_reason' in x else None,
                 stretch_reason=_atd_read_string(x['stretch_reason']) if 'stretch_reason' in x else None,
             )
         else:
@@ -4750,6 +4962,10 @@ class Financials:
             res['cover_page_split_record'] = _atd_write_string(self.cover_page_split_record)
         if self.stretch is not None:
             res['stretch'] = (lambda x: x.to_json())(self.stretch)
+        if self.insiders is not None:
+            res['insiders'] = (lambda x: x.to_json())(self.insiders)
+        if self.insiders_reason is not None:
+            res['insiders_reason'] = _atd_write_string(self.insiders_reason)
         if self.stretch_reason is not None:
             res['stretch_reason'] = _atd_write_string(self.stretch_reason)
         return res

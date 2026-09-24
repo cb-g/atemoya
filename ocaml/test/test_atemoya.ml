@@ -137,6 +137,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     cover_page_shares_as_of = Option.map (fun _ -> "2026-06-30") cover_page_shares;
     cover_page_split_factor;
     cover_page_split_record = Option.map (fun f -> Printf.sprintf "split record: %g on 2026-08-01" f) cover_page_split_factor;
+    insiders = None;
+    insiders_reason = None;
     stretch = None;
     stretch_reason = None;
   }

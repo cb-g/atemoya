@@ -311,7 +311,47 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
             (match v.fair_value with Some f -> Printf.sprintf "%.2f" f | None -> "none")
             (match v.margin_of_safety with Some x -> Printf.sprintf "%+.2f" x | None -> "none")
             (match v.belief with Some (r : belief_readout) -> Printf.sprintf "%.2f" r.probability_overpaid | None -> "none"))
-        (List.map (fun x -> ("low", x)) low @ List.map (fun x -> ("high", x)) high)
+        (List.map (fun x -> ("low", x)) low @ List.map (fun x -> ("high", x)) high);
+      (* (66) The other half of stretch, on the same line: what the people with the most
+         information did about the price. Counting, never weighting. *)
+      let insider_line (v : valuation) =
+        match v.insiders with
+        | None -> Printf.sprintf "  %-10s insiders: %s\n" v.ticker (Option.value v.insiders_reason ~default:"none")
+        | Some (i : insiders) ->
+            Printf.sprintf
+              "  %-10s insiders, 90 days: %d buyer(s), %d seller(s), bought %s, sold %s, net %s%s%s\n"
+              v.ticker i.window_90.buyers i.window_90.sellers (money i.window_90.dollars_bought)
+              (money i.window_90.dollars_sold) (money i.window_90.net_dollars)
+              (if i.cluster_buy then ", cluster buy" else "")
+              (if i.window_90.ceo_or_cfo_bought then ", a chief executive or financial officer bought" else "")
+      in
+      List.iter (fun ((_, (v, _)) : string * (valuation * stretch)) -> Buffer.add_string b (insider_line v))
+        (List.map (fun x -> ("low", x)) low @ List.map (fun x -> ("high", x)) high);
+      (* The second list: stretched with the insiders on the other side of it. The reader
+         decides what that means; the tool only says both fired. *)
+      let against_the_low ((v, _) : valuation * stretch) =
+        match v.insiders with
+        | Some (i : insiders) -> i.cluster_buy || i.window_90.ceo_or_cfo_bought
+        | None -> false
+      in
+      let against_the_high ((v, _) : valuation * stretch) =
+        match v.insiders with
+        | Some (i : insiders) -> i.window_90.net_dollars < 0. && i.window_90.sellers >= 2
+        | None -> false
+      in
+      let other_side =
+        List.map (fun x -> ("low", x)) (List.filter against_the_low low)
+        @ List.map (fun x -> ("high", x)) (List.filter against_the_high high)
+      in
+      Printf.bprintf b "stretched with insiders on the other side (66): %s\n"
+        (match other_side with
+        | [] -> "none"
+        | xs ->
+            String.concat ", "
+              (List.map
+                 (fun ((side, (v, _)) : string * (valuation * stretch)) ->
+                   Printf.sprintf "%s (%s side)" v.ticker side)
+                 xs))
     end;
     let sources = count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> v.required_return_source) vs) in
     Printf.bprintf b "required return (34), across %d Ok names: %s\n"

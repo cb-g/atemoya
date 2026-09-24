@@ -24,8 +24,9 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from collections import Counter
 from collections.abc import Iterable, Mapping
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from dataclasses import dataclass
 from typing import cast
@@ -38,6 +39,9 @@ import reference
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOTENV_PATH = REPO_ROOT / ".env"
 CACHE_DIR = REPO_ROOT / "data" / "sec"
+# (66) A transaction may be reported up to two business days after it happens, so a
+# filing a little older than the window can still carry a transaction inside it.
+INSIDER_FILING_LAG_DAYS = 10
 TAGS_PATH = REPO_ROOT / "reference" / "xbrl_tags.json"
 DEFINITIONS_PATH = REPO_ROOT / "reference" / "field_definitions.json"
 PARAMS_PATH = REPO_ROOT / "reference" / "params.json"
@@ -150,6 +154,41 @@ def submissions(cik: str, user_agent: str) -> dict[str, object] | None:
         if e.code == 404:
             return None
         raise
+
+
+def insiders_of(cik: str | None, index: Mapping[str, object] | None, as_of: date, user_agent: str) -> tuple[boundary.Insiders | None, str | None]:
+    """(66) The Form 4 block for one name, from filings made on or before [as_of].
+
+    A document is immutable once filed, so it is cached forever and never re-fetched; the
+    index is what ages. The cut is on the FILING date, which the index carries and the
+    document does not, so the point-in-time panel reads only what was public on its date."""
+    import insiders as insiders_mod  # noqa: PLC0415
+
+    if cik is None:
+        return None, insiders_mod.NO_CIK
+    if index is None:
+        return None, "SEC submissions index unavailable"
+    oldest = as_of - timedelta(days=max(insiders_mod.WINDOWS))
+    wanted = [(accession, filed, document)
+              for accession, filed, document in insiders_mod.form4_filings(index)
+              if filed <= as_of and filed >= oldest - timedelta(days=INSIDER_FILING_LAG_DAYS)]
+    transactions: list[insiders_mod.Transaction] = []
+    excluded: Counter[str] = Counter()
+    read = 0
+    for accession, filed, document in wanted:
+        path = insiders_mod.CACHE_DIR / cik / f"{accession}.xml"
+        try:
+            body = path.read_bytes() if path.exists() else _get(insiders_mod.document_url(cik, accession, document), user_agent)
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError):
+            continue
+        if not path.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(body)
+        found, codes = insiders_mod.parse_form4(body, accession, filed, issuer_cik=cik)
+        transactions += found
+        excluded += codes
+        read += 1
+    return insiders_mod.compute(transactions, excluded, as_of, cik, read)
 
 
 def latest_annual_submission(index: Mapping[str, object] | None) -> tuple[boundary.Submission | None, str | None]:

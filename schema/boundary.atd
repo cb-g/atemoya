@@ -244,6 +244,8 @@ type financials = {
   ?cover_page_split_factor : float option;          (* (44) the product of the vendor's split ratios after the cover page's date up to the fetch date; the check multiplies the count by it *)
   ?cover_page_split_record : string option;
   ?stretch : stretch option;                        (* (52) present when the name has 250 trading days of closes on or before the date *)
+  ?insiders : insiders option;                      (* (66) present on a CIK-resolved name with Form 4 filings in the year to the date *)
+  ?insiders_reason : string option;                 (* (66) present instead: why there is none *)
   ?stretch_reason : string option;                  (* (52) why not: price history shorter than 250 trading days *)
 }
 
@@ -877,6 +879,58 @@ type stretch = {
   history_days : int;                 (* closes on or before as_of that fed it *)
 }
 
+(* Form 4 (66): what the people with the most information did about the price, filed,
+   timestamped and keyless. Open-market purchases and sales only: an award, an exercise, a
+   withholding or a gift is counted by its code and never summed, because an
+   exercise-and-sell is not a sale of conviction. No score and no weight lives here; the
+   block counts and lists, and the reader decides what it means. Every figure is computed
+   from filings made on or before the valuation date, so the point-in-time panel carries it
+   unchanged. *)
+type insider_transaction = {
+  owner : string;                     (* the reporting owner, as filed *)
+  relationship : string;              (* director | officer: <title> | ten-percent owner | other, as filed, joined by "; " where more than one *)
+  transaction_date : string;
+  code : string;                      (* P (open-market or private purchase) or S (open-market sale); nothing else reaches here *)
+  shares : float;
+  price_per_share : float;
+  dollars : float;                    (* shares x price_per_share *)
+  ?shares_owned_after : float option;
+  accession : string;
+  filed : string;
+  ~plan_10b5_1 : bool;                (* the filing's plan marking, where it carries one: scheduled, not decided *)
+}
+
+type insider_window = {
+  days : int;                         (* 90 or 365, ending at as_of *)
+  buyers : int;                       (* distinct owners with at least one purchase *)
+  sellers : int;
+  dollars_bought : float;
+  dollars_sold : float;
+  net_dollars : float;                (* bought less sold *)
+  ?largest_purchase : insider_transaction option;
+  ceo_or_cfo_bought : bool;           (* any buyer whose filed officer title names a chief executive or chief financial officer *)
+}
+
+(* Two distinct insiders buying on the open market inside one fourteen-day window, which is
+   the standard definition and is kept for that reason; one insider buying twice is not one. *)
+type insider_cluster = {
+  window_start : string;
+  window_end : string;
+  buyers : string list;               (* at least two, distinct *)
+}
+
+type insiders = {
+  as_of : string;                     (* the valuation date the windows end at *)
+  cik : string;
+  window_90 : insider_window;
+  window_365 : insider_window;
+  ~cluster_buy : bool;
+  ?cluster : insider_cluster option;  (* present iff cluster_buy *)
+  filings_read : int;                 (* Form 4 and 4/A documents parsed within the year *)
+  ~excluded_by_code : (string * int) list <json repr="object">;   (* codes seen and not summed, counted by code *)
+  ~scope_limits : string list;        (* what Form 4 cannot see for this name *)
+}
+
 (* The depositary-receipt check (42): on a name with a declared ratio or a financial
    currency different from its trading currency, the cover page's ordinary count over the
    live effective shares (market cap / price, receipt units) against the declared ratio;
@@ -1037,6 +1091,8 @@ type valuation = {
   ?receipt_check : receipt_check option;        (* (42) present iff the financials carry cover_page_shares and the name has a declared ratio or a cross-currency listing *)
   ?stretch : stretch option;                    (* (52) copied from the financials; never fails a record *)
   ?stretch_reason : string option;
+  ?insiders : insiders option;                  (* (66) copied from the financials; never fails a record *)
+  ?insiders_reason : string option;             (* (66) present instead: no CIK, no Form 4 filed, or the issuer files none *)
   ?build_out : build_out option;                (* (60) on a Cyclical or OperatingCompany record that failed the observation or free-cash-flow guard with capex above depreciation and positive EBIT; never a fair value *)
   ?build_out_reason : string option;            (* (60) present instead on such a record: why there is no readout *)
 }

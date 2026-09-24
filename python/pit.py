@@ -379,6 +379,12 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
     import stretch as stretch_mod  # noqa: PLC0415
 
     stretch_block, stretch_reason = stretch_mod.compute(history.closes, history.volumes, d, stretch_mod.load_thresholds())
+    # (66) Form 4 on the same terms as the live fetch, over the index with everything filed
+    # after D already removed: the block reads only what was public on the date.
+    pit_cik, _ = fetch.cik_of(symbol, sec.tickers, declared_cik)
+    insiders_block, insiders_reason = fetch_sec.insiders_of(
+        pit_cik, submissions_on_or_before(fetch_sec.submissions(pit_cik, sec.user_agent), d) if pit_cik else None,
+        d, sec.user_agent)
     pit = boundary.PointInTime(
         as_of_date=d.isoformat(),
         price_date=None if priced is None else priced[0].isoformat(),
@@ -415,6 +421,7 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         cross_check=check,
         submissions_latest_annual=submission, point_in_time=pit,
         stretch=stretch_block, stretch_reason=stretch_reason,
+        insiders=insiders_block, insiders_reason=insiders_reason,
     )
 
 

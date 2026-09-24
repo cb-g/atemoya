@@ -198,6 +198,57 @@ The picture is the surface with the contour, a vertical line at the declared ret
 horizontal one at the declared lag; where the contour is empty the legend says the price is
 outside the map at every lag.
 
+## Insiders
+
+Stretch says the price has run from its own path; Form 4 says what the people with the most
+information did about it (66). Every CIK-resolved record carries an `insiders` block, read
+from SEC's own filings index and archive, keyless and timestamped. A name without a CIK
+carries `insiders_reason` instead, because Form 4 covers SEC registrants only.
+
+**Open-market purchases and sales only.** From the non-derivative table, transaction code
+`P` (purchase) and `S` (sale). An award (`A`), an exercise (`M`), a tax withholding (`F`), a
+gift (`G`) and every other code are **counted by their code and never summed** — an
+exercise-and-sell is not a sale of conviction, and an award files a price of zero, so the
+filter runs before the arithmetic or the buyer counts inflate where the dollars do not. The
+codes seen and not summed are listed on the block as `excluded_by_code`.
+
+The block carries, over the trailing 90 and 365 days: distinct buyers, distinct sellers,
+dollars bought, dollars sold, net dollars, the largest single purchase with its owner and
+relationship as filed, and whether any buyer's filed title names a chief executive or
+financial officer. `cluster_buy` is true when **two distinct insiders** bought on the open
+market inside any fourteen-day window in the trailing ninety days — one insider buying twice
+is not a cluster, which is the point of the rule — with the window's dates and buyers listed.
+
+**The cut is on the filing date, not the transaction date.** A Form 4 carries no filing date
+in its XML and its signature date disagrees with the index often enough to matter, so the
+index is the only source for it. The point-in-time path reads the same index with everything
+filed after `D` already removed, so the panel's block is the one a reader had on the day.
+
+Documents are immutable once filed and are cached under `data/insiders/<CIK>/<accession>.xml`
+for ever; the index is what ages. Amendments are read too: nothing in the index links a `4/A`
+to the `4` it amends — their accessions share only the filing agent and the year — so the same
+line is recognised by owner, date, code and shares, and the later filing wins.
+
+The summary prints, beside every name already listed at `stretch_low >= 3` or
+`stretch_high >= 3`, that name's ninety-day buyer and seller counts and net dollars, and then
+a second list, **"stretched with insiders on the other side"**: stretched low with a cluster
+buy or a chief executive or financial officer buying, and stretched high with net selling by
+two or more distinct sellers. Counting, never weighting.
+
+```sh
+uv run python/plot_insiders.py PLTR                     # -> output/stretch/PLTR.png
+uv run python/plot_insiders.py PLTR --as-of 2026-06-25  # as it stood on that day
+```
+
+The picture is the stretch chart with every open-market purchase and sale drawn at its price
+on its transaction date, sized by dollars against the largest in the window, so the reader
+sees where insiders acted relative to the path. It replaces the stretch-only chart.
+
+**Scope limits, on every block:** Form 4 covers directors, officers and ten-percent owners of
+SEC registrants, so a foreign private issuer files none; a purchase or sale under a rule
+10b5-1 plan is scheduled rather than decided, and the filing's plan marking is carried on the
+transaction where it has one.
+
 ## Build, test, type-check
 
 ```sh

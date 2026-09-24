@@ -491,6 +491,24 @@ in this order:
    per-name beliefs may be given as `--beliefs`; it overrides the tracked ones. Banks and
    insurers carry no belief: their model has no terminal growth.
 
+## Insiders
+
+Form 4, on every CIK-resolved record (66). **It never fails a record and adds no `Failed`
+string**: a name without a CIK, or with no Form 4 in the year, carries `insiders_reason`
+instead of a block, and nothing downstream reads either.
+
+Open-market purchases (`P`) and sales (`S`) from the non-derivative table only; awards,
+exercises, withholdings and gifts are counted by their code and never summed. Over ninety and
+three hundred and sixty-five days: distinct buyers and sellers, dollars each way, the net, the
+largest purchase with its owner and relationship as filed, and whether a chief executive or
+financial officer bought. `cluster_buy` is two **distinct** insiders buying inside a fourteen-day
+window in the trailing ninety days.
+
+Everything is cut on the **filing** date, which the index carries and the document does not, so
+the point-in-time panel reads only what was public on its date. The summary prints the ninety-day
+counts beside every stretched name and then lists those **stretched with insiders on the other
+side**. No score, no weight and no signal: the block counts and lists, and the reader decides.
+
 ## Changelog
 
 - entity class (05): declaration, class check, admissibility, floor.
@@ -611,6 +629,15 @@ in this order:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- insiders: Form 4 as the other half of stretch (66): every CIK-resolved record gains an
+  `insiders` block read from SEC's own index and archive, keyless and timestamped — open-market
+  purchases and sales only, with awards, exercises, withholdings and gifts counted by code and
+  never summed. Distinct buyers and sellers, dollars each way, the largest purchase, a
+  chief-executive-or-financial-officer flag and a two-insider fourteen-day cluster rule, over
+  ninety and three hundred and sixty-five days. Cut on the filing date, so the point-in-time
+  panel carries it. The summary prints the counts beside every stretched name and lists those
+  stretched with insiders on the other side; `plot_insiders.py` draws the transactions on the
+  stretch chart. No score, no weight, no signal, and no new `Failed` string.
 - batch three's findings as rules, and Denmark (65): four rules from the twenty names
   brief 64 added. Interest counts as evidence of debt only when it is an expense and above
   a declared floor of half a per cent of operating income, so two lease-only retailers that
