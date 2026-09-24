@@ -752,6 +752,139 @@
       "ticker": "ROP.SW",
       "entity_class": "OperatingCompany",
       "why": "Roche, pharmaceuticals and diagnostics, on the vendor's Swiss listing ROP.SW in francs; an operating company on vendor statements, since Roche files no SEC facts; the non-voting Genussschein RO.SW is the more traded line and a choice for the holder."
+    },
+    {
+      "ticker": "SOFI",
+      "entity_class": "Bank",
+      "why": "a consumer lender holding a national bank charter and funding its book with deposits; net interest income is far the larger part of revenue, so the bank signature fires and the residual-income lens applies, unlike the retail broker already in this file, which holds no charter and takes no deposits; confirmed by the user.",
+      "scope_limits": [
+        "the lending book is young and still growing fast, so the return on equity the reversion path starts from is a short history rather than a through-cycle one"
+      ]
+    },
+    {
+      "ticker": "ASML.AS",
+      "entity_class": "OperatingCompany",
+      "why": "the Amsterdam ordinary line of the lithography maker, reporting in euros with no filings at the Securities and Exchange Commission, so the statements come from the vendor; its depositary receipt trades separately under another ticker."
+    },
+    {
+      "ticker": "NOVO-B.CO",
+      "entity_class": "OperatingCompany",
+      "why": "the Copenhagen B line of a Danish pharmaceutical maker, reporting in kroner on the vendor path; Denmark appears in none of the country parameter tables."
+    },
+    {
+      "ticker": "7203.T",
+      "entity_class": "Cyclical",
+      "why": "the Tokyo line of a Japanese vehicle maker, reporting in yen; volumes and margins swing with the cycle, so through-cycle return on today's capital is the question and never one year's free cash flow, which is how the American vehicle maker in this file is read; confirmed by the user.",
+      "scope_limits": [
+        "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost",
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor, which carries fewer annual columns than the through-cycle window asks for"
+      ]
+    },
+    {
+      "ticker": "8306.T",
+      "entity_class": "Bank",
+      "why": "the Tokyo line of a Japanese bank holding company, reporting in yen on the vendor path; net interest income is the larger part of revenue and the residual-income lens applies."
+    },
+    {
+      "ticker": "RELIANCE.NS",
+      "entity_class": "Cyclical",
+      "why": "the Mumbai line of an Indian conglomerate, reporting in rupees; refining and petrochemicals set the swing in earnings and capital spending runs at about twice depreciation, so through-cycle return on today's capital is the question; confirmed by the user against the operating company reading.",
+      "scope_limits": [
+        "structural: telecom and retail are now the larger part of profit and are not cyclical, so a through-cycle return blends businesses of two kinds",
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor, which carries fewer annual columns than the through-cycle window asks for"
+      ]
+    },
+    {
+      "ticker": "NESN.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of a packaged-food maker, reporting in francs on the vendor path; a second Swiss domicile beside the pharmaceutical line already in this file."
+    },
+    {
+      "ticker": "SHOP.TO",
+      "entity_class": "HighGrowthSoftware",
+      "why": "the Toronto line of a commerce software platform reporting in dollars while trading in Canadian dollars, so the record is cross-currency on the vendor path; a foreign private issuer whose annual form carries no companyfacts at the Securities and Exchange Commission."
+    },
+    {
+      "ticker": "RIO",
+      "entity_class": "Miner",
+      "why": "a dual-listed iron ore and aluminium miner filing under IFRS on a 20-F in dollars: the net asset value lens, which the tool refuses to replace with a discounted cash flow; adr_ratio: one American depositary share is one ordinary share of the London company (20-F, deposit agreement).",
+      "adr_ratio": 1,
+      "scope_limits": [
+        "the cover page counts the London company's shares alone while the statements and the market capitalisation cover both lines of the dual-listed structure, so the receipt check disagrees by the Australian company's share count"
+      ]
+    },
+    {
+      "ticker": "UL",
+      "entity_class": "OperatingCompany",
+      "why": "a consumer goods company filing under IFRS on a 20-F, reporting in euros under a dollar listing; adr_ratio: one American depositary share is one ordinary share (20-F, deposit agreement).",
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "BHP",
+      "entity_class": "Miner",
+      "why": "a diversified miner filing under IFRS on a 20-F in dollars: the net asset value lens, which the tool refuses to replace with a discounted cash flow; adr_ratio: one American depositary share is two ordinary shares (20-F, deposit agreement).",
+      "adr_ratio": 2
+    },
+    {
+      "ticker": "ENPH",
+      "entity_class": "Cyclical",
+      "why": "solar microinverters sold into a residential market whose demand fell by about half when rates rose and subsidies changed; through-cycle return on today's capital is the question rather than one year's free cash flow."
+    },
+    {
+      "ticker": "AXON",
+      "entity_class": "HighGrowthSoftware",
+      "why": "conducted-energy weapons, body cameras and the evidence software sold with them; revenue compounds while the filed operating line stays thin and changes sign from year to year, so the value is the growth path and not a single year's earnings; confirmed by the user against the operating company reading.",
+      "scope_limits": [
+        "hardware is still the larger part of revenue, so the software lens reads a business whose unit economics are partly a manufacturer's"
+      ]
+    },
+    {
+      "ticker": "DECK",
+      "entity_class": "OperatingCompany",
+      "why": "a footwear brand owner whose fiscal year ends in March; the discounted cash flow on stable free cash flow."
+    },
+    {
+      "ticker": "WSM",
+      "entity_class": "OperatingCompany",
+      "why": "a home furnishings retailer whose fiscal year ends at the turn of January and February; the discounted cash flow on stable free cash flow.",
+      "scope_limits": [
+        "operating leases are excluded from debt by definition, so a retailer whose stores are all leased carries less debt here than its obligations imply"
+      ]
+    },
+    {
+      "ticker": "CROX",
+      "entity_class": "OperatingCompany",
+      "why": "a footwear brand owner; the discounted cash flow on stable free cash flow.",
+      "scope_limits": [
+        "structural: a large acquisition inside the growth window, so the history the growth estimate reads is two businesses",
+        "a write-down of the acquired brand in the latest filed year, which the model reads as a fall in earnings rather than as a one-off"
+      ]
+    },
+    {
+      "ticker": "APD",
+      "entity_class": "OperatingCompany",
+      "why": "industrial gases sold under long take-or-pay contracts; the discounted cash flow on stable free cash flow.",
+      "scope_limits": [
+        "structural: capital spending runs at several times depreciation on projects that are not yet earning, so the latest year's free cash flow is not the business's"
+      ]
+    },
+    {
+      "ticker": "EXC",
+      "entity_class": "RegulatedUtility",
+      "why": "a regulated electric and gas delivery utility; a discounted cash flow reads rate-base construction as value destruction."
+    },
+    {
+      "ticker": "KMI",
+      "entity_class": "OperatingCompany",
+      "why": "natural gas pipelines, terminals and storage earning fee-based contracted revenue rather than a commodity margin, which is what the operating company lens asks of a midstream name; the first midstream name in this file.",
+      "scope_limits": [
+        "a minority of revenue moves with commodity prices rather than with contracted fees"
+      ]
+    },
+    {
+      "ticker": "ARCC",
+      "entity_class": "Bdc",
+      "why": "the largest business development company: a portfolio of private loans and equity stakes marked to fair value every quarter, so the net asset value per share the filing states is the anchor."
     }
   ]
 }
