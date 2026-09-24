@@ -38,6 +38,58 @@ and required return for the anchor path. The panel rows gain the block's numbers
 line per date (no statistic), and `uv run python/plot_market_through_time.py` draws the
 two medians over the dates that have a block.
 
+## The earnings gate
+
+An expiry picked without knowing whether a results release sits inside it is picked blind, and
+a spread or a hedge held across one is a different instrument (68). Every record carries an
+`earnings` block, Ok or Failed: it never fails a record, adds no `Failed` string, and nothing
+in the valuation reads it.
+
+**The calendar, filed and keyless.** Every 8-K carrying item 2.02, Results of Operations and
+Financial Condition, from SEC's own submissions index, over the last five years. The form gate
+is not optional: `items` is an N.NN-shaped comma-joined string on other forms too, and form
+ABS-15G numbers its own items 1.01 to 2.03, so a shape-only match would eventually read an
+asset-backed due-diligence item as an earnings release. An 8-K/A is left out, because it
+restates a release the original already dated. `filings.recent` is a year or a thousand
+filings, whichever is more, so the older pages are read as brief 67 reads them, or the five
+biggest banks would give one year of cadence instead of five.
+
+A filer with no item 2.02 at all falls back to the vendor's dates, and that case is wider than
+a name without a filer: a foreign private issuer files 6-K and a trust files neither. The
+fallback is therefore keyed on the absence of a filed release rather than the absence of a
+CIK, and `past_source_why` says which silence it was.
+
+**The next date** is the vendor's where it carries one — its calendar first, its dated table
+second, and the record says which — and a projection from the filed cadence otherwise, the
+last release plus the median interval of the last eight, recorded as `filed cadence,
+projected`. Never both silently: a projection presented as a filed or vendor date would be a
+forecast wearing a filing's clothes. `cadence_days` is on the block either way, because it is
+the reader's check that the cadence is quarterly — a filer that reports operating statistics
+under item 2.02 as well as results has twice the releases and half the interval, and the
+number says so.
+
+**The realised move** per release is close to close across it, and the benchmark's over the
+same two dates, with the median absolute excess over the last eight. Which two closes bracket
+a release is read, not assumed: the index carries the acceptance time, and a release after the
+close on a day moves that day to the next while one before the open moves the previous day to
+that one. The vendor's closes are already split-adjusted, so their ratio is the corrected move
+and applying a split factor here would put the jump back in.
+
+**The implied event move** is the later of the two bracketing expiries' total variance less
+the earlier's, and its square root. SVI parameterises *total* implied variance, so `w(0)` at
+the forward is exactly "implied volatility squared times years" with no round trip through a
+volatility, and both legs take the same put-call-parity forward — the event variance is a
+difference of two close numbers, and mixing conventions between them is noise exactly where
+the answer is. An expiry on the release date is the later leg, since a release is dated by its
+filing day and an option expiring that day is still exposed to one made before the open.
+`null` with the reason where no expiry precedes the date, where a smile at one of them will
+not fit, or where the subtraction comes out negative — a term structure with no event premium,
+which is a reading and not a gap.
+
+**The mark.** The `market_implied` expiry carries `spans_earnings` and the implied move beside
+it. The expiry is not reselected and no number in the readout moves; a reader is told whether
+the horizon they are being shown carries the release.
+
 ## What it is not
 
 Every field is risk-neutral: it embeds the market's risk pricing and is not a forecast.

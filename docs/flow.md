@@ -629,6 +629,19 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the earnings gate for the options tools (68): every record gains an `earnings` block, Ok or
+  Failed -- the next results release, where the date came from, what the last eight releases
+  did, and what the option market charges for the next one. The calendar is filed and keyless,
+  every 8-K carrying item 2.02 over five years from SEC's own index, with the vendor's dates
+  where a filer files none; the next date is the vendor's where it carries one and a
+  projection from the filed cadence otherwise, and the record always says which. The implied
+  event move is the later of the two bracketing expiries' total variance less the earlier's,
+  at the forward on the fitted smile, `null` with the reason where no expiry precedes the date
+  or the subtraction is negative. `hedge.py`, `express.py` and the `market_implied` expiry
+  carry `spans_earnings` with the implied move beside it; **no candidate is excluded and
+  nothing is re-ranked** -- the flag is added where a candidate is serialised, so the Pareto
+  set, the constraint and both ranking keys cannot see it. It never fails a record, adds no
+  `Failed` string, and nothing in the valuation reads it.
 - stretch and insiders through time (67): a study beside the batch, not in it. Every trading
   day of every name's vendor history from the third year onward is walked with the stretch
   block's own `measures_at` and `counts`; an episode starts the first day a side reaches three

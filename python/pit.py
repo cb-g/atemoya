@@ -422,6 +422,13 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         submissions_latest_annual=submission, point_in_time=pit,
         stretch=stretch_block, stretch_reason=stretch_reason,
         insiders=insiders_block, insiders_reason=insiders_reason,
+        # (68) not on this path, and said rather than left silent: the filed half would cut
+        # cleanly at D, but the vendor serves only today's next date, so a point-in-time
+        # calendar would be the projection alone, which is a different block from the live one
+        earnings_calendar_reason=(
+            "no release calendar on the point-in-time path: the vendor serves only today's next date, "
+            "so a calendar cut at this date would carry a projection where the live record carries a "
+            "vendor date, and the two are not the same block"),
     )
 
 

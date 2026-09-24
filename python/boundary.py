@@ -2711,6 +2711,9 @@ class MarketImplied:
     risk_neutral: bool
     note: str
     implied_growth_reason: Optional[str] = None
+    spans_earnings: Optional[bool] = None
+    earnings_implied_move: Optional[float] = None
+    spans_earnings_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'MarketImplied':
@@ -2737,6 +2740,9 @@ class MarketImplied:
                 risk_neutral=_atd_read_bool(x['risk_neutral']) if 'risk_neutral' in x else _atd_missing_json_field('MarketImplied', 'risk_neutral'),
                 note=_atd_read_string(x['note']) if 'note' in x else _atd_missing_json_field('MarketImplied', 'note'),
                 implied_growth_reason=_atd_read_string(x['implied_growth_reason']) if 'implied_growth_reason' in x else None,
+                spans_earnings=_atd_read_bool(x['spans_earnings']) if 'spans_earnings' in x else None,
+                earnings_implied_move=_atd_read_float(x['earnings_implied_move']) if 'earnings_implied_move' in x else None,
+                spans_earnings_reason=_atd_read_string(x['spans_earnings_reason']) if 'spans_earnings_reason' in x else None,
             )
         else:
             _atd_bad_json('MarketImplied', x)
@@ -2765,6 +2771,12 @@ class MarketImplied:
         res['note'] = _atd_write_string(self.note)
         if self.implied_growth_reason is not None:
             res['implied_growth_reason'] = _atd_write_string(self.implied_growth_reason)
+        if self.spans_earnings is not None:
+            res['spans_earnings'] = _atd_write_bool(self.spans_earnings)
+        if self.earnings_implied_move is not None:
+            res['earnings_implied_move'] = _atd_write_float(self.earnings_implied_move)
+        if self.spans_earnings_reason is not None:
+            res['spans_earnings_reason'] = _atd_write_string(self.spans_earnings_reason)
         return res
 
     @classmethod
@@ -3508,6 +3520,212 @@ class EntityClass:
 
 
 @dataclass
+class EarningsImplied:
+    """Original type: earnings_implied = { ... }
+    """
+
+    snapshot_date: str
+    earlier_expiry: str
+    later_expiry: str
+    earlier_total_variance: float
+    later_total_variance: float
+    event_variance: float
+    implied_move: float
+    forward_convention: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'EarningsImplied':
+        if isinstance(x, dict):
+            return cls(
+                snapshot_date=_atd_read_string(x['snapshot_date']) if 'snapshot_date' in x else _atd_missing_json_field('EarningsImplied', 'snapshot_date'),
+                earlier_expiry=_atd_read_string(x['earlier_expiry']) if 'earlier_expiry' in x else _atd_missing_json_field('EarningsImplied', 'earlier_expiry'),
+                later_expiry=_atd_read_string(x['later_expiry']) if 'later_expiry' in x else _atd_missing_json_field('EarningsImplied', 'later_expiry'),
+                earlier_total_variance=_atd_read_float(x['earlier_total_variance']) if 'earlier_total_variance' in x else _atd_missing_json_field('EarningsImplied', 'earlier_total_variance'),
+                later_total_variance=_atd_read_float(x['later_total_variance']) if 'later_total_variance' in x else _atd_missing_json_field('EarningsImplied', 'later_total_variance'),
+                event_variance=_atd_read_float(x['event_variance']) if 'event_variance' in x else _atd_missing_json_field('EarningsImplied', 'event_variance'),
+                implied_move=_atd_read_float(x['implied_move']) if 'implied_move' in x else _atd_missing_json_field('EarningsImplied', 'implied_move'),
+                forward_convention=_atd_read_string(x['forward_convention']) if 'forward_convention' in x else _atd_missing_json_field('EarningsImplied', 'forward_convention'),
+            )
+        else:
+            _atd_bad_json('EarningsImplied', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['snapshot_date'] = _atd_write_string(self.snapshot_date)
+        res['earlier_expiry'] = _atd_write_string(self.earlier_expiry)
+        res['later_expiry'] = _atd_write_string(self.later_expiry)
+        res['earlier_total_variance'] = _atd_write_float(self.earlier_total_variance)
+        res['later_total_variance'] = _atd_write_float(self.later_total_variance)
+        res['event_variance'] = _atd_write_float(self.event_variance)
+        res['implied_move'] = _atd_write_float(self.implied_move)
+        res['forward_convention'] = _atd_write_string(self.forward_convention)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'EarningsImplied':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class EarningsEvent:
+    """Original type: earnings_event = { ... }
+    """
+
+    filed: str
+    before: str
+    after: str
+    own: float
+    benchmark: float
+    excess: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'EarningsEvent':
+        if isinstance(x, dict):
+            return cls(
+                filed=_atd_read_string(x['filed']) if 'filed' in x else _atd_missing_json_field('EarningsEvent', 'filed'),
+                before=_atd_read_string(x['before']) if 'before' in x else _atd_missing_json_field('EarningsEvent', 'before'),
+                after=_atd_read_string(x['after']) if 'after' in x else _atd_missing_json_field('EarningsEvent', 'after'),
+                own=_atd_read_float(x['own']) if 'own' in x else _atd_missing_json_field('EarningsEvent', 'own'),
+                benchmark=_atd_read_float(x['benchmark']) if 'benchmark' in x else _atd_missing_json_field('EarningsEvent', 'benchmark'),
+                excess=_atd_read_float(x['excess']) if 'excess' in x else _atd_missing_json_field('EarningsEvent', 'excess'),
+            )
+        else:
+            _atd_bad_json('EarningsEvent', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['filed'] = _atd_write_string(self.filed)
+        res['before'] = _atd_write_string(self.before)
+        res['after'] = _atd_write_string(self.after)
+        res['own'] = _atd_write_float(self.own)
+        res['benchmark'] = _atd_write_float(self.benchmark)
+        res['excess'] = _atd_write_float(self.excess)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'EarningsEvent':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class EarningsCalendar:
+    """Original type: earnings_calendar = { ... }
+    """
+
+    past_source: str
+    past_source_why: str
+    past_count: int
+    past_dates: List[str]
+    next_date: str
+    next_source: str
+    next_source_as_of: str
+    events: List[EarningsEvent]
+    benchmark: str
+    scope_limits: List[str]
+    cadence_days: Optional[float] = None
+    realised_median_abs_excess: Optional[float] = None
+    realised_reason: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'EarningsCalendar':
+        if isinstance(x, dict):
+            return cls(
+                past_source=_atd_read_string(x['past_source']) if 'past_source' in x else _atd_missing_json_field('EarningsCalendar', 'past_source'),
+                past_source_why=_atd_read_string(x['past_source_why']) if 'past_source_why' in x else _atd_missing_json_field('EarningsCalendar', 'past_source_why'),
+                past_count=_atd_read_int(x['past_count']) if 'past_count' in x else _atd_missing_json_field('EarningsCalendar', 'past_count'),
+                past_dates=_atd_read_list(_atd_read_string)(x['past_dates']) if 'past_dates' in x else _atd_missing_json_field('EarningsCalendar', 'past_dates'),
+                next_date=_atd_read_string(x['next_date']) if 'next_date' in x else _atd_missing_json_field('EarningsCalendar', 'next_date'),
+                next_source=_atd_read_string(x['next_source']) if 'next_source' in x else _atd_missing_json_field('EarningsCalendar', 'next_source'),
+                next_source_as_of=_atd_read_string(x['next_source_as_of']) if 'next_source_as_of' in x else _atd_missing_json_field('EarningsCalendar', 'next_source_as_of'),
+                events=_atd_read_list(EarningsEvent.from_json)(x['events']) if 'events' in x else _atd_missing_json_field('EarningsCalendar', 'events'),
+                benchmark=_atd_read_string(x['benchmark']) if 'benchmark' in x else _atd_missing_json_field('EarningsCalendar', 'benchmark'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('EarningsCalendar', 'scope_limits'),
+                cadence_days=_atd_read_float(x['cadence_days']) if 'cadence_days' in x else None,
+                realised_median_abs_excess=_atd_read_float(x['realised_median_abs_excess']) if 'realised_median_abs_excess' in x else None,
+                realised_reason=_atd_read_string(x['realised_reason']) if 'realised_reason' in x else None,
+            )
+        else:
+            _atd_bad_json('EarningsCalendar', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['past_source'] = _atd_write_string(self.past_source)
+        res['past_source_why'] = _atd_write_string(self.past_source_why)
+        res['past_count'] = _atd_write_int(self.past_count)
+        res['past_dates'] = _atd_write_list(_atd_write_string)(self.past_dates)
+        res['next_date'] = _atd_write_string(self.next_date)
+        res['next_source'] = _atd_write_string(self.next_source)
+        res['next_source_as_of'] = _atd_write_string(self.next_source_as_of)
+        res['events'] = _atd_write_list((lambda x: x.to_json()))(self.events)
+        res['benchmark'] = _atd_write_string(self.benchmark)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        if self.cadence_days is not None:
+            res['cadence_days'] = _atd_write_float(self.cadence_days)
+        if self.realised_median_abs_excess is not None:
+            res['realised_median_abs_excess'] = _atd_write_float(self.realised_median_abs_excess)
+        if self.realised_reason is not None:
+            res['realised_reason'] = _atd_write_string(self.realised_reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'EarningsCalendar':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Earnings:
+    """Original type: earnings = { ... }
+    """
+
+    calendar: EarningsCalendar
+    days_to_next: int
+    implied: Optional[EarningsImplied] = None
+    implied_reason: Optional[str] = None
+    implied_over_realised: Optional[float] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Earnings':
+        if isinstance(x, dict):
+            return cls(
+                calendar=EarningsCalendar.from_json(x['calendar']) if 'calendar' in x else _atd_missing_json_field('Earnings', 'calendar'),
+                days_to_next=_atd_read_int(x['days_to_next']) if 'days_to_next' in x else _atd_missing_json_field('Earnings', 'days_to_next'),
+                implied=EarningsImplied.from_json(x['implied']) if 'implied' in x else None,
+                implied_reason=_atd_read_string(x['implied_reason']) if 'implied_reason' in x else None,
+                implied_over_realised=_atd_read_float(x['implied_over_realised']) if 'implied_over_realised' in x else None,
+            )
+        else:
+            _atd_bad_json('Earnings', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['calendar'] = (lambda x: x.to_json())(self.calendar)
+        res['days_to_next'] = _atd_write_int(self.days_to_next)
+        if self.implied is not None:
+            res['implied'] = (lambda x: x.to_json())(self.implied)
+        if self.implied_reason is not None:
+            res['implied_reason'] = _atd_write_string(self.implied_reason)
+        if self.implied_over_realised is not None:
+            res['implied_over_realised'] = _atd_write_float(self.implied_over_realised)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Earnings':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class CrossCheck:
     """Original type: cross_check = { ... }
     """
@@ -4223,6 +4441,8 @@ class Valuation:
     insiders_reason: Optional[str] = None
     build_out: Optional[BuildOut] = None
     build_out_reason: Optional[str] = None
+    earnings: Optional[Earnings] = None
+    earnings_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -4277,6 +4497,8 @@ class Valuation:
                 insiders_reason=_atd_read_string(x['insiders_reason']) if 'insiders_reason' in x else None,
                 build_out=BuildOut.from_json(x['build_out']) if 'build_out' in x else None,
                 build_out_reason=_atd_read_string(x['build_out_reason']) if 'build_out_reason' in x else None,
+                earnings=Earnings.from_json(x['earnings']) if 'earnings' in x else None,
+                earnings_reason=_atd_read_string(x['earnings_reason']) if 'earnings_reason' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -4360,6 +4582,10 @@ class Valuation:
             res['build_out'] = (lambda x: x.to_json())(self.build_out)
         if self.build_out_reason is not None:
             res['build_out_reason'] = _atd_write_string(self.build_out_reason)
+        if self.earnings is not None:
+            res['earnings'] = (lambda x: x.to_json())(self.earnings)
+        if self.earnings_reason is not None:
+            res['earnings_reason'] = _atd_write_string(self.earnings_reason)
         return res
 
     @classmethod
@@ -4876,6 +5102,8 @@ class Financials:
     insiders: Optional[Insiders] = None
     insiders_reason: Optional[str] = None
     stretch_reason: Optional[str] = None
+    earnings_calendar: Optional[EarningsCalendar] = None
+    earnings_calendar_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Financials':
@@ -4914,6 +5142,8 @@ class Financials:
                 insiders=Insiders.from_json(x['insiders']) if 'insiders' in x else None,
                 insiders_reason=_atd_read_string(x['insiders_reason']) if 'insiders_reason' in x else None,
                 stretch_reason=_atd_read_string(x['stretch_reason']) if 'stretch_reason' in x else None,
+                earnings_calendar=EarningsCalendar.from_json(x['earnings_calendar']) if 'earnings_calendar' in x else None,
+                earnings_calendar_reason=_atd_read_string(x['earnings_calendar_reason']) if 'earnings_calendar_reason' in x else None,
             )
         else:
             _atd_bad_json('Financials', x)
@@ -4968,6 +5198,10 @@ class Financials:
             res['insiders_reason'] = _atd_write_string(self.insiders_reason)
         if self.stretch_reason is not None:
             res['stretch_reason'] = _atd_write_string(self.stretch_reason)
+        if self.earnings_calendar is not None:
+            res['earnings_calendar'] = (lambda x: x.to_json())(self.earnings_calendar)
+        if self.earnings_calendar_reason is not None:
+            res['earnings_calendar_reason'] = _atd_write_string(self.earnings_calendar_reason)
         return res
 
     @classmethod

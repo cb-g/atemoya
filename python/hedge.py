@@ -226,6 +226,49 @@ class Expiry:
 
 
 @dataclass(frozen=True)
+class EarningsGate:
+    """(68) Whether a candidate's expiry carries the next results release, and what the option
+    market charges for it.
+
+    **A mark and nothing else.** No candidate is excluded, the Pareto set is computed on the
+    same three objectives, the constraint selects what it selected, and neither ranking key
+    sees this. A spread or a hedge held across an earnings release is a different instrument
+    from one that expires before it, and that is the holder's decision to make, not a rule's.
+
+    [next_date] None means the flag cannot be set, and [reason] says why: a run without the
+    block, a name off the record, an index that reports no earnings of its own. Never `false`
+    in that case -- `false` would be a claim that the expiry is clear of a release, which is
+    not what silence means."""
+
+    next_date: str | None
+    next_source: str | None = None
+    implied_move: float | None = None
+    reason: str | None = None
+
+    def mark(self, expiry: str) -> dict[str, object]:
+        """The gate's fields for one candidate, by its expiry date against the release date.
+
+        Dates are compared as dates, never as day counts: a candidate's days-to-expiry is
+        measured from the option snapshot and the release from the run's own date, and the
+        two origins differ whenever the store is a few days behind."""
+        if self.next_date is None:
+            return {"spans_earnings": None, "spans_earnings_reason": self.reason}
+        return {"spans_earnings": expiry >= self.next_date, "earnings_date": self.next_date,
+                "earnings_date_source": self.next_source, "earnings_implied_move": self.implied_move}
+
+
+def earnings_gate(record: boundary.Valuation | None, *, ticker: str = "") -> EarningsGate:
+    """The gate from a run's record, or the reason there is none."""
+    if record is None:
+        return EarningsGate(None, reason=f"no record in the run for {ticker}" if ticker else "no record in the run")
+    if record.earnings is None:
+        return EarningsGate(None, reason=record.earnings_reason or "the run's record carries no earnings block")
+    e = record.earnings
+    return EarningsGate(e.calendar.next_date, next_source=e.calendar.next_source,
+                        implied_move=None if e.implied is None else e.implied.implied_move)
+
+
+@dataclass(frozen=True)
 class Candidate:
     structure: str
     expiry: str
@@ -245,11 +288,14 @@ class Candidate:
         return (self.cost_pct, -self.floor_pct, -(self.cap_pct if self.cap_pct is not None else math.inf), self.structure, self.expiry,
                 self.long_put or 0.0, self.short_put or 0.0, self.short_call or 0.0)
 
-    def to_json(self) -> dict[str, object]:
+    def to_json(self, gate: EarningsGate | None = None) -> dict[str, object]:
+        """(68) [gate] marks the candidate; it is a serialisation argument and not a field,
+        so `key`, `pareto` and `select` cannot see it and nothing can be re-ordered by it."""
         return {"structure": self.structure, "expiry": self.expiry, "days_to_expiry": self.days, "long_put": self.long_put, "short_put": self.short_put,
                 "short_call": self.short_call, "cost_per_share": self.cost, "cost_per_share_at_mid": self.cost_mid, "cost_pct": self.cost_pct,
                 "floor_pct": self.floor_pct, "cap_pct": self.cap_pct, "floor_strike": self.floor_strike,
-                "position_greeks_per_share": {"delta": self.greeks.delta, "gamma": self.greeks.gamma, "vega": self.greeks.vega, "theta": self.greeks.theta}}
+                "position_greeks_per_share": {"delta": self.greeks.delta, "gamma": self.greeks.gamma, "vega": self.greeks.vega, "theta": self.greeks.theta},
+                **(gate.mark(self.expiry) if gate is not None else {})}
 
 
 def expiries_in_window(smiles: boundary.ChainSmiles, chain: boundary.OptionChain, horizon_days: int, *, beyond: int = WINDOW_BEYOND_DAYS) -> tuple[list[Expiry], list[dict[str, object]]]:
@@ -416,7 +462,8 @@ def latest_chain(options: Path, ticker: str, as_of: str | None) -> Path | None:
     return None
 
 
-def hedge_one(h: Holding, chain: boundary.OptionChain, smiles: boundary.ChainSmiles, *, anchor: float | None, anchor_reason: str | None) -> dict[str, object]:
+def hedge_one(h: Holding, chain: boundary.OptionChain, smiles: boundary.ChainSmiles, *, anchor: float | None, anchor_reason: str | None,
+              gate: EarningsGate | None = None) -> dict[str, object]:
     spot = smiles.spot
     expiries, notes = expiries_in_window(smiles, chain, h.horizon_days)
     cands = candidates_of(expiries, spot)
@@ -436,13 +483,31 @@ def hedge_one(h: Holding, chain: boundary.OptionChain, smiles: boundary.ChainSmi
         "expiries_without_a_smile": notes,
         "pricing": "ask for what is bought, bid for what is sold; the mid beside it; a leg without a quote is not a candidate",
         "stale_rule": f"a leg whose mid's implied vol is more than {STALE_VOL_POINTS:.2f} off the fitted smile is excluded",
-        "candidates": [c.to_json() for c in cands],
-        "frontier": [c.to_json() for c in frontier],
-        "eligible": [c.to_json() for c in eligible],
-        "selection": None if selection is None else {**selection.to_json(), "floor_probability": floor_probability(selection, expiries)},
+        "candidates": [c.to_json(gate) for c in cands],
+        "frontier": [c.to_json(gate) for c in frontier],
+        "eligible": [c.to_json(gate) for c in eligible],
+        "selection": None if selection is None else {**selection.to_json(gate), "floor_probability": floor_probability(selection, expiries)},
         "selection_reason": reason,
+        "earnings_gate": ({"next_date": None, "reason": None if gate is None else gate.reason} if gate is None or gate.next_date is None
+                          else {"next_date": gate.next_date, "source": gate.next_source, "implied_move": gate.implied_move,
+                                "spanning": sum(1 for c in cands if c.expiry >= gate.next_date), "candidates": len(cands),
+                                "note": "a mark, never a filter: nothing is excluded or re-ranked by it"}),
         "scope_limits": SCOPE_LIMITS,
     }
+
+
+def gate_line(result: dict[str, object]) -> str:
+    """(68) One line per holding saying whether the candidates carry the next release."""
+    g = result.get("earnings_gate")
+    if not isinstance(g, dict):
+        return "earnings: no gate"
+    gate: dict[str, object] = {str(k): v for k, v in g.items()}  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType, reportUnknownMemberType]
+    if gate.get("next_date") is None:
+        return f"earnings: not marked, {gate.get('reason')}"
+    move = gate.get("implied_move")
+    return (f"earnings {gate['next_date']} ({gate['source']}): {gate['spanning']} of {gate['candidates']} candidates "
+            f"expire on or after it" + (f", implied event move {float(str(move)):.4f}" if move is not None else
+                                        ", no implied event move") + "; nothing excluded")
 
 
 def points(entries: object) -> list[dict[str, object]]:
@@ -455,6 +520,15 @@ def draw(result: dict[str, object], png: Path, *, title: str | None = None) -> N
     selected = points([result["selection"]])
     fig, ax = plt.subplots(figsize=(9, 6))
     ax.scatter([float(str(c["cost_pct"])) for c in cands], [float(str(c["floor_pct"])) for c in cands], s=6, color="tab:gray", alpha=0.25, label=f"candidates ({len(cands)})")
+    # (68) the mark: colour is taken by the cap and the marker by the selection, so a
+    # spanning candidate gets a ring. It is drawn, never filtered; all of them are still here.
+    spanning = [c for c in cands if c.get("spans_earnings") is True]
+    if spanning:
+        gate = result.get("earnings_gate")
+        when = gate.get("next_date") if isinstance(gate, dict) else None  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        ax.scatter([float(str(c["cost_pct"])) for c in spanning], [float(str(c["floor_pct"])) for c in spanning], s=42,
+                   facecolors="none", edgecolors="tab:orange", linewidths=0.6,
+                   label=f"expires on or after earnings {when} ({len(spanning)}); marked, not excluded")
     uncapped = [c for c in frontier if c["cap_pct"] is None]
     capped = [c for c in frontier if c["cap_pct"] is not None]
     # The Pareto set has three objectives; the line is its uncapped part (puts and put
@@ -513,7 +587,8 @@ def main(argv: list[str]) -> int:
         anchor_reason = None if anchor is not None else ("no record in the run" if record is None else f"{record.status.kind}: {record.failed_reason}")
         chain = boundary.OptionChain.from_json_string(chain_path.read_text())
         smiles = smiles_of(chain_path, rf)
-        result = hedge_one(h, chain, smiles, anchor=anchor, anchor_reason=anchor_reason)
+        result = hedge_one(h, chain, smiles, anchor=anchor, anchor_reason=anchor_reason,
+                           gate=earnings_gate(record, ticker=h.ticker))
         (out_dir / f"{stem}.json").write_text(json.dumps(result, indent=1, sort_keys=True) + "\n")
         draw(result, out_dir / f"{stem}.png")
         selected = points([result["selection"]])
@@ -524,8 +599,10 @@ def main(argv: list[str]) -> int:
             fp_value = fp[0].get("value") if fp else None
             print(f"{h.ticker} {smiles.snapshot_date}: {n_cands} candidates, frontier {n_front}; {result['selectable']}; selection {s['structure']} {s['expiry']} "
                   f"cost {float(str(s['cost_pct'])):+.4f} floor {float(str(s['floor_pct'])):.4f} cap {s['cap_pct']}, floor probability {fp_value}")
+            print(f"   {gate_line(result)}")
         else:
             print(f"{h.ticker} {smiles.snapshot_date}: {n_cands} candidates, frontier {n_front}; {result['selectable']}; no selection: {result['selection_reason']}")
+            print(f"   {gate_line(result)}")
     return rc
 
 

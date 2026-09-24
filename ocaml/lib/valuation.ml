@@ -242,6 +242,55 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     in
     own @ List.filter (fun l -> not (List.mem l own)) defaults
   in
+  let rf_of (inputs : model_inputs) =
+    match inputs with
+    | `Dcf i -> i.risk_free_rate.value
+    | `Dcf_midcycle m -> m.dcf.risk_free_rate.value
+    | `Residual_income i -> i.risk_free_rate.value
+    | `Residual_income_insurer i -> i.core.risk_free_rate.value
+    | `Reit_ffo_dividend i -> i.risk_free_rate.value
+    | `Bdc_nav _ -> 0.
+  in
+
+  (* (68) The earnings gate, on EVERY record, Ok or Failed. The calendar is the fetch's --
+     the filed 8-K item 2.02 dates or the vendor's -- and this adds only what needs the
+     options store: what the market charges for the event, from the two expiries bracketing
+     the next release. It never fails a record and nothing downstream reads it. *)
+  let earnings_of (inputs : model_inputs option) =
+    match original.earnings_calendar with
+    | None -> (None, original.earnings_calendar_reason)
+    | Some calendar ->
+        let implied =
+          match options with
+          | None -> Error "no options directory given"
+          | Some lookup -> (
+              (* the store's own absence reason first and the rate only after it: a name with
+                 no chain is told that, not told about a rate it would never have used *)
+              match (lookup original.ticker, inputs) with
+              | Error r, _ -> Error r
+              | Ok _, None ->
+                  Error "the record has no resolved risk-free rate: it failed before a model ran, and the two expiries cannot be put on one forward without one"
+              | Ok chain, Some inputs ->
+                  Earnings.implied_of chain ~rf:(rf_of inputs) ~next:calendar.next_date)
+        in
+        (Some (Earnings.block_of ~calendar ~valued_on:today ~implied), None)
+  in
+  (* (68) The mark on the selected expiry. The expiry is NOT reselected and no readout moves;
+     a reader is told whether the horizon they are being shown carries the release. *)
+  let mark_earnings (m : market_implied option) (e : earnings option) =
+    match (m, e) with
+    | None, _ -> None
+    | Some m, None ->
+        Some { m with spans_earnings_reason = Some "the record carries no earnings calendar" }
+    | Some m, Some e ->
+        Some
+          {
+            m with
+            spans_earnings = Some (Earnings.spans ~expiry:m.expiry ~next:e.calendar.next_date);
+            earnings_implied_move = (match e.implied with Some i -> Some i.implied_move | None -> None);
+            spans_earnings_reason = (match e.implied with Some _ -> None | None -> e.implied_reason);
+          }
+  in
   (* [fin] is the record the model saw: the original, or its converted copy. *)
   let record ~(fin : financials) ?model ?class_check ?inputs ?fair_value ?margin_of_safety
       ?signal ?failed_reason ?build_out ?build_out_reason ~price ~status ~floor () =
@@ -298,6 +347,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       insiders_reason = original.insiders_reason;
       build_out;
       build_out_reason;
+      earnings = fst (earnings_of inputs);
+      earnings_reason = snd (earnings_of inputs);
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,
@@ -368,15 +419,6 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   in
   (* The market-implied readout (36), only under --options: the chain for the name on the
      latest snapshot date, or the reason there is none. *)
-  let rf_of (inputs : model_inputs) =
-    match inputs with
-    | `Dcf i -> i.risk_free_rate.value
-    | `Dcf_midcycle m -> m.dcf.risk_free_rate.value
-    | `Residual_income i -> i.risk_free_rate.value
-    | `Residual_income_insurer i -> i.core.risk_free_rate.value
-    | `Reit_ffo_dividend i -> i.risk_free_rate.value
-    | `Bdc_nav _ -> 0.
-  in
   let market_implied_of ~ke ~fair_value (inputs : model_inputs) =
     match options with
     | None -> (None, None)
@@ -491,7 +533,11 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
           required_return_source =
             Some (match assumptions.required_return with Some r -> r.source | None -> "capm");
           required_return_version = Option.map (fun (r : Dcf.declared_return) -> r.version) assumptions.required_return;
-          market_implied = fst (market_implied_of ~ke:(Dcf.cost_of_equity assumptions) ~fair_value inputs);
+          market_implied =
+            (* (68) marked, never reselected: the expiry is the one the readout already chose *)
+            mark_earnings
+              (fst (market_implied_of ~ke:(Dcf.cost_of_equity assumptions) ~fair_value inputs))
+              (fst (earnings_of (Some inputs)));
           market_implied_reason = snd (market_implied_of ~ke:(Dcf.cost_of_equity assumptions) ~fair_value inputs);
         }
   in

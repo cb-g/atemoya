@@ -187,6 +187,48 @@ by default; slippage is its placeholder.
 uv run python/express.py data/views/mine.json
 ```
 
+## The earnings gate
+
+A structure held across a results release is a different instrument from one that expires
+before it (68), and until now every one of these tools picked an expiry without knowing which
+it had. Each candidate in `hedge.py` and `express.py` now carries `spans_earnings` — true when
+its expiry falls on or after the next release — with the release date, where that date came
+from, and the implied event move beside it.
+
+**No candidate is excluded and nothing is re-ranked.** The flag is added where the candidate
+is serialised, not on the candidate itself, so the Pareto set is computed on the same three
+objectives, the constraint selects what it selected, `Candidate.key` cannot see it and neither
+ranking key in the view tool can. A test holds the marked and unmarked candidate equal on
+every other field. The holder decides what a release means for a position; a rule that quietly
+dropped half the table would be deciding for them.
+
+Both plots mark a spanning candidate with an open ring: colour is already carrying the cap in
+one and `p_market` in the other, and the marker is carrying the selection and credit-or-debit,
+so the ring is the one free channel. It is drawn, never filtered — every candidate is still on
+the picture.
+
+`hedge_book.py` reads `null` with its reason rather than `false`: an index product reports no
+results of its own, each holding in the book has its own release date, and no single date
+stands for the book. `false` there would be a claim that the expiry is clear of a release,
+which is not what silence means. The same holds for a run whose records predate the block, or
+a name with no record: null and a reason, never false.
+
+`express.py`'s volatility diagnostic gains an event line beside its ATM-against-realised one:
+what the market charges for the next release against the median absolute excess move over the
+last eight, and the ratio. **The two are not the same measurement and the line says so.** The
+implied move is one standard deviation of the event under the market's own distribution; the
+realised figure is a median, nearer the middle of the distribution than its standard
+deviation. The ratio therefore sits above one on a quiet name even where the market charges
+nothing for the event, and a reader who takes it for a spread to collect has misread it.
+
+The release calendar and the implied move live on the valuation record; these tools read them
+from the run and never recompute them, so the tool and the record cannot disagree.
+
+```sh
+uv run python/hedge.py data/holdings/demo.json        # each candidate marked, none excluded
+uv run python/express.py data/views/demo.json         # and the event line in the diagnostic
+```
+
 ## Fills
 
 The slippage field in the view-expression tool is a placeholder for this: where option

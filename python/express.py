@@ -331,7 +331,39 @@ def percentile_of(value: float, history: list[float]) -> float | None:
     return 100.0 * sum(1 for h in history if h <= value) / len(history)
 
 
-def vol_diagnostic(options: Path, ticker: str, snapshot_date: str, horizon_days: int, rf: float) -> dict[str, object]:
+def event_line(record: boundary.Valuation | None) -> dict[str, object]:
+    """(68) The volatility diagnostic's event line: what the option market charges for the
+    next results release against what the last eight actually did.
+
+    The two are not the same measurement and the line says so. The implied move is one
+    standard deviation of the event under the market's own distribution, from the two expiries
+    bracketing the release; the realised figure is the MEDIAN absolute excess move over the
+    last eight, which is nearer the middle of the distribution than its standard deviation.
+    The ratio is therefore expected to sit above one even where the market charges nothing
+    for the event, and a reader who treats it as a spread to collect has misread it."""
+    if record is None or record.earnings is None:
+        return {"implied_event_move": None, "realised_median_abs_excess": None, "ratio": None,
+                "sentence": None,
+                "reason": ("no record in the run" if record is None
+                           else record.earnings_reason or "the run's record carries no earnings block")}
+    e = record.earnings
+    implied = None if e.implied is None else e.implied.implied_move
+    realised = e.calendar.realised_median_abs_excess
+    ratio = e.implied_over_realised
+    sentence = (None if implied is None or realised is None else
+                f"the market charges {implied:.1%} for the release on {e.calendar.next_date} "
+                f"({e.calendar.next_source}), {e.days_to_next} days out, against a median absolute excess "
+                f"move of {realised:.1%} over the last {len(e.calendar.events)}")
+    return {"implied_event_move": implied, "realised_median_abs_excess": realised, "ratio": ratio,
+            "next_date": e.calendar.next_date, "next_source": e.calendar.next_source,
+            "days_to_next": e.days_to_next, "events": len(e.calendar.events),
+            "sentence": sentence, "reason": None if implied is not None else e.implied_reason,
+            "note": "one standard deviation of the event under the market's distribution against the MEDIAN "
+                    "absolute excess move realised: the ratio sits above one on a quiet name and is not a spread to collect"}
+
+
+def vol_diagnostic(options: Path, ticker: str, snapshot_date: str, horizon_days: int, rf: float, *,
+                   record: boundary.Valuation | None = None) -> dict[str, object]:
     """Reads the store's chains for the name over the last 250 snapshot dates at or before the
     view's snapshot: the ATM IV at the expiry nearest the horizon on each, the closes."""
     dates = sorted((d.name for d in options.iterdir() if d.is_dir() and d.name <= snapshot_date and (options / d.name / f"{ticker}.json").exists()), reverse=True)[:HISTORY_DATES]
@@ -361,21 +393,28 @@ def vol_diagnostic(options: Path, ticker: str, snapshot_date: str, horizon_days:
     return {"atm_expiry": None if today_expiry is None else today_expiry[0], "atm_days": None if today_expiry is None else today_expiry[1],
             "atm_implied_vol": today_iv, "realised_vol": realised, "realised_returns": n, "realised_window_days": horizon_days,
             "iv_percentile_over_history": pct, "history_snapshots": len(history), "sentence": sentence,
+            "event": event_line(record),
             "note": "debit spreads pay the implied premium; credit spreads receive it; the ATM vol is the straddle nearest spot at the expiry nearest the horizon, inverted from mids"}
 
 
 # --- the run ---
 
-def candidate_json(s: Spread, pm: dict[str, float], pv: float | None, pv_reason: str | None, max_risk: float | None) -> dict[str, object]:
+def candidate_json(s: Spread, pm: dict[str, float], pv: float | None, pv_reason: str | None, max_risk: float | None,
+                   gate: hedge.EarningsGate | None = None) -> dict[str, object]:
+    """(68) [gate] marks the candidate at the serialisation boundary, so neither ranking key
+    can see it: a vertical held across a results release is a different instrument, and that
+    is the holder's to weigh. Nothing is excluded and nothing is re-ordered."""
     ev = None if pv is None else ev_per_dollar_at_risk(pv, s.max_profit, s.max_loss)
     return {"kind": s.kind, "credit": s.credit, "expiry": s.expiry, "days_to_expiry": s.days, "long_strike": s.long_strike, "short_strike": s.short_strike,
             "width": s.width, "cost_per_share": s.cost, "cost_per_share_at_mid": s.cost_at_mid, "fill": s.fill, "max_profit_per_share": s.max_profit, "max_loss_per_share": s.max_loss,
             "breakeven": s.breakeven, "p_market": pm["max_profit"], "p_market_regions": pm, "risk_neutral": True, "p_view": pv, "p_view_reason": pv_reason,
             "ev_per_dollar_at_risk": ev, "disagreement": None if pv is None else pv - pm["max_profit"],
-            "contracts_for_max_risk": None if max_risk is None else int(max_risk // (s.max_loss * CONTRACT))}
+            "contracts_for_max_risk": None if max_risk is None else int(max_risk // (s.max_loss * CONTRACT)),
+            **(gate.mark(s.expiry) if gate is not None else {})}
 
 
-def express_one(v: View, chain: boundary.OptionChain, smiles: boundary.ChainSmiles, diagnostic: dict[str, object], model: FillModel | None = None) -> dict[str, object]:
+def express_one(v: View, chain: boundary.OptionChain, smiles: boundary.ChainSmiles, diagnostic: dict[str, object], model: FillModel | None = None,
+                gate: hedge.EarningsGate | None = None) -> dict[str, object]:
     expiries, notes = hedge.expiries_in_window(smiles, chain, v.horizon_days, beyond=WINDOW_BEYOND_DAYS)
     by_expiry = {e.expiry: e for e in expiries}
     prob = float(v.probability or 0.0)
@@ -383,7 +422,7 @@ def express_one(v: View, chain: boundary.OptionChain, smiles: boundary.ChainSmil
     rows: list[dict[str, object]] = []
     for s in candidates_of(expiries, v.direction, v.slippage_per_leg, model):
         pv, reason = p_view_of(s, v.direction, prob, level_strikes)
-        rows.append(candidate_json(s, p_market_of(s, by_expiry[s.expiry]), pv, reason, v.max_risk_usd))
+        rows.append(candidate_json(s, p_market_of(s, by_expiry[s.expiry]), pv, reason, v.max_risk_usd, gate))
     ranked = sorted((r for r in rows if r["p_view"] is not None), key=lambda r: (-float(str(r["ev_per_dollar_at_risk"])), float(str(r["max_loss_per_share"])), str(r["kind"]), str(r["expiry"]), float(str(r["long_strike"])), float(str(r["short_strike"]))))
     unranked = sorted((r for r in rows if r["p_view"] is None), key=lambda r: (-float(str(r["p_market"])), float(str(r["max_loss_per_share"])), str(r["kind"]), str(r["expiry"]), float(str(r["long_strike"])), float(str(r["short_strike"]))))
     return {
@@ -398,6 +437,10 @@ def express_one(v: View, chain: boundary.OptionChain, smiles: boundary.ChainSmil
         "candidates": rows, "ranked": ranked, "top": ranked[:10], "unranked_on_p_market": unranked,
         "market_prices_the_view_more_strongly": [r for r in ranked if float(str(r["p_market"])) > float(str(r["p_view"]))][:10],
         "vol_diagnostic": diagnostic, "risk_neutral_note": RISK_NEUTRAL_NOTE, "scope_limits": SCOPE_LIMITS,
+        "earnings_gate": ({"next_date": None, "reason": None if gate is None else gate.reason} if gate is None or gate.next_date is None
+                          else {"next_date": gate.next_date, "source": gate.next_source, "implied_move": gate.implied_move,
+                                "spanning": sum(1 for r in rows if r.get("spans_earnings") is True), "candidates": len(rows),
+                                "note": "a mark, never a filter: nothing is excluded or re-ranked by it"}),
     }
 
 
@@ -411,6 +454,15 @@ def draw(result: dict[str, object], png: Path) -> None:
         if pts:
             mappable = ax.scatter([float(str(r["max_loss_per_share"])) for r in pts], [float(str(r["ev_per_dollar_at_risk"])) for r in pts], c=[float(str(r["p_market"])) for r in pts],
                                   cmap="viridis", vmin=0.0, vmax=1.0, marker=marker, s=14, alpha=0.7, label=f"{label} with p_view ({len(pts)})")
+    # (68) the mark: colour is taken by p_market and the marker by credit/debit, so a
+    # candidate expiring on or after the release gets a ring. Drawn, never filtered.
+    spanning = [r for r in ranked if r.get("spans_earnings") is True]
+    if spanning:
+        gate = result.get("earnings_gate")
+        when = gate.get("next_date") if isinstance(gate, dict) else None  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        ax.scatter([float(str(r["max_loss_per_share"])) for r in spanning], [float(str(r["ev_per_dollar_at_risk"])) for r in spanning],
+                   s=48, facecolors="none", edgecolors="tab:orange", linewidths=0.6,
+                   label=f"expires on or after earnings {when} ({len(spanning)}); marked, not excluded")
     if ranked and mappable is not None:
         fig.colorbar(mappable, ax=ax, label="p_market (risk-neutral probability of max profit)")
         top = ranked[0]
@@ -424,7 +476,9 @@ def draw(result: dict[str, object], png: Path) -> None:
     ax.grid(True, alpha=0.3)
     ax.legend(loc="lower right", fontsize=8)
     diag = hedge.points([result["vol_diagnostic"]])[0]
-    fig.text(0.01, 0.01, f"slippage {float(str(view['slippage_per_leg'])):.2f} per contract per leg; {diag.get('sentence') or 'no vol diagnostic'}; {RISK_NEUTRAL_NOTE}.", fontsize=7, wrap=True)
+    event = diag.get("event")
+    event_text = (str(e.get("sentence") or e.get("reason")) if isinstance(event, dict) and (e := {str(k): v for k, v in event.items()}) else "")  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType, reportUnknownMemberType]
+    fig.text(0.01, 0.01, f"slippage {float(str(view['slippage_per_leg'])):.2f} per contract per leg; {diag.get('sentence') or 'no vol diagnostic'}; {event_text}; {RISK_NEUTRAL_NOTE}.", fontsize=7, wrap=True)
     fig.tight_layout(rect=(0, 0.05, 1, 1))
     fig.savefig(png, dpi=120)
     plt.close(fig)
@@ -454,19 +508,20 @@ def main(argv: list[str]) -> int:
             print(f"{v.ticker}: refused: no options data for {v.ticker} in the store{' at or before ' + v.as_of_snapshot if v.as_of_snapshot else ''}; fetch it with: uv run python/fetch_options.py {v.ticker}", file=sys.stderr)
             rc = 1
             continue
-        rf = args.rf if args.rf is not None else hedge.rf_of(hedge.record_of(args.run, v.ticker))
+        record = hedge.record_of(args.run, v.ticker)          # one scan, read twice
+        rf = args.rf if args.rf is not None else hedge.rf_of(record)
         if rf is None:
             print(f"{v.ticker}: no risk-free rate on the run's record; pass --rf", file=sys.stderr)
             rc = 1
             continue
         chain = boundary.OptionChain.from_json_string(chain_path.read_text())
         smiles = hedge.smiles_of(chain_path, rf)
-        diagnostic = vol_diagnostic(args.options, v.ticker, chain.snapshot_date, v.horizon_days, rf)
+        diagnostic = vol_diagnostic(args.options, v.ticker, chain.snapshot_date, v.horizon_days, rf, record=record)
         model_path: Path | None = None if args.fill_model is None else args.fill_model / f"{v.ticker}.json"
         model = FillModel.load(model_path) if model_path is not None and model_path.exists() else None
         if args.fill_model is not None and model is None:
             print(f"{v.ticker}: no fill model at {model_path}; the flat slippage applies", file=sys.stderr)
-        result = express_one(v, chain, smiles, diagnostic, model)
+        result = express_one(v, chain, smiles, diagnostic, model, hedge.earnings_gate(record, ticker=v.ticker))
         (out_dir / f"{v.ticker}.json").write_text(json.dumps(result, indent=1, sort_keys=True) + "\n")
         draw(result, out_dir / f"{v.ticker}.png")
         top = hedge.points(result["top"])
@@ -475,6 +530,10 @@ def main(argv: list[str]) -> int:
         for r in top[:3]:
             print(f"   {r['kind']} {r['long_strike']}/{r['short_strike']} {r['expiry']}: cost {float(str(r['cost_per_share'])):+.2f}, max profit {float(str(r['max_profit_per_share'])):.2f}, max loss {float(str(r['max_loss_per_share'])):.2f}, "
                   f"p_view {float(str(r['p_view'])):.2f}, p_market {float(str(r['p_market'])):.3f}, disagreement {float(str(r['disagreement'])):+.3f}, EV/$ {float(str(r['ev_per_dollar_at_risk'])):+.3f}")
+        print(f"   {hedge.gate_line(result)}")
+        event = diagnostic.get("event")
+        if isinstance(event, dict):
+            print(f"   event: {event.get('sentence') or event.get('reason')}")
     return rc
 
 

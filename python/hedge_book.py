@@ -152,10 +152,19 @@ def book_candidate(c: hedge.Candidate, *, book_value: float, exposure: float, in
                            cost / book_value, floor / book_value, None if cap is None else cap / book_value, c.floor_strike, greeks)
 
 
+# (68) The index product reports no results of its own, so there is no release date for its
+# expiries to lie after. The field is null with that reason and never `false`: `false` would
+# say the expiry is clear of a release, and what is meant is that the question is not the
+# index's. The book's holdings each have their own dates, and one number cannot stand for them.
+INDEX_GATE = hedge.EarningsGate(
+    None, reason="an index product reports no results of its own; each holding in the book has its own "
+                 "release date, and no single date stands for the book")
+
+
 def book_json(c: hedge.Candidate) -> dict[str, object]:
     """The single-name candidate's JSON with the cost keys named for what they are on a book:
     the structure's cost on every covered index share, and the Greeks in index-share terms."""
-    j = c.to_json()
+    j = c.to_json(INDEX_GATE)
     j["cost_on_covered_index_shares"] = j.pop("cost_per_share")
     j["cost_on_covered_index_shares_at_mid"] = j.pop("cost_per_share_at_mid")
     j["position_greeks_in_index_shares"] = j.pop("position_greeks_per_share")

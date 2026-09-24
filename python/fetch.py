@@ -44,6 +44,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError, ValidationInfo, fie
 import boundary
 import fetch_sec
 import reference
+import earnings
 import universe as universe_file
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -663,7 +664,9 @@ def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile 
             submission: boundary.Submission | None = None, submissions_unavailable: str | None = None,
             cover: fetch_sec.CoverPage | None = None, cover_split: tuple[float, str] | None = None,
             stretch_block: boundary.Stretch | None = None, stretch_reason: str | None = None,
-            insiders_block: boundary.Insiders | None = None, insiders_reason: str | None = None) -> boundary.Financials:
+            insiders_block: boundary.Insiders | None = None, insiders_reason: str | None = None,
+            earnings_calendar: boundary.EarningsCalendar | None = None,
+            earnings_calendar_reason: str | None = None) -> boundary.Financials:
     """With [filing_currency] (filed statements) the statement currency is the filing's unit,
     the vendor's is recorded beside it, and the single currency basis holds iff the filing's
     unit is the trading currency."""
@@ -702,6 +705,8 @@ def _record(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile 
         stretch_reason=stretch_reason,
         insiders=insiders_block,
         insiders_reason=insiders_reason,
+        earnings_calendar=earnings_calendar,
+        earnings_calendar_reason=earnings_calendar_reason,
     )
 
 
@@ -753,15 +758,22 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
     if cik is None:
         import insiders as insiders_mod  # noqa: PLC0415
 
+        # (68) no filer, so no item 2.02 to read: the calendar is the vendor's, and says so
+        vendor_calendar, vendor_calendar_reason = earnings.calendar_of(symbol, ticker, as_of.date())
         return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
                        provider_reason=f"no SEC filings for {symbol}: not in company_tickers.json", stretch_block=stretch_block, stretch_reason=stretch_reason,
-                       insiders_reason=insiders_mod.NO_CIK), None
+                       insiders_reason=insiders_mod.NO_CIK,
+                       earnings_calendar=vendor_calendar, earnings_calendar_reason=vendor_calendar_reason), None
     facts = fetch_sec.companyfacts(cik, sec.user_agent)
     index = fetch_sec.submissions(cik, sec.user_agent)
     submission, submissions_unavailable = fetch_sec.latest_annual_submission(index)
     # (66) Form 4 on every CIK-resolved record, cut on the filing date so the block is the
     # same one the point-in-time panel would read on this date.
     insiders_block, insiders_reason = fetch_sec.insiders_of(cik, index, as_of.date(), sec.user_agent)
+    # (68) the release calendar: the filer's own item 2.02 dates where it files them, the
+    # vendor's where it does not -- a foreign private issuer files 6-K and a trust neither.
+    earnings_calendar, earnings_calendar_reason = earnings.calendar_of(
+        symbol, ticker, as_of.date(), cik=cik, index=index, user_agent=sec.user_agent)
     # (42) the cover page's ordinary count, for the receipt-ratio check on every CIK-resolved record,
     # with (44) the vendor's split record between the cover page's date and the fetch date
     cover = None if facts is None else fetch_sec.cover_page_shares(facts, as_of.date(), sec.definitions.shares_for_market_cap.point_in_time.cover_page)
@@ -770,7 +782,8 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
     if not decision.xbrl or decision.currency is None:
         return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
                        provider_reason=f"CIK {cik}: {decision.reason}", submission=submission, submissions_unavailable=submissions_unavailable, cover=cover, cover_split=cover_split, stretch_block=stretch_block, stretch_reason=stretch_reason,
-                       insiders_block=insiders_block, insiders_reason=insiders_reason), None
+                       insiders_block=insiders_block, insiders_reason=insiders_reason,
+                       earnings_calendar=earnings_calendar, earnings_calendar_reason=earnings_calendar_reason), None
 
     filed_notes = list(notes)
     periods = fetch_sec.periods_from_facts(decision.facts, sec.tags, sec.definitions, filed_notes, taxonomy=decision.taxonomy, unit=decision.currency, depth=depth)
@@ -792,7 +805,8 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
             lagged_notes = list(notes) + [f"CIK {cik}: {decision.reason}; the newest annual facts ({lag.facts_end}, filed {lag.facts_filed}) are {facts_age} days old"]
             return _record(symbol, as_of, quote, profile, vendor, lagged_notes, provider="yfinance", provider_reason=lag.text,
                            check=check, submission=submission, cover=cover, cover_split=cover_split, stretch_block=stretch_block, stretch_reason=stretch_reason,
-                       insiders_block=insiders_block, insiders_reason=insiders_reason), None
+                       insiders_block=insiders_block, insiders_reason=insiders_reason,
+                       earnings_calendar=earnings_calendar, earnings_calendar_reason=earnings_calendar_reason), None
         else:
             reason += f"; {lag.text}; the vendor's newest annual ({max((p.period_end for p in vendor), default='none')}) predates the filing's period, so the filed statements are kept"
     check: boundary.CrossCheck | None = None
@@ -809,9 +823,11 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
                       provider_reason=reason, latest_filing=fetch_sec.latest_filing(periods), check=check,
                       taxonomy=decision.taxonomy, filing_currency=decision.currency,
                       submission=submission, submissions_unavailable=submissions_unavailable, cover=cover, cover_split=cover_split, stretch_block=stretch_block, stretch_reason=stretch_reason,
-                      insiders_block=insiders_block, insiders_reason=insiders_reason)
-    # the shadow is the vendor's view of the same name; Form 4 is the filer's, so it rides
-    # on the primary record alone and the diff stays a statements diff
+                      insiders_block=insiders_block, insiders_reason=insiders_reason,
+                      earnings_calendar=earnings_calendar, earnings_calendar_reason=earnings_calendar_reason)
+    # the shadow is the vendor's view of the same name; Form 4 and the release calendar (68)
+    # are the filer's, so they ride on the primary record alone and the diff stays a
+    # statements diff
     shadow = _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
                      provider_reason="shadow of an XBRL-primary record, for the provider diff", stretch_block=stretch_block, stretch_reason=stretch_reason)
     return primary, shadow

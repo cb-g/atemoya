@@ -141,6 +141,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     insiders_reason = None;
     stretch = None;
     stretch_reason = None;
+    earnings_calendar = None;
+    earnings_calendar_reason = None;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -2022,14 +2024,16 @@ let test_market_implied_smile () =
 
 (* A synthetic end-of-day chain from a flat lognormal: spot 100, rf 4%, vol 25%; quotes
    both sides at every strike with bid and ask 2% around the model price. *)
-let synthetic_chain ?(snapshot_date = "2026-09-01") ?(expiries = [ ("2027-03-19", 23); ("2028-01-21", 23); ("2028-06-16", 6) ]) () =
-  let spot = 100. and rf = 0.04 and vol = 0.25 in
+let synthetic_chain ?(snapshot_date = "2026-09-01") ?(expiries = [ ("2027-03-19", 23); ("2028-01-21", 23); ("2028-06-16", 6) ])
+    ?(vol_of = fun (_ : string) -> 0.25) () =
+  let spot = 100. and rf = 0.04 in
   let quotes =
     List.concat_map
       (fun (expiry, strikes) ->
         let days = get (Date.days_between ~from:snapshot_date ~until:expiry) in
         let t = float_of_int days /. 365. in
         let forward = spot *. exp (rf *. t) in
+        let vol = vol_of expiry in
         let w = vol *. vol *. t in
         let step = if strikes = 23 then 5. else 20. in
         let first = if strikes = 23 then 50. else 50. in
@@ -3761,6 +3765,78 @@ let test_build_out_on_the_record () =
         (bare.build_out = None && bare.build_out_reason = Some "build-out return and lag not declared")
 
 
+(* --- the earnings gate (68) --- *)
+
+let earnings_chain ?(snapshot_date = "2026-09-24") ~vols () =
+  (* two near-dated expiries bracketing a release on 2026-10-29, at the vols given *)
+  synthetic_chain ~snapshot_date ~expiries:[ ("2026-10-23", 23); ("2026-10-30", 23) ]
+    ~vol_of:(fun e -> List.assoc e vols) ()
+
+let test_earnings_bracket () =
+  let chain = earnings_chain ~vols:[ ("2026-10-23", 0.25); ("2026-10-30", 0.35) ] () in
+  (match Earnings.bracket chain ~next:"2026-10-29" with
+  | Ok (earlier, later) ->
+      Alcotest.(check string) "earlier" "2026-10-23" earlier;
+      Alcotest.(check string) "later" "2026-10-30" later
+  | Error r -> Alcotest.fail r);
+  (* an expiry ON the release date is the later leg, not the earlier one *)
+  (match Earnings.bracket chain ~next:"2026-10-30" with
+  | Ok (earlier, later) ->
+      Alcotest.(check string) "on the day, earlier" "2026-10-23" earlier;
+      Alcotest.(check string) "on the day, later" "2026-10-30" later
+  | Error r -> Alcotest.fail r);
+  check_error "nothing before" (Earnings.bracket chain ~next:"2026-10-01") [ "no listed expiry precedes 2026-10-01" ];
+  check_error "nothing after" (Earnings.bracket chain ~next:"2026-12-01")
+    [ "no listed expiry falls on or after 2026-12-01" ]
+
+let test_earnings_implied_move () =
+  (* the later expiry carries the event: 35 vol against 25 over seven more days.
+     w(0) at 2026-10-23 is 0.25^2 * 29/365 = 0.004966; at 2026-10-30, 0.35^2 * 36/365 =
+     0.012082; the event variance is 0.007116 and the move its square root, 0.0844. *)
+  let chain = earnings_chain ~vols:[ ("2026-10-23", 0.25); ("2026-10-30", 0.35) ] () in
+  (match Earnings.implied_of chain ~rf:0.04 ~next:"2026-10-29" with
+  | Ok i ->
+      Alcotest.(check string) "earlier" "2026-10-23" i.earlier_expiry;
+      Alcotest.(check string) "later" "2026-10-30" i.later_expiry;
+      Alcotest.(check (Alcotest.float 1e-4)) "earlier w" (0.25 *. 0.25 *. (29. /. 365.)) i.earlier_total_variance;
+      Alcotest.(check (Alcotest.float 1e-4)) "later w" (0.35 *. 0.35 *. (36. /. 365.)) i.later_total_variance;
+      Alcotest.(check (Alcotest.float 1e-4)) "event variance" (i.later_total_variance -. i.earlier_total_variance) i.event_variance;
+      Alcotest.(check (Alcotest.float 1e-4)) "the move is its square root" (sqrt i.event_variance) i.implied_move;
+      Alcotest.(check bool) "a positive move" true (i.implied_move > 0.)
+  | Error r -> Alcotest.fail r);
+  (* the negative case: a term structure with no event premium at all. The later expiry's
+     total variance is BELOW the earlier's, so the subtraction is negative -- which is a
+     reading and not a gap, and is reported as one rather than clamped to zero. *)
+  let quiet = earnings_chain ~vols:[ ("2026-10-23", 0.40); ("2026-10-30", 0.20) ] () in
+  check_error "no event premium" (Earnings.implied_of quiet ~rf:0.04 ~next:"2026-10-29")
+    [ "no event premium"; "the subtraction is negative" ]
+
+let test_earnings_spans_and_block () =
+  Alcotest.(check bool) "after the release" true (Earnings.spans ~expiry:"2026-10-30" ~next:"2026-10-29");
+  Alcotest.(check bool) "on the release" true (Earnings.spans ~expiry:"2026-10-29" ~next:"2026-10-29");
+  Alcotest.(check bool) "before it" false (Earnings.spans ~expiry:"2026-10-23" ~next:"2026-10-29");
+  let calendar : Boundary_t.earnings_calendar =
+    { past_source = "SEC 8-K item 2.02"; past_source_why = "fixture"; past_count = 8;
+      past_dates = []; next_date = "2026-10-29"; next_source = "vendor calendar";
+      next_source_as_of = "2026-09-24"; cadence_days = Some 91.; events = [];
+      realised_median_abs_excess = Some 0.02; realised_reason = None; benchmark = "SPY";
+      scope_limits = [] }
+  in
+  let chain = earnings_chain ~vols:[ ("2026-10-23", 0.25); ("2026-10-30", 0.35) ] () in
+  let implied = Earnings.implied_of chain ~rf:0.04 ~next:"2026-10-29" in
+  let block = Earnings.block_of ~calendar ~valued_on:"2026-09-24" ~implied in
+  Alcotest.(check int) "days to the release" 35 block.days_to_next;
+  (match (block.implied, block.implied_over_realised) with
+  | Some i, Some ratio ->
+      Alcotest.(check (Alcotest.float 1e-9)) "the ratio is implied over realised" (i.implied_move /. 0.02) ratio
+  | _ -> Alcotest.fail "no implied block");
+  (* the reason travels instead when there is none, and the ratio does not appear *)
+  let none = Earnings.block_of ~calendar ~valued_on:"2026-11-30" ~implied:(Error "no options directory given") in
+  Alcotest.(check (option string)) "the reason" (Some "no options directory given") none.implied_reason;
+  Alcotest.(check bool) "no ratio without a move" true (none.implied_over_realised = None);
+  (* a calendar that has aged past its own release says so with a negative count *)
+  Alcotest.(check bool) "negative when stale" true (none.days_to_next < 0)
+
 let () =
   let case name f = Alcotest.test_case name `Quick f in
   Alcotest.run "atemoya"
@@ -3922,6 +3998,12 @@ let () =
           case "underwriting checks recorded, never gates" test_insurer_underwriting_checks;
           case "requires filed statements, names the fix" test_insurer_requires_filed_statements;
           case "routes to the insurer model with a verified floor" test_insurer_routes_and_floors;
+        ] );
+      ( "earnings gate",
+        [
+          Alcotest.test_case "the bracketing expiries" `Quick test_earnings_bracket;
+          Alcotest.test_case "the implied event move, and the negative case" `Quick test_earnings_implied_move;
+          Alcotest.test_case "the mark and the block" `Quick test_earnings_spans_and_block;
         ] );
       ( "valuation",
         [

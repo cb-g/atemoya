@@ -247,6 +247,8 @@ type financials = {
   ?insiders : insiders option;                      (* (66) present on a CIK-resolved name with Form 4 filings in the year to the date *)
   ?insiders_reason : string option;                 (* (66) present instead: why there is none *)
   ?stretch_reason : string option;                  (* (52) why not: price history shorter than 250 trading days *)
+  ?earnings_calendar : earnings_calendar option;    (* (68) the filed or vendor release calendar; the implied half needs the options store and is added at the valuation *)
+  ?earnings_calendar_reason : string option;        (* (68) present instead: why there is no calendar *)
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -935,6 +937,59 @@ type insiders = {
    currency different from its trading currency, the cover page's ordinary count over the
    live effective shares (market cap / price, receipt units) against the declared ratio;
    a flag, never a gate or a correction; present iff the financials carry the cover page. *)
+(* (68) The earnings gate. Every options readout picks an expiry without knowing whether a
+   results release sits inside it, and a spread or a hedge across one is a different
+   instrument. The block never fails a record, adds no `Failed` string, and nothing in the
+   valuation reads it.
+
+   The calendar is filed and keyless: every 8-K carrying item 2.02, Results of Operations
+   and Financial Condition, over the last five years, from SEC's own submissions index. A
+   filer with no 2.02 at all -- a foreign private issuer files 6-K, a trust files neither --
+   falls back to the vendor's dates, and the record says which it read. *)
+type earnings_event = {
+  filed : string;                 (* the 8-K's filing date, or the vendor's date *)
+  before : string;                (* the last close on or before it *)
+  after : string;                 (* the first close after it *)
+  own : float;                    (* close to close across the release, a simple return *)
+  benchmark : float;              (* the same two dates on the benchmark *)
+  excess : float;                 (* own less benchmark *)
+}
+
+type earnings_calendar = {
+  past_source : string;           (* SEC 8-K item 2.02 | vendor *)
+  past_source_why : string;       (* why that source and not the other *)
+  past_count : int;               (* releases found in the five years to the date *)
+  past_dates : string list;       (* every one of them, oldest first *)
+  next_date : string;
+  next_source : string;           (* vendor | filed cadence, projected *)
+  next_source_as_of : string;     (* the vendor fetch date, or the last filed release the projection ran from *)
+  ?cadence_days : float option;   (* the median interval of the last eight releases; the projection's step, and the reader's check that the cadence is quarterly *)
+  events : earnings_event list;   (* the last eight, oldest first; fewer where the history or the closes are shorter *)
+  ?realised_median_abs_excess : float option;   (* the median absolute excess move over those events *)
+  ?realised_reason : string option;             (* present instead: why there is no median *)
+  benchmark : string;
+  scope_limits : string list;
+}
+
+type earnings_implied = {
+  snapshot_date : string;         (* the options snapshot the two expiries were read on *)
+  earlier_expiry : string;
+  later_expiry : string;
+  earlier_total_variance : float; (* the fitted smile at the forward: implied volatility squared times years *)
+  later_total_variance : float;
+  event_variance : float;         (* the later less the earlier *)
+  implied_move : float;           (* its square root *)
+  forward_convention : string;    (* one convention for both legs, or the difference of two small numbers is noise *)
+}
+
+type earnings = {
+  calendar : earnings_calendar;
+  days_to_next : int;             (* from valued_on; negative when the calendar has aged past the release *)
+  ?implied : earnings_implied option;
+  ?implied_reason : string option;            (* present instead: why there is no implied move *)
+  ?implied_over_realised : float option;      (* the implied move over the realised median; present iff both are *)
+}
+
 type receipt_check = {
   cover_page_shares : float;
   cover_page_shares_as_of : string;
@@ -993,6 +1048,9 @@ type market_implied = {
   implied_growth_note : string;       (* why: a horizon of a few years standing in for the long run *)
   risk_neutral : bool;                (* always true *)
   note : string;
+  ?spans_earnings : bool option;      (* (68) true when this expiry lies after the next earnings date; the readout is unchanged either way, the expiry is not reselected, and nothing is excluded *)
+  ?earnings_implied_move : float option;   (* (68) the event's implied move, beside the flag *)
+  ?spans_earnings_reason : string option;  (* (68) present instead: why the flag cannot be set *)
 }
 
 (* (60) The build-out readout: what the new capital must earn for the price to be right.
@@ -1095,4 +1153,6 @@ type valuation = {
   ?insiders_reason : string option;             (* (66) present instead: no CIK, no Form 4 filed, or the issuer files none *)
   ?build_out : build_out option;                (* (60) on a Cyclical or OperatingCompany record that failed the observation or free-cash-flow guard with capex above depreciation and positive EBIT; never a fair value *)
   ?build_out_reason : string option;            (* (60) present instead on such a record: why there is no readout *)
+  ?earnings : earnings option;                  (* (68) the calendar from the financials with the implied event move from the store; on every record, Ok or Failed; never a fair value *)
+  ?earnings_reason : string option;             (* (68) present instead: why there is no block *)
 }

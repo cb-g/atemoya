@@ -367,4 +367,9 @@ let of_chain (chain : option_chain) ~rf ~ke ~fair_value ~growth =
               implied_growth_note = growth_note days;
               risk_neutral = true;
               note;
+              (* (68) The expiry selection does not know the release calendar; the valuation
+                 does, and marks these after. Nothing here is reselected either way. *)
+              spans_earnings = None;
+              earnings_implied_move = None;
+              spans_earnings_reason = None;
             })
