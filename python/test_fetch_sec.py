@@ -214,12 +214,47 @@ def test_debt_absent_is_zero_only_when_the_filing_says_so_twice() -> None:
     assert p.total_debt_composition is not None and p.total_debt_composition.components == []
     for tag in DEFS.total_debt.xbrl.interest_evidence:
         assert period({tag: usd(fact("2025-12-31", 1e6, start="2025-01-01"))}).total_debt is None
-    assert period({"InterestPaidNet": usd(fact("2025-12-31", 0.0, start="2025-01-01"))}).total_debt is None  # a tag at zero is still a tag
     p = period({"LongTermDebtNoncurrent": usd(fact("2025-12-31", 0.745e9))})
     assert p.total_debt == 0.745e9  # debt without interest is the debt
     # a debt tag on another year does not make this year zero: the rule is per period
     p = period({"InterestExpense": usd(fact("2024-12-31", 1e6, start="2024-01-01"))})
     assert p.total_debt == 0.0
+
+
+def test_interest_evidence_has_a_sign_and_a_size() -> None:
+    """(65) A trace of interest is not the filing saying twice that the filer owes nothing.
+    Interest is evidence of debt only when it is an expense and when it is large enough
+    against operating income to be borrowing rather than a facility's fees."""
+    floor = fetch_sec.load_params().interest_evidence_floor.value
+    assert floor == 0.005
+
+    def with_interest(interest: float, operating: float | None) -> fetch.boundary.FiscalPeriod:
+        gaap: dict[str, object] = {"InterestExpenseNonoperating": usd(fact("2025-12-31", interest, start="2025-01-01"))}
+        if operating is not None:
+            gaap["OperatingIncomeLoss"] = usd(fact("2025-12-31", operating, start="2025-01-01"))
+        return period(gaap)
+
+    # Deckers' shape: no borrowing filed, interest two tenths of a per cent of operating income
+    p = with_interest(2.530e6, 1262.903e6)
+    assert p.total_debt == 0.0
+    assert p.total_debt_source is not None and "below the 0.50% floor" in p.total_debt_source
+    assert "InterestExpenseNonoperating" in p.total_debt_source and "0.20%" in p.total_debt_source
+    # at the floor exactly, and above it, the interest stands as evidence and the field is null
+    assert with_interest(0.005 * 1000e6, 1000e6).total_debt is None
+    assert with_interest(0.05 * 1000e6, 1000e6).total_debt is None
+    # interest that is income is never evidence, whatever its size
+    p = with_interest(-40e6, 1000e6)
+    assert p.total_debt == 0.0
+    assert p.total_debt_source is not None and "is interest income, not an expense" in p.total_debt_source
+    # a filer that tags interest paid at zero paid none
+    assert period({"InterestPaidNet": usd(fact("2025-12-31", 0.0, start="2025-01-01"))}).total_debt == 0.0
+    # no operating income, or a loss, gives the floor nothing to measure against: evidence stands
+    assert with_interest(2.530e6, None).total_debt is None
+    assert with_interest(2.530e6, -9169e6).total_debt is None
+    # and a filed debt line is still the debt, whatever the interest
+    assert period({"LongTermDebtNoncurrent": usd(fact("2025-12-31", 0.745e9)),
+                   "InterestExpenseNonoperating": usd(fact("2025-12-31", 1.0, start="2025-01-01")),
+                   "OperatingIncomeLoss": usd(fact("2025-12-31", 1000e6, start="2025-01-01"))}).total_debt == 0.745e9
 
 
 def test_debt_aggregate_is_first_choice_with_convertible_notes_beside_it() -> None:

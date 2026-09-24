@@ -9,7 +9,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?depreciation_amortization ?depreciation_amortization_row ?capex ?delta_nwc
     ?cash ?total_debt ?total_debt_source ?book_equity ?net_income ?dividends_paid
     ?dividends_paid_row ?provision_for_credit_losses ?provision_for_credit_losses_row
-    ?net_loans ?net_loans_row ?filed ?accession ?(restated_from = []) ?working_capital_reconciled ?working_capital_gap ?aoci ?aoci_row ?claims_incurred
+    ?net_loans ?net_loans_row ?filed ?accession ?(restated_from = []) ?no_distributions_filed ?working_capital_reconciled ?working_capital_gap ?aoci ?aoci_row ?claims_incurred
     ?claims_incurred_row ?benefits_losses_and_expenses ?benefits_losses_and_expenses_row
     ?policy_acquisition_expense ?policy_acquisition_expense_row ?operating_expense
     ?operating_expense_row ?future_policy_benefits ?future_policy_benefits_row
@@ -46,6 +46,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     filed;
     accession;
     restated_from;
+    no_distributions_filed;
     working_capital_reconciled;
     working_capital_gap;
     aoci;
@@ -227,7 +228,7 @@ let params_json =
   "growth_clamp_upper": {"value": 0.5, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mature_market_erp": {"value": 0.0423, "source": "Damodaran mature base", "as_of": "2026-01-01", "max_age_days": 400},
-  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
+  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "interest_evidence_floor": {"value": 0.005, "source": "seed", "as_of": "2026-09-24", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
     "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03, "Brazil": 0.035}},
@@ -986,12 +987,13 @@ let bank_assumptions : Dcf.assumptions =
     terminal_growth_rate = param 0.02;
     projection_years = { value = 2; key = "global"; source = "test"; as_of = today; age_days = 0 } }
 
-let bank_history ?(net_income = 200.) ?(dividends = Some 100.) ?(book_equity = 1000.) () =
+let bank_history ?(net_income = 200.) ?(dividends = Some 100.) ?(book_equity = 1000.)
+    ?no_distributions_filed () =
   List.map
     (fun period_end ->
       period ~period_end ~total_revenue:1000. ~net_interest_income:600. ~net_income
         ?dividends_paid:dividends ~dividends_paid_row:"Cash Dividends Paid" ~book_equity
-        ~net_loans:5000. ~net_loans_row:"Net Loan" ())
+        ?no_distributions_filed ~net_loans:5000. ~net_loans_row:"Net Loan" ())
     [ "2025-12-31"; "2024-12-31" ]
 
 let bank_financials ?(price = Some 10.) ?(market_cap = Some 1000.) periods =
@@ -1079,6 +1081,43 @@ let test_ri_retention_derivation () =
   check_error "no dividends row"
     (Residual_income.value bank_assumptions ~country:"T"
        (bank_financials (bank_history ~dividends:None ())))
+    [ "payout not derivable"; "have 0" ];
+  (* (65) An absent dividend tag alone still refuses, above. With the filing's financing
+     section carried and no dividend element of any kind, the filing has said it paid none
+     and retention is 1; the record says which it is. *)
+  let inputs, _ =
+    get
+      (Residual_income.value bank_assumptions ~country:"T"
+         (bank_financials (bank_history ~dividends:None ~no_distributions_filed:true ())))
+  in
+  check_float "payout 0" 0. inputs.payout_ratio;
+  check_float "retention 1" 1. inputs.retention;
+  Alcotest.(check (list string)) "the periods that said so"
+    [ "2025-12-31"; "2024-12-31" ] inputs.payout_periods;
+  Alcotest.(check string) "the source"
+    "no dividend element filed alongside a filed financing section; taken as no distributions"
+    inputs.payout_source;
+  (* a filer that pays keeps the mean, and the source stays empty *)
+  let paying, _ = get (Residual_income.value bank_assumptions ~country:"T" (bank_financials (bank_history ()))) in
+  Alcotest.(check string) "no source where the ratio is a mean" "" paying.payout_source;
+  (* one period saying so is not two *)
+  check_error "one period only"
+    (Residual_income.value bank_assumptions ~country:"T"
+       (bank_financials
+          (List.mapi
+             (fun i (q : Boundary_t.fiscal_period) ->
+               if i = 0 then q else { q with no_distributions_filed = None })
+             (bank_history ~dividends:None ~no_distributions_filed:true ()))))
+    [ "payout not derivable"; "have 0" ];
+  (* and a loss-making period does not count toward the two: retention is about what a
+     profitable year did with its earnings *)
+  check_error "a loss is not a period that said so"
+    (Residual_income.value bank_assumptions ~country:"T"
+       (bank_financials
+          (List.mapi
+             (fun i (q : Boundary_t.fiscal_period) ->
+               if i = 0 then q else { q with net_income = Some (-10.) })
+             (bank_history ~dividends:None ~no_distributions_filed:true ()))))
     [ "payout not derivable"; "have 0" ]
 
 let test_ri_guards () =
@@ -2302,7 +2341,7 @@ let test_minor_unit_guard () =
       "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
       "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-      "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400}, "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
+      "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "interest_evidence_floor": {"value": 0.005, "source": "seed", "as_of": "2026-09-24", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400}, "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
       "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400, "values": {"United States": 0.02, "United Kingdom": 0.0}},
       "unwired": {}}|} ]) } in
   let run_gbp fin = Valuation.run uk_rates ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) fin in
@@ -3299,7 +3338,7 @@ let test_wacc_below_terminal_growth () =
                "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
                "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
-               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
+               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "interest_evidence_floor": {"value": 0.005, "source": "a", "as_of": "2026-09-24", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
                "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
                  "values": {"United States": 0.5}},
                "unwired": {}}|} }

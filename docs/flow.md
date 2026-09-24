@@ -335,8 +335,25 @@ at all:
 6. **Debt components are summed when no aggregate or complete pair is filed.** A filer
    with fewer instruments is not missing data: one component per kind, recorded;
    absent-is-zero applies only when no component and no interest tag is present.
+   **Interest evidence has a sign and a size** (65). A trace of interest is not the filing
+   saying a second time that the filer owes something. Interest counts as evidence only
+   when it is an expense — a figure that is income never does, whatever its size — and when
+   it exceeds `interest_evidence_floor` of operating income, a declared parameter at half a
+   per cent. The floor needs a scale, so it is applied only where operating income is filed
+   and positive; with no operating income line, or a loss, the evidence stands and the
+   field stays null. Both conditions are written into the debt source on the record when
+   the rule fires. Only a filer that tags no debt line at all ever reaches this test.
 7. **AOCI by components.** When the aggregate is absent the filed components are summed,
    recorded as `sum_of_components` with each component.
+
+   **A filer that has never distributed anything retains everything** (65). An absent
+   dividend tag cannot tell "none" from "not filed", so it alone still refuses. The
+   cash-flow statement's financing subtotal settles it: a period whose filing carries that
+   subtotal and no dividend or distribution element of any kind — the wider
+   `dividend_evidence` list, preferred and minority included, not the common-stock payments
+   the models read — has said it paid none, and the period carries `no_distributions_filed`.
+   On the residual-income path, two such periods with positive net income give retention 1
+   with the source on the record; either condition missing leaves the existing refusal.
 8. **FFO does not apply to a financing lease.** A triple-net REIT may account for its
    properties as sales-type or direct-financing leases: they are then net investments in
    leases, they earn interest rather than rent, and there is no real-estate depreciation
@@ -594,6 +611,17 @@ in this order:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- batch three's findings as rules, and Denmark (65): four rules from the twenty names
+  brief 64 added. Interest counts as evidence of debt only when it is an expense and above
+  a declared floor of half a per cent of operating income, so two lease-only retailers that
+  file no borrowing at all stop being refused over an undrawn facility's fees.
+  `IncreaseDecreaseInLeasingReceivables` joins the working-capital exclusions, the vendor's
+  line agreeing to the dollar on four years without it and missing by four fifths with it.
+  A residual-income filer whose filing carries the financing subtotal and no dividend
+  element of any kind retains everything, with the source on the record. And Denmark joins
+  the three country tables from their own sources, with a curve probed live at Statistics
+  Denmark's keyless StatBank, where Danmarks Nationalbank publishes: ten-year only, the
+  seven-year substituted and recorded, no rate hand-copied. No new `Failed` string.
 - the tags an own-year filing uses (62): brief 61's rule reads each period from the filer's
   own-year filing, which is internally consistent but sometimes tags less than the filings
   after it, and 136 value cells went null. Three elements answer for almost all of what

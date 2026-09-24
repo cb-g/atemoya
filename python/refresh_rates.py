@@ -30,6 +30,7 @@ import csv
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import urllib.error
@@ -174,6 +175,25 @@ def parse_ecb_yc(body: bytes, series: Mapping[str, str]) -> Fetched:
     raise RefreshError("ECB: no period carries every requested tenor")
 
 
+def parse_dst_statbank(body: bytes, what: str) -> tuple[date, float]:
+    """Statistics Denmark StatBank BULK CSV: `TYPE;TID;INDHOLD` after a header row, the
+    period as YYYYMmm and a decimal comma. The newest period wins; the series is a monthly
+    average, so the caller dates it at that month's end."""
+    latest: tuple[date, float] | None = None
+    for line in body.decode("utf-8-sig").splitlines():
+        cells = line.split(";")
+        if len(cells) < 3 or not re.fullmatch(r"\d{4}M\d{2}", cells[-2].strip()):
+            continue  # the header row, and any row whose period is not a month
+        period = cells[-2].strip()
+        observed = _month_end(date(int(period[:4]), int(period[5:]), 1))
+        rate = _percent(cells[-1].strip(), what)
+        if latest is None or observed > latest[0]:
+            latest = (observed, rate)
+    if latest is None:
+        raise RefreshError(f"StatBank: no monthly observation for {what}")
+    return latest
+
+
 def parse_bundesbank_lines(body: bytes, what: str) -> tuple[date, float]:
     """Bundesbank REST CSV: `date;value;flags` rows after a metadata block; decimal comma."""
     latest: tuple[date, float] | None = None
@@ -284,6 +304,18 @@ def _substituted(fetched: Fetched, rule: reference.RateSource) -> Fetched:
     return fetched.model_copy(update={"rates": rates, "tenor_used": used})
 
 
+def fetch_dst_statbank(rule: reference.RateSource) -> Fetched:
+    """(65) Denmark. Danmarks Nationalbank's statistics are served through Statistics
+    Denmark's StatBank, keyless; table MPK3 carries the ten-year central government bond
+    redemption yield and nothing shorter, so the seven-year is substituted and recorded,
+    exactly as the OECD monthly tier does."""
+    series = dict(rule.series)
+    observed, rate = parse_dst_statbank(_get(rule.url), series["10y"])
+    return _substituted(
+        Fetched(as_of=observed, rates={"10y": rate},
+                notes=[f"monthly average for {observed.strftime('%B %Y')}; as_of is that month's end"]), rule)
+
+
 def fetch_boc_valet(rule: reference.RateSource) -> Fetched:
     series = dict(rule.series)
     url = rule.url.format(series=",".join(series.values()))
@@ -318,6 +350,7 @@ FETCHERS: dict[str, Callable[[reference.RateSource], Fetched]] = {
     "fred_dgs": fetch_fred_dgs,
     "fred_oecd_10y": fetch_fred_oecd_10y,
     "boc_valet": fetch_boc_valet,
+    "dst_statbank": fetch_dst_statbank,
     "ecb_yc": fetch_ecb_yc,
     "bundesbank_bbsis": fetch_bundesbank_bbsis,
     "mof_jgb": fetch_mof_jgb,

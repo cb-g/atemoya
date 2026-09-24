@@ -340,6 +340,8 @@ class XbrlTags:
     ifrs_full_net_interest_income: NiiRecipe
     depreciation_components: List[str]
     notes: List[str] = field(default_factory=lambda: [])
+    dividend_evidence: List[str] = field(default_factory=lambda: [])
+    financing_section: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'XbrlTags':
@@ -356,6 +358,8 @@ class XbrlTags:
                 ifrs_full_net_interest_income=NiiRecipe.from_json(x['ifrs_full_net_interest_income']) if 'ifrs_full_net_interest_income' in x else _atd_missing_json_field('XbrlTags', 'ifrs_full_net_interest_income'),
                 depreciation_components=_atd_read_list(_atd_read_string)(x['depreciation_components']) if 'depreciation_components' in x else _atd_missing_json_field('XbrlTags', 'depreciation_components'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                dividend_evidence=_atd_read_list(_atd_read_string)(x['dividend_evidence']) if 'dividend_evidence' in x else [],
+                financing_section=_atd_read_list(_atd_read_string)(x['financing_section']) if 'financing_section' in x else [],
             )
         else:
             _atd_bad_json('XbrlTags', x)
@@ -373,6 +377,8 @@ class XbrlTags:
         res['ifrs_full_net_interest_income'] = (lambda x: x.to_json())(self.ifrs_full_net_interest_income)
         res['depreciation_components'] = _atd_write_list(_atd_write_string)(self.depreciation_components)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        res['dividend_evidence'] = _atd_write_list(_atd_write_string)(self.dividend_evidence)
+        res['financing_section'] = _atd_write_list(_atd_write_string)(self.financing_section)
         return res
 
     @classmethod
@@ -1224,6 +1230,7 @@ class Params:
     mature_market_erp: Scalar
     midcycle_window_years: IntScalar
     midcycle_scale_floor: Scalar
+    interest_evidence_floor: Scalar
     sensitivity_steps: SensitivitySteps
     frontier_draws: IntScalar
     frontier_seed: IntScalar
@@ -1243,6 +1250,7 @@ class Params:
                 mature_market_erp=Scalar.from_json(x['mature_market_erp']) if 'mature_market_erp' in x else _atd_missing_json_field('Params', 'mature_market_erp'),
                 midcycle_window_years=IntScalar.from_json(x['midcycle_window_years']) if 'midcycle_window_years' in x else _atd_missing_json_field('Params', 'midcycle_window_years'),
                 midcycle_scale_floor=Scalar.from_json(x['midcycle_scale_floor']) if 'midcycle_scale_floor' in x else _atd_missing_json_field('Params', 'midcycle_scale_floor'),
+                interest_evidence_floor=Scalar.from_json(x['interest_evidence_floor']) if 'interest_evidence_floor' in x else _atd_missing_json_field('Params', 'interest_evidence_floor'),
                 sensitivity_steps=SensitivitySteps.from_json(x['sensitivity_steps']) if 'sensitivity_steps' in x else _atd_missing_json_field('Params', 'sensitivity_steps'),
                 frontier_draws=IntScalar.from_json(x['frontier_draws']) if 'frontier_draws' in x else _atd_missing_json_field('Params', 'frontier_draws'),
                 frontier_seed=IntScalar.from_json(x['frontier_seed']) if 'frontier_seed' in x else _atd_missing_json_field('Params', 'frontier_seed'),
@@ -1263,6 +1271,7 @@ class Params:
         res['mature_market_erp'] = (lambda x: x.to_json())(self.mature_market_erp)
         res['midcycle_window_years'] = (lambda x: x.to_json())(self.midcycle_window_years)
         res['midcycle_scale_floor'] = (lambda x: x.to_json())(self.midcycle_scale_floor)
+        res['interest_evidence_floor'] = (lambda x: x.to_json())(self.interest_evidence_floor)
         res['sensitivity_steps'] = (lambda x: x.to_json())(self.sensitivity_steps)
         res['frontier_draws'] = (lambda x: x.to_json())(self.frontier_draws)
         res['frontier_seed'] = (lambda x: x.to_json())(self.frontier_seed)

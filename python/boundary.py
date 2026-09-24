@@ -1224,6 +1224,7 @@ class ResidualIncomeInputs:
     net_loans: Optional[float]
     net_loans_row: Optional[str]
     provision_to_net_loans: Optional[float]
+    payout_source: str = field(default_factory=lambda: "")
     country_risk_premium: Optional[Parameter] = None
     conversion: Optional[Conversion] = None
 
@@ -1267,6 +1268,7 @@ class ResidualIncomeInputs:
                 net_loans=_atd_read_nullable(_atd_read_float)(x['net_loans']) if 'net_loans' in x else _atd_missing_json_field('ResidualIncomeInputs', 'net_loans'),
                 net_loans_row=_atd_read_nullable(_atd_read_string)(x['net_loans_row']) if 'net_loans_row' in x else _atd_missing_json_field('ResidualIncomeInputs', 'net_loans_row'),
                 provision_to_net_loans=_atd_read_nullable(_atd_read_float)(x['provision_to_net_loans']) if 'provision_to_net_loans' in x else _atd_missing_json_field('ResidualIncomeInputs', 'provision_to_net_loans'),
+                payout_source=_atd_read_string(x['payout_source']) if 'payout_source' in x else "",
                 country_risk_premium=Parameter.from_json(x['country_risk_premium']) if 'country_risk_premium' in x else None,
                 conversion=Conversion.from_json(x['conversion']) if 'conversion' in x else None,
             )
@@ -1311,6 +1313,7 @@ class ResidualIncomeInputs:
         res['net_loans'] = _atd_write_nullable(_atd_write_float)(self.net_loans)
         res['net_loans_row'] = _atd_write_nullable(_atd_write_string)(self.net_loans_row)
         res['provision_to_net_loans'] = _atd_write_nullable(_atd_write_float)(self.provision_to_net_loans)
+        res['payout_source'] = _atd_write_string(self.payout_source)
         if self.country_risk_premium is not None:
             res['country_risk_premium'] = (lambda x: x.to_json())(self.country_risk_premium)
         if self.conversion is not None:
@@ -4339,6 +4342,7 @@ class FiscalPeriod:
     net_loans_row: Optional[str]
     filed: Optional[str] = None
     restated_from: List[Restatement] = field(default_factory=lambda: [])
+    no_distributions_filed: Optional[bool] = None
     working_capital_reconciled: Optional[bool] = None
     working_capital_gap: Optional[float] = None
     accession: Optional[str] = None
@@ -4422,6 +4426,7 @@ class FiscalPeriod:
                 net_loans_row=_atd_read_nullable(_atd_read_string)(x['net_loans_row']) if 'net_loans_row' in x else _atd_missing_json_field('FiscalPeriod', 'net_loans_row'),
                 filed=_atd_read_string(x['filed']) if 'filed' in x else None,
                 restated_from=_atd_read_list(Restatement.from_json)(x['restated_from']) if 'restated_from' in x else [],
+                no_distributions_filed=_atd_read_bool(x['no_distributions_filed']) if 'no_distributions_filed' in x else None,
                 working_capital_reconciled=_atd_read_bool(x['working_capital_reconciled']) if 'working_capital_reconciled' in x else None,
                 working_capital_gap=_atd_read_float(x['working_capital_gap']) if 'working_capital_gap' in x else None,
                 accession=_atd_read_string(x['accession']) if 'accession' in x else None,
@@ -4507,6 +4512,8 @@ class FiscalPeriod:
         if self.filed is not None:
             res['filed'] = _atd_write_string(self.filed)
         res['restated_from'] = _atd_write_list((lambda x: x.to_json()))(self.restated_from)
+        if self.no_distributions_filed is not None:
+            res['no_distributions_filed'] = _atd_write_bool(self.no_distributions_filed)
         if self.working_capital_reconciled is not None:
             res['working_capital_reconciled'] = _atd_write_bool(self.working_capital_reconciled)
         if self.working_capital_gap is not None:

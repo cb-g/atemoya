@@ -68,6 +68,17 @@
       "Changing the floor is a dated declaration, not a tuning knob: the value was set once, from the shape of the window (fifteen years, meant to hold two commodity cycles), not from any name's output."
     ]
   },
+  "interest_evidence_floor": {
+    "value": 0.005,
+    "source": "half a percent of operating income is the scale of an undrawn facility's fees, not of borrowing",
+    "as_of": "2026-09-24",
+    "max_age_days": 400,
+    "notes": [
+      "The debt definition's absent-is-zero rule (25) asks the filing to say twice that a filer owes nothing: no debt line and no interest. (65) A trace of interest is not that second saying. Deckers files no borrowing of any kind and tags interest of two tenths of a per cent of operating income, the fees on an undrawn facility; Williams-Sonoma files none and tags five hundredths of a per cent beside net interest income of far more. Below this fraction the interest is not evidence of debt and the rule fires; at or above it the field stays null, as before.",
+      "The floor is applied only where operating income is filed and positive: a filer with no operating income line, or a loss, has no scale to measure the interest against, so the evidence stands and the field stays null. That is what leaves Ford, whose latest operating income is negative, exactly where it was.",
+      "Interest that is income is never evidence of debt whatever its size, which is the sign half of the same rule and needs no parameter."
+    ]
+  },
   "sensitivity_steps": {
     "growth": 0.02,
     "lambda": 0.1,
@@ -105,7 +116,8 @@
       "Vintage: the World Economic Outlook is published each April and October. This is the April 2026 edition, released on 14 April 2026, established from the data itself -- the projection horizon ends in 2031, which no earlier vintage reaches, and the October 2026 edition is not out. max_age_days 400 fails the table if no newer vintage is transcribed within about thirteen months.",
       "Superseded (57): the previous values were declared judgements carried from the earlier implementation with no source and no method, and sat at roughly half of nominal growth (the United States at 2.0% against the 3.59% here). Every DCF-shaped record moves because of it; that is the point of the change, not a side effect.",
       "British Virgin Islands has no row: it is not an IMF member and the World Economic Outlook carries no series for it. A name domiciled there fails naming terminal_growth_rate, as any country absent from this table does. There is no default row; a table with a source has no default.",
-      "The class beliefs are offsets around this value, so their centres move with it. No belief was adjusted to offset the change."
+      "The class beliefs are offsets around this value, so their centres move with it. No belief was adjusted to offset the change.",
+      "Denmark added 2026-09-24 (65) from the same vintage and the same series as every other row: NGDP in Danish kroner at current prices, 3,650,827,415,000 for 2030 and 3,772,961,869,000 for 2031, a change of 3.345%, recorded at 3.35% to the table's precision."
     ],
     "values": {
       "United States": 0.0359,
@@ -131,7 +143,8 @@
       "Switzerland": 0.0197,
       "Taiwan": 0.0366,
       "United Kingdom": 0.0319,
-      "Uruguay": 0.075
+      "Uruguay": 0.075,
+      "Denmark": 0.0335
     }
   },
   "unwired": {
@@ -141,8 +154,8 @@
       "mode": "static",
       "vix_mean": 19.5,
       "vix_sensitivity": 0.4,
-      "_comment_mode": "Options: 'static' (Damodaran, from equity_risk_premiums.json) or 'dynamic' (VIX-adjusted). Dynamic mode fetches current VIX and adjusts base ERP: ERP_dynamic = ERP_base × (VIX/VIX_mean)^sensitivity.",
-      "_comment_vix": "VIX historical mean ~19.5. Sensitivity 0.3-0.5 typical. Higher sensitivity = more reactive to VIX changes. Example: VIX=30, mean=20, sens=0.4 → adjustment=1.18 (18% higher ERP)."
+      "_comment_mode": "Options: 'static' (Damodaran, from equity_risk_premiums.json) or 'dynamic' (VIX-adjusted). Dynamic mode fetches current VIX and adjusts base ERP: ERP_dynamic = ERP_base \u00d7 (VIX/VIX_mean)^sensitivity.",
+      "_comment_vix": "VIX historical mean ~19.5. Sensitivity 0.3-0.5 typical. Higher sensitivity = more reactive to VIX changes. Example: VIX=30, mean=20, sens=0.4 \u2192 adjustment=1.18 (18% higher ERP)."
     }
   }
 }

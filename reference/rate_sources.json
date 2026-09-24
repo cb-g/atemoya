@@ -17,7 +17,8 @@
     "Aggregators (worldgovernmentbonds, tradingeconomics) are never a programmatic source; they are where a human reads a manual entry from.",
     "A failed fetch writes nothing; the existing entry stays and ages out.",
     "Nothing fetched is tracked (29): the curves themselves are written by python/refresh_rates.py to data/reference/risk_free_rates.json, gitignored, and every user runs the refresher with their own FRED key; a missing curve fails the record naming the refresher. max_age_days, tenors and aliases here seed that file.",
-    "no_curve_fallback (54): a domicile named here has no reachable official curve, and a record whose statements and price are both in one currency takes that currency's country curve for the risk-free rate while keeping the domicile's country risk premium, the risk-free parameter's source saying \"trading currency; domicile curve unavailable\". Uruguay is the only entry: MercadoLibre files a 10-K in dollars and trades in dollars, so the dollar curve is the rate its cash flows discount at, and no Uruguayan sovereign curve is published through any keyless source. The list is a declaration, not a fallback: a domicile not named here still fails with no risk-free curve, and a domicile named here that does have a curve takes it."
+    "no_curve_fallback (54): a domicile named here has no reachable official curve, and a record whose statements and price are both in one currency takes that currency's country curve for the risk-free rate while keeping the domicile's country risk premium, the risk-free parameter's source saying \"trading currency; domicile curve unavailable\". Uruguay is the only entry: MercadoLibre files a 10-K in dollars and trades in dollars, so the dollar curve is the rate its cash flows discount at, and no Uruguayan sovereign curve is published through any keyless source. The list is a declaration, not a fallback: a domicile not named here still fails with no risk-free curve, and a domicile named here that does have a curve takes it.",
+    "Denmark added 2026-09-24 (65): probed before it was recorded, as every official entry is. The Nationalbank's own api.nationalbanken.dk and nationalbanken.statbank.dk hosts do not resolve to a machine-readable yield table; its statistics are published through Statistics Denmark's keyless StatBank API, which returned a dated monthly observation. No rate was hand-copied."
   ],
   "countries": {
     "United States": {
@@ -455,6 +456,28 @@
       ],
       "notes": [
         "No programmatic source verified on 2026-09-18. Refresh by hand from the National Bank of Kazakhstan government securities statistics: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors."
+      ]
+    },
+    "Denmark": {
+      "tier": "official",
+      "source": "Danmarks Nationalbank, ten-year central government bond redemption yield (monthly average), served keyless through Statistics Denmark's StatBank, table MPK3, series type 5500701004",
+      "parser": "dst_statbank",
+      "url": "https://api.statbank.dk/v1/data/MPK3/BULK?TYPE=5500701004&Tid=%3E2020M01",
+      "series": {
+        "10y": "10-years central government bond (redemption yield)"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "Danmarks Nationalbank's own StatBank states that its subject areas are served as part of Statistics Denmark's StatBank, which is why the host is api.statbank.dk and no Nationalbank host is used; verified 2026-09-24, a dated observation came back before this entry was written.",
+        "MPK3 carries no tenor shorter than ten years and the Nationalbank's daily table DNRENTD carries policy and reference rates only, not bond yields, so the seven-year is substituted from the ten-year and recorded, as the OECD monthly tier does.",
+        "as_of is the end of the observation month, the point at which the monthly average is complete.",
+        "The time filter is an open lower bound well in the past, so the URL never needs editing; the parser takes the newest period the response carries."
       ]
     }
   },

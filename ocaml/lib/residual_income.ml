@@ -121,9 +121,26 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
               | _ -> None)
             fin.periods
         in
-        let* payout_ratio, payout_periods =
+        (* (65) A filer that has never distributed anything has no ratio to take a mean of,
+           and an absent dividend tag cannot say so on its own. Where the filing carries the
+           cash-flow statement's financing subtotal and no dividend element of any kind, it
+           has said it paid none, and retention is 1 on the periods that say it. *)
+        let filed_none =
+          List.filter
+            (fun (q : fiscal_period) ->
+              match (q.net_income, q.no_distributions_filed) with
+              | Some ni, Some true when ni > 0. -> true
+              | _ -> false)
+            fin.periods
+        in
+        let* payout_ratio, payout_periods, payout_source =
           match mean_ratio payout_rows ~min_periods:2 with
-          | Some (r, periods) -> Ok (Float.max 0. (Float.min 1. r), periods)
+          | Some (r, periods) -> Ok (Float.max 0. (Float.min 1. r), periods, "")
+          | None when List.length filed_none >= 2 ->
+              Ok
+                ( 0.,
+                  List.map (fun (q : fiscal_period) -> q.period_end) filed_none,
+                  "no dividend element filed alongside a filed financing section; taken as no distributions" )
           | None ->
               Error
                 (Printf.sprintf
@@ -173,6 +190,7 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
                   roe_0;
                   roe_periods;
                   payout_ratio;
+                  payout_source;
                   retention;
                   payout_periods;
                   dividends_paid = p.dividends_paid;

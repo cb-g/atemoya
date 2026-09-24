@@ -110,6 +110,7 @@ type params = {
   mature_market_erp : scalar;         (* the international CAPM's mature-market base; a domicile's total ERP less this is its country risk premium *)
   midcycle_window_years : int_scalar; (* the mid-cycle DCF's window (22): annual periods normalised over, and the period depth the fetch keeps for the class *)
   midcycle_scale_floor : scalar;      (* (55) the smallest opening invested capital, as a fraction of the latest period's, that lets a year into the mid-cycle return average; the reinvestment sums are untouched *)
+  interest_evidence_floor : scalar;   (* (65) interest below this fraction of operating income is not evidence that the filer owes anything; read by the fetcher, not by any model *)
   sensitivity_steps : sensitivity_steps;   (* (23) *)
   frontier_draws : int_scalar;        (* (35) draws from the joint belief distribution; a change is a decision *)
   frontier_seed : int_scalar;         (* (35) the sampler's seed; a change is a decision *)
@@ -289,6 +290,8 @@ type xbrl_tags = {
   ifrs_full_fields : (string * xbrl_field) list <json repr="object">;   (* ifrs-full, the same canonical names (13) *)
   ifrs_full_net_interest_income : nii_recipe;
   depreciation_components : string list;    (* canonical fields summed when no aggregate d&a tag: the first required; both taxonomies *)
+  ~dividend_evidence : string list;         (* (65) every element whose presence says the filer distributes to holders, wider than the dividends_paid the models read: none present, with a financing section filed, is the filing saying it distributed nothing *)
+  ~financing_section : string list;         (* (65) the cash-flow statement's financing subtotal: filed, it makes the absence of a dividend element mean none rather than not filed *)
 }
 
 (* One definition per statement field, applied identically to filed statements (us-gaap

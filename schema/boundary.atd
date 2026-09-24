@@ -86,6 +86,7 @@ type fiscal_period = {
   (* Present only when the provider is filed statements (optional fields: omitted otherwise). *)
   ?filed : string option;                     (* filing date of the statement this period came from *)
   ~restated_from : restatement list;          (* (61) empty unless a later filing disagrees on a tag the record reads *)
+  ?no_distributions_filed : bool option;   (* (65) present and true only where the filing carries the cash-flow statement's financing subtotal and no dividend or distribution element at all: the filing saying it paid none, which an absent tag alone cannot say *)
   ?working_capital_reconciled : bool option;  (* (61) whether the filed operating section adds up as this tool reads it: net income, the adjustments the table names, and this period's working-capital change against the filed operating cash flow. A pointer for a reader and never a gate: false can mean an adjustment tag the table does not name rather than a wrong working-capital number *)
   ?working_capital_gap : float option;        (* (61) the residual when it does not close, in the statement's currency *)
   ?accession : string option;
@@ -447,7 +448,8 @@ type residual_income_inputs = {
   roe_periods : string list;          (* at least 2 *)
   payout_ratio : float;               (* mean of dividends_paid / net_income over payout_periods, clamped to [0, 1] *)
   retention : float;                  (* 1 - payout_ratio; buybacks are not payout here *)
-  payout_periods : string list;       (* at least 2 *)
+  payout_periods : string list;       (* at least 2, or empty under the filed-none rule (65) *)
+  ~payout_source : string;            (* (65) empty where the ratio is the mean above; otherwise why retention is what it is *)
   dividends_paid : float nullable;    (* latest period *)
   dividends_paid_row : string nullable;
   risk_free_rate : parameter;

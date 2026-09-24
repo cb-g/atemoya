@@ -40,6 +40,7 @@ DOTENV_PATH = REPO_ROOT / ".env"
 CACHE_DIR = REPO_ROOT / "data" / "sec"
 TAGS_PATH = REPO_ROOT / "reference" / "xbrl_tags.json"
 DEFINITIONS_PATH = REPO_ROOT / "reference" / "field_definitions.json"
+PARAMS_PATH = REPO_ROOT / "reference" / "params.json"
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
@@ -88,6 +89,12 @@ def load_tags() -> reference.XbrlTags:
 
 def load_definitions() -> reference.FieldDefinitions:
     return reference.FieldDefinitions.from_json_string(DEFINITIONS_PATH.read_text())
+
+
+def load_params() -> reference.Params:
+    """(65) The fetcher reads one declared parameter, interest_evidence_floor; the rest are
+    the models'. Loaded here so a period can be built without threading the whole file."""
+    return reference.Params.from_json_string(PARAMS_PATH.read_text())
 
 
 def _get(url: str, user_agent: str) -> bytes:
@@ -592,7 +599,52 @@ def net_interest_income_recipe(facts: Facts, recipe: reference.NiiRecipe, end: d
 DEBT_FREE = "no debt line filed and no interest expense filed; taken as 0"
 
 
-def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
+def interest_evidence(facts: Facts, defs: reference.FieldDefinitions, params: reference.Params, end: date) -> tuple[bool, str]:
+    """(65) Whether the interest a filer tags is evidence that it owes something, and why.
+
+    The absent-is-zero rule (25) asks the filing to say twice that a filer owes nothing: no
+    debt line, and no interest. A trace of interest is not that second saying. Interest is
+    evidence only when it is an expense -- a net figure that is income never is, whatever
+    its size -- and when it exceeds interest_evidence_floor of operating income. The floor
+    needs a scale: with no operating income filed, or a loss, there is nothing to measure
+    against and the evidence stands."""
+    d = defs.total_debt.xbrl
+    hit = facts.first(d.interest_evidence, end, instant=False)
+    if hit is None:
+        return False, DEBT_FREE
+    value, tag = hit
+    if value <= 0.:
+        return False, f"no debt line filed and {tag} is interest income, not an expense; taken as 0"
+    operating = facts.first(defs.ebit.xbrl.operating_income, end, instant=False)
+    if operating is None or operating[0] <= 0.:
+        return True, ""
+    floor = params.interest_evidence_floor.value
+    share = value / operating[0]
+    if share >= floor:
+        return True, ""
+    return False, (
+        f"no debt line filed and the only interest filed, {tag}, is {share * 100:.2f}% of "
+        f"operating income, below the {floor * 100:.2f}% floor; taken as 0")
+
+
+def no_distributions_filed(facts: Facts, tags: reference.XbrlTags, end: date) -> bool | None:
+    """(65) Whether the filing says, for this period, that it distributed nothing.
+
+    An absent dividend tag cannot distinguish "none" from "not filed". The cash-flow
+    statement's financing subtotal is what settles it: with the section filed and no
+    dividend or distribution element of any kind present, the filer has said it paid none.
+    None where the financing section is not filed, so the caller keeps its existing refusal
+    rather than reading silence as a statement."""
+    if not tags.financing_section or not tags.dividend_evidence:
+        return None
+    if all(facts.at(tag, end, instant=False) is None for tag in tags.financing_section):
+        return None
+    if any(facts.at(tag, end, instant=False) is not None for tag in tags.dividend_evidence):
+        return None
+    return True
+
+
+def total_debt(facts: Facts, defs: reference.FieldDefinitions, params: reference.Params, end: date) -> Derived:
     """Financial debt, first complete recipe: the filer's aggregate (+ convertible notes
     beside it); noncurrent + all current debt as one tag; noncurrent + the current portion
     of long-term debt (+ short-term borrowings when tagged); long-term debt filed with its
@@ -631,9 +683,13 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Der
         # filer tags, one per kind; a filer with fewer instruments is not missing data
         parts = [part(name, hit) for name, hit in (("noncurrent", noncurrent), ("current_long_term", current_long_term),
                                                    ("short_term_borrowings", short_term), ("convertible", convertible)) if hit is not None]
-    elif all(x is None for x in (current_total, total_including_current)) and facts.first(d.interest_evidence, end, instant=False) is None:
-        # absent is zero only when the filing says so twice (25): no debt line and no interest
-        return 0.0, DEBT_FREE, _composition(defs.total_debt.name, [])
+    elif all(x is None for x in (current_total, total_including_current)):
+        # absent is zero only when the filing says so twice (25): no debt line, and no
+        # interest that is evidence of one (65).
+        evidence, source = interest_evidence(facts, defs, params, end)
+        if evidence:
+            return None, None, None
+        return 0.0, source, _composition(defs.total_debt.name, [])
     else:
         return None, None, None
     return sum(p.value for p in parts), _label(parts), _composition(defs.total_debt.name, parts)
@@ -909,11 +965,12 @@ def reconciled_to_aggregate(facts: Facts, defs: reference.FieldDefinitions, end:
     return (abs(gap) <= RECONCILES_EXACTLY * max(abs(aggregate[0]), 1.0), gap)
 
 
-def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD", depth: int = PERIODS_DEFAULT, one_accession: bool = True) -> list[boundary.FiscalPeriod]:
+def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, defs: reference.FieldDefinitions, notes: list[str], *, taxonomy: str = "us-gaap", unit: str = "USD", depth: int = PERIODS_DEFAULT, one_accession: bool = True, params: "reference.Params | None" = None) -> list[boundary.FiscalPeriod]:
     """[depth] is the number of annual periods kept, newest first: the model's need (periods_needed), never a constant."""
     ifrs = taxonomy == "ifrs-full"
     # (61) one filing per fiscal period, chosen before any tag is read. [one_accession] is
     # False only to reproduce the superseded latest-filed-per-tag rule for a diff.
+    declared_params = params if params is not None else load_params()
     accessions = Accessions(gaap, tags) if one_accession else None
     selected = select(gaap, tags, notes, taxonomy=taxonomy, unit=unit, accessions=accessions)
     facts = Facts(gaap, tags, notes, unit=unit, accessions=accessions)
@@ -955,7 +1012,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 v["net_interest_income"], r["net_interest_income"] = net_interest_income_recipe(facts, tags.ifrs_full_net_interest_income, end)
         else:
             cash_value, cash_row, cash_composition = cash(facts, defs, end)
-            debt, debt_row, debt_composition = total_debt(facts, defs, end)
+            debt, debt_row, debt_composition = total_debt(facts, defs, declared_params, end)
             nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
         ffo_value, _, ffo_composition, ffo_unavailable = ffo(facts, defs, end, taxonomy=taxonomy)
@@ -982,7 +1039,8 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 provision_for_credit_losses=None, provision_for_credit_losses_row=None,
                 net_loans=None, net_loans_row=None,
                 filed=anchor.filed.isoformat(), accession=anchor.accn,
-                restated_from=restated, working_capital_reconciled=reconciled, working_capital_gap=wc_gap,
+                restated_from=restated, no_distributions_filed=None if ifrs else no_distributions_filed(facts, tags, end),
+                working_capital_reconciled=reconciled, working_capital_gap=wc_gap,
                 aoci=aoci_value, aoci_row=aoci_row, aoci_recipe=aoci_recipe, aoci_composition=aoci_composition,
                 claims_incurred=v["claims_incurred"], claims_incurred_row=r["claims_incurred"],
                 benefits_losses_and_expenses=v["benefits_losses_and_expenses"], benefits_losses_and_expenses_row=r["benefits_losses_and_expenses"],
