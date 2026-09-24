@@ -29,12 +29,15 @@ from collections.abc import Iterable, Mapping
 from datetime import date, timedelta
 from pathlib import Path
 from dataclasses import dataclass
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 import boundary
 import reference
+
+if TYPE_CHECKING:
+    import insiders as insiders_mod
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOTENV_PATH = REPO_ROOT / ".env"
@@ -48,6 +51,7 @@ PARAMS_PATH = REPO_ROOT / "reference" / "params.json"
 TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
+SUBMISSIONS_PAGE_URL = "https://data.sec.gov/submissions/{name}"
 ANNUAL_SUBMISSION_FORMS = ("10-K", "20-F")  # the original annual filings; amendments and 40-Fs are not
 PROVIDER = "SEC XBRL companyfacts"
 TAXONOMIES = ("us-gaap", "ifrs-full")  # in order of preference when a filer carries both
@@ -154,6 +158,101 @@ def submissions(cik: str, user_agent: str) -> dict[str, object] | None:
         if e.code == 404:
             return None
         raise
+
+
+def submissions_pages(index: Mapping[str, object] | None, first: date, last: date) -> list[str]:
+    """(67) The older submission pages that could carry a filing in [first, last].
+
+    `filings.recent` is a year or a thousand filings, whichever is more, and `filings.files`
+    lists the pages behind it with the span each covers. Only the pages whose span meets the
+    window are named, so walking four years of one filer does not pull twenty years of its
+    index."""
+    if index is None:
+        return []
+    files = cast(list[Mapping[str, object]], cast(Mapping[str, object], index.get("filings") or {}).get("files") or [])
+    out: list[str] = []
+    for page in files:
+        try:
+            covers_from = date.fromisoformat(str(page["filingFrom"]))
+            covers_to = date.fromisoformat(str(page["filingTo"]))
+        except (KeyError, ValueError):
+            out.append(str(page.get("name", "")))        # a page we cannot date is a page we must read
+            continue
+        if covers_from <= last and covers_to >= first:
+            out.append(str(page["name"]))
+    return [name for name in out if name]
+
+
+def submissions_page(name: str, user_agent: str) -> dict[str, object]:
+    """One older page, cached for a day as the index itself is."""
+    return json.loads(_cached(CACHE_DIR / name, SUBMISSIONS_PAGE_URL.format(name=name), user_agent))
+
+
+def form4_filings_cached(cik: str, index: Mapping[str, object] | None, first: date, last: date,
+                         ) -> tuple[list[tuple[str, date, str]], list[str]]:
+    """(67) Every Form 4 filed in [first, last] across `recent` and the older pages ON DISK,
+    with the names of the pages that are not.
+
+    Fetches nothing. A page that is absent is returned rather than passed over, because an
+    unread page is indistinguishable from a quiet quarter and the difference is the whole
+    question."""
+    import insiders as insiders_mod  # noqa: PLC0415
+
+    if index is None:
+        return [], []
+    seen = dict.fromkeys(insiders_mod.form4_filings(index))
+    absent: list[str] = []
+    for name in submissions_pages(index, first, last):
+        path = CACHE_DIR / name
+        if not path.exists():
+            absent.append(name)
+            continue
+        seen.update(dict.fromkeys(insiders_mod.form4_filings(json.loads(path.read_bytes()))))
+    inside = [f for f in seen if first <= f[1] <= last]
+    return sorted(inside, key=lambda x: (x[1], x[0]), reverse=True), absent
+
+
+def insider_document(cik: str, accession: str, document: str, user_agent: str) -> bool:
+    """(67) Put one Form 4 document in the cache if it is not there. True when it was fetched.
+
+    A document is immutable once filed, so it is written once and kept for ever; the index is
+    the only thing that ages. Raises on a transport error, which the caller counts and retries
+    at a slower pace rather than treating as a filing that does not exist."""
+    import insiders as insiders_mod  # noqa: PLC0415
+
+    path = insiders_mod.CACHE_DIR / cik / f"{accession}.xml"
+    if path.exists():
+        return False
+    body = _get(insiders_mod.document_url(cik, accession, document), user_agent)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(body)
+    return True
+
+
+def insiders_cached(cik: str, filings: Iterable[tuple[str, date, str]],
+                    ) -> tuple[list[insiders_mod.Transaction], Counter[str], int, int]:
+    """(67) The Form 4 transactions in [filings] whose documents are already on disk.
+
+    Fetches nothing. A study that walks four years of dates would otherwise become tens of
+    thousands of requests, so the fetching lives in one place and this reads what that left.
+    The count of documents the cache does not hold is returned rather than skipped in
+    silence: a window missing one filing cannot be counted, because the missing one may be
+    the only purchase."""
+    import insiders as insiders_mod  # noqa: PLC0415
+
+    transactions: list[insiders_mod.Transaction] = []
+    excluded: Counter[str] = Counter()
+    read = missing = 0
+    for accession, filed, _document in filings:
+        path = insiders_mod.CACHE_DIR / cik / f"{accession}.xml"
+        if not path.exists():
+            missing += 1
+            continue
+        found, codes = insiders_mod.parse_form4(path.read_bytes(), accession, filed, issuer_cik=cik)
+        transactions += found
+        excluded += codes
+        read += 1
+    return transactions, excluded, read, missing
 
 
 def insiders_of(cik: str | None, index: Mapping[str, object] | None, as_of: date, user_agent: str) -> tuple[boundary.Insiders | None, str | None]:

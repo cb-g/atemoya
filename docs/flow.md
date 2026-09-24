@@ -629,6 +629,18 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- stretch and insiders through time (67): a study beside the batch, not in it. Every trading
+  day of every name's vendor history from the third year onward is walked with the stretch
+  block's own `measures_at` and `counts`; an episode starts the first day a side reaches three
+  after twenty trading days below it. What followed is measured at +20, +60 and +120 trading
+  days against SPY over the same dates, and what the insiders had done is brief 66's own
+  window and cluster functions over the ninety days ending the day *before* the episode.
+  Descriptive only: counts, medians and quartiles, a cell under ten printing its count alone,
+  and no statistic the sample cannot carry. It changed the batch by nothing, adds no `Failed`
+  string, and nothing downstream reads it. Two findings from building it: `filings.recent` is
+  a year or a thousand filings, whichever is more, so anything that walks further must read
+  the older pages `filings.files` names, and a CIK is resolved by the fetch's own resolver
+  rather than read out of a record's prose.
 - insiders: Form 4 as the other half of stretch (66): every CIK-resolved record gains an
   `insiders` block read from SEC's own index and archive, keyless and timestamped — open-market
   purchases and sales only, with awards, exercises, withholdings and gifts counted by code and

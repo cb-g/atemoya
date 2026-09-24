@@ -249,6 +249,84 @@ SEC registrants, so a foreign private issuer files none; a purchase or sale unde
 10b5-1 plan is scheduled rather than decided, and the filing's plan marking is carried on the
 transaction where it has one.
 
+## Stretch and insiders through time
+
+Two episodes said insiders did not call the bottoms stretch caught (66). The study (67) asks
+that question across everything the store holds, **descriptively**: counts, medians and
+quartiles on the sample as it is, and nothing else. No statistic the sample cannot carry, no
+fitted model, no hit rate presented as an edge, and no threshold moved after seeing a table.
+Nothing in the batch reads it and no valuation record changes.
+
+```sh
+uv run python/stretch_study.py --fill               # fetch what the study reads, then stop
+uv run python/stretch_study.py                      # every name in the latest snapshot
+uv run python/stretch_study.py PLTR META            # or the names given
+uv run python/plot_stretch_study.py                 # -> output/stretch_study/forward_excess_60.png
+```
+
+`--fill` is the only thing here that fetches, and it fetches only what the study reads: the
+older submissions pages the windows reach into, then the Form 4 documents filed in those
+windows. On this universe that is 19 pages and 8,559 documents. It is paced by `fetch_sec`,
+it is resumable, and a 503 is SEC asking for a slower pace rather than a filing that does not
+exist — it is counted, named and re-tried on the next `--fill`, never taken as an absence.
+Without it the study still runs and every window it cannot read says so.
+
+**Episodes.** For every name with at least three years of vendor closes, every trading day
+from the third year onward is walked and the stretch counts computed from the block's own
+`measures_at` and `counts`, on closes up to and including that day and nothing after it. An
+episode starts the first day a side reaches 3 after at least 20 trading days below it, and is
+dated by that day. (The percentiles the block also records play no part in a count, so they
+are not recomputed; a test holds the walk's counts equal to the block's.)
+
+The walk stops at `--as-of`, the snapshot's own date by default, and the series it walks is
+cached under `data/stretch_study/`. Both are for the same reason: the vendor serves its
+history to the present and the present moves, so the current day's close is still forming and
+a run an hour later would give a different benchmark return at the horizons that reach it.
+Fetched once, the run repeats byte for byte; delete the directory to re-fetch. Vendor
+revisions to older closes are outside this and are not claimed.
+
+**What followed.** Simple returns at +20, +60 and +120 **trading** days, `null` where the
+window runs past the last close rather than a shortened horizon; the same horizons for SPY
+from the same dates, and the difference, so a market-wide selloff is not read as a stock call.
+
+**What the insiders had done.** The block's own window and cluster functions over the 90
+days ending the day *before* the episode, so nothing filed on the episode's own day or after
+it is read. Only that window: the Form 4 cache is filled for exactly these windows, and a
+365-day figure computed from it would be a subset dressed as a total. Three states — any
+open-market buyer, net selling by two or more distinct sellers, or neither — and `unknown`
+whenever the window cannot be read in full, with the reason saying which: no CIK, no Form 4
+on file at all, an older submissions page not on disk, or a filing the cache does not hold.
+A window missing one filing may be missing the only purchase, so it is never counted as a
+subset; and a window read in full that holds nothing is zero, not unknown.
+
+**`filings.recent` is a year, not a history.** It holds the most recent thousand filings or
+one year, whichever is more, so for a heavy filer it is barely the year: JPMorgan's reaches
+back twelve months and Meta's fifteen. The 365-day block (66) never needs more — SEC's
+`recent` covers exactly the trailing year, and the ten-day filing margin beyond it can only
+hold filings reporting transactions outside the window. A study that walks four years does
+need more, and reading only `recent` would have made Meta's 2023 and 2024 episodes read as no
+insider activity when seven insiders had sold. `filings.files` lists the older pages with the
+span each covers, and only the pages whose span meets a window are read.
+
+The study itself fetches no filing. `fetch_sec.form4_filings_cached` and
+`fetch_sec.insiders_cached` read what is on disk and report what is not, so walking four years
+of dates costs disk reads rather than tens of thousands of requests; `--fill` is the one pass
+that goes to SEC.
+
+The CIK comes from SEC's ticker map and the universe's declared CIKs, the same resolver the
+fetch uses — never from a record's prose, because a name whose provider reason names a
+companyfacts lag rather than a CIK has a CIK all the same.
+
+**The tables**, in `output/stretch_study/`: per side and per side-and-insider-state, for each
+horizon, the count, the median excess, the interquartile range and the share positive; the
+whole thing printed twice, all episodes and first-per-name-per-side-per-year, so the reader
+sees whether a few names carry it; overlapping episodes within 120 days flagged and counted;
+`episodes.jsonl` with every episode in full. **A cell of fewer than ten episodes prints its
+count alone** — a median of eight things is a number pretending to be a measurement.
+
+The picture is one point per episode at +60, grouped by side and insider state, with the
+median drawn as a bar and the count in the label. A picture of a sample, not of a result.
+
 ## Build, test, type-check
 
 ```sh

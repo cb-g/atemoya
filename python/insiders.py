@@ -177,10 +177,16 @@ def parse_form4(body: bytes, accession: str, filed: date, issuer_cik: str | None
 def form4_filings(index: Mapping[str, object]) -> list[tuple[str, date, str]]:
     """(accession, filing date, primary document) per Form 4 and 4/A, newest first.
 
-    The recent block holds a year of filings or a thousand, whichever is more, so a window
-    of a year never needs the older chunks."""
+    Takes either a submissions index, whose filings are under `filings.recent`, or one of the
+    older pages beside it, whose arrays are at the top level.
+
+    **`recent` is a year, not a history.** It holds the most recent thousand filings or one
+    year, whichever is more, so for a heavy filer it is barely the year: JPMorgan's reaches
+    back twelve months and Meta's fifteen. A 365-day window (66) never needs more; anything
+    that walks further (67) must read the older pages, or it reads an empty window and calls
+    it no insider activity."""
     filings = cast(Mapping[str, object], index.get("filings") or {})
-    recent = cast(Mapping[str, Any], filings.get("recent") or {})
+    recent = cast(Mapping[str, Any], filings.get("recent") or index)
     forms = cast(list[str], recent.get("form") or [])
     accessions = cast(list[str], recent.get("accessionNumber") or [])
     dates = cast(list[str], recent.get("filingDate") or [])
@@ -215,7 +221,9 @@ def deduplicate(transactions: list[Transaction]) -> list[Transaction]:
     return sorted(best.values(), key=lambda t: (t.transaction_date, t.accession))
 
 
-def _window(transactions: list[Transaction], as_of: date, days: int) -> boundary.InsiderWindow:
+def window(transactions: list[Transaction], as_of: date, days: int) -> boundary.InsiderWindow:
+    """One window's counts and dollars. Public because the through-time study (67) reads one
+    window from a cache filled for that window alone, and must not claim the other."""
     start = as_of - timedelta(days=days)
     inside = [t for t in transactions if start <= t.transaction_date <= as_of]
     buys = [t for t in inside if t.code == PURCHASE]
@@ -256,6 +264,6 @@ def compute(transactions: list[Transaction], excluded: Counter[str], as_of: date
     found = cluster(kept, as_of)
     return boundary.Insiders(
         as_of=as_of.isoformat(), cik=cik,
-        window_90=_window(kept, as_of, 90), window_365=_window(kept, as_of, 365),
+        window_90=window(kept, as_of, 90), window_365=window(kept, as_of, 365),
         cluster_buy=found is not None, cluster=found, filings_read=filings_read,
         excluded_by_code=sorted(excluded.items()), scope_limits=list(SCOPE_LIMITS)), None
