@@ -91,6 +91,12 @@ let convert ~rate (fin : financials) =
       book_equity = scale rate p.book_equity;
       net_income = scale rate p.net_income;
       dividends_paid = scale rate p.dividends_paid;
+      (* (69) the common-only side is money too: a preferred amount left in the statement
+         currency against a converted book is a deduction of the wrong size *)
+      net_income_to_common = scale rate p.net_income_to_common;
+      preferred_equity = scale rate p.preferred_equity;
+      preferred_dividends = scale rate p.preferred_dividends;
+      common_dividends_paid = scale rate p.common_dividends_paid;
       provision_for_credit_losses = scale rate p.provision_for_credit_losses;
       net_loans = scale rate p.net_loans;
       aoci = scale rate p.aoci;

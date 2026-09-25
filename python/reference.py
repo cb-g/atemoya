@@ -342,6 +342,8 @@ class XbrlTags:
     notes: List[str] = field(default_factory=lambda: [])
     dividend_evidence: List[str] = field(default_factory=lambda: [])
     financing_section: List[str] = field(default_factory=lambda: [])
+    preferred_dividend_evidence: List[str] = field(default_factory=lambda: [])
+    redeemable_preferred_evidence: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'XbrlTags':
@@ -360,6 +362,8 @@ class XbrlTags:
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
                 dividend_evidence=_atd_read_list(_atd_read_string)(x['dividend_evidence']) if 'dividend_evidence' in x else [],
                 financing_section=_atd_read_list(_atd_read_string)(x['financing_section']) if 'financing_section' in x else [],
+                preferred_dividend_evidence=_atd_read_list(_atd_read_string)(x['preferred_dividend_evidence']) if 'preferred_dividend_evidence' in x else [],
+                redeemable_preferred_evidence=_atd_read_list(_atd_read_string)(x['redeemable_preferred_evidence']) if 'redeemable_preferred_evidence' in x else [],
             )
         else:
             _atd_bad_json('XbrlTags', x)
@@ -379,6 +383,8 @@ class XbrlTags:
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         res['dividend_evidence'] = _atd_write_list(_atd_write_string)(self.dividend_evidence)
         res['financing_section'] = _atd_write_list(_atd_write_string)(self.financing_section)
+        res['preferred_dividend_evidence'] = _atd_write_list(_atd_write_string)(self.preferred_dividend_evidence)
+        res['redeemable_preferred_evidence'] = _atd_write_list(_atd_write_string)(self.redeemable_preferred_evidence)
         return res
 
     @classmethod

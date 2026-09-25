@@ -270,6 +270,41 @@ further `--required-returns` file. The rules of use:
 
 ## Definition rules
 
+**(69) The residual-income path reads the common side of the filing.** Residual income values
+common equity, and preferred stock is a claim senior to it: its dividends are not the common
+holder's income and its carrying value is not the common holder's book. So on that path —
+and on no other — income is `NetIncomeLossAvailableToCommonStockholdersBasic` where filed,
+else net income less the filed preferred dividends; book is stockholders' equity less the
+filed preferred carrying value; and the payout numerator is the filed common-dividend element,
+else dividends paid less the preferred dividends. `net_income`, `book_equity` and
+`dividends_paid` themselves are untouched, so no DCF-shaped, REIT or BDC record moves.
+
+**Both or neither.** The filing does not always support all three. A filer that pays preferred
+dividends but files no carrying value for it — Morgan Stanley files none at all, and PNC,
+MetLife and UnitedHealth file a par line of exactly zero beside real preferred — can give a
+common income but not a common book, and common income over total book is neither reading: it
+divides a return that belongs to one claim by a book that belongs to two. Where the filing
+cannot support both, every figure stays on the total-equity basis and `common_basis_why` says
+so. A par-value line of zero does not resolve the carrying value, because presence of the tag
+is not evidence of preferred stock.
+
+The one exception is **redeemable preferred**, which is mezzanine equity and never sat inside
+stockholders' equity at all: there the income is the common holder's after the preferred
+dividend and the book already is, so the income moves and the book does not. Deducting it
+would take out something that was never in.
+
+`PreferredStockLiquidationPreferenceValue` is deliberately not a fallback: on filers that file
+both it equals the carrying value for some and differs every year for others, and one field
+cannot mean two things.
+
+**Preferred dividends are not common distributions (69).** Brief 65's rule reads a filing with
+its financing section filed and no dividend element as saying it distributed nothing. The
+preferred elements now sit in `preferred_dividend_evidence` rather than `dividend_evidence`,
+so a preferred dividend no longer blocks it; a combined common-and-preferred element, and
+minority and affiliate distributions, still do. They are moved within the same file rather
+than deleted, because the restatement scan harvests every element name the tracked reference
+files carry and dropping one would rewrite restatement rows on records that never read it.
+
 The rules of `reference/field_definitions.json` that decide whether a filed field exists
 at all:
 
@@ -629,6 +664,16 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- preferred dividends are not common distributions (69): the residual-income path reads the
+  common side of the filing -- income available to common, book less the filed preferred
+  carrying value, and a payout numerator of common dividends -- where the filing supports all
+  three, and stays wholly on the total-equity basis where it does not, because common income
+  over total book is neither reading. Redeemable preferred moves the income and not the book,
+  since it never sat inside stockholders' equity. The preferred elements move out of brief
+  65's dividend evidence, so a filer that pays preferred dividends and no common one reads as
+  distributing nothing to common holders and SoFi values. `net_income`, `book_equity` and
+  `dividends_paid` are untouched, so no DCF-shaped, REIT or BDC record moves; twenty-one
+  bank and insurer records do, on purpose. No new `Failed` string.
 - the earnings gate for the options tools (68): every record gains an `earnings` block, Ok or
   Failed -- the next results release, where the date came from, what the last eight releases
   did, and what the option market charges for the next one. The calendar is filed and keyless,

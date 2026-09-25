@@ -777,9 +777,57 @@ def no_distributions_filed(facts: Facts, tags: reference.XbrlTags, end: date) ->
         return None
     if all(facts.at(tag, end, instant=False) is None for tag in tags.financing_section):
         return None
+    # (69) preferred elements are not in this list any more: a preferred dividend goes to a
+    # claim senior to common, and residual income values common equity, so its presence says
+    # nothing about whether the common holder was distributed to. The elements themselves are
+    # still declared, under preferred_dividend_evidence, and are read as their own field.
     if any(facts.at(tag, end, instant=False) is not None for tag in tags.dividend_evidence):
         return None
     return True
+
+
+def preferred_equity_of(value: float | None, row: str | None) -> tuple[float | None, str | None]:
+    """(69) The preferred carrying value inside stockholders' equity, or nothing.
+
+    **A par-value line of zero is not a carrying value.** PNC, MET and UNH file
+    `PreferredStockValue` at exactly 0.0, and PNC and MET carry real preferred: the tag is the
+    par line for authorised shares, not the amount on the balance sheet. Taking the zero would
+    report a deduction that did not happen, which is worse than reporting none, so a
+    non-positive figure does not resolve the field and the record says the filing carries no
+    carrying value."""
+    return (value, row) if value is not None and value > 0. else (None, None)
+
+
+def common_dividends_of(common: float | None, common_row: str | None, total: float | None,
+                        preferred: float | None) -> tuple[float | None, str | None]:
+    """(69) Dividends to common holders: the filed common element, else the total less the
+    filed preferred dividends, the recipe recorded.
+
+    The same shape as the income rule, and for the same reason: JPMorgan, Goldman Sachs and
+    Morgan Stanley file `PaymentsOfDividends`, which is common AND preferred, so a payout
+    ratio built on it over an income figure that is common-only would be a ratio of two
+    different things."""
+    if common is not None:
+        return common, common_row
+    if total is None or preferred is None:
+        return None, None
+    return max(0., total - preferred), "dividends_paid - preferred_dividends"
+
+
+def redeemable_preferred(facts: Facts, tags: reference.XbrlTags, end: date) -> bool | None:
+    """(69) Whether the filer's preferred is redeemable, and so outside stockholders' equity.
+
+    Redeemable preferred is mezzanine equity: it sits between liabilities and equity on the
+    balance sheet and was never inside the book the common holder owns. Deducting it would
+    take out something that is not in there. SoFi is the case -- its only `PreferredStockValue`
+    fact ever filed is a single quarterly instant from 2020 -- and its income is still the
+    common holder's after the preferred dividend, so the income moves and the book does not."""
+    if not tags.redeemable_preferred_evidence:
+        return None
+    found = any(facts.at(tag, end, instant=False) is not None
+                or facts.at(tag, end, instant=True) is not None
+                for tag in tags.redeemable_preferred_evidence)
+    return True if found else None
 
 
 def total_debt(facts: Facts, defs: reference.FieldDefinitions, params: reference.Params, end: date) -> Derived:
@@ -1162,6 +1210,9 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         shares = weighted_shares(facts, defs, end, taxonomy=taxonomy)
         interest_value, interest_row, interest_recipe = interest_expense(facts, defs, end, taxonomy=taxonomy)
         aoci_value, aoci_row, aoci_recipe, aoci_composition = aoci(facts, defs, end, (v["aoci"], r["aoci"]))
+        preferred_value, preferred_row = preferred_equity_of(v["preferred_equity"], r["preferred_equity"])
+        common_dividends, common_dividends_row = common_dividends_of(
+            v["common_dividends_paid"], r["common_dividends_paid"], v["dividends_paid"], v["preferred_dividends"])
         periods.append(
             boundary.FiscalPeriod(
                 period_end=end.isoformat(),
@@ -1174,6 +1225,13 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 total_debt=debt, total_debt_source=debt_row,
                 book_equity=v["book_equity"], net_income=v["net_income"],
                 dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
+                # (69) the common-only side, read on every filed period and used by the
+                # residual-income path alone; nothing above or below this line changes
+                net_income_to_common=v["net_income_to_common"], net_income_to_common_row=r["net_income_to_common"],
+                preferred_equity=preferred_value, preferred_equity_row=preferred_row,
+                preferred_dividends=v["preferred_dividends"], preferred_dividends_row=r["preferred_dividends"],
+                preferred_outside_equity=None if ifrs else redeemable_preferred(facts, tags, end),
+                common_dividends_paid=common_dividends, common_dividends_paid_row=common_dividends_row,
                 provision_for_credit_losses=None, provision_for_credit_losses_row=None,
                 net_loans=None, net_loans_row=None,
                 filed=anchor.filed.isoformat(), accession=anchor.accn,

@@ -18,7 +18,9 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?net_interest_income_row ?ebit_recipe ?ebit_composition ?cash_composition
     ?total_debt_composition ?delta_nwc_composition ?ffo ?ffo_composition ?ffo_unavailable ?net_asset_value_per_share ?net_asset_value_per_share_row ?net_asset_value_composition ?net_investment_income ?net_investment_income_row ?net_investment_income_composition ?distributions_per_share ?distributions_per_share_row ?weighted_shares
     ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates ?aoci_recipe ?aoci_composition
-    ?interest_recipe ?depreciation_amortization_recipe ?depreciation_amortization_composition () : Boundary_t.fiscal_period =
+    ?interest_recipe ?depreciation_amortization_recipe ?depreciation_amortization_composition
+    ?net_income_to_common ?preferred_equity ?preferred_dividends ?preferred_outside_equity
+    ?common_dividends_paid () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -99,6 +101,15 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     cash_composition;
     total_debt_composition;
     delta_nwc_composition;
+    net_income_to_common;
+    net_income_to_common_row = None;
+    preferred_equity;
+    preferred_equity_row = (if preferred_equity = None then None else Some "PreferredStockValue");
+    preferred_dividends;
+    preferred_dividends_row = (if preferred_dividends = None then None else Some "PaymentsOfDividendsPreferredStockAndPreferenceStock");
+    preferred_outside_equity;
+    common_dividends_paid;
+    common_dividends_paid_row = None;
   }
 
 let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
@@ -1002,6 +1013,108 @@ let bank_history ?(net_income = 200.) ?(dividends = Some 100.) ?(book_equity = 1
 
 let bank_financials ?(price = Some 10.) ?(market_cap = Some 1000.) periods =
   financials ~price ~market_cap ~industry:(Some "Banks - Diversified") periods
+
+(* --- (69) the common-only basis --- *)
+
+let common_period ?net_income_to_common ?preferred_equity ?preferred_dividends
+    ?preferred_outside_equity ?common_dividends_paid ~period_end ~book ~ni ?dividends () =
+  period ~period_end ~book_equity:book ~net_income:ni ?dividends_paid:dividends
+    ?net_income_to_common ?preferred_equity ?preferred_dividends ?preferred_outside_equity
+    ?common_dividends_paid ~total_revenue:10000. ~net_interest_income:5000. ()
+
+let ri_of periods =
+  match Residual_income.value bank_assumptions ~country:"United States" (bank_financials periods) with
+  | Ok (i, _) -> i
+  | Error r -> Alcotest.failf "residual income refused: %s" r
+
+let test_ri_common_income_recipe () =
+  (* the FILED available-to-common figure wins: it is the filer's own arithmetic and nets out
+     participating securities as well as preferred, which a subtraction cannot reproduce *)
+  let filed =
+    ri_of
+      [ common_period ~period_end:"2025-12-31" ~book:1000. ~ni:120. ~net_income_to_common:100.
+          ~preferred_equity:200. ~preferred_dividends:15. ~dividends:40. ();
+        common_period ~period_end:"2024-12-31" ~book:900. ~ni:108. ~net_income_to_common:90.
+          ~preferred_equity:200. ~preferred_dividends:15. ~dividends:36. () ]
+  in
+  Alcotest.(check string) "basis" "common" filed.common_basis;
+  (* book 1000 - 200 = 800, income 100 -> 0.125; and 90 / 700 -> 0.12857; the mean *)
+  check_float "roe_0 on the common basis" ((100. /. 800. +. (90. /. 700.)) /. 2.) filed.roe_0;
+  check_float "book less the preferred carrying value" 800. filed.book_equity;
+  Alcotest.(check (option approx)) "the deduction recorded" (Some 200.) filed.preferred_equity;
+
+  (* WITHOUT the filed tag it is net income less the filed preferred dividends *)
+  let computed =
+    ri_of
+      [ common_period ~period_end:"2025-12-31" ~book:1000. ~ni:120. ~preferred_equity:200.
+          ~preferred_dividends:15. ~dividends:40. ();
+        common_period ~period_end:"2024-12-31" ~book:900. ~ni:108. ~preferred_equity:200.
+          ~preferred_dividends:15. ~dividends:36. () ]
+  in
+  Alcotest.(check string) "basis" "common" computed.common_basis;
+  check_float "roe_0 from the subtraction" (((120. -. 15.) /. 800.) +. ((108. -. 15.) /. 700.) |> fun x -> x /. 2.) computed.roe_0
+
+let test_ri_preferred_without_a_carrying_value_stays_total () =
+  (* Morgan Stanley files preferred dividends and no carrying value at all; PNC, MetLife and
+     UnitedHealth file a par line of ZERO beside real preferred, and a zero does not resolve
+     the field. Common income over total book is neither reading, so BOTH stay total. *)
+  let stayed =
+    ri_of
+      [ common_period ~period_end:"2025-12-31" ~book:1000. ~ni:120. ~net_income_to_common:100.
+          ~preferred_dividends:15. ~dividends:40. ();
+        common_period ~period_end:"2024-12-31" ~book:900. ~ni:108. ~net_income_to_common:90.
+          ~preferred_dividends:15. ~dividends:36. () ]
+  in
+  Alcotest.(check string) "basis" "total" stayed.common_basis;
+  check_mentions "why" stayed.common_basis_why [ "no preferred carrying value" ];
+  check_float "book is the reported total" 1000. stayed.book_equity;
+  check_float "roe_0 on the total basis" ((120. /. 1000. +. (108. /. 900.)) /. 2.) stayed.roe_0;
+  (* the figure that decided it is on the record even though the basis did not move *)
+  Alcotest.(check (option approx)) "preferred dividends recorded" (Some 15.) stayed.preferred_dividends;
+  Alcotest.(check (option approx)) "and no deduction was taken" None stayed.preferred_equity
+
+let test_ri_redeemable_preferred_moves_income_only () =
+  (* SoFi's preferred is redeemable: mezzanine equity, never inside stockholders' equity, so
+     the income is the common holder's after the preferred dividend and the book already is.
+     Deducting anything here would take out something that was never in. *)
+  let i =
+    ri_of
+      [ common_period ~period_end:"2025-12-31" ~book:1000. ~ni:120. ~preferred_dividends:15.
+          ~preferred_outside_equity:true ~dividends:40. ();
+        common_period ~period_end:"2024-12-31" ~book:900. ~ni:108. ~preferred_dividends:15.
+          ~preferred_outside_equity:true ~dividends:36. () ]
+  in
+  Alcotest.(check string) "basis" "common" i.common_basis;
+  check_mentions "why" i.common_basis_why [ "redeemable" ];
+  check_float "book untouched" 1000. i.book_equity;
+  check_float "income is after the preferred dividend"
+    (((120. -. 15.) /. 1000.) +. ((108. -. 15.) /. 900.) |> fun x -> x /. 2.) i.roe_0
+
+let test_ri_payout_numerator_is_common () =
+  (* JPMorgan, Goldman Sachs and Morgan Stanley file PaymentsOfDividends, which is common AND
+     preferred. A payout built on it over a common-only income is a ratio of two different
+     things, so the numerator follows the basis. *)
+  let i =
+    ri_of
+      [ common_period ~period_end:"2025-12-31" ~book:1000. ~ni:120. ~net_income_to_common:100.
+          ~preferred_equity:200. ~preferred_dividends:15. ~dividends:55. ~common_dividends_paid:40. ();
+        common_period ~period_end:"2024-12-31" ~book:900. ~ni:108. ~net_income_to_common:90.
+          ~preferred_equity:200. ~preferred_dividends:15. ~dividends:51. ~common_dividends_paid:36. () ]
+  in
+  check_float "payout on the common numerator" ((40. /. 100. +. (36. /. 90.)) /. 2.) i.payout_ratio;
+  check_float "retention" (1. -. i.payout_ratio) i.retention;
+  Alcotest.(check (option approx)) "the record shows the numerator it used" (Some 40.) i.dividends_paid
+
+let test_ri_no_preferred_is_untouched () =
+  (* a filer with no preferred anywhere reads exactly as it did: the whole of equity is common *)
+  let i =
+    ri_of
+      [ common_period ~period_end:"2025-12-31" ~book:1000. ~ni:120. ~dividends:40. ();
+        common_period ~period_end:"2024-12-31" ~book:900. ~ni:108. ~dividends:36. () ]
+  in
+  Alcotest.(check string) "basis" "total" i.common_basis;
+  check_float "book" 1000. i.book_equity;
+  check_float "roe_0" ((120. /. 1000. +. (108. /. 900.)) /. 2.) i.roe_0
 
 let test_ri_schedule () =
   let s =
@@ -3913,6 +4026,11 @@ let () =
           case "guards fail, never zero" test_ri_guards;
           case "loan-loss ratios recorded" test_ri_loan_loss_recorded;
           case "a bank routes to residual income, never the dcf" test_bank_routes_to_residual_income;
+          case "(69) common income: filed tag, else the subtraction" test_ri_common_income_recipe;
+          case "(69) preferred dividends with no carrying value keeps both sides total" test_ri_preferred_without_a_carrying_value_stays_total;
+          case "(69) redeemable preferred moves the income, not the book" test_ri_redeemable_preferred_moves_income_only;
+          case "(69) the payout numerator follows the basis" test_ri_payout_numerator_is_common;
+          case "(69) a filer with no preferred is untouched" test_ri_no_preferred_is_untouched;
         ] );
       ( "filed statements",
         [

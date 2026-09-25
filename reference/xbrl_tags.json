@@ -14,7 +14,9 @@
     "ffo fields (18), verified on Realty Income, Prologis and Simon Property FY2025: net income available to common (all three), DepreciationDepletionAndAmortization (Realty Income) or DepreciationAndAmortization (Prologis, Simon), ImpairmentOfRealEstate and GainLossOnSaleOfProperties (Realty Income only; Prologis last filed both in 2012 and 2018, Simon never). The recipe lives in field_definitions.json.",
     "net_income: NetIncomeLoss first; NetIncomeLossAvailableToCommonStockholdersBasic second for a filer that tags only the figure available to common (Simon Property), which is also the anchor the routing needs.",
     "capex (54): PaymentsForSoftware, the cash outflow for internal-use software that qualifies for capitalisation, is appended last so a filer tagging purchases of property, plant and equipment takes that tag as before. It is Veeva's only investing capital outflow: its filed purchases of debt securities less the proceeds from sales and maturities less this tag reproduce its filed net cash used in investing activities exactly for FY2026.",
-    "dividend_evidence and financing_section (65): the dividends_paid field above is what the models read, and it is common-stock payments only. This wider list is what the retention rule asks about instead: any element whose presence says the filer distributed something to someone, preferred and minority included. A filer with none of them, whose cash-flow statement carries the financing subtotal, has said it distributed nothing; a filer with none and no financing section has said nothing at all. SoFi is the case the rule was written for and does not qualify: it tags PaymentsOfDividendsPreferredStockAndPreferenceStock and paid preferred dividends in four of its five filed years."
+    "dividend_evidence and financing_section (65): the dividends_paid field above is what the models read, and it is common-stock payments only. This wider list is what the retention rule asks about instead: any element whose presence says the filer distributed something to someone, preferred and minority included. A filer with none of them, whose cash-flow statement carries the financing subtotal, has said it distributed nothing; a filer with none and no financing section has said nothing at all. SoFi is the case the rule was written for and does not qualify: it tags PaymentsOfDividendsPreferredStockAndPreferenceStock and paid preferred dividends in four of its five filed years.",
+    "(69) preferred_dividend_evidence holds the elements moved OUT of dividend_evidence: a preferred dividend is a distribution to a claim senior to common, so its presence must not make brief 65's no-distributions rule read a filer as distributing to common holders. The entries stay in this file rather than being deleted, because the restatement scan harvests every element name both tracked reference files carry and dropping one would rewrite restatement rows on records that never read it.",
+    "(69) preferred_equity is the carrying value INSIDE stockholders' equity, first of the tags filed. A par-value line of zero is not a carrying value: PNC, MET and UNH file PreferredStockValue at exactly 0.0, and PNC and MET carry real preferred, so a zero does not resolve the field and does not satisfy the deduction. PreferredStockLiquidationPreferenceValue is deliberately absent: on filers that file both it equals the carrying value for some and differs every year for others, and one field cannot mean two things."
   ],
   "cross_check_threshold": 0.02,
   "max_filing_age_days": 400,
@@ -187,6 +189,37 @@
         "GainLossOnSaleOfProperties",
         "GainsLossesOnSalesOfInvestmentRealEstate"
       ]
+    },
+    "net_income_to_common": {
+      "kind": "duration",
+      "tags": [
+        "NetIncomeLossAvailableToCommonStockholdersBasic"
+      ]
+    },
+    "preferred_equity": {
+      "kind": "instant",
+      "tags": [
+        "PreferredStockValue",
+        "PreferredStockIncludingAdditionalPaidInCapitalNetOfDiscount",
+        "PreferredStockIncludingAdditionalPaidInCapital"
+      ]
+    },
+    "preferred_dividends": {
+      "kind": "duration",
+      "tags": [
+        "PaymentsOfDividendsPreferredStockAndPreferenceStock",
+        "PreferredStockDividendsAndOtherAdjustments",
+        "DividendsPreferredStockCash",
+        "DividendsPreferredStock"
+      ]
+    },
+    "common_dividends_paid": {
+      "kind": "duration",
+      "tags": [
+        "PaymentsOfDividendsCommonStock",
+        "DividendsCommonStockCash",
+        "DividendsCommonStock"
+      ]
     }
   },
   "depreciation_components": [
@@ -199,12 +232,9 @@
     "PaymentsOfOrdinaryDividends",
     "DividendsCommonStockCash",
     "DividendsCommonStock",
-    "PaymentsOfDividendsPreferredStockAndPreferenceStock",
     "PaymentsOfDividendsMinorityInterest",
     "PaymentsOfCapitalDistribution",
     "PaymentsOfDistributionsToAffiliates",
-    "DividendsPreferredStockCash",
-    "DividendsPreferredStock",
     "DividendsPaidCommonAndPreferredStock"
   ],
   "financing_section": [
@@ -332,6 +362,22 @@
     "gain_on_property_sales": {
       "kind": "duration",
       "tags": []
+    },
+    "net_income_to_common": {
+      "kind": "duration",
+      "tags": []
+    },
+    "preferred_equity": {
+      "kind": "instant",
+      "tags": []
+    },
+    "preferred_dividends": {
+      "kind": "duration",
+      "tags": []
+    },
+    "common_dividends_paid": {
+      "kind": "duration",
+      "tags": []
     }
   },
   "ifrs_full_net_interest_income": {
@@ -342,5 +388,14 @@
     "interest_expense": [
       "InterestExpense"
     ]
-  }
+  },
+  "preferred_dividend_evidence": [
+    "PaymentsOfDividendsPreferredStockAndPreferenceStock",
+    "DividendsPreferredStockCash",
+    "DividendsPreferredStock"
+  ],
+  "redeemable_preferred_evidence": [
+    "RedeemablePreferredStockDividends",
+    "TemporaryEquityCarryingAmountAttributableToParent"
+  ]
 }

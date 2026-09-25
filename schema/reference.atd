@@ -292,6 +292,8 @@ type xbrl_tags = {
   depreciation_components : string list;    (* canonical fields summed when no aggregate d&a tag: the first required; both taxonomies *)
   ~dividend_evidence : string list;         (* (65) every element whose presence says the filer distributes to holders, wider than the dividends_paid the models read: none present, with a financing section filed, is the filing saying it distributed nothing *)
   ~financing_section : string list;         (* (65) the cash-flow statement's financing subtotal: filed, it makes the absence of a dividend element mean none rather than not filed *)
+  ~preferred_dividend_evidence : string list;   (* (69) the elements moved out of dividend_evidence: a preferred dividend goes to a claim senior to common, so its presence must not make the retention rule read a filer as distributing to common holders *)
+  ~redeemable_preferred_evidence : string list; (* (69) redeemable preferred is mezzanine equity and never sits inside stockholders' equity, so a filer that tags one of these needs no book deduction and taking one would double-count *)
 }
 
 (* One definition per statement field, applied identically to filed statements (us-gaap

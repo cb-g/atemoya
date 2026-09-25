@@ -51,6 +51,96 @@ let mean_ratio rows ~min_periods =
 
 let absent name opt = if Option.is_none opt then Some name else None
 
+(* (69) Residual income values COMMON equity, and preferred stock is a claim senior to it.
+   Its dividends are not the common holder's income and its carrying value is not the common
+   holder's book, so income, book and the payout numerator are all read common-only.
+
+   **Both or neither.** The filing does not always support all three. A filer that pays
+   preferred dividends but files no carrying value for it -- Morgan Stanley files none at all,
+   and PNC, MetLife and UnitedHealth file a par line of zero beside real preferred -- can give
+   a common income but not a common book, and common income over total book is neither
+   reading: it understates the return on a book it does not belong to. Where the filing cannot
+   support both, every figure stays on the total-equity basis and the record says so. The one
+   exception is redeemable preferred, which is mezzanine equity and never sat inside the book
+   at all: there the income moves and the book is already common. *)
+type basis = {
+  income : fiscal_period -> float option;
+  book : fiscal_period -> float option;
+  dividends : fiscal_period -> float option;
+  dividends_row : fiscal_period -> string option;
+  name : string;
+  why : string;
+  preferred_equity : float option;
+  preferred_equity_row : string option;
+}
+
+let total_basis ~book ~why =
+  {
+    income = (fun (q : fiscal_period) -> q.net_income);
+    book;
+    dividends = (fun (q : fiscal_period) -> q.dividends_paid);
+    dividends_row = (fun (q : fiscal_period) -> q.dividends_paid_row);
+    name = "total";
+    why;
+    preferred_equity = None;
+    preferred_equity_row = None;
+  }
+
+let income_to_common (q : fiscal_period) =
+  (* the filed figure first: it is the filer's own arithmetic, and it nets out participating
+     securities as well as preferred, which a subtraction cannot reproduce *)
+  match (q.net_income_to_common, q.net_income, q.preferred_dividends) with
+  | Some filed, _, _ -> Some filed
+  | None, Some ni, Some pref -> Some (ni -. pref)
+  | None, ni, _ -> ni
+
+let common_of ~book (p : fiscal_period) =
+  let pays_preferred = Option.is_some p.preferred_dividends in
+  let outside = p.preferred_outside_equity = Some true in
+  let has_carrying = Option.is_some p.preferred_equity in
+  let filed_common = Option.is_some p.net_income_to_common in
+  if (not pays_preferred) && not filed_common then
+    total_basis ~book ~why:"no preferred dividend and no available-to-common figure filed: common equity is the whole of it"
+  else if pays_preferred && (not has_carrying) && not outside then
+    total_basis ~book
+      ~why:
+        "preferred dividends are filed but no preferred carrying value is: income, book and \
+         retention all stay on the total-equity basis, because common income over total book \
+         is neither reading"
+  else
+    let deduction (q : fiscal_period) =
+      match (book q, q.preferred_equity) with
+      | Some b, Some pref -> Some (b -. pref)
+      | b, None -> b
+      | None, _ -> None
+    in
+    {
+      income = income_to_common;
+      book = (if outside then book else deduction);
+      dividends =
+        (fun (q : fiscal_period) ->
+          match q.common_dividends_paid with Some d -> Some d | None -> q.dividends_paid);
+      dividends_row =
+        (fun (q : fiscal_period) ->
+          match q.common_dividends_paid with
+          | Some _ -> q.common_dividends_paid_row
+          | None -> q.dividends_paid_row);
+      name = "common";
+      why =
+        (if outside then
+           "the preferred is redeemable and sits outside stockholders' equity, so the income is \
+            the common holder's after the preferred dividend and the book already is"
+         else if has_carrying then
+           "the available-to-common income, the book less the filed preferred carrying value, and \
+            the common dividend"
+         else
+           "an available-to-common figure is filed and no preferred dividend is: the common side \
+            is what the filer reports");
+      preferred_equity = p.preferred_equity;
+      preferred_equity_row = p.preferred_equity_row;
+    }
+
+
 let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dcf.assumptions) ~country
     (fin : financials) =
   let ( let* ) = Result.bind in
@@ -67,9 +157,11 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
         absent "market_cap" fin.market_cap;
       ]
   in
+  (* (69) one basis for the whole record, chosen from the latest period and applied to every
+     ROE and payout row: a book on one basis against an income on another is not a return *)
+  let b = common_of ~book p in
   let statement =
-    List.filter_map Fun.id
-      [ absent "book_equity" (book p); absent "net_income" p.net_income ]
+    List.filter_map Fun.id [ absent "book_equity" (b.book p); absent "net_income" (b.income p) ]
   in
   let part label = function
     | [] -> None
@@ -86,7 +178,7 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
              statement;
          ])
   in
-  match (fin.currency, fin.price, fin.market_cap, book p, p.net_income) with
+  match (fin.currency, fin.price, fin.market_cap, b.book p, b.income p) with
   | Some _currency, Some price, Some market_cap, Some book_equity, Some net_income ->
       if price <= 0. || market_cap <= 0. then
         Error (Printf.sprintf "price %g and market cap %g must be positive" price market_cap)
@@ -97,7 +189,7 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
         let roe_rows =
           List.filter_map
             (fun (q : fiscal_period) ->
-              match (q.net_income, book q) with
+              match (b.income q, b.book q) with
               | Some ni, Some be -> Some (q.period_end, ni, be)
               | _ -> None)
             fin.periods
@@ -116,7 +208,7 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
         let payout_rows =
           List.filter_map
             (fun (q : fiscal_period) ->
-              match (q.dividends_paid, q.net_income) with
+              match (b.dividends q, b.income q) with
               | Some d, Some ni when ni > 0. -> Some (q.period_end, Float.min d ni, ni)
               | _ -> None)
             fin.periods
@@ -128,7 +220,7 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
         let filed_none =
           List.filter
             (fun (q : fiscal_period) ->
-              match (q.net_income, q.no_distributions_filed) with
+              match (b.income q, q.no_distributions_filed) with
               | Some ni, Some true when ni > 0. -> true
               | _ -> false)
             fin.periods
@@ -193,8 +285,8 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
                   payout_source;
                   retention;
                   payout_periods;
-                  dividends_paid = p.dividends_paid;
-                  dividends_paid_row = p.dividends_paid_row;
+                  dividends_paid = b.dividends p;
+                  dividends_paid_row = b.dividends_row p;
                   risk_free_rate = a.risk_free_rate;
                   equity_risk_premium = a.equity_risk_premium;
                   country_risk_premium = a.country_risk_premium;
@@ -218,6 +310,14 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
                   net_loans = p.net_loans;
                   net_loans_row = p.net_loans_row;
                   provision_to_net_loans = ratio p.provision_for_credit_losses p.net_loans;
+                  common_basis = b.name;
+                  common_basis_why = b.why;
+                  preferred_equity = b.preferred_equity;
+                  preferred_equity_row = b.preferred_equity_row;
+                  (* recorded whether or not the basis moved: a reader is owed the figure that
+                     decided it, not only the decision *)
+                  preferred_dividends = p.preferred_dividends;
+                  preferred_dividends_row = p.preferred_dividends_row;
                 },
                 fair_value )
   | _ -> Error missing

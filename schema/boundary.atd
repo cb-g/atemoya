@@ -147,6 +147,20 @@ type fiscal_period = {
   ?cash_composition : composition option;
   ?total_debt_composition : composition option;
   ?delta_nwc_composition : composition option;
+  (* (69) The common-only side of the filing, for the residual-income path alone. Residual
+     income values COMMON equity, and preferred stock is a claim senior to it: its dividends
+     are not the common holder's income and its carrying value is not the common holder's
+     book. Nothing outside that path reads any of these, and the fields the rest of the tool
+     reads -- net_income, book_equity, dividends_paid -- are untouched. *)
+  ?net_income_to_common : float option;       (* the filed available-to-common figure; any sign. It nets out participating-security allocations as well as preferred dividends, so it can differ from net income on a filer with no preferred at all *)
+  ?net_income_to_common_row : string option;
+  ?preferred_equity : float option;           (* >= 0; the preferred carrying value INSIDE stockholders' equity, first of the carrying tags filed. A par-value line of zero is not a carrying value and does not resolve *)
+  ?preferred_equity_row : string option;
+  ?preferred_dividends : float option;        (* >= 0; declared or paid, the tag recorded. Its presence is what says a filer HAS preferred, which a zero carrying value cannot *)
+  ?preferred_dividends_row : string option;
+  ?preferred_outside_equity : bool option;    (* (69) true where the filer tags redeemable preferred: mezzanine equity, never inside stockholders' equity, so the common book needs no deduction and taking one would double-count *)
+  ?common_dividends_paid : float option;      (* >= 0; the filed common-dividend element, else dividends_paid less preferred_dividends, the recipe recorded *)
+  ?common_dividends_paid_row : string option;
 }
 
 (* One canonical field compared between the statements provider and the cross-check
@@ -478,6 +492,16 @@ type residual_income_inputs = {
   net_loans : float nullable;
   net_loans_row : string nullable;
   provision_to_net_loans : float nullable;
+  (* (69) Which basis the whole record ran on. Residual income values common equity, so
+     income, book and retention are common-only where the filing supports all three; where
+     it does not, every one of them stays on the total-equity basis and this says why.
+     They never mix: common income over total book is neither reading. *)
+  ~common_basis : string;                     (* common | total *)
+  ~common_basis_why : string;                 (* what the filing did or did not support *)
+  ?preferred_equity : float option;           (* the carrying value deducted from book, when one was *)
+  ?preferred_equity_row : string option;
+  ?preferred_dividends : float option;        (* the latest period's, recorded whether or not the basis moved *)
+  ?preferred_dividends_row : string option;
 }
 
 (* The insurer model: the residual-income core run on AOCI-adjusted book (reported

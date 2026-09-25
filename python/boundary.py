@@ -1227,6 +1227,12 @@ class ResidualIncomeInputs:
     payout_source: str = field(default_factory=lambda: "")
     country_risk_premium: Optional[Parameter] = None
     conversion: Optional[Conversion] = None
+    common_basis: str = field(default_factory=lambda: "")
+    common_basis_why: str = field(default_factory=lambda: "")
+    preferred_equity: Optional[float] = None
+    preferred_equity_row: Optional[str] = None
+    preferred_dividends: Optional[float] = None
+    preferred_dividends_row: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'ResidualIncomeInputs':
@@ -1271,6 +1277,12 @@ class ResidualIncomeInputs:
                 payout_source=_atd_read_string(x['payout_source']) if 'payout_source' in x else "",
                 country_risk_premium=Parameter.from_json(x['country_risk_premium']) if 'country_risk_premium' in x else None,
                 conversion=Conversion.from_json(x['conversion']) if 'conversion' in x else None,
+                common_basis=_atd_read_string(x['common_basis']) if 'common_basis' in x else "",
+                common_basis_why=_atd_read_string(x['common_basis_why']) if 'common_basis_why' in x else "",
+                preferred_equity=_atd_read_float(x['preferred_equity']) if 'preferred_equity' in x else None,
+                preferred_equity_row=_atd_read_string(x['preferred_equity_row']) if 'preferred_equity_row' in x else None,
+                preferred_dividends=_atd_read_float(x['preferred_dividends']) if 'preferred_dividends' in x else None,
+                preferred_dividends_row=_atd_read_string(x['preferred_dividends_row']) if 'preferred_dividends_row' in x else None,
             )
         else:
             _atd_bad_json('ResidualIncomeInputs', x)
@@ -1318,6 +1330,16 @@ class ResidualIncomeInputs:
             res['country_risk_premium'] = (lambda x: x.to_json())(self.country_risk_premium)
         if self.conversion is not None:
             res['conversion'] = (lambda x: x.to_json())(self.conversion)
+        res['common_basis'] = _atd_write_string(self.common_basis)
+        res['common_basis_why'] = _atd_write_string(self.common_basis_why)
+        if self.preferred_equity is not None:
+            res['preferred_equity'] = _atd_write_float(self.preferred_equity)
+        if self.preferred_equity_row is not None:
+            res['preferred_equity_row'] = _atd_write_string(self.preferred_equity_row)
+        if self.preferred_dividends is not None:
+            res['preferred_dividends'] = _atd_write_float(self.preferred_dividends)
+        if self.preferred_dividends_row is not None:
+            res['preferred_dividends_row'] = _atd_write_string(self.preferred_dividends_row)
         return res
 
     @classmethod
@@ -4830,6 +4852,15 @@ class FiscalPeriod:
     cash_composition: Optional[Composition] = None
     total_debt_composition: Optional[Composition] = None
     delta_nwc_composition: Optional[Composition] = None
+    net_income_to_common: Optional[float] = None
+    net_income_to_common_row: Optional[str] = None
+    preferred_equity: Optional[float] = None
+    preferred_equity_row: Optional[str] = None
+    preferred_dividends: Optional[float] = None
+    preferred_dividends_row: Optional[str] = None
+    preferred_outside_equity: Optional[bool] = None
+    common_dividends_paid: Optional[float] = None
+    common_dividends_paid_row: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'FiscalPeriod':
@@ -4914,6 +4945,15 @@ class FiscalPeriod:
                 cash_composition=Composition.from_json(x['cash_composition']) if 'cash_composition' in x else None,
                 total_debt_composition=Composition.from_json(x['total_debt_composition']) if 'total_debt_composition' in x else None,
                 delta_nwc_composition=Composition.from_json(x['delta_nwc_composition']) if 'delta_nwc_composition' in x else None,
+                net_income_to_common=_atd_read_float(x['net_income_to_common']) if 'net_income_to_common' in x else None,
+                net_income_to_common_row=_atd_read_string(x['net_income_to_common_row']) if 'net_income_to_common_row' in x else None,
+                preferred_equity=_atd_read_float(x['preferred_equity']) if 'preferred_equity' in x else None,
+                preferred_equity_row=_atd_read_string(x['preferred_equity_row']) if 'preferred_equity_row' in x else None,
+                preferred_dividends=_atd_read_float(x['preferred_dividends']) if 'preferred_dividends' in x else None,
+                preferred_dividends_row=_atd_read_string(x['preferred_dividends_row']) if 'preferred_dividends_row' in x else None,
+                preferred_outside_equity=_atd_read_bool(x['preferred_outside_equity']) if 'preferred_outside_equity' in x else None,
+                common_dividends_paid=_atd_read_float(x['common_dividends_paid']) if 'common_dividends_paid' in x else None,
+                common_dividends_paid_row=_atd_read_string(x['common_dividends_paid_row']) if 'common_dividends_paid_row' in x else None,
             )
         else:
             _atd_bad_json('FiscalPeriod', x)
@@ -5054,6 +5094,24 @@ class FiscalPeriod:
             res['total_debt_composition'] = (lambda x: x.to_json())(self.total_debt_composition)
         if self.delta_nwc_composition is not None:
             res['delta_nwc_composition'] = (lambda x: x.to_json())(self.delta_nwc_composition)
+        if self.net_income_to_common is not None:
+            res['net_income_to_common'] = _atd_write_float(self.net_income_to_common)
+        if self.net_income_to_common_row is not None:
+            res['net_income_to_common_row'] = _atd_write_string(self.net_income_to_common_row)
+        if self.preferred_equity is not None:
+            res['preferred_equity'] = _atd_write_float(self.preferred_equity)
+        if self.preferred_equity_row is not None:
+            res['preferred_equity_row'] = _atd_write_string(self.preferred_equity_row)
+        if self.preferred_dividends is not None:
+            res['preferred_dividends'] = _atd_write_float(self.preferred_dividends)
+        if self.preferred_dividends_row is not None:
+            res['preferred_dividends_row'] = _atd_write_string(self.preferred_dividends_row)
+        if self.preferred_outside_equity is not None:
+            res['preferred_outside_equity'] = _atd_write_bool(self.preferred_outside_equity)
+        if self.common_dividends_paid is not None:
+            res['common_dividends_paid'] = _atd_write_float(self.common_dividends_paid)
+        if self.common_dividends_paid_row is not None:
+            res['common_dividends_paid_row'] = _atd_write_string(self.common_dividends_paid_row)
         return res
 
     @classmethod
