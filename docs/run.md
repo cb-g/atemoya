@@ -6,26 +6,16 @@ dune exec atemoya -- data/financials/*.json # one valuation record per line on s
 uv run python/refresh_rates.py --all        # sovereign curves per reference/rate_sources.json -> data/reference/risk_free_rates.json (never tracked)
 uv run python/refresh_fx.py --all           # FX via FRED H.10 -> data/reference/fx_rates.json (never tracked)
 
-uv run python/fetch_all.py                  # every ticker in reference/universe.json ->
-data/snapshots/<date>/, data/financials -> the latest dune exec atemoya --
-data/financials --out output   # -> output/valuations.jsonl, summary.txt,
-provider_diff.txt, the same three under output/runs/<date>/ (never overwritten), and
-output/maps/<ticker>.json per belief map uv run python/plot_map.py AAPL # ->
-output/maps/AAPL.png: the belief map's surface, the price contour,
-
-the observed starting growth dune exec atemoya -- data/financials --out output
---baseline previous/valuations.jsonl   # plus this run against that one dune exec
-atemoya -- data/snapshots/<new> --out output --baseline previous/valuations.jsonl
---baseline- snapshot data/snapshots/<old>   # plus stability_<old>_<new>.txt uv run
-python/fetch_all.py --as-of 2025-06-30   # point-in-time: data/pit/2025-06-30/ from what
-was known on that date, with its reference/ dune exec atemoya -- data/pit/2025-06-30
---reference data/pit/2025-06-30/reference --fetched data/pit/2025-06-30/reference
---today 2025-06-30 --out output/pit/2025-06-30 dune exec atemoya -- --entity-class
-OperatingCompany --out output data/financials/NEW.json   # a name not in the universe,
-declared on the command line uv run python/build_panel.py                    # every
-quarter-end 2022-03-31 ..
-
-2026-06-30 -> output/pit/panel.jsonl, panel_summary.txt ```
+uv run python/fetch_all.py                  # every ticker in reference/universe.json -> data/snapshots/<date>/, data/financials -> the latest
+dune exec atemoya -- data/financials --out output   # -> output/valuations.jsonl, summary.txt, provider_diff.txt, the same three under output/runs/<date>/ (never overwritten), and output/maps/<ticker>.json per belief map
+uv run python/plot_map.py AAPL                   # -> output/maps/AAPL.png: the belief map's surface, the price contour, the observed starting growth
+dune exec atemoya -- data/financials --out output --baseline previous/valuations.jsonl   # plus this run against that one
+dune exec atemoya -- data/snapshots/<new> --out output --baseline previous/valuations.jsonl --baseline-snapshot data/snapshots/<old>   # plus stability_<old>_<new>.txt
+uv run python/fetch_all.py --as-of 2025-06-30   # point-in-time: data/pit/2025-06-30/ from what was known on that date, with its reference/
+dune exec atemoya -- data/pit/2025-06-30 --reference data/pit/2025-06-30/reference --fetched data/pit/2025-06-30/reference --today 2025-06-30 --out output/pit/2025-06-30
+dune exec atemoya -- --entity-class OperatingCompany --out output data/financials/NEW.json   # a name not in the universe, declared on the command line
+uv run python/build_panel.py                    # every quarter-end 2022-03-31 .. 2026-06-30 -> output/pit/panel.jsonl, panel_summary.txt
+```
 
 ## Inputs and declarations
 
