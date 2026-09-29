@@ -748,11 +748,20 @@ def interest_evidence(facts: Facts, defs: reference.FieldDefinitions, params: re
     against and the evidence stands."""
     d = defs.total_debt.xbrl
     hit = facts.first(d.interest_evidence, end, instant=False)
+    kind = "interest"
+    if hit is None:
+        # (72) the balance-sheet accrual: a filer that owes interest at the year end owes
+        # something, under the same sign and size test. Ford's own FY2018 filing tags no
+        # interest expense at all and 0.99bn of interest payable.
+        hit = facts.first(d.debt_evidence, end, instant=True)
+        kind = "interest payable"
     if hit is None:
         return False, DEBT_FREE
     value, tag = hit
     if value <= 0.:
-        return False, f"no debt line filed and {tag} is interest income, not an expense; taken as 0"
+        if kind == "interest":
+            return False, f"no debt line filed and {tag} is interest income, not an expense; taken as 0"
+        return False, f"no debt line filed and {tag} is not positive; taken as 0"
     operating = facts.first(defs.ebit.xbrl.operating_income, end, instant=False)
     if operating is None or operating[0] <= 0.:
         return True, ""
@@ -761,8 +770,34 @@ def interest_evidence(facts: Facts, defs: reference.FieldDefinitions, params: re
     if share >= floor:
         return True, ""
     return False, (
-        f"no debt line filed and the only interest filed, {tag}, is {share * 100:.2f}% of "
+        f"no debt line filed and the only {kind} filed, {tag}, is {share * 100:.2f}% of "
         f"operating income, below the {floor * 100:.2f}% floor; taken as 0")
+
+
+COMPARATIVE = "; comparative balance sheet of a later filing, the period's own filing presenting none (72)"
+
+
+def comparative_balance_sheet(comparative: Facts, defs: reference.FieldDefinitions, params: reference.Params, end: date, *,
+                              chosen_cash: Derived, chosen_debt: Derived) -> tuple[float | None, str | None, boundary.Composition | None,
+                                                                    float | None, str | None, boundary.Composition | None]:
+    """(72) A fallback period's cash and debt from the latest filing that carries the line,
+    taken only where the chosen filing resolved nothing: cash when it is missing, debt when
+    it is missing or was taken as zero for want of any line, and then only a filed line
+    (a composition with components), never the other filing's own absent-is-zero. The
+    source says where the figure came from. A period read from its own year never comes
+    here: a line its own filing did not tag stays untagged."""
+    cash_value, cash_row, cash_composition = chosen_cash
+    debt_value, debt_row, debt_composition = chosen_debt
+    if cash_value is None:
+        value, row, composition = cash(comparative, defs, end)
+        if value is not None and row is not None:
+            cash_value, cash_row, cash_composition = value, row + COMPARATIVE, composition
+    taken_as_zero = debt_value == 0.0 and debt_composition is not None and not debt_composition.components
+    if debt_value is None or taken_as_zero:
+        value, row, composition = total_debt(comparative, defs, params, end)
+        if value is not None and row is not None and composition is not None and composition.components:
+            debt_value, debt_row, debt_composition = value, row + COMPARATIVE, composition
+    return cash_value, cash_row, cash_composition, debt_value, debt_row, debt_composition
 
 
 def no_distributions_filed(facts: Facts, tags: reference.XbrlTags, end: date) -> bool | None:
@@ -1160,6 +1195,11 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
     accessions = Accessions(gaap, tags) if one_accession else None
     selected = select(gaap, tags, notes, taxonomy=taxonomy, unit=unit, accessions=accessions)
     facts = Facts(gaap, tags, notes, unit=unit, accessions=accessions)
+    # (72) The latest filing per tag, read for one thing only: the balance sheet of a period
+    # no filing reports as its own year. Such a period is read from the latest filing that
+    # carries it at all, which for the third-oldest year of a three-year filer presents that
+    # year's income statement and not its balance sheet; the filing before it does.
+    comparative = Facts(gaap, tags, [], unit=unit) if accessions is not None else None
     # The fiscal year ends the filer anchors. Net income with book equity for every filer
     # that reports one; (59) a business development company's net asset value per share
     # stands in beside it, because two of the three verified stop tagging net income (and
@@ -1199,6 +1239,10 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         else:
             cash_value, cash_row, cash_composition = cash(facts, defs, end)
             debt, debt_row, debt_composition = total_debt(facts, defs, declared_params, end)
+            if comparative is not None and accessions is not None and accessions.is_fallback(end):
+                cash_value, cash_row, cash_composition, debt, debt_row, debt_composition = comparative_balance_sheet(
+                    comparative, defs, declared_params, end,
+                    chosen_cash=(cash_value, cash_row, cash_composition), chosen_debt=(debt, debt_row, debt_composition))
             nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
         ffo_value, _, ffo_composition, ffo_unavailable = ffo(facts, defs, end, taxonomy=taxonomy)

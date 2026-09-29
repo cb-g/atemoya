@@ -2344,6 +2344,7 @@ class DebtXbrl:
     aggregate: List[str] = field(default_factory=lambda: [])
     convertible: List[str] = field(default_factory=lambda: [])
     interest_evidence: List[str] = field(default_factory=lambda: [])
+    debt_evidence: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -2359,6 +2360,7 @@ class DebtXbrl:
                 aggregate=_atd_read_list(_atd_read_string)(x['aggregate']) if 'aggregate' in x else [],
                 convertible=_atd_read_list(_atd_read_string)(x['convertible']) if 'convertible' in x else [],
                 interest_evidence=_atd_read_list(_atd_read_string)(x['interest_evidence']) if 'interest_evidence' in x else [],
+                debt_evidence=_atd_read_list(_atd_read_string)(x['debt_evidence']) if 'debt_evidence' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -2375,6 +2377,7 @@ class DebtXbrl:
         res['aggregate'] = _atd_write_list(_atd_write_string)(self.aggregate)
         res['convertible'] = _atd_write_list(_atd_write_string)(self.convertible)
         res['interest_evidence'] = _atd_write_list(_atd_write_string)(self.interest_evidence)
+        res['debt_evidence'] = _atd_write_list(_atd_write_string)(self.debt_evidence)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 

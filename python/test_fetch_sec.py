@@ -1076,3 +1076,79 @@ def test_point_in_time_takes_the_filing_on_or_before_the_date() -> None:
     assert fy21.accession == "acc-2022-10-28"
     assert fy21.delta_nwc is not None and math.isclose(fy21.delta_nwc, (10125 - 5799 - 1676) * 1e6)
     assert fy21.restated_from == [], "the later filing does not exist on that date"
+
+
+def test_interest_expense_other_and_interest_payable_are_evidence_of_debt() -> None:
+    """(72) Ford's two shapes. Its own FY2024 filing tags interest as InterestExpenseOther
+    and its own FY2018 filing tags no interest expense at all, only the year-end accrual
+    InterestPayableCurrent; either says the filer owes something, under the same sign and
+    size test as the interest lines, so debt stays null instead of reading zero."""
+    assert "InterestExpenseOther" in DEFS.total_debt.xbrl.interest_evidence
+    assert DEFS.total_debt.xbrl.debt_evidence == ["InterestPayableCurrent", "InterestPayableCurrentAndNoncurrent"]
+    loss = {"OperatingIncomeLoss": usd(fact("2025-12-31", -9169e6, start="2025-01-01"))}
+    assert period({"InterestExpenseOther": usd(fact("2025-12-31", 1115e6, start="2025-01-01")), **loss}).total_debt is None
+    assert period({"InterestPayableCurrent": usd(fact("2025-12-31", 988e6))}).total_debt is None
+    assert period({"InterestPayableCurrentAndNoncurrent": usd(fact("2025-12-31", 12e6))}).total_debt is None
+    # the accrual is read after the interest lines, and under the same floor
+    p = period({"InterestPayableCurrent": usd(fact("2025-12-31", 2e6)), "OperatingIncomeLoss": usd(fact("2025-12-31", 1000e6, start="2025-01-01"))})
+    assert p.total_debt == 0.0
+    assert p.total_debt_source is not None and "the only interest payable filed, InterestPayableCurrent, is 0.20%" in p.total_debt_source
+    p = period({"InterestPayableCurrent": usd(fact("2025-12-31", 0.0))})
+    assert p.total_debt == 0.0 and p.total_debt_source is not None and "InterestPayableCurrent is not positive" in p.total_debt_source
+    # a filed debt line is still the debt, and the accrual never derives an EBIT
+    assert period({"LongTermDebtNoncurrent": usd(fact("2025-12-31", 0.745e9)), "InterestPayableCurrent": usd(fact("2025-12-31", 988e6))}).total_debt == 0.745e9
+    assert "InterestPayableCurrent" not in DEFS.ebit.xbrl.interest_expense
+
+
+def three_year_registrant() -> dict[str, object]:
+    """Sandisk's shape: a first 10-K (filed 2025-08-15) with FY2025 and the FY2024 comparative
+    balance sheet, then a second (filed 2026-08-17) with FY2026, FY2025 and the FY2024 income
+    statement only, its FY2024 instants being the opening equity and cash of its statements
+    of equity and cash flows, with no FY2024 debt line. FY2024 is nobody's own year."""
+    first, second = "2025-08-15", "2026-08-17"
+    return {
+        "NetIncomeLoss": usd(fact("2025-06-27", -1.6e9, start="2024-06-29", filed=first), fact("2024-06-28", -0.7e9, start="2023-07-01", filed=first),
+                             fact("2026-07-03", 11.4e9, start="2025-06-28", filed=second), fact("2025-06-27", -1.6e9, start="2024-06-29", filed=second),
+                             fact("2024-06-28", -0.7e9, start="2023-07-01", filed=second)),
+        "StockholdersEquity": usd(fact("2025-06-27", 9.6e9, filed=first), fact("2024-06-28", 11.1e9, filed=first),
+                                  fact("2026-07-03", 21e9, filed=second), fact("2025-06-27", 9.6e9, filed=second), fact("2024-06-28", 11.1e9, filed=second)),
+        "CashAndCashEquivalentsAtCarryingValue": usd(fact("2025-06-27", 1.5e9, filed=first), fact("2024-06-28", 328e6, filed=first),
+                                                     fact("2026-07-03", 3e9, filed=second), fact("2025-06-27", 1.5e9, filed=second)),
+        "LongTermDebt": usd(fact("2025-06-27", 2.0e9, filed=first), fact("2024-06-28", 0.0, filed=first),
+                            fact("2026-07-03", 1.8e9, filed=second), fact("2025-06-27", 2.0e9, filed=second)),
+        "InterestExpenseNonoperating": usd(fact("2025-06-27", 100e6, start="2024-06-29", filed=first), fact("2024-06-28", 40e6, start="2023-07-01", filed=first),
+                                           fact("2026-07-03", 90e6, start="2025-06-28", filed=second), fact("2025-06-27", 100e6, start="2024-06-29", filed=second),
+                                           fact("2024-06-28", 40e6, start="2023-07-01", filed=second)),
+    }
+
+
+def test_a_fallback_period_reads_its_balance_sheet_from_the_filing_that_carries_it() -> None:
+    """(72) FY2024 is read from the second filing, which presents no FY2024 balance sheet, so
+    its debt and cash would be missing; the first filing carries both, and a period with
+    no own year takes them from there, saying so. The two own-year periods are untouched."""
+    ps = {p.period_end: p for p in periods_of(three_year_registrant())}
+    fy24 = ps["2024-06-28"]
+    assert fy24.accession == "acc-2026-08-17"  # the latest filing that carries the period at all (61)
+    assert fy24.total_debt == 0.0  # the zero the first filing tagged, not absent-is-zero: the interest blocks that
+    assert fy24.total_debt_source is not None and fy24.total_debt_source.startswith("LongTermDebt") and "comparative balance sheet" in fy24.total_debt_source
+    assert fy24.total_debt_composition is not None and [c.name for c in fy24.total_debt_composition.components] == ["total_including_current"]
+    assert fy24.cash == 328e6 and fy24.cash_row is not None and "comparative balance sheet" in fy24.cash_row
+    for end, debt in (("2025-06-27", 2.0e9), ("2026-07-03", 1.8e9)):
+        p = ps[end]
+        assert p.total_debt == debt and p.total_debt_source == "LongTermDebt" and p.cash_row is not None and "comparative" not in p.cash_row
+
+
+def test_an_own_year_period_keeps_its_own_presentation() -> None:
+    """(72) Enphase FY2015: its own 10-K tags no debt line and does tag interest, and the
+    next year's 10-K carries a zero for the comparative. The own year is the presentation,
+    so the field stays null; the comparative rule never reaches an own-year period."""
+    gaap = {
+        "NetIncomeLoss": usd(fact("2015-12-31", -22e6, start="2015-01-01", filed="2016-03-01"),
+                             fact("2016-12-31", -67e6, start="2016-01-01", filed="2017-03-01"), fact("2015-12-31", -22e6, start="2015-01-01", filed="2017-03-01")),
+        "StockholdersEquity": usd(fact("2015-12-31", 42e6, filed="2016-03-01"), fact("2016-12-31", 5e6, filed="2017-03-01"), fact("2015-12-31", 42e6, filed="2017-03-01")),
+        "InterestExpense": usd(fact("2015-12-31", 501e3, start="2015-01-01", filed="2016-03-01")),
+        "LongTermDebtNoncurrent": usd(fact("2015-12-31", 0.0, filed="2017-03-01"), fact("2016-12-31", 0.0, filed="2017-03-01")),
+    }
+    ps = {p.period_end: p for p in periods_of(gaap)}
+    assert ps["2015-12-31"].accession == "acc-2016-03-01" and ps["2015-12-31"].total_debt is None
+    assert ps["2016-12-31"].total_debt == 0.0 and ps["2016-12-31"].total_debt_source == "LongTermDebtNoncurrent"

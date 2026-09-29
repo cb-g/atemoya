@@ -344,6 +344,7 @@ type debt_xbrl = {
   total_including_current : string list;    (* long-term debt filed with its current portion; recipe 3 *)
   excluded : string list;                   (* operating lease liabilities: never summed *)
   ~interest_evidence : string list;         (* interest tags whose presence says the filer owes something; with no debt tag and none of these, debt is 0 (25) *)
+  ~debt_evidence : string list;             (* (72) balance-sheet tags whose presence says the filer owes something (interest payable); read after interest_evidence, under the same sign and size test *)
   ~notes : string list;
 }
 

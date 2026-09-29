@@ -378,6 +378,20 @@ at all:
    and positive; with no operating income line, or a loss, the evidence stands and the
    field stays null. Both conditions are written into the debt source on the record when
    the rule fires. Only a filer that tags no debt line at all ever reaches this test.
+   **The evidence includes the accrual** (72). `InterestExpenseOther` is an interest line
+   and joins the list; and where a filing tags no interest expense at all, a positive
+   `InterestPayableCurrent` (or its current-and-noncurrent form) is read after it under the
+   same sign and size test, because a filer that owes interest at the year end owes
+   something. Ford's own FY2024 filing tags the first and its own FY2018 filing only the
+   second, its debt instants being dimensioned by segment and never reaching companyfacts,
+   and the rule had written total debt 0 on both years; both now stay null with the tag
+   named. **A fallback period's balance sheet** (72). A period no filing reports as its own
+   year is read from the latest filing that carries it at all, which for the third-oldest
+   year of a three-year filer presents that year's income statement and not its balance
+   sheet. On such a period, and only such a period, cash and debt the chosen filing does
+   not resolve are read from the latest annual filing that carries the line, the source
+   saying so; a period read from its own year keeps its own presentation, so a line its
+   own filing did not tag stays untagged.
 7. **AOCI by components.** When the aggregate is absent the filed components are summed,
    recorded as `sum_of_components` with each component.
 
@@ -664,6 +678,19 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the debt a filing cannot show (72): the mid-cycle audit found the absent-is-zero rule
+  writing total debt 0 on Ford for FY2018 and FY2024, a filer whose debt lines are
+  dimensioned and never reach companyfacts and whose own filings tag interest as
+  `InterestExpenseOther` or only as the accrual `InterestPayableCurrent`; both join the
+  evidence, under the existing sign and size test, so both years stay null with the tag
+  named. Measured on all 33 periods the rule fires on, Ford's two are the only ones that
+  move. And a period no filing reports as its own year, read from a filing that presents
+  its income statement and not its balance sheet, now takes cash and debt from the latest
+  filing that carries the line, saying so: six periods on six names, three of them
+  business development companies whose FY2021 debt had read zero. The three new element
+  names add restatement rows on ten records that read none of them, recorded and never
+  taken. The window floor of eight and the scale floor stay as declared, the audit having
+  found every other lost observation working as written. No new `Failed` string.
 - twenty-five names, Mexico, the terminal's jar and a Bundesbank placeholder (71): a
   downstream project running a clone asked for twenty-six names and four repairs. Twenty-five
   join `reference/universe.json` with the class judgments delegated to the tool and every
