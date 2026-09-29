@@ -4,7 +4,8 @@
     "Reclassified 2026-09-23 (54) by the user: Amazon and Venture Global move from OperatingCompany and Unprofitable to Cyclical, both for the same reason Oracle carries, a capacity build-out inside the growth window that the latest year's free cash flow cannot speak for; Robinhood stays under the software lens with the interest-revenue scope limit written down, so the bank signature its filing fires is a recorded disagreement and not a misclassification. The class judgments drafted in batch 2 were confirmed by the user on the same day.",
     "FDUS, MAIN and GBDC move from Wrapper to Bdc (59): a business development company is not a wrapper holding other securities, it is a lender whose portfolio is marked to fair value every quarter, and the net asset value lens reads that mark with the coverage of the distribution beside it. The ten other wrappers stay refused.",
     "Twenty-five names added 2026-09-29 (71) at the request of a downstream project that runs a clone: the class judgments were delegated to the tool by that project and drafted here from the vendor's statements and the filers' own forms, so each why says what was read; the user confirmed the two judgment calls, Circle as an operating company and GE Vernova as a cyclical, and may reclassify any of the others by editing this file. Two of the project's twenty-six were not added as asked: SK hynix was already here as 000660.KS, and Bending Spoons, which the project could not name a symbol for, is listed on Nasdaq as BSP, confirmed from the listing's own announcement, and is added under that symbol. Mexico joins the four country tables in the same commit because two of the names, the Mexico City line of Walmart's retailer and the Tiendas 3B receipt, report in pesos and Mexico was in none of them.",
-    "lei (73): a Legal Entity Identifier declared on an entry names the filer whose ESEF annual reports on filings.xbrl.org are its statements, for a name with no SEC filer; read from the filer's own report cover and never resolved from the vendor, whose ISIN lookup returned nothing for three of the four names and a wrong code for one. Declared 2026-09-29 on Sanofi, Air Liquide, ASML and Novo Nordisk; Allianz is not on the aggregator and stays on the vendor."
+    "lei (73): a Legal Entity Identifier declared on an entry names the filer whose ESEF annual reports on filings.xbrl.org are its statements, for a name with no SEC filer; read from the filer's own report cover and never resolved from the vendor, whose ISIN lookup returned nothing for three of the four names and a wrong code for one. Declared 2026-09-29 on Sanofi, Air Liquide, ASML and Novo Nordisk; Allianz is not on the aggregator and stays on the vendor.",
+    "Filers declared by CIK 2026-09-30 (79): Toyota's Tokyo line and AstraZeneca's London line read their own 20-F statements, which are the same IFRS accounts each home line trades on. MUFG's is not declared, its 20-F being US GAAP against the J-GAAP the Tokyo line trades on; the difference is written on its entry."
   ],
   "tickers": [
     {
@@ -158,7 +159,8 @@
     {
       "ticker": "AZN.L",
       "entity_class": "OperatingCompany",
-      "why": "dollar statements under a pence price: the cross-currency and minor-unit path"
+      "why": "dollar statements under a pence price: the cross-currency and minor-unit path. The filer is declared by CIK: AstraZeneca files a 20-F in IFRS in dollars, the same statements the London line trades on, and the ticker map knows only the depositary receipt.",
+      "cik": "0000901832"
     },
     {
       "ticker": "SPY",
@@ -778,16 +780,16 @@
     {
       "ticker": "7203.T",
       "entity_class": "Cyclical",
-      "why": "the Tokyo line of a Japanese vehicle maker, reporting in yen; volumes and margins swing with the cycle, so through-cycle return on today's capital is the question and never one year's free cash flow, which is how the American vehicle maker in this file is read; confirmed by the user.",
+      "why": "the Tokyo line of a Japanese vehicle maker, reporting in yen; volumes and margins swing with the cycle, so through-cycle return on today's capital is the question and never one year's free cash flow, which is how the American vehicle maker in this file is read; confirmed by the user. The filer is declared by CIK: Toyota files a 20-F in IFRS in yen, the same consolidated statements the Tokyo line trades on, and the ticker map knows only the depositary receipt.",
       "scope_limits": [
-        "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost",
-        "no filings at the Securities and Exchange Commission, so the statements come from the vendor, which carries fewer annual columns than the through-cycle window asks for"
-      ]
+        "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost"
+      ],
+      "cik": "0001094517"
     },
     {
       "ticker": "8306.T",
       "entity_class": "Bank",
-      "why": "the Tokyo line of a Japanese bank holding company, reporting in yen on the vendor path; net interest income is the larger part of revenue and the residual-income lens applies."
+      "why": "the Tokyo line of a Japanese bank holding company, reporting in yen on the vendor path; net interest income is the larger part of revenue and the residual-income lens applies. Its 20-F is filed in US GAAP while the Tokyo line trades on the J-GAAP accounts the vendor carries, and the two differ by about a third on net income and a tenth on book, so the SEC filer is deliberately not declared: reading it would swap the basis the market prices for one it does not, and the domestic accounts wait on a Japanese filed source."
     },
     {
       "ticker": "RELIANCE.NS",

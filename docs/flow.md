@@ -763,6 +763,14 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the home lines of 20-F filers read their own filings (79): Toyota's Tokyo line and
+  AstraZeneca's London line declare the SEC filer by CIK, the ticker map knowing only the
+  depositary receipts, and read the same IFRS statements their home lines trade on;
+  AstraZeneca moves from the vendor's four columns to five filed years and Toyota stays
+  on the vendor by the lag decision until companyfacts carries its June 20-F. MUFG is
+  deliberately not declared: its 20-F is US GAAP against the J-GAAP its Tokyo line trades
+  on, a third apart on net income, and the entry says so. A Japanese filed source is
+  therefore not needed for any name held. No new `Failed` string.
 - Hong Kong's curve from the Government Bond Programme's workbook (78): the HKMA open API
   stops at three-year Exchange Fund Notes, but hkgb.gov.hk publishes the institutional
   bonds' closing reference pricings daily as a workbook with the three, five, seven and
