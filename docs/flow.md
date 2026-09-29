@@ -763,6 +763,14 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- Hong Kong's curve from the Government Bond Programme's workbook (78): the HKMA open API
+  stops at three-year Exchange Fund Notes, but hkgb.gov.hk publishes the institutional
+  bonds' closing reference pricings daily as a workbook with the three, five, seven and
+  ten-year benchmarks, keyless, read with xlrd, the newest dated row the observation and
+  nothing substituted because the seven-year is a benchmark of its own; the one-year is a
+  floating note with no yield and is not listed. The Government asks to be quoted as the
+  owner of the pricings, which the source string does. Tencent's Hong Kong line values.
+  Taiwan stays manual, every route probed and recorded. No new `Failed` string.
 - Singapore's curve from MAS's own page (77): the API gateway needs a registered corporate
   account a foreign individual cannot open, but MAS's Daily SGS Prices statistics page
   renders the benchmark closing yields server-side and keyless, so the hand-copied entry,

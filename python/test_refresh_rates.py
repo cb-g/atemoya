@@ -170,3 +170,28 @@ def test_mas_page_reads_the_newest_dated_row_by_tenor() -> None:
         rr.parse_mas_sgs_html(body, ["7y"])
     with pytest.raises(rr.RefreshError, match="not on the page"):
         rr.parse_mas_sgs_html(b"<html></html>", ["10y"])
+
+
+def test_hkgb_benchmark_rows_read_the_newest_date_by_tenor() -> None:
+    """(78) The benchmark sheet as rows: the Tenor row names the benchmarks over a price and
+    a yield column each, the one-year floating note quotes no yield, the newest dated row is
+    the observation, a missing tenor an error. Synthetic numbers."""
+    rows: list[list[object]] = [
+        ["Daily HKD Institutional Government Bond Closing Reference Pricings", "", ""],
+        ["Tenor", "1-year*", "", "3-year", "", "5-year", "", "7-year", "", "10-year", ""],
+        ["Issue code", "01GH", "", "05GB", "", "05GB", "", "07GB", "", "10GB", ""],
+        ["", "Price", "Yield", "Price", "Yield", "Price", "Yield", "Price", "Yield", "Price", "Yield"],
+        ["Date", "", "(%)", "", "(%)", "", "(%)", "", "(%)", "", "(%)"],
+        ["2026-09-29 00:00:00", 100, "-", 99.2, 1.21, 98.2, 1.41, 97.2, 1.61, 96.2, 1.81],
+        ["2026-09-30 00:00:00", 100, "-", 99.1, 1.22, 98.1, 1.42, 97.1, 1.62, 96.1, 1.82],
+        ["Notes:", "", ""],
+    ]
+    f = rr.parse_hkgb_rows(rows, ["3y", "5y", "7y", "10y"])
+    assert f.as_of == date(2026, 9, 30)
+    assert f.rates == {"3y": 0.0122, "5y": 0.0142, "7y": 0.0162, "10y": 0.0182}
+    with pytest.raises(rr.RefreshError, match="is not a number"):
+        rr.parse_hkgb_rows(rows, ["1y"])   # the floating-rate note carries no yield
+    with pytest.raises(rr.RefreshError, match="no 15y column"):
+        rr.parse_hkgb_rows(rows, ["15y"])
+    with pytest.raises(rr.RefreshError, match="no Tenor row"):
+        rr.parse_hkgb_rows([["nothing"]], ["10y"])

@@ -419,6 +419,75 @@ def fetch_mas_sgs_html(rule: reference.RateSource) -> Fetched:
     return _substituted(parse_mas_sgs_html(_get(rule.url), requested), rule)
 
 
+HKGB_TENORS = {"1-year": "1y", "3-year": "3y", "5-year": "5y", "7-year": "7y", "10-year": "10y", "15-year": "15y", "20-year": "20y"}
+
+
+def hkgb_benchmark_rows(body: bytes, sheet: str) -> list[list[object]]:
+    """(78) The Government Bond Programme's daily closing-pricings workbook, a binary Excel
+    file; the benchmark sheet's cells, row by row, for the pure parser below. A date cell
+    is rendered as an ISO date, everything else as the cell's own value."""
+    import xlrd  # the one binary-Excel source in the registry
+
+    book = xlrd.open_workbook(file_contents=body)
+    names = book.sheet_names()
+    if sheet not in names:
+        raise RefreshError(f"HKGB: sheet {sheet!r} is not in the workbook ({', '.join(names)})")
+    ws = book.sheet_by_name(sheet)
+    rows: list[list[object]] = []
+    for r in range(ws.nrows):
+        row: list[object] = []
+        for c in range(ws.ncols):
+            cell = ws.cell(r, c)
+            if cell.ctype == xlrd.XL_CELL_DATE:
+                row.append(xlrd.xldate_as_datetime(float(cell.value), book.datemode).date().isoformat())
+            else:
+                row.append(cell.value)
+        rows.append(row)
+    return rows
+
+
+def parse_hkgb_rows(rows: list[list[object]], tenors: list[str]) -> Fetched:
+    """(78) The benchmark sheet: a `Tenor` row naming the benchmarks (each over a price
+    column and a yield column), then one dated row per business day with a price and a
+    yield per benchmark. The newest dated row is the observation; a requested tenor the
+    sheet does not carry, or one whose yield is not a number (the one-year is a floating
+    rate note quoted at par with no yield), is an error, never an interpolation."""
+    tenor_row = next((r for r in rows if r and str(r[0]).strip().lower() == "tenor"), None)
+    if tenor_row is None:
+        raise RefreshError("HKGB: the benchmark sheet has no Tenor row")
+    columns: dict[str, int] = {}
+    for c, cell in enumerate(tenor_row):
+        label = str(cell).strip().rstrip("*").lower()
+        if label in HKGB_TENORS:
+            columns[HKGB_TENORS[label]] = c + 1  # the yield sits right of the price under each tenor
+    dated: list[tuple[date, list[object]]] = []
+    for r in rows:
+        stamp = str(r[0]).strip() if r else ""
+        try:
+            dated.append((date.fromisoformat(stamp[:10]), r))
+        except ValueError:
+            continue
+    if not dated:
+        raise RefreshError("HKGB: the benchmark sheet has no dated row")
+    observed, latest = max(dated, key=lambda x: x[0])
+    rates: dict[str, float] = {}
+    for tenor in tenors:
+        c = columns.get(tenor)
+        if c is None or c >= len(latest):
+            raise RefreshError(f"HKGB: the benchmark sheet carries no {tenor} column")
+        rates[tenor] = _percent(str(latest[c]), f"HKGB {tenor}")
+    return Fetched(as_of=observed, rates=rates, notes=[f"HKGB Closing Reference Pricings for {observed.isoformat()}, the Government of the Hong Kong SAR the owner"])
+
+
+def fetch_hkgb_xls(rule: reference.RateSource) -> Fetched:
+    """(78) Hong Kong. The Government Bond Programme publishes the institutional bonds'
+    closing reference pricings daily as a workbook, keyless; the HKMA open API stops at
+    three-year Exchange Fund Notes and carries no bond yields."""
+    series = dict(rule.series)
+    requested = [t for t in rule.tenors if not any(t == r for r, _ in rule.substitute)]
+    return _substituted(parse_hkgb_rows(hkgb_benchmark_rows(_get(rule.url), series["sheet"]), requested), rule)
+
+
 def fetch_dst_statbank(rule: reference.RateSource) -> Fetched:
     """(65) Denmark. Danmarks Nationalbank's statistics are served through Statistics
     Denmark's StatBank, keyless; table MPK3 carries the ten-year central government bond
@@ -468,6 +537,7 @@ FETCHERS: dict[str, Callable[[reference.RateSource], Fetched]] = {
     "dst_statbank": fetch_dst_statbank,
     "chinabond_czb": fetch_chinabond_czb,
     "mas_sgs_html": fetch_mas_sgs_html,
+    "hkgb_xls": fetch_hkgb_xls,
     "ecb_yc": fetch_ecb_yc,
     "bundesbank_bbsis": fetch_bundesbank_bbsis,
     "mof_jgb": fetch_mof_jgb,

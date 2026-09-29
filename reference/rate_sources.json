@@ -21,7 +21,8 @@
     "Denmark added 2026-09-24 (65): probed before it was recorded, as every official entry is. The Nationalbank's own api.nationalbanken.dk and nationalbanken.statbank.dk hosts do not resolve to a machine-readable yield table; its statistics are published through Statistics Denmark's keyless StatBank API, which returned a dated monthly observation. No rate was hand-copied.",
     "Mexico added 2026-09-29 (71) on the fred_oecd_10y tier, probed before it was recorded as every entry is: Banco de Mexico's SIE API needs a registered token, so the OECD monthly ten-year through FRED is the source, the seven-year substituted from it and recorded. No rate was hand-copied.",
     "China moved from manual to official 2026-09-30 (75): the hand-copied entry, a hundred and seventeen days stale, is replaced by ChinaBond's own curve. The other manual entries were probed the same day and stay: Hong Kong's HKMA open API serves Exchange Fund Bills and Notes closing yields keyless but the notes outstanding run to three years and the Government Bond Programme datasets carry issuance and tenders, not yields; Taiwan's Taipei Exchange and stock exchange open APIs carry bond issuance and no government yield curve, and MOPS refuses scripted requests; Singapore's MAS serves its SGS yields only through its API gateway, which needs a registered credential; Kazakhstan's National Bank serves exchange rates and no yields programmatically.",
-    "Singapore moved from manual to official 2026-09-30 (77): the hand-copied entry, a hundred and seventeen days stale and refusing Sea and Grab, is replaced by MAS's own Daily SGS Prices page, whose closing-levels table is server-rendered and keyless. The API gateway probed the day before needs a registered corporate account that a foreign individual cannot open, so the page is the source."
+    "Singapore moved from manual to official 2026-09-30 (77): the hand-copied entry, a hundred and seventeen days stale and refusing Sea and Grab, is replaced by MAS's own Daily SGS Prices page, whose closing-levels table is server-rendered and keyless. The API gateway probed the day before needs a registered corporate account that a foreign individual cannot open, so the page is the source.",
+    "Hong Kong moved from manual to official 2026-09-30 (78): the hand-copied entry, a hundred and seventeen days stale and refusing Tencent's Hong Kong line, is replaced by the Government Bond Programme's own daily closing-pricings workbook, read with xlrd. Taiwan stays manual: the Taipei Exchange's pages for the government bond yield curve are script-driven with no endpoint reachable from outside, its open API and the stock exchange's carry issuance and no curve, and MOPS refuses scripted requests."
   ],
   "countries": {
     "United States": {
@@ -430,19 +431,24 @@
       ]
     },
     "Hong Kong": {
-      "tier": "manual",
-      "source": "hand-copied sovereign yield curve",
-      "parser": "manual",
+      "tier": "official",
+      "source": "HKGB Closing Reference Pricings, the Government of the Hong Kong SAR the owner: the daily closing yields of the benchmark institutional Government Bonds, from the Government Bond Programme's own workbook",
+      "parser": "hkgb_xls",
+      "url": "https://www.hkgb.gov.hk/en/others/documents/HKD_DailyClosingReferencePricings_IBPandGSBP.xls",
+      "series": {
+        "sheet": "Daily GB Closings - Benchmark"
+      },
       "tenors": [
-        "1y",
         "3y",
         "5y",
         "7y",
         "10y"
       ],
       "notes": [
-        "No programmatic source verified on 2026-09-18. Refresh by hand from HKMA Government Bond Programme yields: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors.",
-        "The HKMA API path tried on 2026-09-18 answered 'API not found'."
+        "The workbook is published keyless on hkgb.gov.hk each business day: a benchmark sheet naming the tenors over a price and a yield column each and one dated row per day. Verified 2026-09-30, a dated observation came back to python/refresh_rates.py before this entry was written. It is a binary Excel file, the one such source in the registry, read with xlrd.",
+        "The benchmarks are one, three, five, seven, ten, fifteen and twenty years; the one-year is a HONIA-indexed floating rate note quoted at par with no yield, so the one-year is not listed rather than taken from the three-year. The seven-year is a benchmark of its own, so nothing is substituted.",
+        "The sheet's own terms: the figures are calculated each business day by Bloomberg from the Primary Dealers' quotes and published by the Government, which asks users to refer to them as HKGB Closing Reference Pricings and to quote the Government as their owner, which the source string on this entry and on every record's risk-free parameter does; nothing fetched is redistributed.",
+        "The HKMA open API was probed 2026-09-29 and serves Exchange Fund Bills and Notes closing yields to three years and the Government Bond Programme's issuance, outstanding and tender datasets, no bond yields; the workbook is where the yields are."
       ]
     },
     "Taiwan": {
