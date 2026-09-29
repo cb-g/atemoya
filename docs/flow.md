@@ -763,6 +763,13 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- Singapore's curve from MAS's own page (77): the API gateway needs a registered corporate
+  account a foreign individual cannot open, but MAS's Daily SGS Prices statistics page
+  renders the benchmark closing yields server-side and keyless, so the hand-copied entry,
+  a hundred and seventeen days stale, gives way to it: the newest dated row, the tenors
+  read at their own columns, the seven-year substituted from the ten-year and recorded.
+  Sea and Grab clear the curve gate and stop at the working-capital field their filings
+  lack. No new `Failed` string.
 - the runway readout (76): every Unprofitable record carries cash against the burn, the burn
   being the cash-flow statement's own net cash from operating activities less capital
   spending, the years of runway, the filed history of free cash flow, and the releases the

@@ -20,7 +20,8 @@
     "no_curve_fallback (54): a domicile named here has no reachable official curve, and a record whose statements and price are both in one currency takes that currency's country curve for the risk-free rate while keeping the domicile's country risk premium, the risk-free parameter's source saying \"trading currency; domicile curve unavailable\". Uruguay is the only entry: MercadoLibre files a 10-K in dollars and trades in dollars, so the dollar curve is the rate its cash flows discount at, and no Uruguayan sovereign curve is published through any keyless source. The list is a declaration, not a fallback: a domicile not named here still fails with no risk-free curve, and a domicile named here that does have a curve takes it.",
     "Denmark added 2026-09-24 (65): probed before it was recorded, as every official entry is. The Nationalbank's own api.nationalbanken.dk and nationalbanken.statbank.dk hosts do not resolve to a machine-readable yield table; its statistics are published through Statistics Denmark's keyless StatBank API, which returned a dated monthly observation. No rate was hand-copied.",
     "Mexico added 2026-09-29 (71) on the fred_oecd_10y tier, probed before it was recorded as every entry is: Banco de Mexico's SIE API needs a registered token, so the OECD monthly ten-year through FRED is the source, the seven-year substituted from it and recorded. No rate was hand-copied.",
-    "China moved from manual to official 2026-09-30 (75): the hand-copied entry, a hundred and seventeen days stale, is replaced by ChinaBond's own curve. The other manual entries were probed the same day and stay: Hong Kong's HKMA open API serves Exchange Fund Bills and Notes closing yields keyless but the notes outstanding run to three years and the Government Bond Programme datasets carry issuance and tenders, not yields; Taiwan's Taipei Exchange and stock exchange open APIs carry bond issuance and no government yield curve, and MOPS refuses scripted requests; Singapore's MAS serves its SGS yields only through its API gateway, which needs a registered credential; Kazakhstan's National Bank serves exchange rates and no yields programmatically."
+    "China moved from manual to official 2026-09-30 (75): the hand-copied entry, a hundred and seventeen days stale, is replaced by ChinaBond's own curve. The other manual entries were probed the same day and stay: Hong Kong's HKMA open API serves Exchange Fund Bills and Notes closing yields keyless but the notes outstanding run to three years and the Government Bond Programme datasets carry issuance and tenders, not yields; Taiwan's Taipei Exchange and stock exchange open APIs carry bond issuance and no government yield curve, and MOPS refuses scripted requests; Singapore's MAS serves its SGS yields only through its API gateway, which needs a registered credential; Kazakhstan's National Bank serves exchange rates and no yields programmatically.",
+    "Singapore moved from manual to official 2026-09-30 (77): the hand-copied entry, a hundred and seventeen days stale and refusing Sea and Grab, is replaced by MAS's own Daily SGS Prices page, whose closing-levels table is server-rendered and keyless. The API gateway probed the day before needs a registered corporate account that a foreign individual cannot open, so the page is the source."
   ],
   "countries": {
     "United States": {
@@ -404,19 +405,28 @@
       ]
     },
     "Singapore": {
-      "tier": "manual",
-      "source": "hand-copied sovereign yield curve",
-      "parser": "manual",
+      "tier": "official",
+      "source": "Monetary Authority of Singapore, Daily SGS Prices: closing yields of the benchmark Singapore Government Securities, read from MAS's own statistics page",
+      "parser": "mas_sgs_html",
+      "url": "https://eservices.mas.gov.sg/Statistics/fdanet/SgsBenchmarkIssuePrices.aspx",
+      "series": {
+        "table": "ContentPlaceHolder1_ClosingLevelsTable"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
       "tenors": [
         "1y",
-        "3y",
         "5y",
         "7y",
         "10y"
       ],
       "notes": [
-        "No programmatic source reachable. Refresh by hand from MAS SGS prices and yields: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors. MAS publishes no 3-year benchmark and discontinued the 7-year on 1 February 2011, so those two tenors are interpolated on every vintage.",
-        "Probed again on 2026-09-23 (54) and every route refused: the eservices datastore API answers with MAS's failover maintenance page, as it did on 2026-09-18; the eservices statistics REST API serves the bond and bill auction results and the savings-bond table but has no yields endpoint; the Financial Database Application's benchmark prices and yields page is an ASP.NET form whose postback returns the same maintenance notice and which offers no JSON or CSV route; data.gov.sg carries no yield dataset among its whole catalogue; and FRED carries no Singapore government bond series at all. The entry stays manual until MAS's statistics service returns."
+        "The page renders the closing-levels table server-side and keyless: the benchmark tenors, a row saying which cells are prices and which yields, and one dated row per business day; the newest row is the observation. Verified 2026-09-30, a dated observation came back to python/refresh_rates.py before this entry was written.",
+        "MAS's API gateway serves the same yields to a registered corporate account only, and its portal is closed to a foreign individual (a corporate email is required and the country of origin is fixed to Singapore), which is why the page and not the gateway is the source.",
+        "The benchmarks are 1, 2, 5, 10, 15, 20, 30 and 50 years; there is no 7-year benchmark, so the seven-year is substituted from the ten-year and recorded, as the OECD monthly tier does, and the three-year is not listed rather than taken from either neighbour.",
+        "as_of is the closing date the row carries, a daily observation.",
+        "Reading the page is permitted by MAS's own Terms of Use (mas.gov.sg/terms-of-use), which carry an Open Data Licence for the datasets MAS publishes: use, access, download, copy, distribute and adapt, commercially or not, on condition of a conspicuous notice acknowledging the source, with no restriction to Singapore residents or corporations; the corporate-account requirement gates the API gateway as a service, not the data. The source string on this entry and on every record's risk-free parameter is that notice; nothing fetched is redistributed. The page itself states that the yields reflect bid rates quoted by SGS primary dealers."
       ]
     },
     "Hong Kong": {

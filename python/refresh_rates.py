@@ -362,6 +362,63 @@ def fetch_chinabond_czb(rule: reference.RateSource) -> Fetched:
     return parse_chinabond_czb(_post(rule.url, {"locale": "en_US"}), series["curve"], list(rule.tenors))
 
 
+MAS_TENORS = {"6-Mth": "6m", "1-Year": "1y", "2-Year": "2y", "5-Year": "5y", "10-Year": "10y", "15-Year": "15y", "20-Year": "20y", "30-Year": "30y", "50-Year": "50y"}
+
+
+def parse_mas_sgs_html(body: bytes, tenors: list[str]) -> Fetched:
+    """(77) MAS's own Daily SGS Prices page, server-rendered: the closing-levels table has a
+    row of benchmark tenors, a row saying which cells are prices and which yields (a bill
+    carries a yield alone, a bond a price then a yield), and a dated row per business day.
+    The newest dated row is the observation; a requested tenor the table does not carry
+    is an error, never an interpolation."""
+    import html as html_mod
+    import re
+
+    page = body.decode("utf-8", errors="replace")
+    table = re.search(r'<table[^>]*id="ContentPlaceHolder1_ClosingLevelsTable".*?</table>', page, re.S)
+    if table is None:
+        raise RefreshError("MAS: the closing-levels table is not on the page")
+    rows: list[list[str]] = []
+    for tr in re.findall(r"<tr.*?</tr>", table.group(0), re.S):
+        cells = [re.sub(r"\s+", " ", html_mod.unescape(re.sub(r"<[^>]+>", " ", c))).strip() for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, re.S)]
+        rows.append(cells)
+    tenor_row = next((r for r in rows if len(r) > 2 and r[1] in MAS_TENORS), None)
+    kind_row = next((r for r in rows if r and set(r) <= {"Yield", "Price"}), None)
+    dated = [r for r in rows if r and re.fullmatch(r"\d{1,2} [A-Z][a-z]{2} \d{4}", r[0])]
+    if tenor_row is None or kind_row is None or not dated:
+        raise RefreshError("MAS: the closing-levels table has not the shape this parser reads (tenor row, kind row, dated rows)")
+    # which value cell carries each tenor's yield
+    yield_at: dict[str, int] = {}
+    i = 0
+    for label in tenor_row[1:]:
+        if i >= len(kind_row):
+            break
+        if kind_row[i] == "Price":
+            yield_at[label] = i + 1
+            i += 2
+        else:
+            yield_at[label] = i
+            i += 1
+    latest = max(dated, key=lambda r: datetime.strptime(r[0], "%d %b %Y"))
+    observed = datetime.strptime(latest[0], "%d %b %Y").date()
+    values = latest[1:]
+    by_tenor = {MAS_TENORS[label]: values[idx] for label, idx in yield_at.items() if label in MAS_TENORS and idx < len(values)}
+    rates: dict[str, float] = {}
+    for tenor in tenors:
+        if tenor not in by_tenor:
+            raise RefreshError(f"MAS: the table carries no {tenor} benchmark")
+        rates[tenor] = _percent(by_tenor[tenor], f"MAS {tenor}")
+    return Fetched(as_of=observed, rates=rates, notes=[f"MAS Daily SGS Prices, closing yields of the benchmark issues for {observed.isoformat()}"])
+
+
+def fetch_mas_sgs_html(rule: reference.RateSource) -> Fetched:
+    """(77) Singapore. MAS's API gateway needs a registered corporate account and its portal
+    is closed to a foreign individual, but MAS's own statistics page renders the benchmark
+    closing yields server-side, keyless; that page is the official source."""
+    requested = [t for t in rule.tenors if not any(t == r for r, _ in rule.substitute)]
+    return _substituted(parse_mas_sgs_html(_get(rule.url), requested), rule)
+
+
 def fetch_dst_statbank(rule: reference.RateSource) -> Fetched:
     """(65) Denmark. Danmarks Nationalbank's statistics are served through Statistics
     Denmark's StatBank, keyless; table MPK3 carries the ten-year central government bond
@@ -410,6 +467,7 @@ FETCHERS: dict[str, Callable[[reference.RateSource], Fetched]] = {
     "boc_valet": fetch_boc_valet,
     "dst_statbank": fetch_dst_statbank,
     "chinabond_czb": fetch_chinabond_czb,
+    "mas_sgs_html": fetch_mas_sgs_html,
     "ecb_yc": fetch_ecb_yc,
     "bundesbank_bbsis": fetch_bundesbank_bbsis,
     "mof_jgb": fetch_mof_jgb,

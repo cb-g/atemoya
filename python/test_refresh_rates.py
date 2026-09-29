@@ -147,3 +147,26 @@ def test_chinabond_curve_is_picked_by_id_and_read_at_whole_year_points() -> None
         rr.parse_chinabond_czb(body, "missing", ["10y"])
     with pytest.raises(rr.RefreshError, match="malformed"):
         rr.parse_chinabond_czb(json.dumps([{"ycDefId": "cgb", "worktime": "n/a", "seriesData": []}]).encode(), "cgb", ["10y"])
+
+
+def test_mas_page_reads_the_newest_dated_row_by_tenor() -> None:
+    """(77) The closing-levels table: bills carry a yield alone, bonds a price then a yield;
+    the newest dated row is the observation, a missing tenor an error. Synthetic numbers."""
+    def row(*cells: str) -> str:
+        return "<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>"
+    table = ('<table id="ContentPlaceHolder1_ClosingLevelsTable">'
+             + row("", "Treasury Bills", "Bonds")
+             + row("", "6-Mth", "1-Year", "2-Year", "5-Year", "10-Year")
+             + row("Issue", "BS1", "BY1", "N1 2% 2028", "NX 1% 2031", "NZ 2% 2036")
+             + row("Yield", "Yield", "Price", "Yield", "Price", "Yield", "Price", "Yield")
+             + row("29 Sep 2026", "1.10", "1.20", "99.0", "1.30", "98.0", "1.50", "97.0", "1.70")
+             + row("30 Sep 2026", "1.11", "1.21", "99.1", "1.31", "98.1", "1.51", "97.1", "1.71")
+             + row("28 Sep 2026", "1.09", "1.19", "99.2", "1.29", "98.2", "1.49", "97.2", "1.69")
+             + "</table>")
+    body = ("<html><body>" + table + "</body></html>").encode()
+    f = rr.parse_mas_sgs_html(body, ["1y", "5y", "10y"])
+    assert f.as_of == date(2026, 9, 30) and f.rates == {"1y": 0.0121, "5y": 0.0151, "10y": 0.0171}
+    with pytest.raises(rr.RefreshError, match="no 7y benchmark"):
+        rr.parse_mas_sgs_html(body, ["7y"])
+    with pytest.raises(rr.RefreshError, match="not on the page"):
+        rr.parse_mas_sgs_html(b"<html></html>", ["10y"])
