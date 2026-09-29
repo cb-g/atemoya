@@ -129,3 +129,21 @@ def test_fx_normalisation_follows_the_quote_direction() -> None:
     with pytest.raises(rr.RefreshError):
         refresh_fx.normalise(1.0, "sideways")
     assert rr.parse_fred_latest(json.dumps({"observations": [{"date": "2026-09-11", "value": "5.0"}]}).encode(), "DEXBZUS") == (date(2026, 9, 11), "5.0")
+
+
+def test_chinabond_curve_is_picked_by_id_and_read_at_whole_year_points() -> None:
+    """(75) A list of curves with a grid of (years, per cent); the requested curve by its id,
+    the tenors at their exact grid points, a missing point an error rather than an
+    interpolation, and a wrong id an error naming the count. Every number is synthetic."""
+    grid = [[0.0, 0.9], [0.5, 1.0], [1.0, 1.1], [2.0, 1.2], [3.0, 1.3], [5.0, 1.5], [7.0, 1.7], [10.0, 2.0]]
+    body = json.dumps([{"ycDefId": "other", "ycDefName": "x", "worktime": "2026-09-29", "seriesData": grid},
+                       {"ycDefId": "cgb", "ycDefName": "China Government Bond", "worktime": "2026-09-29", "seriesData": grid}]).encode()
+    f = rr.parse_chinabond_czb(body, "cgb", ["1y", "3y", "5y", "7y", "10y"])
+    assert f.as_of == date(2026, 9, 29)
+    assert f.rates == {"1y": 0.011, "3y": 0.013, "5y": 0.015, "7y": 0.017, "10y": 0.02}
+    with pytest.raises(rr.RefreshError, match="no 15y point"):
+        rr.parse_chinabond_czb(body, "cgb", ["15y"])
+    with pytest.raises(rr.RefreshError, match="not in the answer"):
+        rr.parse_chinabond_czb(body, "missing", ["10y"])
+    with pytest.raises(rr.RefreshError, match="malformed"):
+        rr.parse_chinabond_czb(json.dumps([{"ycDefId": "cgb", "worktime": "n/a", "seriesData": []}]).encode(), "cgb", ["10y"])

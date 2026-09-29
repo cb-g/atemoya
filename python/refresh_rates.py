@@ -35,6 +35,7 @@ import sys
 import tempfile
 import urllib.error
 import urllib.parse
+from typing import cast
 import urllib.request
 from collections.abc import Callable, Mapping
 from datetime import date, datetime
@@ -315,6 +316,52 @@ def _substituted(fetched: Fetched, rule: reference.RateSource) -> Fetched:
     return fetched.model_copy(update={"rates": rates, "tenor_used": used})
 
 
+def _post(url: str, data: Mapping[str, str], timeout: int = 60) -> bytes:
+    """A form POST; the one source that answers nothing to a GET is ChinaBond (75)."""
+    body = urllib.parse.urlencode(dict(data)).encode()
+    request = urllib.request.Request(url, data=body, headers={"User-Agent": USER_AGENT, "Content-Type": "application/x-www-form-urlencoded"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.read()
+    except urllib.error.HTTPError as e:
+        raise RefreshError(f"HTTP {e.code}: {e.read().decode(errors='replace')[:200]}") from e
+    except urllib.error.URLError as e:
+        raise RefreshError(f"cannot reach the source: {e.reason}") from e
+
+
+def parse_chinabond_czb(body: bytes, curve_id: str, tenors: list[str]) -> Fetched:
+    """(75) ChinaBond's yield-curve answer: a list of curves, each with its id, its name, the
+    date it is for and `seriesData`, pairs of (years, yield in per cent) on a fine grid that
+    carries every whole-year tenor. The curve is picked by id; a requested tenor the grid
+    does not carry is an error, never an interpolation."""
+    raw = cast(object, json.loads(body.decode("utf-8")))
+    listed: list[object] = cast(list[object], raw) if isinstance(raw, list) else []
+    curves = [cast(Mapping[str, object], c) for c in listed if isinstance(c, dict) and str(cast(Mapping[str, object], c).get("ycDefId")) == curve_id]
+    if not curves:
+        raise RefreshError(f"ChinaBond: curve {curve_id} not in the answer ({len(listed)} curve(s))")
+    curve = curves[0]
+    try:
+        observed = date.fromisoformat(str(curve["worktime"])[:10])
+        grid = {float(cast(float, x)): float(cast(float, y)) for x, y in cast(list[tuple[object, object]], curve["seriesData"])}
+    except (KeyError, TypeError, ValueError) as e:
+        raise RefreshError(f"ChinaBond: malformed curve: {e}") from e
+    rates: dict[str, float] = {}
+    for tenor in tenors:
+        years = float(tenor[:-1])
+        if years not in grid:
+            raise RefreshError(f"ChinaBond: the grid carries no {tenor} point")
+        rates[tenor] = round(grid[years] / 100.0, 6)
+    return Fetched(as_of=observed, rates=rates, notes=[f"ChinaBond curve {curve.get('ycDefName', '')} for {observed.isoformat()}"])
+
+
+def fetch_chinabond_czb(rule: reference.RateSource) -> Fetched:
+    """(75) China. China Central Depository & Clearing publishes the China Government Bond
+    yield curve at yield.chinabond.com.cn; the chart's own endpoint answers a form POST,
+    keyless, with the latest day's curve on a grid of years."""
+    series = dict(rule.series)
+    return parse_chinabond_czb(_post(rule.url, {"locale": "en_US"}), series["curve"], list(rule.tenors))
+
+
 def fetch_dst_statbank(rule: reference.RateSource) -> Fetched:
     """(65) Denmark. Danmarks Nationalbank's statistics are served through Statistics
     Denmark's StatBank, keyless; table MPK3 carries the ten-year central government bond
@@ -362,6 +409,7 @@ FETCHERS: dict[str, Callable[[reference.RateSource], Fetched]] = {
     "fred_oecd_10y": fetch_fred_oecd_10y,
     "boc_valet": fetch_boc_valet,
     "dst_statbank": fetch_dst_statbank,
+    "chinabond_czb": fetch_chinabond_czb,
     "ecb_yc": fetch_ecb_yc,
     "bundesbank_bbsis": fetch_bundesbank_bbsis,
     "mof_jgb": fetch_mof_jgb,

@@ -737,6 +737,15 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- China's curve from ChinaBond (75): the hand-copied Chinese entry, a hundred and seventeen days
+  stale, gives way to the China Government Bond yield curve China Central Depository &
+  Clearing publishes, read keyless from the chart's own endpoint by a form POST and picked by
+  the curve's id, every whole-year tenor on the grid and no interpolation. The other four
+  manual entries were probed and stay, the registry saying why for each: Hong Kong's open API
+  serves Exchange Fund Notes to three years and no bond yields, Taiwan's exchanges serve
+  issuance and no curve, Singapore's gateway needs a registered credential, Kazakhstan's
+  bank serves exchange rates only. No record moves: the one name priced in yuan is refused
+  by class. No new `Failed` string.
 - statements from DART (74): a Korea Exchange line reads its annual reports from OpenDART
   when the operator holds a key, the regulator's own register mapping the stock code to the
   filer and each business year's consolidated lines arriving with their ifrs-full account

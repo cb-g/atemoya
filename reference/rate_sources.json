@@ -19,7 +19,8 @@
     "Nothing fetched is tracked (29): the curves themselves are written by python/refresh_rates.py to data/reference/risk_free_rates.json, gitignored, and every user runs the refresher with their own FRED key; a missing curve fails the record naming the refresher. max_age_days, tenors and aliases here seed that file.",
     "no_curve_fallback (54): a domicile named here has no reachable official curve, and a record whose statements and price are both in one currency takes that currency's country curve for the risk-free rate while keeping the domicile's country risk premium, the risk-free parameter's source saying \"trading currency; domicile curve unavailable\". Uruguay is the only entry: MercadoLibre files a 10-K in dollars and trades in dollars, so the dollar curve is the rate its cash flows discount at, and no Uruguayan sovereign curve is published through any keyless source. The list is a declaration, not a fallback: a domicile not named here still fails with no risk-free curve, and a domicile named here that does have a curve takes it.",
     "Denmark added 2026-09-24 (65): probed before it was recorded, as every official entry is. The Nationalbank's own api.nationalbanken.dk and nationalbanken.statbank.dk hosts do not resolve to a machine-readable yield table; its statistics are published through Statistics Denmark's keyless StatBank API, which returned a dated monthly observation. No rate was hand-copied.",
-    "Mexico added 2026-09-29 (71) on the fred_oecd_10y tier, probed before it was recorded as every entry is: Banco de Mexico's SIE API needs a registered token, so the OECD monthly ten-year through FRED is the source, the seven-year substituted from it and recorded. No rate was hand-copied."
+    "Mexico added 2026-09-29 (71) on the fred_oecd_10y tier, probed before it was recorded as every entry is: Banco de Mexico's SIE API needs a registered token, so the OECD monthly ten-year through FRED is the source, the seven-year substituted from it and recorded. No rate was hand-copied.",
+    "China moved from manual to official 2026-09-30 (75): the hand-copied entry, a hundred and seventeen days stale, is replaced by ChinaBond's own curve. The other manual entries were probed the same day and stay: Hong Kong's HKMA open API serves Exchange Fund Bills and Notes closing yields keyless but the notes outstanding run to three years and the Government Bond Programme datasets carry issuance and tenders, not yields; Taiwan's Taipei Exchange and stock exchange open APIs carry bond issuance and no government yield curve, and MOPS refuses scripted requests; Singapore's MAS serves its SGS yields only through its API gateway, which needs a registered credential; Kazakhstan's National Bank serves exchange rates and no yields programmatically."
   ],
   "countries": {
     "United States": {
@@ -382,9 +383,13 @@
       ]
     },
     "China": {
-      "tier": "manual",
-      "source": "hand-copied sovereign yield curve",
-      "parser": "manual",
+      "tier": "official",
+      "source": "ChinaBond (China Central Depository & Clearing), the China Government Bond yield curve published at yield.chinabond.com.cn, read from the chart's own endpoint",
+      "parser": "chinabond_czb",
+      "url": "https://yield.chinabond.com.cn/cbweb-czb-web/czb/czbChartSearch",
+      "series": {
+        "curve": "2c9081e50a2f9606010a3068cae70001"
+      },
       "tenors": [
         "1y",
         "3y",
@@ -393,7 +398,8 @@
         "10y"
       ],
       "notes": [
-        "No programmatic source verified on 2026-09-18. Refresh by hand from ChinaBond (yield.chinabond.com.cn) government bond curve: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors.",
+        "The endpoint answers a form POST (locale=en_US) and nothing to a GET, with the latest day's curve as (years, per cent) pairs on a grid that carries every whole-year tenor; the curve is picked by its id, which names the China Government Bond curve (中债国债收益率曲线); verified 2026-09-30, a dated curve came back to python/refresh_rates.py before this entry was written.",
+        "as_of is the day the curve is for (worktime), a daily observation.",
         "FRED carries no OECD series for China."
       ]
     },
