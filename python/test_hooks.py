@@ -34,6 +34,8 @@ def commit(path: Path, name: str, content: str) -> subprocess.CompletedProcess[s
 CASES = [
     ("THETADATA_" + "EMAIL=" + "someone@example.org", "named credential"),
     ("THETADATA_" + "PASSWORD=" + "short", "named credential"),
+    ("DART_API_" + "KEY=" + "x", "named credential"),
+    ("EDINET_API_" + "KEY=" + "x", "named credential"),
     ("FRED_API_" + "KEY=" + "abc123", "named credential"),
     ("SEC_EDGAR_" + "IDENTITY=" + '"A Person a.person@corp.net"', "not the example.com placeholder"),
 ]

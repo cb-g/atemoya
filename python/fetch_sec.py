@@ -684,6 +684,8 @@ def cash_ifrs(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Deri
         if found:
             parts.extend(found)
             break
+    # (74) term deposits held outside cash equivalents, on top of whichever alternative was taken
+    parts.extend(facts.sum_present("short_term_deposits", d.short_term_deposits, end, instant=True))
     return sum(p.value for p in parts), _label(parts), _composition(defs.cash.name, parts)
 
 

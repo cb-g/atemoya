@@ -116,7 +116,7 @@ def test_an_anchored_extension_stands_in_only_where_the_standard_line_is_absent(
     assert adapted.currency == "EUR" and adapted.substitutions == 2
     pretax = gaap["ProfitLossBeforeTax"]["units"]["EUR"]  # pyright: ignore[reportIndexIssue, reportUnknownVariableType]
     assert sorted((e["end"], e["val"]) for e in pretax) == [("2023-12-31", 120e6), ("2024-12-31", 130e6)]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
-    assert all(e["form"] == "ESEF" and e["fp"] == "FY" and e["accn"] == f24.fxo_id and e["filed"] == "2025-03-01" for e in pretax)  # pyright: ignore[reportUnknownVariableType]  # pyright: ignore[reportUnknownArgumentType]
+    assert all(e["form"] == "ESEF" and e["fp"] == "FY" and e["accn"] == f24.fxo_id and e["filed"] == "2025-03-01" for e in pretax)  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
     assert "acme:ResultatAvantImpots" not in gaap and "CashFlowsFromUsedInOperations" not in gaap
     assert [n for n in adapted.notes if "ProfitLossBeforeTax read from the extension acme:ResultatAvantImpots" in n] and len(adapted.notes) == 1
     # a standard line present in the same report wins over the extension
@@ -175,7 +175,7 @@ def test_the_aggregator_lagging_the_filer_is_a_recorded_decision() -> None:
     esef = [period("2024-12-31", "2025-03-11"), period("2023-12-31", "2024-03-12")]
     vendor = [period("2025-12-31", None), period("2024-12-31", None)]
     reason = fetch.esef_lags(esef, vendor, date(2026, 9, 29), 400)
-    assert reason is not None and "the aggregator lags the filer" in reason and "2024-12-31" in reason and "2025-12-31" in reason
+    assert reason is not None and "the source lags the filer" in reason and "2024-12-31" in reason and "2025-12-31" in reason
     assert fetch.esef_lags(esef, vendor, date(2025, 12, 31), 400) is None          # inside the gate: the filing stands
     assert fetch.esef_lags(esef, [period("2024-12-31", None)], date(2026, 9, 29), 400) is None   # the vendor is no newer
     assert fetch.esef_lags([], vendor, date(2026, 9, 29), 400) is None

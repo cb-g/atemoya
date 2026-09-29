@@ -74,8 +74,12 @@
           "OtherCurrentFinancialAssets"
         ]
       ],
+      "short_term_deposits": [
+        "ShorttermDepositsNotClassifiedAsCashEquivalents"
+      ],
       "notes": [
-        "Verified FY2025/FY2024: SAP's OtherCurrentFinancialAssets 1.552bn matched the vendor's short-term investments row within the threshold; TSMC splits its current financial assets by measurement category (192.2 + 102.0 + 0.2bn TWD), summed as one alternative; Sony's OtherCurrentFinancialAssets 145.2bn JPY carries more than the vendor's marketable-securities row and no separate IFRS tag names that line: a known residual."
+        "Verified FY2025/FY2024: SAP's OtherCurrentFinancialAssets 1.552bn matched the vendor's short-term investments row within the threshold; TSMC splits its current financial assets by measurement category (192.2 + 102.0 + 0.2bn TWD), summed as one alternative; Sony's OtherCurrentFinancialAssets 145.2bn JPY carries more than the vendor's marketable-securities row and no separate IFRS tag names that line: a known residual.",
+        "short-term deposits (74): ShorttermDepositsNotClassifiedAsCashEquivalents, the term deposits a filer holds outside cash equivalents, is added on top of whichever investment alternative is taken, because the definition is cash and short-term investments and a deposit is one. Measured before it was written: no 20-F filer in the universe tags the element, so no SEC record moves; ASML's ESEF reports tag it and the sum then meets the vendor's cash-and-short-term-investments row exactly; Samsung Electronics' DART lines tag it at 67,965bn won beside 57,882 of cash equivalents and the sum meets the vendor's row to the won; SK hynix's meet it within the threshold."
       ]
     }
   },

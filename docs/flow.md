@@ -488,6 +488,33 @@ same report always wins. Sanofi's profit before tax reads this way; its deprecia
 not, its only depreciation line being an extension wider than two standard adjustments,
 so the record carries none and says so.
 
+### Statements from DART
+
+A Korea Exchange line reads its annual reports from OpenDART (74) when the operator holds
+a key, free on registration, read from the environment first and the env file second like
+every other key and never printed. Nothing is declared: the regulator's own corporation
+register maps the six-digit stock code to the eight-digit filer, cached for a day. Each
+business year's annual report is one call, the consolidated statements line by line with
+the account id, the current-year amount, the period the line covers and the receipt
+number of the report, whose first eight digits are the day it was filed; a line whose
+account id is a standard ifrs-full concept becomes a fact in the companyfacts shape and
+the same period reader reads the year from its own report. A line under DART's own
+account id, or under no standard code at all, is counted on the record and left unread
+unless a declared reading, measured on the filers before it was written, says what it is:
+DART's operating income, the line K-IFRS requires every filer to present, is the
+operating income the ebit recipe reads; DART's one-line change in operating assets and
+liabilities is the working-capital aggregate, negated into the boundary's sign (Samsung's
+three filed years against the vendor's, to the won); and short-term borrowings filed under
+no code at all are read by the regulator's own label for them, because a debt recipe
+summing the tagged components would otherwise read Samsung as owing a fifteenth of what it
+owes. Each reading is named on the record. What the face of the statements does not carry
+stays absent: neither Samsung nor SK hynix presents depreciation on its cash-flow
+statement, the reconciliation being in the notes the endpoint does not serve, so both
+refuse the DCF for want of it, as Sanofi does, and the vendor's figure from the notes is
+not taken in its place. The walk runs from this year back and stops after two empty years
+in a row; the lag decision and the cross-check are the ESEF path's. Without the key the
+name stays on the vendor and the reason says which key is missing.
+
 ### A lens that discounts nothing
 
 Most classes here end in a model that projects something and discounts it. The BDC lens
@@ -710,6 +737,20 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- statements from DART (74): a Korea Exchange line reads its annual reports from OpenDART
+  when the operator holds a key, the regulator's own register mapping the stock code to the
+  filer and each business year's consolidated lines arriving with their ifrs-full account
+  ids, the receipt day as the filing date, through the same period reader. Three declared
+  readings, measured on Samsung and SK hynix: DART's operating income, its one-line
+  working-capital change negated into the boundary's sign, and short-term borrowings filed
+  under no code read by their label. One recipe rule: term deposits held outside cash
+  equivalents join cash on top of the investment alternative, which no 20-F filer tags and
+  which brings ASML's and Samsung's cash to the vendor's row exactly. On the run both Korean
+  names move from the vendor to the filing and refuse the DCF for want of a depreciation
+  line neither presents on the face of its statements. Taiwan stays on the vendor: MOPS
+  refuses scripted requests and the exchange's open API carries no history. EDINET waits on
+  a key. The pre-commit hook refuses the two new key names with any value. No new `Failed`
+  string.
 - statements from ESEF (73): a name with no SEC filer whose universe entry declares an
   `lei` reads its ESEF annual reports from filings.xbrl.org, keyless, in the companyfacts
   shape and through the same period reader under the ifrs-full definitions, with the

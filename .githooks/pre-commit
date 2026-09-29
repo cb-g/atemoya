@@ -30,7 +30,7 @@ $(printf '%s\n' "$hit" | cut -c1-80 | sed 's/^/  /')"
 # 3. Name-specific refusals (36), in any file including .env.example: a ThetaData login or
 #    a FRED key with any value at all, and an SEC identity whose value is not the example.com
 #    placeholder. The generic pattern above needs 16 characters; these need none.
-named="(THETADATA_EMAIL|THETADATA_PASSWORD|FRED_API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]"
+named="(THETADATA_EMAIL|THETADATA_PASSWORD|FRED_API_KEY|DART_API_KEY|EDINET_API_KEY)[[:space:]]*=[[:space:]]*[^[:space:]]"
 hit=$(printf '%s
 ' "$added" | grep -E "$named")
 rc=$?

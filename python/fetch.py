@@ -43,6 +43,7 @@ import yfinance as yf
 from pydantic import BaseModel, ConfigDict, ValidationError, ValidationInfo, field_validator
 
 import boundary
+import fetch_dart
 import fetch_esef
 import fetch_sec
 import reference
@@ -759,8 +760,45 @@ def esef_lags(periods: list[boundary.FiscalPeriod], vendor: list[boundary.Fiscal
     age = (as_of - date.fromisoformat(newest.filed)).days
     if age <= max_age_days:
         return None
-    return (f"the aggregator lags the filer: the newest ESEF report is for {newest.period_end}, added {newest.filed}, {age} days ago "
+    return (f"the source lags the filer: the newest filed report is for {newest.period_end}, added {newest.filed}, {age} days ago "
             f"against max_filing_age_days {max_age_days}, and the vendor carries an annual for {vendor_newest}; the vendor's statements are used")
+
+
+def _filed_without_sec(symbol: str, as_of: datetime, quote: Quote | None, profile: Profile | None, vendor: list[boundary.FiscalPeriod],
+                       notes: list[str], sec: SecContext, depth: int, *, gaap: Mapping[str, object], currency: str, extra_notes: list[str],
+                       form: str, provider: str, reason: str, note_line: str,
+                       stretch_block: boundary.Stretch | None, stretch_reason: str | None, insiders_reason: str | None,
+                       earnings_calendar: boundary.EarningsCalendar | None, earnings_calendar_reason: str | None) -> tuple[boundary.Financials, boundary.Financials | None]:
+    """(73, 74) Filed statements from a source that is not the SEC, already in the companyfacts
+    shape: the same period reader under the ifrs-full definitions with the source's form name
+    admitted on this path alone, the lag decision against the vendor, the cross-check beside,
+    and the vendor's shadow for the provider diff. [note_line] carries `{n}` for the period count."""
+    filed_notes = list(notes) + extra_notes
+    tags = dataclasses.replace(sec.tags, annual_forms=[*sec.tags.annual_forms, form])
+    periods = fetch_sec.periods_from_facts(gaap, tags, sec.definitions, filed_notes, taxonomy=fetch_esef.TAXONOMY, unit=currency, depth=depth)
+    filed_notes.append(note_line.replace("{n}", str(len(periods))))
+    lagging = esef_lags(periods, vendor, as_of.date(), sec.tags.max_filing_age_days)
+    if lagging is not None:
+        return _record(symbol, as_of, quote, profile, vendor, list(notes) + [reason], provider="yfinance", provider_reason=f"{reason}; {lagging}",
+                       stretch_block=stretch_block, stretch_reason=stretch_reason, insiders_reason=insiders_reason,
+                       earnings_calendar=earnings_calendar, earnings_calendar_reason=earnings_calendar_reason), None
+    check: boundary.CrossCheck | None = None
+    vendor_currency = quote.financial_currency if quote else None
+    if periods and vendor_currency != currency:
+        filed_notes.append(f"cross-check: not run, the vendor's statements are in {vendor_currency} and the filing's in {currency}")
+    elif periods:
+        match = match_period(periods[0], vendor)
+        if match is not None:
+            check = cross_check(periods[0], match, sec.tags.cross_check_threshold, "yfinance")
+        else:
+            filed_notes.append(f"cross-check: the vendor has no period within {CROSS_CHECK_MAX_DAYS} days of {periods[0].period_end}")
+    primary = _record(symbol, as_of, quote, profile, periods, filed_notes, provider=provider, provider_reason=reason,
+                      latest_filing=fetch_sec.latest_filing(periods), check=check, taxonomy=fetch_esef.TAXONOMY, filing_currency=currency,
+                      stretch_block=stretch_block, stretch_reason=stretch_reason, insiders_reason=insiders_reason,
+                       earnings_calendar=earnings_calendar, earnings_calendar_reason=earnings_calendar_reason)
+    shadow = _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
+                     provider_reason="shadow of an XBRL-primary record, for the provider diff", stretch_block=stretch_block, stretch_reason=stretch_reason)
+    return primary, shadow
 
 
 def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_sec.PERIODS_DEFAULT,
@@ -781,43 +819,42 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
         # (68) no filer, so no item 2.02 to read: the calendar is the vendor's, and says so
         vendor_calendar, vendor_calendar_reason = earnings.calendar_of(symbol, ticker, as_of.date())
         no_sec = f"no SEC filings for {symbol}: not in company_tickers.json"
+        # (74) a Korea Exchange line with an OpenDART key: the regulator's own register maps the
+        # stock code to the filer, and the annual reports' lines are read year by year
+        code = fetch_dart.stock_code(symbol)
+        if code is not None:
+            key = fetch_dart.api_key()
+            if key is None:
+                no_sec += f"; {fetch_dart.KEY_NAME} is not set, so the DART path is not read"
+            else:
+                corp = fetch_dart.corp_codes(key).get(code)
+                if corp is None:
+                    no_sec += f"; stock code {code} is not in OpenDART's corporation register"
+                else:
+                    dart = fetch_dart.statements(key, corp, years=depth, today=as_of.date())
+                    if dart.reports and dart.currency:
+                        reason = f"{no_sec}; OpenDART corporation {corp} for stock code {code}: {len(dart.reports)} annual report(s), the newest for {dart.reports[0].period_end.isoformat()}"
+                        line = f"OpenDART corporation {corp}: {len(dart.reports)} annual report(s), {len(dart.gaap)} ifrs-full tags; {{n}} annual periods in {dart.currency}, {depth} asked for; {sum(dart.unread.values())} line(s) under no standard account id unread"
+                        return _filed_without_sec(symbol, as_of, quote, profile, vendor, notes, sec, depth, gaap=dart.gaap, currency=dart.currency,
+                                                  extra_notes=dart.notes, form=fetch_dart.FORM, provider=fetch_dart.PROVIDER, reason=reason, note_line=line,
+                                                  stretch_block=stretch_block, stretch_reason=stretch_reason, insiders_reason=insiders_mod.NO_CIK,
+                           earnings_calendar=vendor_calendar, earnings_calendar_reason=vendor_calendar_reason)
+                    no_sec += f"; OpenDART corporation {corp} carries no annual report lines"
         if declared_lei:
             # (73) the ESEF annual reports the universe entry's LEI names, in the companyfacts
             # shape, read by the same period reader under the ifrs-full definitions
             esef = fetch_esef.statements(declared_lei, span=(sec.tags.annual_span_days[0], sec.tags.annual_span_days[1]), read_tags=fetch_sec.read_tag_names())
             if esef.filings and esef.currency:
-                filed_notes = list(notes) + esef.notes
-                esef_tags = dataclasses.replace(sec.tags, annual_forms=[*sec.tags.annual_forms, fetch_esef.FORM])  # the form name the adapted facts carry
-                periods = fetch_sec.periods_from_facts(esef.gaap, esef_tags, sec.definitions, filed_notes, taxonomy=fetch_esef.TAXONOMY, unit=esef.currency, depth=depth)
-                filed_notes.append(f"LEI {declared_lei}: {len(esef.filings)} ESEF annual report(s), {len(esef.gaap)} ifrs-full tags; {len(periods)} annual periods in {esef.currency}, {depth} asked for; {esef.substitutions} anchored extension(s) read")
                 reason = f"{no_sec}; LEI {declared_lei} declared in the universe entry: {len(esef.filings)} ESEF annual report(s) on filings.xbrl.org, the newest for {esef.filings[0].period_end.isoformat()}"
-                lagging = esef_lags(periods, vendor, as_of.date(), sec.tags.max_filing_age_days)
-                if lagging is not None:
-                    return _record(symbol, as_of, quote, profile, vendor, list(notes) + [reason], provider="yfinance", provider_reason=f"{reason}; {lagging}",
-                                   stretch_block=stretch_block, stretch_reason=stretch_reason, insiders_reason=insiders_mod.NO_CIK,
-                                   earnings_calendar=vendor_calendar, earnings_calendar_reason=vendor_calendar_reason), None
-                check: boundary.CrossCheck | None = None
-                vendor_currency = quote.financial_currency if quote else None
-                if periods and vendor_currency != esef.currency:
-                    filed_notes.append(f"cross-check: not run, the vendor's statements are in {vendor_currency} and the filing's in {esef.currency}")
-                elif periods:
-                    match = match_period(periods[0], vendor)
-                    if match is not None:
-                        check = cross_check(periods[0], match, sec.tags.cross_check_threshold, "yfinance")
-                    else:
-                        filed_notes.append(f"cross-check: the vendor has no period within {CROSS_CHECK_MAX_DAYS} days of {periods[0].period_end}")
-                primary = _record(symbol, as_of, quote, profile, periods, filed_notes, provider=fetch_esef.PROVIDER, provider_reason=reason,
-                                  latest_filing=fetch_sec.latest_filing(periods), check=check, taxonomy=fetch_esef.TAXONOMY, filing_currency=esef.currency,
-                                  stretch_block=stretch_block, stretch_reason=stretch_reason, insiders_reason=insiders_mod.NO_CIK,
-                                  earnings_calendar=vendor_calendar, earnings_calendar_reason=vendor_calendar_reason)
-                shadow = _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
-                                 provider_reason="shadow of an XBRL-primary record, for the provider diff", stretch_block=stretch_block, stretch_reason=stretch_reason)
-                return primary, shadow
+                line = f"LEI {declared_lei}: {len(esef.filings)} ESEF annual report(s), {len(esef.gaap)} ifrs-full tags; {{n}} annual periods in {esef.currency}, {depth} asked for; {esef.substitutions} anchored extension(s) read"
+                return _filed_without_sec(symbol, as_of, quote, profile, vendor, notes, sec, depth, gaap=esef.gaap, currency=esef.currency,
+                                          extra_notes=esef.notes, form=fetch_esef.FORM, provider=fetch_esef.PROVIDER, reason=reason, note_line=line,
+                                                  stretch_block=stretch_block, stretch_reason=stretch_reason, insiders_reason=insiders_mod.NO_CIK,
+                           earnings_calendar=vendor_calendar, earnings_calendar_reason=vendor_calendar_reason)
             no_sec += f"; LEI {declared_lei} declared but filings.xbrl.org carries no annual report for it"
-        return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance",
-                       provider_reason=no_sec, stretch_block=stretch_block, stretch_reason=stretch_reason,
-                       insiders_reason=insiders_mod.NO_CIK,
-                       earnings_calendar=vendor_calendar, earnings_calendar_reason=vendor_calendar_reason), None
+        return _record(symbol, as_of, quote, profile, vendor, notes, provider="yfinance", provider_reason=no_sec,
+                       stretch_block=stretch_block, stretch_reason=stretch_reason, insiders_reason=insiders_mod.NO_CIK,
+                           earnings_calendar=vendor_calendar, earnings_calendar_reason=vendor_calendar_reason), None
     facts = fetch_sec.companyfacts(cik, sec.user_agent)
     index = fetch_sec.submissions(cik, sec.user_agent)
     submission, submissions_unavailable = fetch_sec.latest_annual_submission(index)

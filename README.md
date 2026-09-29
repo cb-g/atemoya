@@ -44,7 +44,9 @@ Options data needs ThetaData's terminal and your own login: the terminal's jar i
 from ThetaData's open download on the first `start`, and `docs/market-implied.md` has the
 steps.
 European filers' ESEF annual reports come keyless from filings.xbrl.org for the names
-whose universe entry declares an `lei`; nothing to set up.
+whose universe entry declares an `lei`; nothing to set up. Korean filers' annual reports
+come from OpenDART, which needs a free key on the `DART_API_KEY` line of the env file;
+without it the Korean names stay on the vendor.
 
 ## Data policy and first run
 

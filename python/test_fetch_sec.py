@@ -1200,3 +1200,17 @@ def test_ifrs_working_capital_aggregate_only_where_no_component_is_tagged() -> N
            "AdjustmentsForDecreaseIncreaseInSomethingNew": usd(fact("2025-12-31", 1e6, start="2025-01-01"))}
     p = fetch_sec.periods_from_facts(odd, TAGS, DEFS, notes, taxonomy="ifrs-full")[0]
     assert p.delta_nwc is None and any("unclassified" in n for n in notes)
+
+
+def test_ifrs_cash_adds_short_term_deposits_on_top_of_the_investment_alternative() -> None:
+    """(74) Samsung's shape: cash equivalents, term deposits outside them, and a current
+    financial asset at fair value; the deposits are added on top of the alternative taken,
+    and a filer that tags none reads exactly as before."""
+    ifrs = {"ProfitLoss": usd(fact("2025-12-31", 10e9, start="2025-01-01")), "Equity": usd(fact("2025-12-31", 50e9))}
+    p = fetch_sec.periods_from_facts({**ifrs, "CashAndCashEquivalents": usd(fact("2025-12-31", 57e9)),
+                                      "ShorttermDepositsNotClassifiedAsCashEquivalents": usd(fact("2025-12-31", 68e9)),
+                                      "CurrentFinancialAssetsAtFairValueThroughProfitOrLoss": usd(fact("2025-12-31", 1e9))}, TAGS, DEFS, [], taxonomy="ifrs-full")[0]
+    assert p.cash == 126e9
+    assert p.cash_composition is not None and [c.name for c in p.cash_composition.components] == ["cash_equivalents", "short_term_investments", "short_term_deposits"]
+    p = fetch_sec.periods_from_facts({**ifrs, "CashAndCashEquivalents": usd(fact("2025-12-31", 57e9)), "CurrentInvestments": usd(fact("2025-12-31", 5e9))}, TAGS, DEFS, [], taxonomy="ifrs-full")[0]
+    assert p.cash == 62e9 and [c.name for c in (p.cash_composition.components if p.cash_composition else [])] == ["cash_equivalents", "short_term_investments"]

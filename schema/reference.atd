@@ -324,6 +324,7 @@ type cash_vendor = {
 type cash_ifrs = {
   cash_equivalents : string list;
   short_term_investments : string list list;
+  ~short_term_deposits : string list;   (* (74) term deposits held outside cash equivalents, added on top of the investment alternative taken *)
   ~notes : string list;
 }
 

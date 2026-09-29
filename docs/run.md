@@ -77,6 +77,15 @@ stays on the vendor and the reason says so; and where the aggregator's newest re
 past the filing-age gate while the vendor carries a newer annual, the vendor's statements
 are used by a decision written into the provider reason, as the companyfacts lag is.
 
+A Korea Exchange line (`.KS`, `.KQ`) reads its annual reports from OpenDART (74) when
+`DART_API_KEY` is set, in the environment or on its line of the env file at the repo
+root: the regulator's own register maps the stock code to the filer, and each business
+year's consolidated lines arrive with their ifrs-full account ids and go through the same
+period reader, one period per report, the receipt day as the filing date. Lines under
+DART's own account ids or under no standard code are counted and left unread. The key is
+free on registration at opendart.fss.or.kr; without it the name stays on the vendor and
+the reason says so.
+
 Both providers assemble cash, total debt, the change in working capital and ebit per
 `reference/field_definitions.json`, the one definition per field with its reasoning; every
 period records the components summed, and a record fetched under another definition fails

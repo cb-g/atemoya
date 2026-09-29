@@ -2620,6 +2620,7 @@ class CashIfrs:
 
     cash_equivalents: List[str]
     short_term_investments: List[List[str]]
+    short_term_deposits: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -2628,6 +2629,7 @@ class CashIfrs:
             return cls(
                 cash_equivalents=_atd_read_list(_atd_read_string)(x['cash_equivalents']) if 'cash_equivalents' in x else _atd_missing_json_field('CashIfrs', 'cash_equivalents'),
                 short_term_investments=_atd_read_list(_atd_read_list(_atd_read_string))(x['short_term_investments']) if 'short_term_investments' in x else _atd_missing_json_field('CashIfrs', 'short_term_investments'),
+                short_term_deposits=_atd_read_list(_atd_read_string)(x['short_term_deposits']) if 'short_term_deposits' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -2637,6 +2639,7 @@ class CashIfrs:
         res: Dict[str, Any] = {}
         res['cash_equivalents'] = _atd_write_list(_atd_write_string)(self.cash_equivalents)
         res['short_term_investments'] = _atd_write_list(_atd_write_list(_atd_write_string))(self.short_term_investments)
+        res['short_term_deposits'] = _atd_write_list(_atd_write_string)(self.short_term_deposits)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 
