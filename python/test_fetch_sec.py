@@ -1152,3 +1152,51 @@ def test_an_own_year_period_keeps_its_own_presentation() -> None:
     ps = {p.period_end: p for p in periods_of(gaap)}
     assert ps["2015-12-31"].accession == "acc-2016-03-01" and ps["2015-12-31"].total_debt is None
     assert ps["2016-12-31"].total_debt == 0.0 and ps["2016-12-31"].total_debt_source == "LongTermDebtNoncurrent"
+
+
+def test_ifrs_depreciation_reads_the_inclusive_cash_flow_adjustment_after_the_income_statement() -> None:
+    """(73) Novo Nordisk's shape: no depreciation line on the income statement, the cash-flow
+    reconciliation's combined depreciation-and-impairment adjustment only. It reads as the
+    inclusive recipe, impairment taken out where tagged; the income-statement tag, where
+    filed, stays first."""
+    adj = "AdjustmentsForDepreciationAndAmortisationExpenseAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss"
+    ifrs = {"ProfitLoss": usd(fact("2025-12-31", 10e9, start="2025-01-01")), "Equity": usd(fact("2025-12-31", 50e9))}
+    ps = fetch_sec.periods_from_facts({**ifrs, adj: usd(fact("2025-12-31", 12e9, start="2025-01-01")),
+                                       "ImpairmentLossRecognisedInProfitOrLoss": usd(fact("2025-12-31", 2e9, start="2025-01-01"))},
+                                      TAGS, DEFS, [], taxonomy="ifrs-full")
+    p = ps[0]
+    assert p.depreciation_amortization == 10e9 and p.depreciation_amortization_recipe == "inclusive_less_impairment"
+    assert p.depreciation_amortization_row is not None and adj in p.depreciation_amortization_row
+    p = fetch_sec.periods_from_facts({**ifrs, adj: usd(fact("2025-12-31", 12e9, start="2025-01-01")),
+                                      "DepreciationAndAmortisationExpense": usd(fact("2025-12-31", 9e9, start="2025-01-01"))},
+                                     TAGS, DEFS, [], taxonomy="ifrs-full")[0]
+    assert p.depreciation_amortization == 9e9 and p.depreciation_amortization_recipe == "pure"
+    # with no impairment figure beside it the adjustment is not read at all: the impairment
+    # inside it cannot be taken out (Novo Nordisk), and the period carries no depreciation
+    p = fetch_sec.periods_from_facts({**ifrs, adj: usd(fact("2025-12-31", 12e9, start="2025-01-01"))}, TAGS, DEFS, [], taxonomy="ifrs-full")[0]
+    assert p.depreciation_amortization is None
+    # a component impairment beside it is enough
+    p = fetch_sec.periods_from_facts({**ifrs, adj: usd(fact("2025-12-31", 12e9, start="2025-01-01")),
+                                      "ImpairmentLossRecognisedInProfitOrLossGoodwill": usd(fact("2025-12-31", 0.5e9, start="2025-01-01"))}, TAGS, DEFS, [], taxonomy="ifrs-full")[0]
+    assert p.depreciation_amortization == 11.5e9
+
+
+def test_ifrs_working_capital_aggregate_only_where_no_component_is_tagged() -> None:
+    """(73) The filer's own working-capital total, in the boundary's sign as filed (measured on
+    Unilever against its components and on TransAlta and Denison against the vendor's line);
+    read only when the period carries no tag of the adjustment family, so a filer that tags
+    components keeps the component reading and an unclassified family tag still leaves null."""
+    ifrs = {"ProfitLoss": usd(fact("2025-12-31", 10e9, start="2025-01-01")), "Equity": usd(fact("2025-12-31", 50e9))}
+    p = fetch_sec.periods_from_facts({**ifrs, "IncreaseDecreaseInWorkingCapital": usd(fact("2025-12-31", -116e6, start="2025-01-01"))}, TAGS, DEFS, [], taxonomy="ifrs-full")[0]
+    assert p.delta_nwc == -116e6 and p.delta_nwc_row == "IncreaseDecreaseInWorkingCapital"
+    assert p.delta_nwc_composition is not None and [c.name for c in p.delta_nwc_composition.components] == ["aggregate"]
+    sign = DEFS.delta_nwc.ifrs.sign
+    both = {**ifrs, "IncreaseDecreaseInWorkingCapital": usd(fact("2025-12-31", -116e6, start="2025-01-01")),
+            "AdjustmentsForDecreaseIncreaseInInventories": usd(fact("2025-12-31", 40e6, start="2025-01-01"))}
+    p = fetch_sec.periods_from_facts(both, TAGS, DEFS, [], taxonomy="ifrs-full")[0]
+    assert p.delta_nwc == 40e6 * sign and p.delta_nwc_row is not None and "AdjustmentsForDecreaseIncreaseInInventories" in p.delta_nwc_row
+    notes: list[str] = []
+    odd = {**ifrs, "IncreaseDecreaseInWorkingCapital": usd(fact("2025-12-31", -116e6, start="2025-01-01")),
+           "AdjustmentsForDecreaseIncreaseInSomethingNew": usd(fact("2025-12-31", 1e6, start="2025-01-01"))}
+    p = fetch_sec.periods_from_facts(odd, TAGS, DEFS, notes, taxonomy="ifrs-full")[0]
+    assert p.delta_nwc is None and any("unclassified" in n for n in notes)

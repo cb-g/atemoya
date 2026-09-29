@@ -456,6 +456,38 @@ the statement's structure — and it is exactly the identity a period assembled 
 filings breaks. The fetch run tallies how many of those periods reconcile and names the
 filers that do not. It gates nothing.
 
+### Statements from ESEF
+
+A name with no SEC filer whose universe entry declares an `lei` (73) reads its ESEF
+annual reports from filings.xbrl.org, the keyless aggregator of the Inline XBRL every
+issuer on an EU, EEA or UK regulated market must file. The identifier is declared, never
+resolved: the vendor's ISIN lookup returned nothing for three of the four names and a
+wrong code for one, and an LEI is a fact about the filer a human reads once from the
+report's own cover.
+
+**The facts arrive in the companyfacts shape and nothing downstream knows the
+difference.** Each report's xBRL-JSON becomes entries with the period end, the value, the
+report's id as the accession, the date it was added as the filing date and `ESEF` as the
+form, and the same period reader reads them under the ifrs-full definitions: one period
+per report (the rule above), the tag behind every number, the restatement scan, the
+vendor cross-check beside. A fact with a dimension beyond the core five is a breakdown
+and is skipped; a fact in a unit that is not a currency is skipped. A report is annual
+when a duration of about a year ends at its period end, so Novo Nordisk's quarterlies in
+the same format are skipped and named; two reports for one period end (a dual listing
+files twice) resolve to the earlier-added one, the other named.
+
+**An anchored extension stands in only where the standard line is absent.** ESEF filers
+extend the taxonomy freely and must anchor each extension to the closest wider standard
+concept in the report's definition linkbase, which is read from the package. Where a
+report tags no standard fact for a concept the definitions read and does tag an extension
+anchored to that one concept as narrower, the extension's value is read under the
+standard concept and the note names both, because a narrower line is at most the wider
+one and the reader is told which line stood in. An extension anchored to several wider
+concepts, or to none, or to a concept nothing reads, is left alone; a standard fact in the
+same report always wins. Sanofi's profit before tax reads this way; its depreciation does
+not, its only depreciation line being an extension wider than two standard adjustments,
+so the record carries none and says so.
+
 ### A lens that discounts nothing
 
 Most classes here end in a model that projects something and discounts it. The BDC lens
@@ -678,6 +710,24 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- statements from ESEF (73): a name with no SEC filer whose universe entry declares an
+  `lei` reads its ESEF annual reports from filings.xbrl.org, keyless, in the companyfacts
+  shape and through the same period reader under the ifrs-full definitions, with the
+  anchoring read from each report's package so an extension anchored to one standard
+  concept the definitions read stands in where the standard line is absent, the note
+  naming both. Declared on Sanofi, Air Liquide, ASML and Novo Nordisk; Allianz is not on
+  the aggregator. Two recipe rules came with it, measured on every ifrs-full filer:
+  `RevenueFromContractsWithCustomers` after `Revenue`, the working-capital aggregate
+  where no component is tagged, in the sign the filers that tag both were measured at,
+  and the cash-flow reconciliation's combined depreciation adjustment only beside an
+  impairment figure, because read without one it put Novo's impairment into free cash
+  flow and lifted its value by half. On the run: ASML moves from the vendor's four
+  columns to five filed years; Sanofi and Novo Nordisk, valued on the vendor before, now
+  refuse for want of a depreciation line their reports do not tag, which is the honest
+  reading; Air Liquide stays on the vendor by a recorded decision, the aggregator's newest
+  report being past the gate while the vendor carries the newer year; HSBC's periods gain
+  a depreciation figure its model does not read. No other record's periods move. No new
+  `Failed` string.
 - the debt a filing cannot show (72): the mid-cycle audit found the absent-is-zero rule
   writing total debt 0 on Ford for FY2018 and FY2024, a filer whose debt lines are
   dimensioned and never reach companyfacts and whose own filings tag interest as

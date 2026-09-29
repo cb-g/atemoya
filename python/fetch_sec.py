@@ -493,13 +493,19 @@ def depreciation_ifrs(facts: "Facts", defs: reference.FieldDefinitions, end: dat
     if pure is not None:
         return pure[0], pure[1], [boundary.Component(name="total", value=pure[0], row=pure[1])], "pure", None
     inclusive = facts.first(d.inclusive, end, instant=False)
+    # (73) the cash-flow reconciliation's combined adjustment: only with an impairment
+    # figure beside it, since with none the impairment inside it cannot be taken out
+    adjustment = facts.first(d.inclusive_adjustment, end, instant=False) if inclusive is None else None
+    impairment = facts.first(d.impairment, end, instant=False)
+    impairment_parts = [boundary.Component(name="impairment_component", value=-v, row=tag) for tag in d.impairment_components if (v := facts.at(tag, end, instant=False)) is not None]
+    if inclusive is None and adjustment is not None and (impairment is not None or impairment_parts):
+        inclusive = adjustment
     if inclusive is not None:
         parts = [boundary.Component(name="inclusive", value=inclusive[0], row=inclusive[1])]
-        impairment = facts.first(d.impairment, end, instant=False)
         if impairment is not None:
             parts.append(boundary.Component(name="impairment", value=-impairment[0], row=impairment[1]))
         else:
-            parts += [boundary.Component(name="impairment_component", value=-v, row=tag) for tag in d.impairment_components if (v := facts.at(tag, end, instant=False)) is not None]
+            parts += impairment_parts
         reversal = facts.first(d.reversal, end, instant=False)
         if reversal is not None:
             parts.append(boundary.Component(name="reversal", value=reversal[0], row=reversal[1]))
@@ -720,6 +726,13 @@ def delta_nwc_ifrs(facts: Facts, defs: reference.FieldDefinitions, end: date, no
         value = facts.at(tag, end, instant=False)
         if value is not None:
             parts.append(boundary.Component(name="cash_flow_signed_components", value=value * d.sign, row=tag))
+    if not parts and not present:
+        # (73) the filer's own total, where it tags no component at all; in the boundary's
+        # sign as filed, measured on the filers that tag both (see the definition's notes)
+        aggregate = facts.first(d.aggregate, end, instant=False)
+        if aggregate is not None:
+            part = boundary.Component(name="aggregate", value=aggregate[0], row=aggregate[1])
+            return part.value, part.row, _composition(defs.delta_nwc.name, [part])
     if not parts:
         return None, None, None
     return sum(p.value for p in parts), _label(parts), _composition(defs.delta_nwc.name, parts)

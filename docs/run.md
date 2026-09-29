@@ -63,6 +63,20 @@ facts are past the filing-age gate, the vendor's statements are used by a decisi
 written into the record's provider reason (companyfacts lags submissions), never as a
 fallback from the gate.
 
+A name with no SEC filer whose universe entry declares an `lei` (73) reads its ESEF
+annual reports, the Inline XBRL every issuer on an EU, EEA or UK regulated market must
+file, from filings.xbrl.org, keyless: the index is cached for a day and each report's
+facts and definition linkbase for ever under `data/esef/`. The facts arrive in the
+companyfacts shape and go through the same period reader under the ifrs-full definitions,
+one period per report, the vendor cross-checked beside; interim reports are skipped and
+named, and where a report tags an extension anchored to one standard concept the
+definitions read and no standard line for it, the extension stands in and the note says
+so. The LEI is read from the filer's own report cover and declared, never resolved from
+the vendor. An issuer the aggregator does not carry (Allianz, on the German register)
+stays on the vendor and the reason says so; and where the aggregator's newest report is
+past the filing-age gate while the vendor carries a newer annual, the vendor's statements
+are used by a decision written into the provider reason, as the companyfacts lag is.
+
 Both providers assemble cash, total debt, the change in working capital and ebit per
 `reference/field_definitions.json`, the one definition per field with its reasoning; every
 period records the components summed, and a record fetched under another definition fails

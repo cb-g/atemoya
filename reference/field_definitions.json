@@ -328,8 +328,12 @@
       ],
       "excluded": [],
       "sign": -1.0,
+      "aggregate": [
+        "IncreaseDecreaseInWorkingCapital"
+      ],
       "notes": [
-        "Sign convention verified on TSMC FY2024 and SAP FY2025 against the vendor's component rows: AdjustmentsForDecreaseIncreaseInInventories -36.872bn TWD matched the vendor's Change In Inventory within the threshold (the statement's sign, a build-up negative), AdjustmentsForIncreaseDecreaseInTradeAccountPayable 17.074 its Change In Account Payable, SAP's receivables -0.388 its receivables row; the family is cash-flow-signed for assets and liabilities alike, so every component is flipped by sign into the boundary's (an increase in working capital positive). The taxonomy's IncreaseDecreaseInWorkingCapital aggregate is filed only by Itau, a bank, so its sign could not be verified on an operating company and it is not read. Financial-services balances in the family (deposits from customers or banks, loans and advances, held-for-trading assets and liabilities, insurance contract liabilities) are left unclassified on purpose, as on us-gaap: a filer carrying them gets null with a note (Sony's FY2025 20-F still consolidates Sony Bank's deposits), never a partial working capital."
+        "Sign convention verified on TSMC FY2024 and SAP FY2025 against the vendor's component rows: AdjustmentsForDecreaseIncreaseInInventories -36.872bn TWD matched the vendor's Change In Inventory within the threshold (the statement's sign, a build-up negative), AdjustmentsForIncreaseDecreaseInTradeAccountPayable 17.074 its Change In Account Payable, SAP's receivables -0.388 its receivables row; the family is cash-flow-signed for assets and liabilities alike, so every component is flipped by sign into the boundary's (an increase in working capital positive). The taxonomy's IncreaseDecreaseInWorkingCapital aggregate is filed only by Itau, a bank, so its sign could not be verified on an operating company and it is not read. Financial-services balances in the family (deposits from customers or banks, loans and advances, held-for-trading assets and liabilities, insurance contract liabilities) are left unclassified on purpose, as on us-gaap: a filer carrying them gets null with a note (Sony's FY2025 20-F still consolidates Sony Bank's deposits), never a partial working capital.",
+        "the aggregate (73): IncreaseDecreaseInWorkingCapital is read as the filer's own working-capital total only when the period carries no tag of the adjustment family at all, and in the boundary's sign as filed, which was measured before it was written: Unilever tags both and the aggregate equals the sum of its components in the boundary's sign on every period (FY2025 -116m, FY2022 422m); TransAlta and Denison, on the vendor path, tag it at exactly the vendor's working-capital line in the boundary's sign on every period. A period with family tags keeps the component reading, and one with an unclassified family tag stays null as before. Novo Nordisk's ESEF reports carry the aggregate and no family tag."
       ]
     }
   },
@@ -513,6 +517,9 @@
       "inclusive": [
         "DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss"
       ],
+      "inclusive_adjustment": [
+        "AdjustmentsForDepreciationAndAmortisationExpenseAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss"
+      ],
       "impairment": [
         "ImpairmentLossRecognisedInProfitOrLoss"
       ],
@@ -536,6 +543,9 @@
       "components": [
         "DepreciationExpense",
         "AmortisationExpense"
+      ],
+      "notes": [
+        "the inclusive cash-flow adjustment (73): AdjustmentsForDepreciationAndAmortisationExpenseAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss is read after inclusive, and only when the period tags an impairment figure, a total or a component, beside it, because the line carries the impairment inside it and with no impairment tagged there is nothing to take out: Novo Nordisk's ESEF reports tag the adjustment and no impairment line, and reading it as depreciation put the year's impairment into free cash flow and lifted the fair value by half, so Novo carries no depreciation and says so; HSBC tags it with its goodwill impairment component beside it and reads the difference (a bank, whose model reads no depreciation). Every other ifrs-full filer in the universe tags an earlier tag in the recipe, which stays first, so no other record moves."
       ]
     },
     "notes": [

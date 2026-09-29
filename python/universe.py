@@ -1,23 +1,26 @@
 """The universe file, loaded strictly: each entry is exactly ticker, entity_class, why and
-optionally scope_limits, cik, adr_ratio (42, ordinary shares per depositary receipt, a
-positive number) and the two build-out declarations (60); anything else is an error, so
-nothing that remembers an outcome or a finding can creep back into a declaration."""
+optionally scope_limits, cik, lei (73, the Legal Entity Identifier whose ESEF reports are
+the statements, twenty characters), adr_ratio (42, ordinary shares per depositary
+receipt, a positive number) and the two build-out declarations (60); anything else is an
+error, so nothing that remembers an outcome or a finding can creep back into a declaration."""
 
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 from typing import Any, cast
 
 import reference
 
-ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "cik", "adr_ratio",
+ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "cik", "lei", "adr_ratio",
            "build_out_return", "build_out_lag_years")
 REQUIRED = ("ticker", "entity_class", "why")
 # (60) A build-out declaration is exactly a value, the evidence for it and a date. A number
 # with no why is not a declaration, which is the whole point of the readout being declared.
 DECLARATION = ("value", "why", "as_of")
+LEI = re.compile(r"[A-Z0-9]{18}[0-9]{2}")  # ISO 17442: eighteen alphanumerics and two check digits
 
 
 class UniverseError(ValueError):
@@ -39,6 +42,9 @@ def _check_entry(index: int, entry: object) -> None:
     missing = [k for k in REQUIRED if not isinstance(fields.get(k), str) or not str(fields[k]).strip()]
     if missing:
         raise UniverseError(f"universe entry {name} lacks {', '.join(missing)}")
+    lei = fields.get("lei")
+    if lei is not None and (not isinstance(lei, str) or not LEI.fullmatch(lei)):
+        raise UniverseError(f"universe entry {name}: lei must be a twenty-character Legal Entity Identifier (letters and digits), not {lei!r}")
     ratio = fields.get("adr_ratio")
     if ratio is not None and (isinstance(ratio, bool) or not isinstance(ratio, (int, float)) or ratio <= 0):
         raise UniverseError(f"universe entry {name}: adr_ratio must be a positive number (ordinary shares per receipt)")

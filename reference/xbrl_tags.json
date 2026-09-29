@@ -16,7 +16,8 @@
     "capex (54): PaymentsForSoftware, the cash outflow for internal-use software that qualifies for capitalisation, is appended last so a filer tagging purchases of property, plant and equipment takes that tag as before. It is Veeva's only investing capital outflow: its filed purchases of debt securities less the proceeds from sales and maturities less this tag reproduce its filed net cash used in investing activities exactly for FY2026.",
     "dividend_evidence and financing_section (65): the dividends_paid field above is what the models read, and it is common-stock payments only. This wider list is what the retention rule asks about instead: any element whose presence says the filer distributed something to someone, preferred and minority included. A filer with none of them, whose cash-flow statement carries the financing subtotal, has said it distributed nothing; a filer with none and no financing section has said nothing at all. SoFi is the case the rule was written for and does not qualify: it tags PaymentsOfDividendsPreferredStockAndPreferenceStock and paid preferred dividends in four of its five filed years.",
     "(69) preferred_dividend_evidence holds the elements moved OUT of dividend_evidence: a preferred dividend is a distribution to a claim senior to common, so its presence must not make brief 65's no-distributions rule read a filer as distributing to common holders. The entries stay in this file rather than being deleted, because the restatement scan harvests every element name both tracked reference files carry and dropping one would rewrite restatement rows on records that never read it.",
-    "(69) preferred_equity is the carrying value INSIDE stockholders' equity, first of the tags filed. A par-value line of zero is not a carrying value: PNC, MET and UNH file PreferredStockValue at exactly 0.0, and PNC and MET carry real preferred, so a zero does not resolve the field and does not satisfy the deduction. PreferredStockLiquidationPreferenceValue is deliberately absent: on filers that file both it equals the carrying value for some and differs every year for others, and one field cannot mean two things."
+    "(69) preferred_equity is the carrying value INSIDE stockholders' equity, first of the tags filed. A par-value line of zero is not a carrying value: PNC, MET and UNH file PreferredStockValue at exactly 0.0, and PNC and MET carry real preferred, so a zero does not resolve the field and does not satisfy the deduction. PreferredStockLiquidationPreferenceValue is deliberately absent: on filers that file both it equals the carrying value for some and differs every year for others, and one field cannot mean two things.",
+    "ESEF (73): the annual reports EU, EEA and UK issuers file in Inline XBRL, read from filings.xbrl.org for a name whose universe entry declares an LEI, arrive in the companyfacts shape with form ESEF; the fetch extends annual_forms with that name on the ESEF path alone, so the SEC path's provider reason, which lists the forms, is unchanged on every record. RevenueFromContractsWithCustomers joins the ifrs-full revenue chain after Revenue: Air Liquide tags it and no Revenue, and every 20-F filer in the universe that tags it (BP, BHP, Rio Tinto, TSMC, Denison, TransAlta, Shell, Franco-Nevada, Grab) tags Revenue beside it, which stays first, so no existing record moves."
   ],
   "cross_check_threshold": 0.02,
   "max_filing_age_days": 400,
@@ -245,7 +246,8 @@
     "total_revenue": {
       "kind": "duration",
       "tags": [
-        "Revenue"
+        "Revenue",
+        "RevenueFromContractsWithCustomers"
       ]
     },
     "pretax_income": {

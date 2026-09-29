@@ -3,7 +3,8 @@
     "The one universe, growing to every name anyone classifies. A declaration, nothing else: the ticker, the class a human declared for it (never inferred), why that class in words meant to hold for years, and what no model can see for the name. No outcome, number, date, tag or parameter lives here; the run records those per record, and whether anything changed since the last run is the baseline diff. The loader is strict: an unknown field is a load error. An entry may declare the SEC filer to read by cik when the ticker map points elsewhere, with the reason in why.",
     "Reclassified 2026-09-23 (54) by the user: Amazon and Venture Global move from OperatingCompany and Unprofitable to Cyclical, both for the same reason Oracle carries, a capacity build-out inside the growth window that the latest year's free cash flow cannot speak for; Robinhood stays under the software lens with the interest-revenue scope limit written down, so the bank signature its filing fires is a recorded disagreement and not a misclassification. The class judgments drafted in batch 2 were confirmed by the user on the same day.",
     "FDUS, MAIN and GBDC move from Wrapper to Bdc (59): a business development company is not a wrapper holding other securities, it is a lender whose portfolio is marked to fair value every quarter, and the net asset value lens reads that mark with the coverage of the distribution beside it. The ten other wrappers stay refused.",
-    "Twenty-five names added 2026-09-29 (71) at the request of a downstream project that runs a clone: the class judgments were delegated to the tool by that project and drafted here from the vendor's statements and the filers' own forms, so each why says what was read; the user confirmed the two judgment calls, Circle as an operating company and GE Vernova as a cyclical, and may reclassify any of the others by editing this file. Two of the project's twenty-six were not added as asked: SK hynix was already here as 000660.KS, and Bending Spoons, which the project could not name a symbol for, is listed on Nasdaq as BSP, confirmed from the listing's own announcement, and is added under that symbol. Mexico joins the four country tables in the same commit because two of the names, the Mexico City line of Walmart's retailer and the Tiendas 3B receipt, report in pesos and Mexico was in none of them."
+    "Twenty-five names added 2026-09-29 (71) at the request of a downstream project that runs a clone: the class judgments were delegated to the tool by that project and drafted here from the vendor's statements and the filers' own forms, so each why says what was read; the user confirmed the two judgment calls, Circle as an operating company and GE Vernova as a cyclical, and may reclassify any of the others by editing this file. Two of the project's twenty-six were not added as asked: SK hynix was already here as 000660.KS, and Bending Spoons, which the project could not name a symbol for, is listed on Nasdaq as BSP, confirmed from the listing's own announcement, and is added under that symbol. Mexico joins the four country tables in the same commit because two of the names, the Mexico City line of Walmart's retailer and the Tiendas 3B receipt, report in pesos and Mexico was in none of them.",
+    "lei (73): a Legal Entity Identifier declared on an entry names the filer whose ESEF annual reports on filings.xbrl.org are its statements, for a name with no SEC filer; read from the filer's own report cover and never resolved from the vendor, whose ISIN lookup returned nothing for three of the four names and a wrong code for one. Declared 2026-09-29 on Sanofi, Air Liquide, ASML and Novo Nordisk; Allianz is not on the aggregator and stays on the vendor."
   ],
   "tickers": [
     {
@@ -103,7 +104,7 @@
     {
       "ticker": "ALV.DE",
       "entity_class": "Insurer",
-      "why": "a European insurer with no SEC filings; the insurer model needs filed statements"
+      "why": "a European insurer with no SEC filings; the insurer model needs filed statements, and Allianz SE's ESEF annual reports are not on filings.xbrl.org, which does not aggregate the German register, so no filed statements are reachable keyless"
     },
     {
       "ticker": "HDB",
@@ -765,12 +766,14 @@
     {
       "ticker": "ASML.AS",
       "entity_class": "OperatingCompany",
-      "why": "the Amsterdam ordinary line of the lithography maker, reporting in euros with no filings at the Securities and Exchange Commission, so the statements come from the vendor; its depositary receipt trades separately under another ticker."
+      "why": "the Amsterdam ordinary line of the lithography maker, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own cover; its depositary receipt trades separately under another ticker.",
+      "lei": "724500Y6DUVHQD6OXN27"
     },
     {
       "ticker": "NOVO-B.CO",
       "entity_class": "OperatingCompany",
-      "why": "the Copenhagen B line of a Danish pharmaceutical maker, reporting in kroner on the vendor path; Denmark appears in none of the country parameter tables."
+      "why": "the Copenhagen B line of a Danish pharmaceutical maker, reporting in kroner; the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own cover, its quarterly reports in the same format left aside; Denmark joined the country parameter tables when this name did.",
+      "lei": "549300DAQ1CVT6CXN342"
     },
     {
       "ticker": "7203.T",
@@ -1039,12 +1042,14 @@
     {
       "ticker": "SAN.PA",
       "entity_class": "OperatingCompany",
-      "why": "the Paris line of Sanofi, pharmaceuticals and vaccines, reporting in euros on the vendor path; positive, stable free cash flow and no structural break; deregistered from the Securities and Exchange Commission, so no filed facts."
+      "why": "the Paris line of Sanofi, pharmaceuticals and vaccines, reporting in euros; deregistered from the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own cover, with the vendor's statements cross-checked beside them; positive, stable free cash flow and no structural break.",
+      "lei": "549300E9PC51EN656011"
     },
     {
       "ticker": "AI.PA",
       "entity_class": "OperatingCompany",
-      "why": "the Paris line of Air Liquide, industrial gases, reporting in euros on the vendor path; positive, stable free cash flow under long-term supply contracts and no structural break; no filings at the Securities and Exchange Commission."
+      "why": "the Paris line of Air Liquide, industrial gases, reporting in euros; no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own cover; positive, stable free cash flow under long-term supply contracts and no structural break.",
+      "lei": "969500MMPQVHK671GT54"
     },
     {
       "ticker": "GAIN",

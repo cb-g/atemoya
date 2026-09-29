@@ -43,6 +43,8 @@ its example.com placeholder. `.env` is gitignored and the pre-commit hook refuse
 Options data needs ThetaData's terminal and your own login: the terminal's jar is fetched
 from ThetaData's open download on the first `start`, and `docs/market-implied.md` has the
 steps.
+European filers' ESEF annual reports come keyless from filings.xbrl.org for the names
+whose universe entry declares an `lei`; nothing to set up.
 
 ## Data policy and first run
 

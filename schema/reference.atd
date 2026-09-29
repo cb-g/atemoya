@@ -203,6 +203,7 @@ type universe_entry = {
   why : string;                         (* why this class *)
   ~scope_limits : string list;          (* durable: what the models cannot see for this name; carried verbatim *)
   ?cik : string option;                 (* an identifier, not a number (22): the SEC filer to read instead of the ticker map's, with the reason in why *)
+  ?lei : string option;                 (* (73) the Legal Entity Identifier whose ESEF annual reports on filings.xbrl.org are the statements, for a name with no SEC filer; declared, never resolved from the vendor *)
   ?adr_ratio : float option;            (* (42) ordinary shares per depositary receipt, positive, from the 20-F's deposit-agreement disclosure cited in why; absent means 1 *)
   ?build_out_return : declared_build_out option;      (* (60) the after-tax return the new capital earns once earning, a decimal *)
   ?build_out_lag_years : declared_build_out option;   (* (60) whole years from spend to first earning *)
@@ -405,6 +406,7 @@ type nwc_ifrs = {
   components : string list;
   excluded : string list;
   sign : float;
+  ~aggregate : string list;             (* (73) the filer's own working-capital total, read only when it tags no family component; in the boundary's sign as measured *)
   ~notes : string list;
 }
 
@@ -513,6 +515,7 @@ type dna_totals = {
 type dna_ifrs = {
   pure : string list;                   (* depreciation and amortisation without impairment *)
   inclusive : string list;              (* depreciation, amortisation and impairment net of reversals *)
+  ~inclusive_adjustment : string list;  (* (73) the cash-flow reconciliation's combined adjustment, read after inclusive and only when an impairment figure is tagged beside it, since with none the impairment cannot be taken out *)
   impairment : string list;             (* the impairment total *)
   impairment_components : string list;
   reversal : string list;               (* the reversal total *)

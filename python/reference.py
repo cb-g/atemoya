@@ -440,6 +440,7 @@ class UniverseEntry:
     why: str
     scope_limits: List[str] = field(default_factory=lambda: [])
     cik: Optional[str] = None
+    lei: Optional[str] = None
     adr_ratio: Optional[float] = None
     build_out_return: Optional[DeclaredBuildOut] = None
     build_out_lag_years: Optional[DeclaredBuildOut] = None
@@ -453,6 +454,7 @@ class UniverseEntry:
                 why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('UniverseEntry', 'why'),
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
                 cik=_atd_read_string(x['cik']) if 'cik' in x else None,
+                lei=_atd_read_string(x['lei']) if 'lei' in x else None,
                 adr_ratio=_atd_read_float(x['adr_ratio']) if 'adr_ratio' in x else None,
                 build_out_return=DeclaredBuildOut.from_json(x['build_out_return']) if 'build_out_return' in x else None,
                 build_out_lag_years=DeclaredBuildOut.from_json(x['build_out_lag_years']) if 'build_out_lag_years' in x else None,
@@ -468,6 +470,8 @@ class UniverseEntry:
         res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
         if self.cik is not None:
             res['cik'] = _atd_write_string(self.cik)
+        if self.lei is not None:
+            res['lei'] = _atd_write_string(self.lei)
         if self.adr_ratio is not None:
             res['adr_ratio'] = _atd_write_float(self.adr_ratio)
         if self.build_out_return is not None:
@@ -1381,6 +1385,7 @@ class NwcIfrs:
     components: List[str]
     excluded: List[str]
     sign: float
+    aggregate: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -1391,6 +1396,7 @@ class NwcIfrs:
                 components=_atd_read_list(_atd_read_string)(x['components']) if 'components' in x else _atd_missing_json_field('NwcIfrs', 'components'),
                 excluded=_atd_read_list(_atd_read_string)(x['excluded']) if 'excluded' in x else _atd_missing_json_field('NwcIfrs', 'excluded'),
                 sign=_atd_read_float(x['sign']) if 'sign' in x else _atd_missing_json_field('NwcIfrs', 'sign'),
+                aggregate=_atd_read_list(_atd_read_string)(x['aggregate']) if 'aggregate' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -1402,6 +1408,7 @@ class NwcIfrs:
         res['components'] = _atd_write_list(_atd_write_string)(self.components)
         res['excluded'] = _atd_write_list(_atd_write_string)(self.excluded)
         res['sign'] = _atd_write_float(self.sign)
+        res['aggregate'] = _atd_write_list(_atd_write_string)(self.aggregate)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 
@@ -2248,6 +2255,7 @@ class DnaIfrs:
     reversal: List[str]
     reversal_components: List[str]
     totals: List[str]
+    inclusive_adjustment: List[str] = field(default_factory=lambda: [])
     components: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -2261,6 +2269,7 @@ class DnaIfrs:
                 reversal=_atd_read_list(_atd_read_string)(x['reversal']) if 'reversal' in x else _atd_missing_json_field('DnaIfrs', 'reversal'),
                 reversal_components=_atd_read_list(_atd_read_string)(x['reversal_components']) if 'reversal_components' in x else _atd_missing_json_field('DnaIfrs', 'reversal_components'),
                 totals=_atd_read_list(_atd_read_string)(x['totals']) if 'totals' in x else _atd_missing_json_field('DnaIfrs', 'totals'),
+                inclusive_adjustment=_atd_read_list(_atd_read_string)(x['inclusive_adjustment']) if 'inclusive_adjustment' in x else [],
                 components=_atd_read_list(_atd_read_string)(x['components']) if 'components' in x else [],
             )
         else:
@@ -2275,6 +2284,7 @@ class DnaIfrs:
         res['reversal'] = _atd_write_list(_atd_write_string)(self.reversal)
         res['reversal_components'] = _atd_write_list(_atd_write_string)(self.reversal_components)
         res['totals'] = _atd_write_list(_atd_write_string)(self.totals)
+        res['inclusive_adjustment'] = _atd_write_list(_atd_write_string)(self.inclusive_adjustment)
         res['components'] = _atd_write_list(_atd_write_string)(self.components)
         return res
 
