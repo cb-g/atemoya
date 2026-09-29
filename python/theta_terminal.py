@@ -4,12 +4,19 @@ this repository with the user's own credentials.
     uv run python/theta_terminal.py start|stop|status
 
 The jar lives in tools/thetaterminal/ (gitignored entirely, with its config, its logs and
-the momentary creds file); the user downloads ThetaTerminalv3.jar there from ThetaData.
-start reads THETADATA_EMAIL and THETADATA_PASSWORD from the environment (direnv loads
-.env), writes them to tools/thetaterminal/creds.txt with mode 600, launches the jar with
---creds-file in a clean environment that does not carry the two variables, waits for the
-terminal's port, and removes the creds file whether or not the terminal came up. Nothing
-here prints a credential or the environment, on any path.
+the momentary creds file). A fresh clone has no jar, so start fetches ThetaTerminalv3.jar
+(71) from ThetaData's open download, which needs no login, before it touches a credential:
+streamed to a temporary file beside its destination, checked to be a real jar by the zip
+magic and a non-trivial size, renamed into place atomically, its size and sha256 printed;
+a failure removes the partial file and exits non-zero naming why. A jar already there is
+never replaced unless `start --update-jar` says so, and status says the jar is missing and
+that start will download it. start then reads THETADATA_EMAIL and THETADATA_PASSWORD from
+the environment first and, for whichever the environment lacks, from .env at the repo root
+(the same reading refresh_rates.py and fetch_sec.py do for their keys), writes them to
+tools/thetaterminal/creds.txt with mode 600, launches the jar with --creds-file in a clean
+environment that does not carry the two variables, waits for the terminal's port, and
+removes the creds file whether or not the terminal came up. Nothing here prints a
+credential or the environment, on any path.
 
 stop's job (56) is that the port ends closed, so it signals whatever holds the port, not
 whatever the pid file names: the jar launches a second JVM that outlives its launcher, so
@@ -20,30 +27,97 @@ port is closed at the end."""
 
 from __future__ import annotations
 
+import hashlib
 import os
 import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
-from collections.abc import Callable, Mapping
+import urllib.request
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / "tools" / "thetaterminal"
 JAR_NAME = "ThetaTerminalv3.jar"
+JAR_URL = "https://downloads.thetadata.us/ThetaTerminalv3.jar"  # published openly by ThetaData; no login
+JAR_MIN_BYTES = 1_000_000  # the terminal is tens of megabytes; anything smaller is an error page, not a jar
+ZIP_MAGIC = b"PK\x03\x04"  # a jar is a zip archive and begins with the local-file-header signature
+DOTENV_PATH = ROOT / ".env"
 PORT = 25503
 HOST = "127.0.0.1"
 VARS = ("THETADATA_EMAIL", "THETADATA_PASSWORD")  # the two names the environment carries
 
 
-def credentials(env: Mapping[str, str]) -> tuple[str, str]:
-    """The two values from the environment; the error names the variables, never a value."""
-    email = env.get(VARS[0], "").strip()
-    password = env.get(VARS[1], "").strip()
-    if not email or not password:
-        raise SystemExit(f"{VARS[0]} and {VARS[1]} must be set in the environment (put them in .env; direnv loads it)")
-    return email, password
+def _dotenv_values(path: Path, names: tuple[str, ...]) -> dict[str, str]:
+    """NAME=value lines from the env file at the repo root, for the names asked and no
+    others: the same reading fetch_sec.identity and refresh_rates._api_key do for their
+    keys. Quotes are stripped, nothing else is interpreted, and nothing is printed."""
+    found: dict[str, str] = {}
+    if not path.is_file():
+        return found
+    for line in path.read_text().splitlines():
+        name, sep, value = line.strip().partition("=")
+        if sep and name.strip() in names:
+            found[name.strip()] = value.strip().strip("'\"")
+    return found
+
+
+def credentials(env: Mapping[str, str], *, dotenv: Path = DOTENV_PATH) -> tuple[str, str]:
+    """The two values, from the environment first and from the env file for whichever the
+    environment lacks; the error names the variables, never a value."""
+    values = {name: env.get(name, "").strip() for name in VARS}
+    missing = tuple(name for name in VARS if not values[name])
+    if missing:
+        for name, value in _dotenv_values(dotenv, missing).items():
+            values[name] = value.strip()
+    if not all(values[name] for name in VARS):
+        raise SystemExit(f"{VARS[0]} and {VARS[1]} must be set in the environment or in .env at the repo root (see .env.example)")
+    return values[VARS[0]], values[VARS[1]]
+
+
+def _fetch_url(url: str) -> Iterator[bytes]:
+    """The download, streamed in chunks; the one function here that touches the network."""
+    request = urllib.request.Request(url, headers={"User-Agent": "atemoya theta_terminal"})
+    with urllib.request.urlopen(request, timeout=120) as response:
+        while chunk := response.read(1 << 20):
+            yield chunk
+
+
+def download_jar(jar: Path, *, url: str = JAR_URL, fetch: Callable[[str], Iterable[bytes]] = _fetch_url) -> None:
+    """Fetch the terminal jar into place (71): streamed to a temporary file beside its
+    destination, checked to be a real jar (the zip magic and a non-trivial size), then
+    renamed into place atomically, so no reader ever sees a half-written jar. On any
+    failure the partial file is removed and the process exits non-zero naming why. The
+    size and sha256 of what was installed are printed so a reader can compare them with
+    ThetaData's own."""
+    jar.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix=f".{jar.name}.", suffix=".part", dir=jar.parent)
+    partial = Path(name)
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        print(f"fetching {jar.name} from {url}")
+        with os.fdopen(fd, "wb") as out:
+            for chunk in fetch(url):
+                out.write(chunk)
+                digest.update(chunk)
+                size += len(chunk)
+        with open(partial, "rb") as head:
+            magic = head.read(len(ZIP_MAGIC))
+        if magic != ZIP_MAGIC or size < JAR_MIN_BYTES:
+            shape = "zip magic present" if magic == ZIP_MAGIC else "no zip magic"
+            raise SystemExit(f"{jar.name}: the download is not a jar ({size} bytes, {shape}); nothing installed, the partial file removed")
+        os.replace(partial, jar)
+    except SystemExit:
+        partial.unlink(missing_ok=True)
+        raise
+    except Exception as e:
+        partial.unlink(missing_ok=True)
+        raise SystemExit(f"{jar.name}: download failed: {type(e).__name__}: {e}; nothing installed, the partial file removed") from e
+    print(f"{jar.name}: {size} bytes, sha256 {digest.hexdigest()}")
 
 
 def write_creds(path: Path, email: str, password: str) -> None:
@@ -70,15 +144,17 @@ def clean_env(env: Mapping[str, str]) -> dict[str, str]:
     return {k: v for k, v in env.items() if k not in VARS}
 
 
-def start(env: Mapping[str, str], *, tools: Path = TOOLS, java: str = "java", port: int = PORT, wait: float = 120.0) -> int:
+def start(env: Mapping[str, str], *, tools: Path = TOOLS, java: str = "java", port: int = PORT, wait: float = 120.0,
+          update_jar: bool = False, dotenv: Path = DOTENV_PATH,
+          fetch: Callable[[str], Iterable[bytes]] = _fetch_url) -> int:
     jar = tools / JAR_NAME
     if port_open(port=port):
-        print(f"ThetaTerminal already answering on {HOST}:{port}")
+        note = "; stop it before updating the jar" if update_jar else ""
+        print(f"ThetaTerminal already answering on {HOST}:{port}{note}")
         return 0
-    if not jar.exists():
-        print(f"{jar} not found: download {JAR_NAME} from ThetaData into {tools}/ (it is gitignored)", file=sys.stderr)
-        return 1
-    email, password = credentials(env)
+    if update_jar or not jar.exists():
+        download_jar(jar, fetch=fetch)  # before the credentials step: no creds file exists yet
+    email, password = credentials(env, dotenv=dotenv)
     creds = tools / "creds.txt"
     log = tools / "terminal.log"
     pid_file = tools / "terminal.pid"
@@ -213,16 +289,25 @@ def status(*, tools: Path = TOOLS, port: int = PORT) -> int:
     pid_file = tools / "terminal.pid"
     pid = pid_file.read_text().strip() if pid_file.exists() else None
     up = port_open(port=port)
-    print(f"port {HOST}:{port}: {'answering' if up else 'closed'}; pid file: {pid or 'none'}; jar: {'present' if (tools / JAR_NAME).exists() else 'missing'}")
+    jar = tools / JAR_NAME
+    jar_state = f"present ({jar.stat().st_size} bytes)" if jar.exists() else "missing (start will download it)"
+    print(f"port {HOST}:{port}: {'answering' if up else 'closed'}; pid file: {pid or 'none'}; jar: {jar_state}")
     return 0 if up else 1
 
 
+USAGE = "usage: uv run python/theta_terminal.py start [--update-jar] | stop | status"
+
+
 def main(argv: list[str]) -> int:
-    if len(argv) != 1 or argv[0] not in ("start", "stop", "status"):
-        print("usage: uv run python/theta_terminal.py start|stop|status", file=sys.stderr)
+    if not argv or argv[0] not in ("start", "stop", "status"):
+        print(USAGE, file=sys.stderr)
+        return 2
+    flags = set(argv[1:])
+    if flags - ({"--update-jar"} if argv[0] == "start" else set()):
+        print(USAGE, file=sys.stderr)
         return 2
     if argv[0] == "start":
-        return start(os.environ)
+        return start(os.environ, update_jar="--update-jar" in flags)
     if argv[0] == "stop":
         return stop()
     return status()

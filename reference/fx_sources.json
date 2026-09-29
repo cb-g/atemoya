@@ -6,7 +6,8 @@
     "H.10 is released weekly on Monday for the week through the previous Friday, so the newest observation can be nine days old on a Sunday; 10 days is the tightest gate that does not fail every weekend.",
     "Cross rates go through USD: trading per financial = usd_per_unit(financial) / usd_per_unit(trading), both legs recorded. USD itself is 1 by definition.",
     "A currency with no FRED series (KZT, ILS) is never scraped: the valuation fails naming the pair until a human wires a source.",
-    "currency_countries names the country whose curve and terminal growth a trading currency uses; EUR uses Germany, the euro benchmark curve."
+    "currency_countries names the country whose curve and terminal growth a trading currency uses; EUR uses Germany, the euro benchmark curve.",
+    "MXN maps to Mexico (71): the peso's H.10 series was already here; the country it names for the curve and the terminal growth was not, until Mexico joined the country tables."
   ],
   "currency_countries": {
     "USD": "United States",
@@ -25,7 +26,8 @@
     "SGD": "Singapore",
     "SEK": "Sweden",
     "ILS": "Israel",
-    "KZT": "Kazakhstan"
+    "KZT": "Kazakhstan",
+    "MXN": "Mexico"
   },
   "currencies": {
     "BRL": {

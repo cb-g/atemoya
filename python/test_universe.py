@@ -17,7 +17,7 @@ def test_tracked_universe_is_a_declaration_only() -> None:
     text = (ROOT / "reference" / "universe.json").read_text()
     u = universe.load_text(text)
     raw = json.loads(text)["tickers"]
-    assert len(u.tickers) == len(raw) == 153
+    assert len(u.tickers) == len(raw) == 178
     for entry in raw:
         assert set(entry) <= set(universe.ALLOWED) and all(k in entry for k in universe.REQUIRED)
         # no number followed by a unit, no percentage or multiple, no four-digit year, in a why
@@ -122,7 +122,7 @@ def test_terminal_growth_is_sourced_with_no_default() -> None:
 
     # every country the ERP table carries, except the one with no WEO series
     assert set(values) == set(dict(erp.values)) - {"British Virgin Islands"}
-    assert len(values) == 25
+    assert len(values) == 26
     assert any("not an IMF member" in n for n in tg.notes)
 
     # nominal growth, so every row sits above the old declared judgements it replaced
@@ -180,3 +180,39 @@ def test_the_danish_parser_reads_the_newest_month() -> None:
     assert refresh_rates.parse_dst_statbank(b"TYPE;TID;INDHOLD\nx;2026;1,00\ny;2026M02;1,50\n", "10y") == (date(2026, 2, 28), 0.015)
     with pytest.raises(refresh_rates.RefreshError, match="no monthly observation"):
         refresh_rates.parse_dst_statbank(b"TYPE;TID;INDHOLD\n", "10y")
+
+
+def test_mexicos_three_rows_and_its_curve() -> None:
+    """(71) Mexico joins the three country tables from the tables' own sources, its curve is
+    the OECD monthly tier through FRED as South Korea's is, probed before it was written,
+    and the peso names it as the country whose curve and terminal growth a peso price uses."""
+    import reference
+
+    erp = reference.CountryTable.from_json_string((ROOT / "reference" / "equity_risk_premiums.json").read_text())
+    tax = reference.CountryTable.from_json_string((ROOT / "reference" / "tax_rates.json").read_text())
+    params = reference.Params.from_json_string((ROOT / "reference" / "params.json").read_text())
+    sources = reference.RateSources.from_json_string((ROOT / "reference" / "rate_sources.json").read_text())
+    fx = reference.FxSources.from_json_string((ROOT / "reference" / "fx_sources.json").read_text())
+
+    # Baa2: the mature-market base plus a country risk premium, stored as the total
+    assert dict(erp.values)["Mexico"] == 0.0669
+    assert round(dict(erp.values)["Mexico"] - params.mature_market_erp.value, 4) == 0.0246
+    assert any("Mexico" in n and "Baa2" in n for n in erp.notes)
+
+    assert dict(tax.values)["Mexico"] == 0.3
+    assert any("Mexico" in n and "no state taxes" in n for n in tax.notes)
+
+    # the same vintage and series as every other terminal-growth row
+    assert dict(params.terminal_growth_rate.values)["Mexico"] == 0.0548
+    assert any("Mexico" in n and "2031" in n for n in params.terminal_growth_rate.notes)
+
+    # the curve: the OECD monthly ten-year through FRED, the seven-year substituted
+    mx = dict(sources.countries)["Mexico"]
+    assert mx.tier == "fred_oecd_10y" and mx.parser == "fred_oecd_10y"
+    assert dict(mx.series) == {"10y": "IRLTLT01MXM156N"}
+    assert dict(mx.substitute) == {"7y": "10y"} and list(mx.tenors) == ["7y", "10y"]
+    assert any("verified" in n or "probed" in n for n in mx.notes)
+
+    # a peso price takes Mexico's curve and terminal growth
+    assert dict(fx.currency_countries)["MXN"] == "Mexico"
+    assert "MXN" in dict(fx.currencies)

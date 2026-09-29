@@ -40,8 +40,9 @@ The U.S. risk-free curve comes from FRED and needs an API key, free from
 the key on the `FRED_API_KEY` line. SEC XBRL requires every request to name its sender: set
 the `SEC_EDGAR_IDENTITY` key to `"<name> <email>"`, quoted, as `.env.example` shows with
 its example.com placeholder. `.env` is gitignored and the pre-commit hook refuses it.
-Options data needs ThetaData's terminal and your own login; `docs/market-implied.md` has
-the three steps.
+Options data needs ThetaData's terminal and your own login: the terminal's jar is fetched
+from ThetaData's open download on the first `start`, and `docs/market-implied.md` has the
+steps.
 
 ## Data policy and first run
 

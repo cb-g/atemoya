@@ -117,7 +117,8 @@
       "Superseded (57): the previous values were declared judgements carried from the earlier implementation with no source and no method, and sat at roughly half of nominal growth (the United States at 2.0% against the 3.59% here). Every DCF-shaped record moves because of it; that is the point of the change, not a side effect.",
       "British Virgin Islands has no row: it is not an IMF member and the World Economic Outlook carries no series for it. A name domiciled there fails naming terminal_growth_rate, as any country absent from this table does. There is no default row; a table with a source has no default.",
       "The class beliefs are offsets around this value, so their centres move with it. No belief was adjusted to offset the change.",
-      "Denmark added 2026-09-24 (65) from the same vintage and the same series as every other row: NGDP in Danish kroner at current prices, 3,650,827,415,000 for 2030 and 3,772,961,869,000 for 2031, a change of 3.345%, recorded at 3.35% to the table's precision."
+      "Denmark added 2026-09-24 (65) from the same vintage and the same series as every other row: NGDP in Danish kroner at current prices, 3,650,827,415,000 for 2030 and 3,772,961,869,000 for 2031, a change of 3.345%, recorded at 3.35% to the table's precision.",
+      "Mexico added 2026-09-29 (71) from the same vintage and the same series as every other row, read from the IMF's own SDMX service (dataflow IMF.RES:WEO, published 2026-04-14, the April 2026 edition) rather than the database's web report, which the same service returned Denmark's two figures from exactly as recorded above, so the vintage is the same one: NGDP in Mexican pesos at current prices, 46,876,709,698,000 for 2030 and 49,446,875,556,000 for 2031, a change of 5.483%, recorded at 5.48% to the table's precision."
     ],
     "values": {
       "United States": 0.0359,
@@ -144,7 +145,8 @@
       "Taiwan": 0.0366,
       "United Kingdom": 0.0319,
       "Uruguay": 0.075,
-      "Denmark": 0.0335
+      "Denmark": 0.0335,
+      "Mexico": 0.0548
     }
   },
   "unwired": {

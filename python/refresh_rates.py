@@ -194,13 +194,24 @@ def parse_dst_statbank(body: bytes, what: str) -> tuple[date, float]:
     return latest
 
 
+BUNDESBANK_MISSING = "."  # the Bundesbank's marker for a day with no observation (a holiday, a gap)
+
+
 def parse_bundesbank_lines(body: bytes, what: str) -> tuple[date, float]:
-    """Bundesbank REST CSV: `date;value;flags` rows after a metadata block; decimal comma."""
+    """Bundesbank REST CSV: `date;value;flags` rows after a metadata block; decimal comma.
+    A row whose value is the placeholder `.` is a day the Bundesbank published no
+    observation for (the response ran to a holiday on 2026-09-29 and the whole refresh
+    fell over on it); such rows are skipped and the newest numeric observation is the one
+    returned, still subject to the caller's age check."""
     latest: tuple[date, float] | None = None
     for line in body.decode("utf-8-sig").splitlines():
         parts = line.split(";")
-        if len(parts) >= 2 and len(parts[0]) == 10 and parts[0][:4].isdigit() and parts[1].strip():
-            latest = (date.fromisoformat(parts[0]), _percent(parts[1], what))
+        if len(parts) < 2 or len(parts[0]) != 10 or not parts[0][:4].isdigit():
+            continue
+        value = parts[1].strip()
+        if not value or value == BUNDESBANK_MISSING:
+            continue
+        latest = (date.fromisoformat(parts[0]), _percent(value, what))
     if latest is None:
         raise RefreshError(f"{what}: no dated observation in the response")
     return latest

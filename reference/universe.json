@@ -2,7 +2,8 @@
   "notes": [
     "The one universe, growing to every name anyone classifies. A declaration, nothing else: the ticker, the class a human declared for it (never inferred), why that class in words meant to hold for years, and what no model can see for the name. No outcome, number, date, tag or parameter lives here; the run records those per record, and whether anything changed since the last run is the baseline diff. The loader is strict: an unknown field is a load error. An entry may declare the SEC filer to read by cik when the ticker map points elsewhere, with the reason in why.",
     "Reclassified 2026-09-23 (54) by the user: Amazon and Venture Global move from OperatingCompany and Unprofitable to Cyclical, both for the same reason Oracle carries, a capacity build-out inside the growth window that the latest year's free cash flow cannot speak for; Robinhood stays under the software lens with the interest-revenue scope limit written down, so the bank signature its filing fires is a recorded disagreement and not a misclassification. The class judgments drafted in batch 2 were confirmed by the user on the same day.",
-    "FDUS, MAIN and GBDC move from Wrapper to Bdc (59): a business development company is not a wrapper holding other securities, it is a lender whose portfolio is marked to fair value every quarter, and the net asset value lens reads that mark with the coverage of the distribution beside it. The ten other wrappers stay refused."
+    "FDUS, MAIN and GBDC move from Wrapper to Bdc (59): a business development company is not a wrapper holding other securities, it is a lender whose portfolio is marked to fair value every quarter, and the net asset value lens reads that mark with the coverage of the distribution beside it. The ten other wrappers stay refused.",
+    "Twenty-five names added 2026-09-29 (71) at the request of a downstream project that runs a clone: the class judgments were delegated to the tool by that project and drafted here from the vendor's statements and the filers' own forms, so each why says what was read; the user confirmed the two judgment calls, Circle as an operating company and GE Vernova as a cyclical, and may reclassify any of the others by editing this file. Two of the project's twenty-six were not added as asked: SK hynix was already here as 000660.KS, and Bending Spoons, which the project could not name a symbol for, is listed on Nasdaq as BSP, confirmed from the listing's own announcement, and is added under that symbol. Mexico joins the four country tables in the same commit because two of the names, the Mexico City line of Walmart's retailer and the Tiendas 3B receipt, report in pesos and Mexico was in none of them."
   ],
   "tickers": [
     {
@@ -885,6 +886,181 @@
       "ticker": "ARCC",
       "entity_class": "Bdc",
       "why": "the largest business development company: a portfolio of private loans and equity stakes marked to fair value every quarter, so the net asset value per share the filing states is the anchor."
+    },
+    {
+      "ticker": "NKE",
+      "entity_class": "OperatingCompany",
+      "why": "Nike, footwear and apparel; a plain operating company with positive free cash flow through a demand reset that cut revenue and margins inside the window.",
+      "scope_limits": [
+        "a reset year sits inside the growth window, so the derived starting growth reads the trough rather than the franchise"
+      ]
+    },
+    {
+      "ticker": "NFLX",
+      "entity_class": "OperatingCompany",
+      "why": "Netflix, subscription streaming; a plain operating company with positive, growing free cash flow and no structural break."
+    },
+    {
+      "ticker": "CRCL",
+      "entity_class": "OperatingCompany",
+      "why": "Circle Internet Group, issuer of the USDC stablecoin, a us-gaap filer; its revenue is the interest earned on the reserves backing the coin, free cash flow is positive on every filed year but the first, and the latest year's GAAP loss is the listing's stock compensation rather than a break; declared an operating company because it holds no bank charter and takes no deposits, so the residual-income lens has no book to read, confirmed by the user against the unprofitable reading.",
+      "scope_limits": [
+        "reserve income is the policy rate times the coin in circulation, neither of which the company controls, so a rate cut moves revenue one for one and the DCF reads a level",
+        "about half of reserve income is paid away to the distribution partner under a contract the filing describes but the statements do not separate"
+      ]
+    },
+    {
+      "ticker": "BE",
+      "entity_class": "Unprofitable",
+      "why": "Bloom Energy, solid-oxide fuel cells; GAAP loss-making on every filed year with free cash flow only lately positive, so the runway lens, no model; the operating-company class becomes the right one once a filed year shows a profit and positive free cash flow together."
+    },
+    {
+      "ticker": "GEV",
+      "entity_class": "Cyclical",
+      "why": "GE Vernova, gas turbines, wind and grid equipment spun out of General Electric; two loss years and two profitable years inside the window as the power-equipment order cycle turned, so through-cycle return on today's capital is the question and never the latest year's free cash flow; confirmed by the user against the operating-company reading.",
+      "scope_limits": [
+        "structural: the loss years are the carve-out's, filed before the company stood alone, and the wind losses inside them are a business being run down rather than a cycle"
+      ]
+    },
+    {
+      "ticker": "SNDK",
+      "entity_class": "Cyclical",
+      "why": "Sandisk, NAND flash memory spun out of Western Digital; the textbook memory cycle, with a loss trough and an impairment inside the window and the up-cycle in the latest year.",
+      "scope_limits": [
+        "the filed history before the separation is a carve-out, so the through-cycle window reads years the company did not manage as a whole"
+      ]
+    },
+    {
+      "ticker": "CRWV",
+      "entity_class": "Unprofitable",
+      "why": "CoreWeave, GPU cloud capacity; GAAP loss-making on every filed year with free cash flow deeply negative under a debt-funded build-out, so the runway lens, no model."
+    },
+    {
+      "ticker": "CCB",
+      "entity_class": "Bank",
+      "why": "Coastal Financial, a bank holding company whose subsidiary bank takes deposits and lends, with a banking-as-a-service arm; net interest income is the larger part of revenue, so the bank signature fires and the residual-income lens applies.",
+      "scope_limits": [
+        "the banking-as-a-service arm's fee and credit-enhancement income is a growing share of revenue that the residual-income lens reads inside the return on equity without separating it"
+      ]
+    },
+    {
+      "ticker": "TCS.NS",
+      "entity_class": "OperatingCompany",
+      "why": "the Mumbai line of an Indian information-technology services company, reporting in rupees on the vendor path; positive, stable free cash flow and no structural break; no filings at the Securities and Exchange Commission."
+    },
+    {
+      "ticker": "3231.TW",
+      "entity_class": "Cyclical",
+      "why": "the Taipei line of a Taiwanese electronics manufacturer, reporting in Taiwan dollars on the vendor path; volumes and working capital swing with its customers' product cycles, and the latest year's free cash flow is negative on the working capital an artificial-intelligence server ramp absorbs, so through-cycle return on today's capital is the question.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor, which carries fewer annual columns than the through-cycle window asks for"
+      ]
+    },
+    {
+      "ticker": "688256.SS",
+      "entity_class": "Unprofitable",
+      "why": "the Shanghai STAR line of a Chinese designer of artificial-intelligence chips, reporting in yuan on the vendor path; loss-making on every filed year but the latest and free cash flow negative on all of them, so the runway lens, no model; the state changes once a second profitable year with positive free cash flow is filed."
+    },
+    {
+      "ticker": "WALMEX.MX",
+      "entity_class": "OperatingCompany",
+      "why": "the Mexico City line of Walmart's Mexican and Central American retailer, reporting in pesos on the vendor path; positive, stable free cash flow and no structural break; the first name in this file whose trading currency is the peso, so Mexico joins the country tables with it.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ]
+    },
+    {
+      "ticker": "BSP",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Bending Spoons, an Italian software company listed on Nasdaq in dollars since the first of July of its listing year and reporting in dollars, so Italy's country risk premium on the dollar curve; consumer and business applications, most of them acquired, profitable with positive free cash flow; the software lens; its first annual report to the Securities and Exchange Commission is not yet filed, so the statements come from the vendor until it is.",
+      "scope_limits": [
+        "growth is bought: nearly every product in the revenue line was acquired inside the window, so the derived starting growth reads acquisitions as organic and the revert-to-anchor path is a judgment about the next purchase rather than the last product"
+      ]
+    },
+    {
+      "ticker": "QXO",
+      "entity_class": "Cyclical",
+      "why": "QXO, building-products distribution assembled by acquisition; roofing and building materials follow the construction cycle, so through-cycle return on today's capital is the question.",
+      "scope_limits": [
+        "structural: the operating business was acquired inside the window and the years before it are a shell's, so the through-cycle window holds one year of the business it values",
+        "the acquisition's goodwill and the interest on the debt that bought it sit inside the latest year's loss"
+      ]
+    },
+    {
+      "ticker": "PLNT",
+      "entity_class": "OperatingCompany",
+      "why": "Planet Fitness, a gym franchisor; positive, stable free cash flow from franchise royalties and no structural break.",
+      "scope_limits": [
+        "the recapitalised balance sheet carries negative book equity, so any book-based reading is meaningless and only the cash flows speak"
+      ]
+    },
+    {
+      "ticker": "BROS",
+      "entity_class": "OperatingCompany",
+      "why": "Dutch Bros, drive-through coffee shops; profitable, with free cash flow positive on the latest two filed years while shops are still being added at pace, so the operating-company class rather than unprofitable.",
+      "scope_limits": [
+        "capital spending on new shops runs well above depreciation, so the latest year's free cash flow understates the earning power of the shops already open",
+        "an Up-C structure: the listed company owns a share of the operating partnership, so the filed net income to the listed holder is a fraction of the whole"
+      ]
+    },
+    {
+      "ticker": "BAM",
+      "entity_class": "OperatingCompany",
+      "why": "Brookfield Asset Management, an alternative asset manager earning fees on capital it manages for others, filing with the Securities and Exchange Commission from its New York domicile; positive free cash flow from fee-related earnings.",
+      "scope_limits": [
+        "structural: the listed company's ownership of the asset-management business changed inside the window, so the consolidated history is not one entity's throughout",
+        "carried interest is recognised on realisation and the DCF cannot see the unrealised balance"
+      ]
+    },
+    {
+      "ticker": "TBBB",
+      "entity_class": "Unprofitable",
+      "why": "BBB Foods, the Mexican hard-discount grocer Tiendas 3B, listed in New York in dollars and reporting in pesos under IFRS on a 20-F, so a cross-currency name with Mexico as its domicile; free cash flow is positive on every filed year while the GAAP result is a loss on all but one, the latest year's on non-cash charges, which is the state the class text calls unprofitable, so the runway lens until a second profitable year is filed."
+    },
+    {
+      "ticker": "SEE.L",
+      "entity_class": "Unprofitable",
+      "why": "Seeing Machines, driver-monitoring software and sensors, listed on London's AIM in pence and reporting in dollars from an Australian domicile, so cross-currency and minor-unit on the vendor path; loss-making with negative free cash flow on every filed year, so the runway lens, no model."
+    },
+    {
+      "ticker": "CHYM",
+      "entity_class": "Unprofitable",
+      "why": "Chime Financial, a consumer fintech earning interchange on debit cards issued by partner banks; it holds no charter and takes no deposits of its own; GAAP loss-making on every filed year, the latest on the listing's stock compensation, with free cash flow thinly positive, so the runway lens, no model, exactly the judgment the class text settles."
+    },
+    {
+      "ticker": "0700.HK",
+      "entity_class": "OperatingCompany",
+      "why": "the Hong Kong line of Tencent, games, social platforms, advertising and payments, trading in Hong Kong dollars while reporting in yuan, so cross-currency on the vendor path; positive, stable free cash flow and no structural break.",
+      "scope_limits": [
+        "a large book of listed and unlisted investments sits on the balance sheet at values the DCF does not read",
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ]
+    },
+    {
+      "ticker": "SAN.PA",
+      "entity_class": "OperatingCompany",
+      "why": "the Paris line of Sanofi, pharmaceuticals and vaccines, reporting in euros on the vendor path; positive, stable free cash flow and no structural break; deregistered from the Securities and Exchange Commission, so no filed facts."
+    },
+    {
+      "ticker": "AI.PA",
+      "entity_class": "OperatingCompany",
+      "why": "the Paris line of Air Liquide, industrial gases, reporting in euros on the vendor path; positive, stable free cash flow under long-term supply contracts and no structural break; no filings at the Securities and Exchange Commission."
+    },
+    {
+      "ticker": "GAIN",
+      "entity_class": "Bdc",
+      "why": "Gladstone Investment, a business development company lending to and taking equity in lower-middle-market buyouts, externally managed; the net asset value lens, with the coverage of its monthly distribution and the supplemental ones the check.",
+      "scope_limits": [
+        "a large equity share of the portfolio: realised gains fund the supplemental distributions, so net investment income alone understates what is paid out"
+      ]
+    },
+    {
+      "ticker": "TLN",
+      "entity_class": "MerchantPower",
+      "why": "Talen Energy, merchant nuclear and gas generation selling into the PJM market; the merchant-power class by its text, refused by design and judged on its capacity and price lens instead.",
+      "scope_limits": [
+        "fresh-start accounting on emergence from bankruptcy sits inside the window, so the filed history before it is another entity's"
+      ]
     }
   ]
 }

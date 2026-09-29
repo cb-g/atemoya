@@ -18,7 +18,8 @@
     "A failed fetch writes nothing; the existing entry stays and ages out.",
     "Nothing fetched is tracked (29): the curves themselves are written by python/refresh_rates.py to data/reference/risk_free_rates.json, gitignored, and every user runs the refresher with their own FRED key; a missing curve fails the record naming the refresher. max_age_days, tenors and aliases here seed that file.",
     "no_curve_fallback (54): a domicile named here has no reachable official curve, and a record whose statements and price are both in one currency takes that currency's country curve for the risk-free rate while keeping the domicile's country risk premium, the risk-free parameter's source saying \"trading currency; domicile curve unavailable\". Uruguay is the only entry: MercadoLibre files a 10-K in dollars and trades in dollars, so the dollar curve is the rate its cash flows discount at, and no Uruguayan sovereign curve is published through any keyless source. The list is a declaration, not a fallback: a domicile not named here still fails with no risk-free curve, and a domicile named here that does have a curve takes it.",
-    "Denmark added 2026-09-24 (65): probed before it was recorded, as every official entry is. The Nationalbank's own api.nationalbanken.dk and nationalbanken.statbank.dk hosts do not resolve to a machine-readable yield table; its statistics are published through Statistics Denmark's keyless StatBank API, which returned a dated monthly observation. No rate was hand-copied."
+    "Denmark added 2026-09-24 (65): probed before it was recorded, as every official entry is. The Nationalbank's own api.nationalbanken.dk and nationalbanken.statbank.dk hosts do not resolve to a machine-readable yield table; its statistics are published through Statistics Denmark's keyless StatBank API, which returned a dated monthly observation. No rate was hand-copied.",
+    "Mexico added 2026-09-29 (71) on the fred_oecd_10y tier, probed before it was recorded as every entry is: Banco de Mexico's SIE API needs a registered token, so the OECD monthly ten-year through FRED is the source, the seven-year substituted from it and recorded. No rate was hand-copied."
   ],
   "countries": {
     "United States": {
@@ -478,6 +479,25 @@
         "MPK3 carries no tenor shorter than ten years and the Nationalbank's daily table DNRENTD carries policy and reference rates only, not bond yields, so the seven-year is substituted from the ten-year and recorded, as the OECD monthly tier does.",
         "as_of is the end of the observation month, the point at which the monthly average is complete.",
         "The time filter is an open lower bound well in the past, so the URL never needs editing; the parser takes the newest period the response carries."
+      ]
+    },
+    "Mexico": {
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series IRLTLT01MXM156N",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "IRLTLT01MXM156N"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
+      "tenors": [
+        "7y",
+        "10y"
+      ],
+      "notes": [
+        "as_of is the end of the observation month, the point at which the monthly average is complete",
+        "Banco de Mexico's own SIE API serves the bond curve but only to a registered token, which the keyless rule of this file does not admit, so the OECD monthly ten-year through FRED is the tier, as it is for South Korea; verified 2026-09-29, a dated observation came back to python/refresh_rates.py before this entry was written."
       ]
     }
   },

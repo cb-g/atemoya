@@ -100,13 +100,18 @@ says so. Nothing here feeds the headline, the beliefs or the frontier.
 ## The terminal and the store
 
 Options data comes from ThetaData through its terminal, run from this repository with your
-own subscription. Download `ThetaTerminalv3.jar` from ThetaData into `tools/thetaterminal/`
-(gitignored entirely: the jar, its config, its logs and the momentary creds file live
-there); put your ThetaData login in `.env` as `THETADATA_EMAIL` and `THETADATA_PASSWORD`;
-then `uv run python/theta_terminal.py start` (then `status`, `stop`). The script reads the
-two variables from the environment, writes a creds file with mode 600, launches the jar
-with `--creds-file`, and removes the file once the terminal's port answers. It never
-prints a credential.
+own subscription. Put your ThetaData login in `.env` as `THETADATA_EMAIL` and
+`THETADATA_PASSWORD`; then `uv run python/theta_terminal.py start` (then `status`, `stop`).
+The first `start` fetches `ThetaTerminalv3.jar` from ThetaData's open download, which
+needs no login, into `tools/thetaterminal/` (gitignored entirely: the jar, its config, its
+logs and the momentary creds file live there): streamed to a temporary file, checked to be
+a real jar, renamed into place atomically, its size and sha256 printed; a failed or corrupt
+download is removed and the command exits non-zero saying so. A jar already there is never
+replaced unless you say `start --update-jar`, and `status` reads `jar: missing (start will
+download it)` until the first start. The script reads the two variables from the
+environment, or from `.env` at the repo root for whichever the environment lacks, writes a
+creds file with mode 600, launches the jar with `--creds-file`, and removes the file once
+the terminal's port answers. It never prints a credential.
 
 ```sh
 uv run python/theta_terminal.py start

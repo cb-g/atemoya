@@ -51,6 +51,21 @@ def test_bundesbank_csv_reads_decimal_comma_after_metadata() -> None:
     assert rr.parse_bundesbank_lines(body, "R07XX") == (date(2026, 9, 18), 0.028)
 
 
+def test_bundesbank_csv_skips_the_missing_observation_placeholder() -> None:
+    """The Bundesbank marks a day with no observation as `.`; the refresh of 2026-09-29 fell
+    over on one. Such a row is skipped and the newest numeric row is the observation, so the
+    age check downstream sees that row's date and not the placeholder's."""
+    body = ('\ufeff"";BBSIS.D.I...;FLAGS\n"";Zinsstrukturkurve;\nEinheit;Prozent;\n'
+            "2026-09-17;2,90;\n2026-09-18;2,80;\n2026-09-21;.;\n2026-09-22;.;\n").encode("utf-8")
+    assert rr.parse_bundesbank_lines(body, "R07XX") == (date(2026, 9, 18), 0.028)
+    # a response that is placeholders only carries no observation at all
+    with pytest.raises(rr.RefreshError, match="no dated observation"):
+        rr.parse_bundesbank_lines(b"2026-09-21;.;\n2026-09-22;.;\n", "R07XX")
+    # anything else that is not a number is still an error, named
+    with pytest.raises(rr.RefreshError, match="is not a number"):
+        rr.parse_bundesbank_lines(b"2026-09-21;n/a;\n", "R07XX")
+
+
 def test_mof_csv_takes_the_last_dated_row() -> None:
     body = (b"Interest Rate (September 2026),,,(Unit : %)\r\nDate,1Y,2Y,3Y,5Y,7Y,10Y\r\n"
             b"2026/9/16,1.5,1.7,1.9,2.2,2.4,2.8\r\n2026/9/17,1.6,1.9,2.0,2.3,2.6,3.0\r\n"

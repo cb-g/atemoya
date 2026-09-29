@@ -664,6 +664,24 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- twenty-five names, Mexico, the terminal's jar and a Bundesbank placeholder (71): a
+  downstream project running a clone asked for twenty-six names and four repairs. Twenty-five
+  join `reference/universe.json` with the class judgments delegated to the tool and every
+  why saying what was read; SK hynix was already here and Bending Spoons, which the project
+  had no symbol for, is listed on Nasdaq as BSP. Two of the names report in pesos, so Mexico
+  joins the four country tables from their own sources, the risk premium and tax rows from
+  the vintages the files already carry, the terminal-growth row from the IMF's own SDMX
+  service on the same April 2026 vintage (Denmark's two figures came back from the same call
+  exactly as recorded), and a curve on the OECD monthly tier through FRED, probed before it
+  was written; the peso now names Mexico as its curve's country. `theta_terminal.py start`
+  fetches the terminal's jar from ThetaData's open download when it is missing, before the
+  credentials step, streamed to a temporary file, checked by the zip magic and a minimum size,
+  renamed into place atomically with its size and sha256 printed, never replacing a jar that
+  is there unless `--update-jar` says so; and the login falls back from the environment to
+  the env file at the repo root for whichever variable the environment lacks, as the FRED
+  key and the SEC identity already did. The Bundesbank parser skips the `.` a holiday
+  leaves in the series and takes the newest numeric observation, the ninety-day age check
+  unchanged. No new `Failed` string.
 - preferred dividends are not common distributions (69): the residual-income path reads the
   common side of the filing -- income available to common, book less the filed preferred
   carrying value, and a payout numerator of common dividends -- where the filing supports all
