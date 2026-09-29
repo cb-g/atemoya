@@ -353,6 +353,27 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
                    Printf.sprintf "%s (%s side)" v.ticker side)
                  xs))
     end;
+    (* (76) The runway readout, one line per Unprofitable record: a state, never a value. *)
+    let with_runway = List.filter (fun (v : valuation) -> Option.is_some v.runway || Option.is_some v.runway_reason) vs in
+    if with_runway <> [] then begin
+      Printf.bprintf b "runway (76), across %d Unprofitable names:\n" (List.length with_runway);
+      List.iter
+        (fun (v : valuation) ->
+          match v.runway with
+          | Some (r : runway) ->
+              let money x = if Float.abs x >= 1e9 then Printf.sprintf "%.2fbn" (x /. 1e9) else Printf.sprintf "%.1fm" (x /. 1e6) in
+              Printf.bprintf b "  %-10s cash %s %s, free cash flow %s for %s%s%s\n" v.ticker (money r.cash) (Option.value v.currency ~default:"") (money r.free_cash_flow) r.period_end
+                (match (r.burn, r.years_of_runway) with
+                | Some burn, Some years -> Printf.sprintf ", burn %s, runway %.1f years" (money burn) years
+                | _ -> ", self-funding")
+                (match (r.next_release, r.days_to_next, r.releases_within_runway, r.calendar_reason) with
+                | Some next, Some d, Some n, _ -> Printf.sprintf "; next release %s in %d days, %d release(s) inside the runway" next d n
+                | Some next, Some d, None, Some why -> Printf.sprintf "; next release %s in %d days; %s" next d why
+                | _, _, _, Some why -> "; " ^ why
+                | _ -> "")
+          | None -> Printf.bprintf b "  %-10s no runway readout: %s\n" v.ticker (Option.value v.runway_reason ~default:"unknown"))
+        with_runway
+    end;
     let sources = count_by (fun x -> x) (List.filter_map (fun (v : valuation) -> v.required_return_source) vs) in
     Printf.bprintf b "required return (34), across %d Ok names: %s\n"
       (List.length (List.filter (fun (v : valuation) -> Option.is_some v.required_return_source) vs))

@@ -1214,3 +1214,17 @@ def test_ifrs_cash_adds_short_term_deposits_on_top_of_the_investment_alternative
     assert p.cash_composition is not None and [c.name for c in p.cash_composition.components] == ["cash_equivalents", "short_term_investments", "short_term_deposits"]
     p = fetch_sec.periods_from_facts({**ifrs, "CashAndCashEquivalents": usd(fact("2025-12-31", 57e9)), "CurrentInvestments": usd(fact("2025-12-31", 5e9))}, TAGS, DEFS, [], taxonomy="ifrs-full")[0]
     assert p.cash == 62e9 and [c.name for c in (p.cash_composition.components if p.cash_composition else [])] == ["cash_equivalents", "short_term_investments"]
+
+
+def test_operating_cash_flow_is_read_as_filed_on_both_taxonomies() -> None:
+    """(76) The cash-flow statement's own subtotal, the total first and the continuing-
+    operations subtotal after it (Air Products files only the latter); no recipe."""
+    p = period({"NetCashProvidedByUsedInOperatingActivities": usd(fact("2025-12-31", -1.5e9, start="2025-01-01"))})
+    assert p.operating_cash_flow == -1.5e9 and p.operating_cash_flow_row == "NetCashProvidedByUsedInOperatingActivities"
+    p = period({"NetCashProvidedByUsedInOperatingActivitiesContinuingOperations": usd(fact("2025-12-31", 2e9, start="2025-01-01"))})
+    assert p.operating_cash_flow == 2e9 and p.operating_cash_flow_row == "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"
+    assert period({}).operating_cash_flow is None
+    ifrs = {"ProfitLoss": usd(fact("2025-12-31", 1e9, start="2025-01-01")), "Equity": usd(fact("2025-12-31", 5e9)),
+            "CashFlowsFromUsedInOperatingActivities": usd(fact("2025-12-31", 3e9, start="2025-01-01"))}
+    p = fetch_sec.periods_from_facts(ifrs, TAGS, DEFS, [], taxonomy="ifrs-full")[0]
+    assert p.operating_cash_flow == 3e9 and p.operating_cash_flow_row == "CashFlowsFromUsedInOperatingActivities"

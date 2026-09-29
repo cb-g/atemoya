@@ -1284,6 +1284,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 total_debt=debt, total_debt_source=debt_row,
                 book_equity=v["book_equity"], net_income=v["net_income"],
                 dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
+                operating_cash_flow=v["operating_cash_flow"], operating_cash_flow_row=r["operating_cash_flow"],
                 # (69) the common-only side, read on every filed period and used by the
                 # residual-income path alone; nothing above or below this line changes
                 net_income_to_common=v["net_income_to_common"], net_income_to_common_row=r["net_income_to_common"],

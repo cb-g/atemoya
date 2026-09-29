@@ -42,6 +42,10 @@ never by a stored expectation.
 
 ## The record
 
+An `Unprofitable` record carries a `runway` block beside its refusal (76): cash against
+the burn from the cash-flow statement's own lines, the years of runway and the releases
+inside it, or a `runway_reason`. It is a state, never a value or a signal.
+
 A record is either `Ok` with a fair value, or `Failed` with a reason; it never carries a
 guessed number. Every record carries a `floor` (present, absent by definition, or not
 assessable here, with its basis) that gates nothing, and `model_version` names the code

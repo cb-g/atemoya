@@ -20,7 +20,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates ?aoci_recipe ?aoci_composition
     ?interest_recipe ?depreciation_amortization_recipe ?depreciation_amortization_composition
     ?net_income_to_common ?preferred_equity ?preferred_dividends ?preferred_outside_equity
-    ?common_dividends_paid () : Boundary_t.fiscal_period =
+    ?common_dividends_paid ?operating_cash_flow ?operating_cash_flow_row () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -41,6 +41,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     net_income;
     dividends_paid;
     dividends_paid_row;
+    operating_cash_flow;
+    operating_cash_flow_row;
     provision_for_credit_losses;
     provision_for_credit_losses_row;
     net_loans;
@@ -3924,6 +3926,59 @@ let test_earnings_implied_move () =
   check_error "no event premium" (Earnings.implied_of quiet ~rf:0.04 ~next:"2026-10-29")
     [ "no event premium"; "the subtraction is negative" ]
 
+let runway_calendar ?(cadence = Some 91.) next =
+  {
+    Boundary_t.past_source = "vendor"; past_source_why = "test"; past_count = 8; past_dates = []; next_date = next; next_source = "vendor";
+    next_source_as_of = "2026-09-30"; cadence_days = cadence; events = []; realised_median_abs_excess = None; realised_reason = None;
+    benchmark = "SPY"; scope_limits = [];
+  }
+
+let test_runway_reads_cash_against_the_burn () =
+  (* (76) the burn is the cash-flow statement's own: operating cash flow less capex; the
+     releases inside the runway count the next one and step at the calendar's cadence *)
+  let latest = period ~period_end:"2025-12-31" ~cash:1000. ~operating_cash_flow:(-150.) ~capex:50. ~total_debt:20. () in
+  let prior = period ~period_end:"2024-12-31" ~cash:1300. ~operating_cash_flow:(-240.) ~capex:60. () in
+  match Runway.of_record ~entity_class:(Some `Unprofitable) ~periods:[ latest; prior ] ~calendar:(Some (runway_calendar "2026-11-03")) ~calendar_reason:None ~valued_on:"2026-09-30" with
+  | Some (r : Boundary_t.runway), None ->
+      check_float "free cash flow" (-200.) r.free_cash_flow;
+      check_float "burn" 200. (Option.get r.burn);
+      check_float "years" 5. (Option.get r.years_of_runway);
+      Alcotest.(check bool) "not self-funding" false r.self_funding;
+      Alcotest.(check int) "history" 2 (List.length r.history);
+      Alcotest.(check (option int)) "days to next" (Some 34) r.days_to_next;
+      (* five years is 1826 days; 34 to the next, then every 91: 1 + floor(1792 / 91) = 20 *)
+      Alcotest.(check (option int)) "releases within the runway" (Some 20) r.releases_within_runway;
+      Alcotest.(check (option string)) "no calendar reason" None r.calendar_reason
+  | _ -> Alcotest.fail "expected a block"
+
+let test_runway_self_funding_missing_and_other_classes () =
+  let funded = period ~period_end:"2025-12-31" ~cash:500. ~operating_cash_flow:120. ~capex:50. () in
+  (match Runway.of_record ~entity_class:(Some `Unprofitable) ~periods:[ funded ] ~calendar:(Some (runway_calendar "2026-11-03")) ~calendar_reason:None ~valued_on:"2026-09-30" with
+   | Some r, None ->
+       Alcotest.(check bool) "self-funding" true r.self_funding;
+       Alcotest.(check (option (float 1e-9))) "no burn" None r.burn;
+       Alcotest.(check (option (float 1e-9))) "no years" None r.years_of_runway;
+       Alcotest.(check bool) "the count says why" true (Option.is_some r.calendar_reason && r.releases_within_runway = None)
+   | _ -> Alcotest.fail "expected a self-funding block");
+  (* a missing flow is the reason, naming it *)
+  let bare = period ~period_end:"2025-12-31" ~cash:500. ~capex:50. () in
+  (match Runway.of_record ~entity_class:(Some `Unprofitable) ~periods:[ bare ] ~calendar:None ~calendar_reason:None ~valued_on:"2026-09-30" with
+   | None, Some why -> Alcotest.(check bool) "names the flow" true (contains why "operating_cash_flow")
+   | _ -> Alcotest.fail "expected a reason");
+  (* no calendar: the block stands and the count says why *)
+  let burning = period ~period_end:"2025-12-31" ~cash:500. ~operating_cash_flow:(-100.) ~capex:0. () in
+  (match Runway.of_record ~entity_class:(Some `Unprofitable) ~periods:[ burning ] ~calendar:None ~calendar_reason:(Some "no filer") ~valued_on:"2026-09-30" with
+   | Some r, None -> Alcotest.(check (option string)) "carries the calendar's reason" (Some "no filer") r.calendar_reason
+   | _ -> Alcotest.fail "expected a block without a calendar");
+  (* the next release beyond the runway counts nothing; a passed date counts nothing *)
+  Alcotest.(check int) "beyond" 0 (Runway.releases_within ~years:0.05 ~days_to_next:40 ~cadence_days:91.);
+  Alcotest.(check int) "passed" 0 (Runway.releases_within ~years:2. ~days_to_next:(-3) ~cadence_days:91.);
+  Alcotest.(check int) "just the next" 1 (Runway.releases_within ~years:0.2 ~days_to_next:40 ~cadence_days:91.);
+  (* every other class: neither field *)
+  match Runway.of_record ~entity_class:(Some `OperatingCompany) ~periods:[ burning ] ~calendar:None ~calendar_reason:None ~valued_on:"2026-09-30" with
+  | None, None -> ()
+  | _ -> Alcotest.fail "another class carries no runway fields"
+
 let test_earnings_spans_and_block () =
   Alcotest.(check bool) "after the release" true (Earnings.spans ~expiry:"2026-10-30" ~next:"2026-10-29");
   Alcotest.(check bool) "on the release" true (Earnings.spans ~expiry:"2026-10-29" ~next:"2026-10-29");
@@ -4122,6 +4177,11 @@ let () =
           Alcotest.test_case "the bracketing expiries" `Quick test_earnings_bracket;
           Alcotest.test_case "the implied event move, and the negative case" `Quick test_earnings_implied_move;
           Alcotest.test_case "the mark and the block" `Quick test_earnings_spans_and_block;
+        ] );
+      ( "runway readout",
+        [
+          case "cash against the burn, and the releases inside it" test_runway_reads_cash_against_the_burn;
+          case "self-funding, a missing flow, no calendar, other classes" test_runway_self_funding_missing_and_other_classes;
         ] );
       ( "valuation",
         [

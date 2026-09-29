@@ -166,3 +166,12 @@ def test_minor_unit_price_is_converted_and_market_cap_kept() -> None:
     same = fetch.Quote.model_validate({"currency": "USD", "financial_currency": "USD", "price": 10.0, "market_cap": 5e3})
     g = fetch.quote_fields(same, [])
     assert (g["currency"], g["price"], g["price_unit_divisor"]) == ("USD", 10.0, 1.0)
+
+
+def test_vendor_operating_cash_flow_row_is_read_any_sign() -> None:
+    """(76) The vendor's own subtotal, the row recorded; absent stays absent."""
+    out = fetch._cashflow_values({"Operating Cash Flow": -497.0e6, "Capital Expenditure": -102.0e6})  # pyright: ignore[reportPrivateUsage]
+    assert out["operating_cash_flow"] == -497.0e6 and out["operating_cash_flow_row"] == "Operating Cash Flow"
+    out = fetch._cashflow_values({"Cash Flow From Continuing Operating Activities": 12.0e6})  # pyright: ignore[reportPrivateUsage]
+    assert out["operating_cash_flow"] == 12.0e6
+    assert fetch._cashflow_values({})["operating_cash_flow"] is None  # pyright: ignore[reportPrivateUsage]

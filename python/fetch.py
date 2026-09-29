@@ -200,6 +200,8 @@ class CashFlowStatement(Statement):
     delta_nwc_composition: Components | None
     dividends_paid: float | None  # positive = cash paid
     dividends_paid_row: str | None
+    operating_cash_flow: float | None
+    operating_cash_flow_row: str | None
 
 
 class BalanceSheet(Statement):
@@ -240,6 +242,7 @@ PROVISION_ROWS = (
     "Provision For Doubtful Accounts",
 )
 DIVIDEND_ROWS = ("Cash Dividends Paid", "Common Stock Dividend Paid")  # outflows, negative on the vendor's statement
+OPERATING_CASH_FLOW_ROWS = ("Operating Cash Flow", "Cash Flow From Continuing Operating Activities")  # (76) the vendor's own subtotal, any sign
 NET_LOAN_ROWS = ("Net Loan", "Net Loans", "Loans Receivable")
 # Insurer signature: the first of these rows that carries a value. Verified absent for
 # ALL, MET, PGR and ALV.DE on yfinance 1.7.0 (2026-09-18); kept so a vendor that does
@@ -376,6 +379,7 @@ def _cashflow_values(rows: Mapping[str, object], defs: reference.FieldDefinition
     out["depreciation_amortization"], out["depreciation_amortization_row"] = _first_present(rows, DNA_ROWS)
     dividends, row = _first_present(rows, DIVIDEND_ROWS)
     out["dividends_paid"], out["dividends_paid_row"] = (None if dividends is None else 0.0 - dividends), row
+    out["operating_cash_flow"], out["operating_cash_flow_row"] = _first_present(rows, OPERATING_CASH_FLOW_ROWS)
     return out
 
 
@@ -525,6 +529,8 @@ def _period(
         net_income=income.net_income if income else None,
         dividends_paid=cashflow.dividends_paid if cashflow else None,
         dividends_paid_row=cashflow.dividends_paid_row if cashflow else None,
+        operating_cash_flow=cashflow.operating_cash_flow if cashflow else None,
+        operating_cash_flow_row=cashflow.operating_cash_flow_row if cashflow else None,
         provision_for_credit_losses=income.provision_for_credit_losses if income else None,
         provision_for_credit_losses_row=income.provision_for_credit_losses_row if income else None,
         net_loans=balance.net_loans if balance else None,

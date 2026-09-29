@@ -33,6 +33,8 @@ flowchart TD
   ST -.-> V
   F -. "unreadable or gated" .-> FF1[Failed: see table]
   M -. "guard or missing field" .-> FF2[Failed: see table]
+  A -. "Unprofitable" .-> RW[runway readout]
+  RW --> REC
   C -. "bound or sign" .-> FF3[Failed: see table]
   classDef failed fill:#f8d7da,stroke:#b02a37,color:#000
   classDef store fill:#e2e3e5,stroke:#6c757d,color:#000

@@ -291,6 +291,12 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
             spans_earnings_reason = (match e.implied with Some _ -> None | None -> e.implied_reason);
           }
   in
+  (* (76) The runway readout, from the original statements in their own currency, on an
+     Unprofitable record and no other; it rides beside the class's own refusal. *)
+  let runway, runway_reason =
+    Runway.of_record ~entity_class:declared ~periods:original.periods ~calendar:original.earnings_calendar
+      ~calendar_reason:original.earnings_calendar_reason ~valued_on:today
+  in
   (* [fin] is the record the model saw: the original, or its converted copy. *)
   let record ~(fin : financials) ?model ?class_check ?inputs ?fair_value ?margin_of_safety
       ?signal ?failed_reason ?build_out ?build_out_reason ~price ~status ~floor () =
@@ -349,6 +355,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       build_out_reason;
       earnings = fst (earnings_of inputs);
       earnings_reason = snd (earnings_of inputs);
+      runway;
+      runway_reason;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,

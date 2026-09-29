@@ -135,6 +135,32 @@ is held flat, which understates a growing name and overstates a fading one; ever
 growth capex is valued as if it becomes earning capital, which no build-out achieves. It is
 a map of what the price requires, not a value.
 
+## The runway readout
+
+The Unprofitable class is refused by design, its lens being cash runway against the
+catalyst calendar, and until brief 76 the record carried the lens's name and nothing of
+the lens. Every Unprofitable record now carries `runway`, or `runway_reason` saying why
+not, beside its own refusal. No other class carries either field: the question is not
+theirs.
+
+The reading is the latest period's cash and short-term investments as the cash definition
+reads them, the period's free cash flow from the cash-flow statement's own lines, net cash
+from operating activities less capital spending, both as filed or as the vendor reports
+them, the burn where that is negative, the years of runway as cash over burn, and the
+release dates the earnings calendar puts inside those years, counting the next when it has
+not passed and stepping at the calendar's median cadence. A period that funded itself
+carries the block with `self_funding` true and no years. The history lists every filed
+period's free cash flow so the reader sees whether the burn is narrowing.
+
+Two things it is not. It is not free cash flow as the DCF reads it: that engine derives it
+from EBIT, and this reads the filer's own operating subtotal, because a loss-maker's
+GAAP loss is full of charges that never left the bank, stock compensation and fair-value
+marks among them, and the first draft of this readout, built on net income, read BBB
+Foods as burning five times what its cash-flow statement shows. And it is not a forecast:
+the burn is one filed year's, not a run-rate, and a name whose burn is halving each year
+reads the same as one whose burn is doubling, which is what the history beside it is for.
+Nothing here is a fair value, a floor or a signal, and nothing downstream reads it.
+
 ## Fetched data
 
 Nothing obtained from a data provider is tracked. `reference/` holds declarations and
@@ -737,6 +763,13 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the runway readout (76): every Unprofitable record carries cash against the burn, the burn
+  being the cash-flow statement's own net cash from operating activities less capital
+  spending, the years of runway, the filed history of free cash flow, and the releases the
+  earnings calendar puts inside the runway; or the reason there is none. A new field on
+  every period, `operating_cash_flow`, read as filed on both taxonomies and from the vendor's
+  row, additive on the wire. No fair value, no floor, no signal; no other class carries the
+  fields. No new `Failed` string.
 - China's curve from ChinaBond (75): the hand-copied Chinese entry, a hundred and seventeen days
   stale, gives way to the China Government Bond yield curve China Central Depository &
   Clearing publishes, read keyless from the chart's own endpoint by a form POST and picked by

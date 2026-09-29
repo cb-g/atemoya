@@ -79,6 +79,8 @@ type fiscal_period = {
   net_income : float nullable;                (* any sign *)
   dividends_paid : float nullable;            (* >= 0; cash dividends paid in the period *)
   dividends_paid_row : string nullable;
+  ?operating_cash_flow : float option;        (* (76) the cash-flow statement's net cash from operating activities, as filed or as the vendor reports it; any sign *)
+  ?operating_cash_flow_row : string option;   (* the tag or row it came from *)
   provision_for_credit_losses : float nullable;   (* >= 0; the vendor exposes no such row on any bank probed (2026-09-18) *)
   provision_for_credit_losses_row : string nullable;
   net_loans : float nullable;                 (* >= 0; banks only *)
@@ -1127,6 +1129,38 @@ type build_out = {
   scope_limits : string list;           (* what this map cannot see, carried onto the record *)
 }
 
+
+(* (76) The runway readout. The Unprofitable class is refused by design, its lens being
+   cash runway against the catalyst calendar, and until now the record carried the lens's
+   name and nothing of the lens. This is the reading: the latest period's cash and
+   short-term investments as the definitions read them, the free cash flow of that period
+   from the cash-flow statement's own lines (net cash from operating activities less
+   capital spending), the burn where that is negative, the years of runway as
+   cash over burn, and the release dates the earnings calendar puts inside those years. A
+   state, not a forecast: nothing here is a fair value, a floor or a signal, and nothing
+   downstream reads it. *)
+type runway_period = {
+  period_end : string;
+  free_cash_flow : float;
+}
+
+type runway = {
+  period_end : string;                    (* the latest fiscal period *)
+  cash : float;                           (* cash and short-term investments, the cash definition *)
+  ?total_debt : float option;             (* beside it, for the reader; not netted *)
+  free_cash_flow : float;                 (* operating cash flow less capex, the latest period, the cash-flow statement's own *)
+  burn : float nullable;                  (* -free_cash_flow where negative; null when the period funded itself *)
+  years_of_runway : float nullable;       (* cash / burn; null when there is no burn *)
+  self_funding : bool;
+  history : runway_period list;           (* every filed period carrying the four flows, newest first *)
+  ?next_release : string option;          (* the earnings calendar's next date *)
+  ?days_to_next : int option;             (* from valued_on *)
+  ?cadence_days : float option;           (* the calendar's median interval, the step the count below runs at *)
+  ?releases_within_runway : int option;   (* releases the cadence puts inside the years of runway, counting the next; null with no burn or no calendar *)
+  ?calendar_reason : string option;       (* present instead of the four above: why the calendar gives nothing *)
+  basis : string;                         (* what was read, in words *)
+}
+
 type valuation = {
   ticker : string;
   as_of : string;                     (* the fetch timestamp, from financials *)
@@ -1179,4 +1213,6 @@ type valuation = {
   ?build_out_reason : string option;            (* (60) present instead on such a record: why there is no readout *)
   ?earnings : earnings option;                  (* (68) the calendar from the financials with the implied event move from the store; on every record, Ok or Failed; never a fair value *)
   ?earnings_reason : string option;             (* (68) present instead: why there is no block *)
+  ?runway : runway option;                      (* (76) on an Unprofitable record: cash against the burn as this tool reads it, and the releases inside it; never a fair value, a floor or a signal *)
+  ?runway_reason : string option;               (* (76) present instead on an Unprofitable record: why there is no readout *)
 }

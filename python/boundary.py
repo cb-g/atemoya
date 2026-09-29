@@ -837,6 +837,112 @@ class Sensitivity:
 
 
 @dataclass
+class RunwayPeriod:
+    """Original type: runway_period = { ... }
+    """
+
+    period_end: str
+    free_cash_flow: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'RunwayPeriod':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('RunwayPeriod', 'period_end'),
+                free_cash_flow=_atd_read_float(x['free_cash_flow']) if 'free_cash_flow' in x else _atd_missing_json_field('RunwayPeriod', 'free_cash_flow'),
+            )
+        else:
+            _atd_bad_json('RunwayPeriod', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['free_cash_flow'] = _atd_write_float(self.free_cash_flow)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'RunwayPeriod':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Runway:
+    """Original type: runway = { ... }
+    """
+
+    period_end: str
+    cash: float
+    free_cash_flow: float
+    burn: Optional[float]
+    years_of_runway: Optional[float]
+    self_funding: bool
+    history: List[RunwayPeriod]
+    basis: str
+    total_debt: Optional[float] = None
+    next_release: Optional[str] = None
+    days_to_next: Optional[int] = None
+    cadence_days: Optional[float] = None
+    releases_within_runway: Optional[int] = None
+    calendar_reason: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Runway':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('Runway', 'period_end'),
+                cash=_atd_read_float(x['cash']) if 'cash' in x else _atd_missing_json_field('Runway', 'cash'),
+                free_cash_flow=_atd_read_float(x['free_cash_flow']) if 'free_cash_flow' in x else _atd_missing_json_field('Runway', 'free_cash_flow'),
+                burn=_atd_read_nullable(_atd_read_float)(x['burn']) if 'burn' in x else _atd_missing_json_field('Runway', 'burn'),
+                years_of_runway=_atd_read_nullable(_atd_read_float)(x['years_of_runway']) if 'years_of_runway' in x else _atd_missing_json_field('Runway', 'years_of_runway'),
+                self_funding=_atd_read_bool(x['self_funding']) if 'self_funding' in x else _atd_missing_json_field('Runway', 'self_funding'),
+                history=_atd_read_list(RunwayPeriod.from_json)(x['history']) if 'history' in x else _atd_missing_json_field('Runway', 'history'),
+                basis=_atd_read_string(x['basis']) if 'basis' in x else _atd_missing_json_field('Runway', 'basis'),
+                total_debt=_atd_read_float(x['total_debt']) if 'total_debt' in x else None,
+                next_release=_atd_read_string(x['next_release']) if 'next_release' in x else None,
+                days_to_next=_atd_read_int(x['days_to_next']) if 'days_to_next' in x else None,
+                cadence_days=_atd_read_float(x['cadence_days']) if 'cadence_days' in x else None,
+                releases_within_runway=_atd_read_int(x['releases_within_runway']) if 'releases_within_runway' in x else None,
+                calendar_reason=_atd_read_string(x['calendar_reason']) if 'calendar_reason' in x else None,
+            )
+        else:
+            _atd_bad_json('Runway', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['cash'] = _atd_write_float(self.cash)
+        res['free_cash_flow'] = _atd_write_float(self.free_cash_flow)
+        res['burn'] = _atd_write_nullable(_atd_write_float)(self.burn)
+        res['years_of_runway'] = _atd_write_nullable(_atd_write_float)(self.years_of_runway)
+        res['self_funding'] = _atd_write_bool(self.self_funding)
+        res['history'] = _atd_write_list((lambda x: x.to_json()))(self.history)
+        res['basis'] = _atd_write_string(self.basis)
+        if self.total_debt is not None:
+            res['total_debt'] = _atd_write_float(self.total_debt)
+        if self.next_release is not None:
+            res['next_release'] = _atd_write_string(self.next_release)
+        if self.days_to_next is not None:
+            res['days_to_next'] = _atd_write_int(self.days_to_next)
+        if self.cadence_days is not None:
+            res['cadence_days'] = _atd_write_float(self.cadence_days)
+        if self.releases_within_runway is not None:
+            res['releases_within_runway'] = _atd_write_int(self.releases_within_runway)
+        if self.calendar_reason is not None:
+            res['calendar_reason'] = _atd_write_string(self.calendar_reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Runway':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class RoicObservation:
     """Original type: roic_observation = { ... }
     """
@@ -4465,6 +4571,8 @@ class Valuation:
     build_out_reason: Optional[str] = None
     earnings: Optional[Earnings] = None
     earnings_reason: Optional[str] = None
+    runway: Optional[Runway] = None
+    runway_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -4521,6 +4629,8 @@ class Valuation:
                 build_out_reason=_atd_read_string(x['build_out_reason']) if 'build_out_reason' in x else None,
                 earnings=Earnings.from_json(x['earnings']) if 'earnings' in x else None,
                 earnings_reason=_atd_read_string(x['earnings_reason']) if 'earnings_reason' in x else None,
+                runway=Runway.from_json(x['runway']) if 'runway' in x else None,
+                runway_reason=_atd_read_string(x['runway_reason']) if 'runway_reason' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -4608,6 +4718,10 @@ class Valuation:
             res['earnings'] = (lambda x: x.to_json())(self.earnings)
         if self.earnings_reason is not None:
             res['earnings_reason'] = _atd_write_string(self.earnings_reason)
+        if self.runway is not None:
+            res['runway'] = (lambda x: x.to_json())(self.runway)
+        if self.runway_reason is not None:
+            res['runway_reason'] = _atd_write_string(self.runway_reason)
         return res
 
     @classmethod
@@ -4796,6 +4910,8 @@ class FiscalPeriod:
     provision_for_credit_losses_row: Optional[str]
     net_loans: Optional[float]
     net_loans_row: Optional[str]
+    operating_cash_flow: Optional[float] = None
+    operating_cash_flow_row: Optional[str] = None
     filed: Optional[str] = None
     restated_from: List[Restatement] = field(default_factory=lambda: [])
     no_distributions_filed: Optional[bool] = None
@@ -4889,6 +5005,8 @@ class FiscalPeriod:
                 provision_for_credit_losses_row=_atd_read_nullable(_atd_read_string)(x['provision_for_credit_losses_row']) if 'provision_for_credit_losses_row' in x else _atd_missing_json_field('FiscalPeriod', 'provision_for_credit_losses_row'),
                 net_loans=_atd_read_nullable(_atd_read_float)(x['net_loans']) if 'net_loans' in x else _atd_missing_json_field('FiscalPeriod', 'net_loans'),
                 net_loans_row=_atd_read_nullable(_atd_read_string)(x['net_loans_row']) if 'net_loans_row' in x else _atd_missing_json_field('FiscalPeriod', 'net_loans_row'),
+                operating_cash_flow=_atd_read_float(x['operating_cash_flow']) if 'operating_cash_flow' in x else None,
+                operating_cash_flow_row=_atd_read_string(x['operating_cash_flow_row']) if 'operating_cash_flow_row' in x else None,
                 filed=_atd_read_string(x['filed']) if 'filed' in x else None,
                 restated_from=_atd_read_list(Restatement.from_json)(x['restated_from']) if 'restated_from' in x else [],
                 no_distributions_filed=_atd_read_bool(x['no_distributions_filed']) if 'no_distributions_filed' in x else None,
@@ -4983,6 +5101,10 @@ class FiscalPeriod:
         res['provision_for_credit_losses_row'] = _atd_write_nullable(_atd_write_string)(self.provision_for_credit_losses_row)
         res['net_loans'] = _atd_write_nullable(_atd_write_float)(self.net_loans)
         res['net_loans_row'] = _atd_write_nullable(_atd_write_string)(self.net_loans_row)
+        if self.operating_cash_flow is not None:
+            res['operating_cash_flow'] = _atd_write_float(self.operating_cash_flow)
+        if self.operating_cash_flow_row is not None:
+            res['operating_cash_flow_row'] = _atd_write_string(self.operating_cash_flow_row)
         if self.filed is not None:
             res['filed'] = _atd_write_string(self.filed)
         res['restated_from'] = _atd_write_list((lambda x: x.to_json()))(self.restated_from)
