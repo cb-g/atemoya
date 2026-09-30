@@ -15,6 +15,8 @@ uv run python/fetch_all.py --as-of 2025-06-30   # point-in-time: data/pit/2025-0
 dune exec atemoya -- data/pit/2025-06-30 --reference data/pit/2025-06-30/reference --fetched data/pit/2025-06-30/reference --today 2025-06-30 --out output/pit/2025-06-30
 dune exec atemoya -- --entity-class OperatingCompany --out output data/financials/NEW.json   # a name not in the universe, declared on the command line
 uv run python/build_panel.py                    # every quarter-end 2022-03-31 .. 2026-06-30 -> output/pit/panel.jsonl, panel_summary.txt
+uv run python/build_panel.py --no-insiders      # (80) the same without the Form 4 read, hours of paced fetching the anchor study does not need; the per-name vendor fetch is cached for the day under data/pit/names/
+uv run python/anchor_study.py --as-of 2026-09-30  # (80) what the panel's judgments preceded: excess over SPY at +63/+126/+252 trading days, by signal, quintile, belief, model, class and refusal family -> output/anchor_study/
 ```
 
 ## Inputs and declarations
@@ -112,6 +114,26 @@ and lists the inputs behind every moved fair value; with `--baseline-snapshot` a
 every moved input of every record is classified (price, new filing, restatement, vendor
 row, rate or FX, unexplained) in a stability report, so two fetches with nothing having
 happened can be shown to agree.
+
+## The anchor study
+
+`uv run python/anchor_study.py` (80) asks what the records' own judgments preceded. For every
+row of the point-in-time panel, valued on its quarter-end from what was known then, it reads
+what the price did afterwards against SPY over the same calendar dates at +63, +126 and +252
+trading days, and groups the rows by what the record said on the day: Ok or refused, the
+signal, the margin of safety in quintiles within each date so the market's own quarter does
+not masquerade as the anchor's, the belief's probability_overpaid where one existed, the
+class, the model, and for the refusals the family of the reason. It writes
+`output/anchor_study/records.jsonl` and `tables.txt`; `plot_anchor_study.py` draws the
+year-ahead excess by margin-of-safety quintile as strip plots with the medians marked.
+
+Descriptive only: counts, medians, quartiles and the share positive. The names on one date
+move together with the market, so a hundred and seventy-eight names on eighteen quarter-ends
+are not eighteen hundred independent tests and no statistic is claimed; a cell under ten
+rows prints its count alone. Nothing here feeds a model, a belief or a signal. The closes
+are cut at `--as-of` and cached under `data/anchor_study/` so the study repeats byte for
+byte; delete the directory to re-fetch. Rebuild the panel first (`build_panel.py`) when the
+code has moved since it was written, or the study reads yesterday's judgments.
 
 ## Share counts and point-in-time
 

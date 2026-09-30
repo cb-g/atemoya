@@ -58,3 +58,27 @@ def test_plot_medians_leave_the_blank_dates_out() -> None:
             bp.panel_row(record("B", block={**BLOCK, "p_below_anchor_path": 0.4}, overpaid=0.5), d2, None, with_options=True)]
     points, blank = plot.medians(rows)
     assert blank == [d1] and points == [(d2, 0.30000000000000004, 0.75)]
+
+
+def test_a_name_round_trips_through_the_fetch_cache() -> None:
+    """(80) The fetch phase's data for one name, closes, splits, volumes, quote, profile and
+    vendor periods, comes back from its JSON equal to what went in."""
+    import json as json_mod
+    from datetime import date as date_mod
+
+    import boundary as boundary_mod
+    import build_panel as bp
+    import fetch as fetch_mod
+    import pit as pit_mod
+
+    history = pit_mod.History({date_mod(2024, 1, 2): 100.0, date_mod(2024, 1, 3): 101.5}, {date_mod(2024, 6, 10): 4.0}, {date_mod(2024, 1, 2): 1000.0})
+    quote = fetch_mod.Quote.model_validate({"price": 101.5, "market_cap": 5.0e9, "currency": "USD", "financial_currency": "USD", "shares": 4.9e7})
+    import dataclasses as dc
+    required: dict[str, object] = {f.name: None for f in dc.fields(boundary_mod.FiscalPeriod)
+                                   if f.default is dc.MISSING and f.default_factory is dc.MISSING}
+    period = boundary_mod.FiscalPeriod(**{**required, "period_end": "2023-12-31", "ebit": 1.0, "total_revenue": 9.0, "net_income": 1.0})  # pyright: ignore[reportArgumentType]
+    raw = json_mod.loads(json_mod.dumps(bp.name_to_json(history, quote, None, [period])))
+    h2, (q2, p2), v2 = bp.name_from_json(raw)
+    assert h2.closes == history.closes and h2.splits == history.splits and h2.volumes == history.volumes
+    assert q2 is not None and q2.price == 101.5 and q2.currency == "USD" and p2 is None
+    assert len(v2) == 1 and v2[0].period_end == "2023-12-31" and v2[0].total_revenue == 9.0

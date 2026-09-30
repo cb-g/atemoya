@@ -763,6 +763,18 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the anchor study (80): the first look at the outputs. Every panel row, valued on its
+  quarter-end from what was known then, set beside the excess over SPY at a quarter, a
+  half year and a year, grouped by what the record said: over the eighteen quarter-ends
+  from 2022 to mid-2026 the anchors did not precede the price on their own side. Buys
+  ran below the market at a year and sells about level with it; the cheapest quintile
+  by margin of safety ran below the dearest; a belief that the price was almost surely
+  overpaid preceded a year level with the market; and the sign of the margin matched the
+  sign of the year's excess on 418 rows of 889. One regime, eighteen dates, no statistic
+  claimed, and no model, belief or signal touched: a finding for the reader, recorded in
+  full in `output/anchor_study/`. The panel builder gains a per-name daily cache and a
+  switch to skip the Form 4 read, without which the rebuild spent an hour fetching
+  documents the study does not read. No new `Failed` string.
 - the home lines of 20-F filers read their own filings (79): Toyota's Tokyo line and
   AstraZeneca's London line declare the SEC filer by CIK, the ticker map knowing only the
   depositary receipts, and read the same IFRS statements their home lines trade on;

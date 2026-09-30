@@ -345,10 +345,15 @@ def statements_on(symbol: str, d: date, sec: SecLike, notes: list[str], *, decla
     return periods, decision, None, submission, filtered
 
 
+NO_INSIDERS = "not read: the panel was built without Form 4 (80); the documents for every name at every date are hours of paced fetching that the anchor study does not read"
+
+
 def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Quote | None, profile: fetch.Profile | None,
-           vendor: list[boundary.FiscalPeriod] | None = None, *, declared_cik: str | None = None, adr_ratio: float | None = None) -> boundary.Financials:
+           vendor: list[boundary.FiscalPeriod] | None = None, *, declared_cik: str | None = None, adr_ratio: float | None = None,
+           insiders: bool = True) -> boundary.Financials:
     """[adr_ratio] (42): ordinary shares per receipt as declared on the universe entry; the
-    filed count is divided by it, since the price is the receipt's, and both are recorded."""
+    filed count is divided by it, since the price is the receipt's, and both are recorded.
+    [insiders] False (80) leaves the Form 4 block unread with the reason on the record."""
     notes: list[str] = []
     periods, decision, why, submission, facts = statements_on(symbol, d, sec, notes, declared_cik=declared_cik)
     priced = price_on(history, d)
@@ -382,9 +387,12 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
     # (66) Form 4 on the same terms as the live fetch, over the index with everything filed
     # after D already removed: the block reads only what was public on the date.
     pit_cik, _ = fetch.cik_of(symbol, sec.tickers, declared_cik)
-    insiders_block, insiders_reason = fetch_sec.insiders_of(
-        pit_cik, submissions_on_or_before(fetch_sec.submissions(pit_cik, sec.user_agent), d) if pit_cik else None,
-        d, sec.user_agent)
+    if insiders:
+        insiders_block, insiders_reason = fetch_sec.insiders_of(
+            pit_cik, submissions_on_or_before(fetch_sec.submissions(pit_cik, sec.user_agent), d) if pit_cik else None,
+            d, sec.user_agent)
+    else:
+        insiders_block, insiders_reason = None, NO_INSIDERS
     pit = boundary.PointInTime(
         as_of_date=d.isoformat(),
         price_date=None if priced is None else priced[0].isoformat(),
@@ -434,10 +442,11 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
 
 def run_date(d: date, tickers: list[str], *, histories: dict[str, History], quotes: dict[str, tuple[fetch.Quote | None, fetch.Profile | None]],
              sec: SecLike, out_root: Path = PIT_ROOT, vendors: dict[str, list[boundary.FiscalPeriod]] | None = None,
-             ciks: Mapping[str, str] | None = None, ratios: Mapping[str, float] | None = None) -> Path:
+             ciks: Mapping[str, str] | None = None, ratios: Mapping[str, float] | None = None, insiders: bool = True) -> Path:
     """data/pit/<D>/ with a record per ticker and the reference as of D. The vendor's live
     statements (fetched once per ticker) supply the same-period cross-check; [ciks] are the
-    universe entries' declared filers (25), [ratios] their declared receipt ratios (42)."""
+    universe entries' declared filers (25), [ratios] their declared receipt ratios (42);
+    [insiders] False (80) skips the Form 4 read on every record, with the reason."""
     out = out_root / d.isoformat()
     out.mkdir(parents=True, exist_ok=True)
     vendors = {} if vendors is None else vendors
@@ -452,7 +461,7 @@ def run_date(d: date, tickers: list[str], *, histories: dict[str, History], quot
         if symbol not in vendors:
             vendors[symbol] = fetch.vendor_periods(yf.Ticker(symbol), [])
         quote, profile = quotes[symbol]
-        records.append(record(symbol, d, sec, histories[symbol], quote, profile, vendors[symbol], declared_cik=ciks.get(symbol), adr_ratio=ratios.get(symbol)))
+        records.append(record(symbol, d, sec, histories[symbol], quote, profile, vendors[symbol], declared_cik=ciks.get(symbol), adr_ratio=ratios.get(symbol), insiders=insiders))
     countries: set[str] = set()
     currencies: set[str] = set()
     fx_sources = reference.FxSources.from_json_string((REFERENCE / "fx_sources.json").read_text())

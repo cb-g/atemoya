@@ -69,6 +69,50 @@ def forward_return(history: pit.History, d: date, days: int = 365) -> float | No
 
 
 OPTIONS_MAX_AGE_DAYS = 7  # the no-lookahead window (37): a snapshot older than this before D is not used
+NAME_CACHE = REPO_ROOT / "data" / "pit" / "names"
+NAME_CACHE_SECONDS = 86400  # (80) a name's history, profile and vendor statements are fetched once a day
+
+
+def name_to_json(history: pit.History, quote: fetch.Quote | None, profile: fetch.Profile | None, vendor: list[pit.boundary.FiscalPeriod]) -> dict[str, object]:
+    """(80) What the fetch phase holds for one name, as JSON: the closes, splits and volumes
+    by ISO date, the vendor's quote and profile, and its statements as boundary periods."""
+    return {
+        "closes": {d.isoformat(): v for d, v in sorted(history.closes.items())},
+        "splits": {d.isoformat(): v for d, v in sorted(history.splits.items())},
+        "volumes": {d.isoformat(): v for d, v in sorted(history.volumes.items())},
+        "quote": None if quote is None else quote.model_dump(mode="json"),
+        "profile": None if profile is None else profile.model_dump(mode="json"),
+        "vendor": [p.to_json() for p in vendor],
+    }
+
+
+def name_from_json(raw: dict[str, object]) -> tuple[pit.History, tuple[fetch.Quote | None, fetch.Profile | None], list[pit.boundary.FiscalPeriod]]:
+    def dated(key: str) -> dict[date, float]:
+        return {date.fromisoformat(k): float(v) for k, v in as_dict(raw.get(key)).items() if isinstance(v, (int, float))}
+    quote = fetch.Quote.model_validate(raw["quote"]) if raw.get("quote") is not None else None
+    profile = fetch.Profile.model_validate(raw["profile"]) if raw.get("profile") is not None else None
+    vendor_raw = raw.get("vendor")
+    vendor = [pit.boundary.FiscalPeriod.from_json(p) for p in vendor_raw] if isinstance(vendor_raw, list) else []  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+    return pit.History(dated("closes"), dated("splits"), dated("volumes")), (quote, profile), vendor
+
+
+def load_name(symbol: str, *, refetch: bool = False, cache: Path = NAME_CACHE) -> tuple[pit.History, tuple[fetch.Quote | None, fetch.Profile | None], list[pit.boundary.FiscalPeriod]]:
+    """(80) The name's vendor data from the day's cache, else fetched and cached: the panel
+    builder used to make three vendor calls per name for the whole universe before valuing a
+    single date, writing nothing meanwhile, and a slow vendor turned that into an hour of
+    silence that a restart repeated from zero."""
+    import time  # noqa: PLC0415
+
+    path = cache / f"{symbol}.json"
+    if path.exists() and not refetch and time.time() - path.stat().st_mtime < NAME_CACHE_SECONDS:
+        return name_from_json(as_dict(json.loads(path.read_text())))
+    ticker = yf.Ticker(symbol)
+    history = pit.History.fetch(symbol)
+    quote, profile = fetch._info(ticker, [])  # pyright: ignore[reportPrivateUsage]
+    vendor = fetch.vendor_periods(ticker, [])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(name_to_json(history, quote, profile, vendor), sort_keys=True))
+    return history, (quote, profile), vendor
 
 
 def run_batch(pit_dir: Path, d: date, binary: Path, options: Path | None = None, out_root: Path = OUT) -> Path:
@@ -142,8 +186,12 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--dates", nargs="*", type=date.fromisoformat, default=QUARTER_ENDS)
     parser.add_argument("--binary", type=Path, default=BINARY)
     parser.add_argument("--options", type=Path, default=None, help="the options store (37); the batch runs with --options-max-age 7")
+    parser.add_argument("--refetch", action="store_true", help="(80) ignore the per-name vendor cache under data/pit/names/ and fetch every name again")
+    parser.add_argument("--no-insiders", action="store_true", help="(80) leave the Form 4 block unread on every record, with the reason; the anchor study does not read it and the documents are hours of paced fetching")
     args = parser.parse_args(argv)
     universe_path: Path = args.universe
+    refetch: bool = args.refetch
+    insiders: bool = not args.no_insiders
     dates: list[date] = sorted(args.dates)
     binary: Path = args.binary
     options: Path | None = args.options
@@ -158,17 +206,15 @@ def main(argv: list[str]) -> int:
     histories: dict[str, pit.History] = {}
     quotes: dict[str, tuple[fetch.Quote | None, fetch.Profile | None]] = {}
     vendors: dict[str, list[pit.boundary.FiscalPeriod]] = {}
-    for symbol in tickers:
-        ticker = yf.Ticker(symbol)
-        histories[symbol] = pit.History.fetch(symbol)
-        quotes[symbol] = fetch._info(ticker, [])  # pyright: ignore[reportPrivateUsage]
-        vendors[symbol] = fetch.vendor_periods(ticker, [])
+    for i, symbol in enumerate(tickers, 1):
+        histories[symbol], quotes[symbol], vendors[symbol] = load_name(symbol, refetch=refetch)
+        print(f"vendor {i}/{len(tickers)} {symbol}", flush=True)  # (80) the fetch phase used to write nothing for an hour
     OUT.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, object]] = []
     summary: list[str] = ["point-in-time panel: one descriptive table per date, no statistic", ""]
     market: list[str] = ["point-in-time market-implied (37): one descriptive table per date, no statistic; every number risk-neutral, the market's risk pricing and not a forecast", ""]
     for d in dates:
-        pit_dir = pit.run_date(d, tickers, histories=histories, quotes=quotes, sec=sec, vendors=vendors, ciks=ciks, ratios=ratios)
+        pit_dir = pit.run_date(d, tickers, histories=histories, quotes=quotes, sec=sec, vendors=vendors, ciks=ciks, ratios=ratios, insiders=insiders)
         valuations = run_batch(pit_dir, d, binary, options)
         day_rows: list[dict[str, object]] = []
         for line in valuations.read_text().splitlines():
