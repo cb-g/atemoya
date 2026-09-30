@@ -89,8 +89,9 @@ root: the regulator's own register maps the stock code to the filer, and each bu
 year's consolidated lines arrive with their ifrs-full account ids and go through the same
 period reader, one period per report, the receipt day as the filing date. Lines under
 DART's own account ids or under no standard code are counted and left unread. The key is
-free on registration at opendart.fss.or.kr; without it the name stays on the vendor and
-the reason says so.
+free on registration at opendart.fss.or.kr, open to individuals of any nationality under
+its terms of use, personal and one per member, which is why it lives only in your own env
+file; without it the name stays on the vendor and the reason says so.
 
 Both providers assemble cash, total debt, the change in working capital and ebit per
 `reference/field_definitions.json`, the one definition per field with its reasoning; every

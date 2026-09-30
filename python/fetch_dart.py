@@ -20,7 +20,16 @@ filed under no standard code) is counted and left unread until a measured rule s
 it is.
 
 Nothing fetched is tracked: the register and each year's lines are cached for a day
-under data/dart/, since an amended report replaces the year's lines under a new receipt."""
+under data/dart/, since an amended report replaces the year's lines under a new receipt.
+
+OpenDART's terms of use (opendart.fss.or.kr/intro/terms.do), read 2026-09-30: anyone may
+register, individuals included, with no nationality or residency limit; the key is
+personal, one per member, and not to be used by a third party, which is why it is read
+only from the operator's own environment or env file and never written, printed or
+committed; the request allowance is posted on the site and a call over it answers status
+020, raised here as an error and never retried; excessive network access is a ground for
+suspension, so requests are paced and cached. The terms say nothing about redistribution
+and the tool does none: every user fetches with their own key under a gitignored path."""
 
 from __future__ import annotations
 
