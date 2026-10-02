@@ -17,6 +17,7 @@ dune exec atemoya -- --entity-class OperatingCompany --out output data/financial
 uv run python/build_panel.py                    # every quarter-end 2022-03-31 .. 2026-06-30 -> output/pit/panel.jsonl, panel_summary.txt
 uv run python/build_panel.py --no-insiders      # (80) the same without the Form 4 read, hours of paced fetching the anchor study does not need; the per-name vendor fetch is cached for the day under data/pit/names/
 uv run python/anchor_study.py --as-of 2026-09-30  # (80) what the panel's judgments preceded: excess over SPY at +63/+126/+252 trading days, by signal, quintile, belief, model, class and refusal family -> output/anchor_study/
+uv run python/consensus.py                     # (82) today's consensus bar for every name, the release history, output/consensus/; at each sitting or daily
 ```
 
 ## Inputs and declarations
@@ -366,6 +367,57 @@ count alone** — a median of eight things is a number pretending to be a measur
 
 The picture is one point per episode at +60, grouped by side and insider state, with the
 median drawn as a bar and the count in the label. A picture of a sample, not of a result.
+
+## Consensus and surprise
+
+`uv run python/consensus.py` (82) records the Street's bar for every universe name and how
+each name has met it. It is a side output: nothing in a valuation record reads it, no model,
+belief or signal moves with it, and it never fails a record. Consensus is an input for a
+reader who uses it as the market's bar; it settles nothing.
+
+**The daily snapshot** writes `data/consensus/days/<day>/<TICKER>.json`: for this quarter,
+next quarter and both fiscal years, each period's end date, the EPS bar (mean, low, high,
+analyst count, the year-ago figure), the revenue bar with the same keys, and the EPS
+consensus as it stood 7, 30, 60 and 90 days earlier. The fetch day is the as-of date of
+every figure in the file, and a figure the vendor does not carry is null. A run is
+idempotent per day: an ok record is never fetched or overwritten again, a failed one is
+retried, and `manifest.json` says complete or partial with the names that failed. A name
+the vendor answers with no consensus at all, a fund for instance, is `none` rather than
+failed: listed apart in the manifest and not retried that day. A day with no run gets a
+manifest of its own saying it is a gap, because a bar cannot be taken after the fact. Run
+it at each sitting or daily by cron; the more days it runs, the fresher the bar each
+revenue pair can use, and every pair says how many days before the release its bar was
+taken. Nothing here is tracked, so each clone builds its own history from its first run.
+
+**The release history** writes `data/consensus/history/<TICKER>.json` once a day: every
+past release in the vendor's dated earnings table with its final EPS estimate and the
+reported figure, both on the **Street-adjusted basis** the vendor carries and not GAAP,
+the estimate being the last consensus before the release with no earlier date given; each
+release matched to the latest filed fiscal period ending 1 to 120 days before it, or null
+with the reason; and, for a name with SEC filings, quarterly revenue as first filed, a
+three-month figure where one is filed and otherwise the fourth quarter as the fiscal year
+less the nine months to the third quarter, labelled so. The revenue tags are the shared
+`total_revenue` list plus one element the shared list does not yet name, written in the
+module with the reason.
+
+**The summary** is `output/consensus/summary.jsonl`, `pooled.json` and `summary.txt`,
+regenerated from `data/` alone. Per name and per window of the last 8 and 12 releases:
+the count, beats (reported above the estimate), meets and misses, the beat rate, and the
+median and quartiles of the surprise in percent of the estimate, a zero estimate counted in
+the rate and left out of the percentages with the reason. Revenue gets the same windows,
+in percent and absolute, over the pairs of a snapshotted bar taken on a day before the
+release and the filed quarter, so it starts empty and fills one release at a time. The
+pooled rate is the beats and releases summed across every name with a window; pulling a
+name's own rate toward it is the reader's decision, not the tool's.
+
+**Scope limits.** The surprise history measures the Street's adjusted EPS against the
+Street's own estimate, so it says nothing about GAAP EPS. The revenue bar is the
+consensus's own definition of revenue, which can differ from the filed line, gross against
+net or with pass-through costs, and a pair across such a gap reads as a surprise. A name
+with no SEC filer has releases and bars but no filed quarters, and says so. Sources: the
+vendor's earnings-trend module, reached through a private surface of yfinance 1.7.0, so a
+change in the library is a failed record with the reason; the vendor's dated earnings
+table; SEC companyfacts.
 
 ## Build, test, type-check
 

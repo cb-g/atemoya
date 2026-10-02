@@ -643,6 +643,27 @@ the point-in-time panel reads only what was public on its date. The summary prin
 counts beside every stretched name and then lists those **stretched with insiders on the other
 side**. No score, no weight and no signal: the block counts and lists, and the reader decides.
 
+## Consensus and surprise
+
+A side output off the universe (82), drawn on the chart as a dotted edge that never reaches
+the record. `python/consensus.py` takes the Street's bar for every name each day, keeps the
+vendor's release history beside the filed quarters, and summarises each name's surprise
+pattern and the pooled rate. **It adds no `Failed` string and fails no record.** Its own
+states are written into its files, not into a record:
+
+| file | state | as the file carries it |
+|---|---|---|
+| a day's name | failed | vendor failed: (exception) |
+| a day's name | none: no consensus, not retried that day | the vendor carries no consensus for this name |
+| a day's name | none: no consensus, not retried that day | the vendor lists the periods but no EPS or revenue estimate in any |
+| a day's manifest | partial | (n) name(s) failed; rerun today to retry them |
+| a day's manifest | gap | no run on this day; a consensus bar cannot be taken after the fact |
+| a release | no period | no filed fiscal period ends 1 to 120 days before the release |
+| a release, filed quarters | no filer | no SEC filer for this name: no filed period ends or quarterly revenue |
+| a name's history | failed | the vendor's dated earnings table carries no past release with a reported figure |
+| a window | zero estimate | estimate is zero: no surprise in percent |
+| a summary | no pairs | no revenue bar was snapshotted before a release whose filed quarter is on disk |
+
 ## Changelog
 
 - entity class (05): declaration, class check, admissibility, floor.
@@ -763,6 +784,18 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- consensus and surprise (82): a side output the downstream project asked for, drawn off
+  the universe and never reaching the record. `python/consensus.py` takes each name's
+  Street bar every day it runs, this and next quarter and both fiscal years with mean, low,
+  high, analyst count and the EPS trend at 7 to 90 days, idempotent per day, with a gap
+  manifest for every day without a run and a fund's missing consensus kept apart from a
+  failed fetch. Beside it, each name's release history on the vendor's Street-adjusted
+  basis matched to its filed fiscal period, and quarterly revenue as first filed. The
+  summary gives each name's beat rate and surprise over its last 8 and 12 releases, revenue
+  pairs as snapshots come to precede releases, and the pooled rate; shrinkage is the
+  reader's. Lumentum files revenue under an element the shared tag list lacks, so the
+  module reads it beside the list, and widening the list is left to a measured change. No
+  valuation record moves and no `Failed` string is added.
 - thirty-two names and a holding-company class (81): the downstream project running a clone
   asked for thirty-two names over two days, the class judgments delegated to the tool as in
   brief 71 and every why saying what was read. Howard Hughes fits no class since it bought a

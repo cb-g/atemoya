@@ -35,6 +35,7 @@ flowchart TD
   M -. "guard or missing field" .-> FF2[Failed: see table]
   A -. "Unprofitable" .-> RW[runway readout]
   RW --> REC
+  U -. "side output, never on the record" .-> CS[consensus and surprise]
   C -. "bound or sign" .-> FF3[Failed: see table]
   classDef failed fill:#f8d7da,stroke:#b02a37,color:#000
   classDef store fill:#e2e3e5,stroke:#6c757d,color:#000
