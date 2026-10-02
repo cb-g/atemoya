@@ -17,7 +17,7 @@ def test_tracked_universe_is_a_declaration_only() -> None:
     text = (ROOT / "reference" / "universe.json").read_text()
     u = universe.load_text(text)
     raw = json.loads(text)["tickers"]
-    assert len(u.tickers) == len(raw) == 178
+    assert len(u.tickers) == len(raw) == 210
     for entry in raw:
         assert set(entry) <= set(universe.ALLOWED) and all(k in entry for k in universe.REQUIRED)
         # no number followed by a unit, no percentage or multiple, no four-digit year, in a why
@@ -216,3 +216,26 @@ def test_mexicos_three_rows_and_its_curve() -> None:
     # a peso price takes Mexico's curve and terminal growth
     assert dict(fx.currency_countries)["MXN"] == "Mexico"
     assert "MXN" in dict(fx.currencies)
+
+
+def test_the_holding_company_class_and_the_thirty_two() -> None:
+    """(81) A name that fits no class gets a class: HoldingCompany has a row, admits no
+    model and names the sum of the parts; Howard Hughes is its one name. Strategy is a
+    Wrapper, not a new class. Thales and Saab declare the LEI their own reports carry."""
+    import reference
+
+    admissibility = reference.Admissibility.from_json_string((ROOT / "reference" / "admissibility.json").read_text())
+    rows = dict(admissibility.classes)
+    row = rows["HoldingCompany"]
+    assert row.admissible_models == []
+    assert "sum of the parts" in row.lens and "consolidated statements" in row.never
+    assert any(n.startswith("HoldingCompany (81)") for n in admissibility.notes)
+
+    u = universe.load_text((ROOT / "reference" / "universe.json").read_text())
+    by = {e.ticker: e for e in u.tickers}
+    assert [t for t, e in by.items() if e.entity_class == "HoldingCompany"] == ["HHH"]
+    assert by["MSTR"].entity_class == "Wrapper"
+    assert by["HO.PA"].lei == "529900FNDVTQJOVVPZ19"
+    assert by["SAAB-B.ST"].lei == "549300ZHO4JCQQI13M69"
+    added = "CLS TTD BX OWL PS GOGO IONQ IBM LLY MXT.AX MOT.AX PSUS RDDT NBIS SPOT BKNG EXPE ABNB HHH AEHR LITE BWXT ENB MP ZETA COIN MSTR GD NOC RTX HO.PA SAAB-B.ST".split()
+    assert set(added) <= set(by) and len(added) == 32

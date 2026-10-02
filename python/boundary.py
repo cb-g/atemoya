@@ -3587,11 +3587,29 @@ class Ballast:
 
 
 @dataclass
+class HoldingCompany:
+    """Original type: entity_class = [ ... | HoldingCompany | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'HoldingCompany'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'HoldingCompany'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class EntityClass:
     """Original type: entity_class = [ ... ]
     """
 
-    value: Union[OperatingCompany, Bank, Insurer, RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, Unprofitable, Cyclical, Wrapper, Bdc, ConstructionStage, UnderBid, Ballast]
+    value: Union[OperatingCompany, Bank, Insurer, RegulatedUtility, MerchantPower, Reit, Miner, Royalty, HighGrowthSoftware, Unprofitable, Cyclical, Wrapper, Bdc, ConstructionStage, UnderBid, Ballast, HoldingCompany]
 
     @property
     def kind(self) -> str:
@@ -3633,6 +3651,8 @@ class EntityClass:
                 return cls(UnderBid())
             if x == 'Ballast':
                 return cls(Ballast())
+            if x == 'HoldingCompany':
+                return cls(HoldingCompany())
             _atd_bad_json('EntityClass', x)
         _atd_bad_json('EntityClass', x)
 

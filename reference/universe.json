@@ -5,7 +5,8 @@
     "FDUS, MAIN and GBDC move from Wrapper to Bdc (59): a business development company is not a wrapper holding other securities, it is a lender whose portfolio is marked to fair value every quarter, and the net asset value lens reads that mark with the coverage of the distribution beside it. The ten other wrappers stay refused.",
     "Twenty-five names added 2026-09-29 (71) at the request of a downstream project that runs a clone: the class judgments were delegated to the tool by that project and drafted here from the vendor's statements and the filers' own forms, so each why says what was read; the user confirmed the two judgment calls, Circle as an operating company and GE Vernova as a cyclical, and may reclassify any of the others by editing this file. Two of the project's twenty-six were not added as asked: SK hynix was already here as 000660.KS, and Bending Spoons, which the project could not name a symbol for, is listed on Nasdaq as BSP, confirmed from the listing's own announcement, and is added under that symbol. Mexico joins the four country tables in the same commit because two of the names, the Mexico City line of Walmart's retailer and the Tiendas 3B receipt, report in pesos and Mexico was in none of them.",
     "lei (73): a Legal Entity Identifier declared on an entry names the filer whose ESEF annual reports on filings.xbrl.org are its statements, for a name with no SEC filer; read from the filer's own report cover and never resolved from the vendor, whose ISIN lookup returned nothing for three of the four names and a wrong code for one. Declared 2026-09-29 on Sanofi, Air Liquide, ASML and Novo Nordisk; Allianz is not on the aggregator and stays on the vendor.",
-    "Filers declared by CIK 2026-09-30 (79): Toyota's Tokyo line and AstraZeneca's London line read their own 20-F statements, which are the same IFRS accounts each home line trades on. MUFG's is not declared, its 20-F being US GAAP against the J-GAAP the Tokyo line trades on; the difference is written on its entry."
+    "Filers declared by CIK 2026-09-30 (79): Toyota's Tokyo line and AstraZeneca's London line read their own 20-F statements, which are the same IFRS accounts each home line trades on. MUFG's is not declared, its 20-F being US GAAP against the J-GAAP the Tokyo line trades on; the difference is written on its entry.",
+    "Thirty-two names added 2026-10-02 (81) at the request of the downstream project that runs a clone, twenty asked on the first and twelve on the second, the class judgments delegated to the tool as in brief 71 and drafted from the vendor's statements, the filers' own forms and their announcements, so each why says what was read; the user may reclassify any by editing this file. Howard Hughes needed a class this file did not have: since buying an insurer it consolidates a land developer and an insurer, and per the admissibility rule a name that fits no class gets a class added, HoldingCompany, refused with the sum of the parts named, rather than a place in OperatingCompany. Strategy is a Wrapper and not a new class, because the premium or discount to the bitcoin it holds is the wrapper lens exactly. Thales and Saab declare the LEI read from their own ESEF reports' facts."
   ],
   "tickers": [
     {
@@ -1068,6 +1069,248 @@
       "scope_limits": [
         "fresh-start accounting on emergence from bankruptcy sits inside the window, so the filed history before it is another entity's"
       ]
+    },
+    {
+      "ticker": "CLS",
+      "entity_class": "OperatingCompany",
+      "why": "Celestica, electronics manufacturing services and the networking and server platforms it builds for data-centre customers, domiciled in Canada and reporting in dollars under a dollar listing, so Canada's country risk premium on the dollar curve; profitable with positive free cash flow on every filed year and no structural break; an operating company on thin margins, as the server-hardware maker here is.",
+      "scope_limits": [
+        "a few hyperscale customers carry a large share of revenue, a concentration the filing discloses and the DCF cannot see"
+      ]
+    },
+    {
+      "ticker": "TTD",
+      "entity_class": "HighGrowthSoftware",
+      "why": "The Trade Desk, a self-service software platform on which advertisers and their agencies buy digital advertising; revenue compounds, GAAP-profitable with positive free cash flow on every filed year, its large stock compensation kept inside EBIT as filed; the software lens."
+    },
+    {
+      "ticker": "BX",
+      "entity_class": "OperatingCompany",
+      "why": "Blackstone, an alternative asset manager earning management fees on capital it manages for others and performance revenue on what that capital earns; positive free cash flow; an operating company, as the other alternative asset managers here are.",
+      "scope_limits": [
+        "performance revenue is carried interest accrued on the funds' unrealised marks, so it moves with markets and reverses when the marks fall, and a single year mixes a fee business with a market position",
+        "some of the funds it manages are consolidated, and their own borrowings are not the manager's"
+      ]
+    },
+    {
+      "ticker": "OWL",
+      "entity_class": "OperatingCompany",
+      "why": "Blue Owl Capital, an alternative asset manager earning fees on permanent and long-dated capital in private credit, stakes in other managers and real estate; positive free cash flow while GAAP net income stays thin under the amortisation of the intangibles its acquisitions brought; an operating company, as the other alternative asset managers here are.",
+      "scope_limits": [
+        "structural: the business was formed by a combination at the start of the window and grown by acquisitions inside it, so the filed history is not one entity's throughout"
+      ]
+    },
+    {
+      "ticker": "PS",
+      "entity_class": "OperatingCompany",
+      "why": "Pershing Square Inc., the listed management company of Pershing Square's funds, earning management and performance fees on mostly permanent capital in a few concentrated portfolios, listed together with the closed-end fund it manages; an operating company, as the other alternative asset managers here are.",
+      "scope_limits": [
+        "performance fees on a few concentrated funds are a large part of revenue and move with those funds' annual returns, which the DCF reads as a level",
+        "the filed history is short and mostly predates the listing"
+      ]
+    },
+    {
+      "ticker": "GOGO",
+      "entity_class": "OperatingCompany",
+      "why": "Gogo, inflight connectivity for business aviation, selling airborne equipment and recurring service plans; profitable with positive free cash flow on every filed year; an operating company.",
+      "scope_limits": [
+        "structural: an acquisition inside the window about doubled revenue and added international and government customers, so the filed history before it is a smaller business"
+      ]
+    },
+    {
+      "ticker": "IONQ",
+      "entity_class": "Unprofitable",
+      "why": "IonQ, quantum computing systems and quantum networking; GAAP loss-making on every filed year with negative free cash flow funded by share issuance; the runway lens, no model.",
+      "scope_limits": [
+        "growth is bought: several acquisitions inside the window add revenue the earlier years do not carry"
+      ]
+    },
+    {
+      "ticker": "IBM",
+      "entity_class": "OperatingCompany",
+      "why": "IBM, software, consulting and infrastructure; positive, stable free cash flow; an operating company.",
+      "scope_limits": [
+        "a captive financing arm lends to clients for hardware, software and services, so finance debt sits inside total debt beside the corporate debt, as on the car maker here",
+        "structural: the managed-infrastructure business was spun off at the start of the window and the earliest year is restated without it"
+      ]
+    },
+    {
+      "ticker": "LLY",
+      "entity_class": "OperatingCompany",
+      "why": "Eli Lilly, pharmaceuticals; profitable, with free cash flow positive but held well under earnings by a manufacturing build-out for its incretin medicines; an operating company, as the other pharmaceutical makers here are.",
+      "scope_limits": [
+        "capital spending on new manufacturing runs far above depreciation inside the window, so the free cash flow the DCF starts from is held down by construction",
+        "growth rests on a few products whose pricing and patents the model does not see"
+      ]
+    },
+    {
+      "ticker": "MXT.AX",
+      "entity_class": "Wrapper",
+      "why": "Metrics Master Income Trust, an Australian listed investment trust in Australian dollars holding units in its manager's wholesale funds of senior corporate loans rather than loans of its own; a wrapper, refused by design and judged on the premium or discount to its net asset value and the source of its distribution; not a business development company, since it files nothing the net asset value model reads."
+    },
+    {
+      "ticker": "MOT.AX",
+      "entity_class": "Wrapper",
+      "why": "Metrics Income Opportunities Trust, an Australian listed investment trust in Australian dollars holding units in its manager's wholesale funds of higher-yielding private credit and equity; a wrapper, refused by design and judged on the premium or discount to its net asset value and the source of its distribution; not a business development company, since it files nothing the net asset value model reads."
+    },
+    {
+      "ticker": "PSUS",
+      "entity_class": "Wrapper",
+      "why": "Pershing Square USA, a closed-end fund registered under the Investment Company Act holding a concentrated portfolio of listed equities, managed by the asset manager listed beside it; a wrapper, refused by design."
+    },
+    {
+      "ticker": "RDDT",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Reddit, an advertising-funded community platform with data licensing beside it; revenue compounds and the latest filed year is GAAP-profitable with positive free cash flow, after loss years that include the listing's stock compensation; declared software rather than a plain operating company, the judgment already made for the recently profitable platform here."
+    },
+    {
+      "ticker": "NBIS",
+      "entity_class": "Unprofitable",
+      "why": "Nebius Group, GPU cloud capacity, domiciled in the Netherlands and reporting in dollars; operating losses on every filed year of the continuing business and free cash flow deeply negative under a build-out, the positive net income of some years being gains on businesses and stakes it sold, deconsolidated or revalued; the runway lens, no model, as for the other GPU cloud here.",
+      "scope_limits": [
+        "structural: the filed history before the divestiture is a larger company's, the continuing business being what remained"
+      ]
+    },
+    {
+      "ticker": "SPOT",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Spotify, subscription and advertising-funded audio streaming, a foreign private issuer reporting in euros under IFRS under a dollar listing, so the record is cross-currency; operating losses turned to profit inside the window with free cash flow positive on every filed year; declared software rather than a plain operating company, the judgment already made for the recently profitable platform here.",
+      "scope_limits": [
+        "royalties to rights holders are most of the cost of revenue and are set by licence agreements the statements do not separate",
+        "the legal domicile is Luxembourg while the vendor's profile, which chooses the country risk premium, names Sweden, where the headquarters is; both carry no country premium"
+      ]
+    },
+    {
+      "ticker": "BKNG",
+      "entity_class": "OperatingCompany",
+      "why": "Booking Holdings, online travel agencies earning commissions and payment revenue on accommodation and travel bookings; positive, stable free cash flow and no structural break.",
+      "scope_limits": [
+        "travel demand follows the economy, and the window opens on the recovery from the pandemic collapse, so the earliest year understates the run rate"
+      ]
+    },
+    {
+      "ticker": "EXPE",
+      "entity_class": "OperatingCompany",
+      "why": "Expedia Group, online travel agencies and a business-to-business travel platform; positive, stable free cash flow and no structural break.",
+      "scope_limits": [
+        "travel demand follows the economy, and the window opens on the recovery from the pandemic collapse, so the earliest year understates the run rate"
+      ]
+    },
+    {
+      "ticker": "ABNB",
+      "entity_class": "OperatingCompany",
+      "why": "Airbnb, a marketplace for short-term stays earning service fees from guests and hosts; positive, stable free cash flow, its large stock compensation kept inside EBIT as filed; an operating company.",
+      "scope_limits": [
+        "guest payments held for future stays sit on their own balance-sheet line against a matching liability, outside the cash the record reads, and are not the company's"
+      ]
+    },
+    {
+      "ticker": "HHH",
+      "entity_class": "HoldingCompany",
+      "why": "Howard Hughes Holdings, master-planned communities whose land sales follow the housing cycle and the commercial properties built in them, and since after its latest annual report a specialty insurer and reinsurer bought for cash and funded partly by preferred stock; one set of consolidated statements now holds a land developer and an insurer, which need lenses that cannot share a model, so the holding-company class, refused with the sum of the parts named.",
+      "scope_limits": [
+        "the latest annual statements hold the developer alone; the insurer enters from the first annual report after the purchase",
+        "structural: a seaport entertainment district was spun off inside the window"
+      ]
+    },
+    {
+      "ticker": "AEHR",
+      "entity_class": "Cyclical",
+      "why": "Aehr Test Systems, wafer-level test and burn-in equipment sold to semiconductor makers in a few large orders, whose fiscal year ends in May; profitable years and loss years follow its customers' capacity cycles, so through-cycle return on today's capital is the question and never the latest year; the class text puts a company that was profitable and went through a break here rather than among the unprofitable.",
+      "scope_limits": [
+        "a few customers carry most of revenue in any year, so the swing is partly the cycle and partly the timing of their orders"
+      ]
+    },
+    {
+      "ticker": "LITE",
+      "entity_class": "Cyclical",
+      "why": "Lumentum, optical and photonic components and modules for telecom and data-centre networks, whose fiscal year ends at the turn of June and July; profitable, then operating losses through the telecom downturn, then profitable again on data-centre demand, so through-cycle return on today's capital is the question; the class text puts a company that was profitable and went through a break here rather than among the unprofitable.",
+      "scope_limits": [
+        "the latest year's GAAP net loss is a one-time non-cash loss on extinguishing convertible notes settled in shares; the mid-cycle model builds its after-tax operating profit from net income plus interest, so that loss enters the window as an operating year and alone turns the mean return on capital negative, though the filer reported positive operating income that year; without it the window holds one observation fewer than the floor, so the name refuses either way, but the reason the record gives is the loss and not the business",
+        "acquisitions inside the window add businesses the earlier years do not carry"
+      ]
+    },
+    {
+      "ticker": "BWXT",
+      "entity_class": "OperatingCompany",
+      "why": "BWX Technologies, naval nuclear reactors and fuel for the U.S. government under long-running contracts, and commercial nuclear components and services; positive, stable free cash flow; an operating company, as the defence contractor here is.",
+      "scope_limits": [
+        "acquisitions inside the window and an agreed sale of the medical isotopes business change the segment mix, so the filed history is a different mix from the one ahead"
+      ]
+    },
+    {
+      "ticker": "ENB",
+      "entity_class": "OperatingCompany",
+      "why": "Enbridge, crude oil and natural gas pipelines, gas distribution utilities and renewable power, a Canadian filer of annual reports under U.S. GAAP in Canadian dollars under a dollar listing, so the record is cross-currency; tolls and contracted capacity rather than a commodity margin, which is what the operating company lens asks of a midstream name, as for the pipeline company here.",
+      "scope_limits": [
+        "structural: gas distribution utilities bought inside the window are a rate-base business, whose construction a discounted cash flow reads as value destruction",
+        "the capital programme runs above depreciation, so the free cash flow the DCF starts from is held down by construction"
+      ]
+    },
+    {
+      "ticker": "MP",
+      "entity_class": "Miner",
+      "why": "MP Materials, a rare-earth mine and separation plant producing neodymium-praseodymium oxide and building magnet manufacturing, its earnings set by rare-earth prices it does not control; the miner class by its text, net asset value and reserve life, refused by design.",
+      "scope_limits": [
+        "a government agreement guarantees a floor price on its oxide and buys the output of a magnet plant under construction, which a net asset value at a long-run price deck would have to read",
+        "loss-making on the latest filed years while magnet manufacturing is built"
+      ]
+    },
+    {
+      "ticker": "ZETA",
+      "entity_class": "Unprofitable",
+      "why": "Zeta Global, marketing technology and data sold by subscription and usage; a GAAP net loss on every filed year with the operating line only lately positive, and positive free cash flow from stock compensation added back; the runway lens, no model, exactly the judgment the class text settles for a filer with no profitable year; the software class becomes the right one once a filed year shows a GAAP profit and positive free cash flow together."
+    },
+    {
+      "ticker": "COIN",
+      "entity_class": "Cyclical",
+      "why": "Coinbase, a crypto-asset exchange, custodian and staking provider earning transaction fees on trading volume and interest on the stablecoin reserves it shares in; earnings set by crypto-asset prices and trading activity it does not control, with loss years and profit years inside the window, so through-cycle return on today's capital is the question.",
+      "scope_limits": [
+        "crypto assets held for investment are marked to fair value through the income statement, so earnings carry a market position as well as a business, and the mid-cycle model, which builds its after-tax operating profit from net income plus interest, reads that position as operating return",
+        "customer cash and crypto held in custody sit on their own balance-sheet lines against matching liabilities, outside the cash the record reads, and are not the company's",
+        "structural: a derivatives exchange bought inside the window adds a business the earlier years do not carry"
+      ]
+    },
+    {
+      "ticker": "MSTR",
+      "entity_class": "Wrapper",
+      "why": "Strategy, a holder of bitcoin funded by common, preferred and convertible issuance, with a small enterprise software business beside it that is not what the price reads; the wrapper class, refused by design and judged on the premium or discount to the bitcoin it holds and on its preferred dividends decomposed by source, never on the consolidated statements, whose operating line carries the change in the bitcoin's fair value.",
+      "scope_limits": [
+        "the holding is one commodity rather than securities, and the preferred and convertible claims on it rank ahead of the common"
+      ]
+    },
+    {
+      "ticker": "GD",
+      "entity_class": "OperatingCompany",
+      "why": "General Dynamics, business jets, nuclear submarines, combat vehicles and defence technology services; positive, stable free cash flow; an operating company, as the defence contractor here is."
+    },
+    {
+      "ticker": "NOC",
+      "entity_class": "OperatingCompany",
+      "why": "Northrop Grumman, aircraft, strategic missiles, space systems and mission systems for defence customers; positive, stable free cash flow; an operating company, as the defence contractor here is."
+    },
+    {
+      "ticker": "RTX",
+      "entity_class": "OperatingCompany",
+      "why": "RTX, aircraft engines, aerospace systems and missiles and defence systems; positive free cash flow; an operating company, as the defence contractor here is.",
+      "scope_limits": [
+        "a charge for inspecting and compensating customers over a powder-metal defect in one engine family depressed one year's operating income inside the window"
+      ]
+    },
+    {
+      "ticker": "HO.PA",
+      "entity_class": "OperatingCompany",
+      "why": "the Paris line of Thales, defence electronics, aerospace, space and digital identity and security, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own facts, with the vendor's statements cross-checked beside them; positive, stable free cash flow; an operating company.",
+      "lei": "529900FNDVTQJOVVPZ19"
+    },
+    {
+      "ticker": "SAAB-B.ST",
+      "entity_class": "OperatingCompany",
+      "why": "the Stockholm B line of Saab, combat aircraft, missiles, naval systems and surveillance, reporting in kronor with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own facts, with the vendor's statements cross-checked beside them; profitable with positive free cash flow while it builds capacity for its order book; an operating company.",
+      "scope_limits": [
+        "capital spending on new capacity runs above depreciation inside the window, so the free cash flow the DCF starts from is held down by construction"
+      ],
+      "lei": "549300ZHO4JCQQI13M69"
     }
   ]
 }

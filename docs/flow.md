@@ -763,6 +763,21 @@ side**. No score, no weight and no signal: the block counts and lists, and the r
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- thirty-two names and a holding-company class (81): the downstream project running a clone
+  asked for thirty-two names over two days, the class judgments delegated to the tool as in
+  brief 71 and every why saying what was read. Howard Hughes fits no class since it bought a
+  specialty insurer: one set of consolidated statements now holds a land developer and an
+  insurer, so the admissibility rule adds `HoldingCompany`, refused with the sum of the parts
+  named, rather than giving it a place in `OperatingCompany`. Strategy is a `Wrapper`, the
+  premium or discount to the bitcoin it holds being that lens exactly. Thales reads its ESEF
+  reports by the LEI its own facts carry; Saab declares its LEI and stays on the vendor by the
+  aggregator-lag decision. Twelve of the thirty-two value and twenty refuse with the reason on
+  the record. Lumentum's refusal is a finding about the mid-cycle model rather than the name:
+  its after-tax operating profit is built from net income, so a one-time loss on extinguishing
+  convertible notes enters the window as an operating year and alone turns the mean return
+  negative; the scope limit says so. Every one of the hundred and seventy-eight existing
+  records is byte-identical between the previous tip and this tree on the same snapshot. The
+  class refusal is the existing templated string, so no new `Failed` string.
 - the anchor study (80): the first look at the outputs. Every panel row, valued on its
   quarter-end from what was known then, set beside the excess over SPY at a quarter, a
   half year and a year, grouped by what the record said: over the eighteen quarter-ends

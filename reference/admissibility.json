@@ -5,6 +5,7 @@
     "Models today: dcf (OperatingCompany, HighGrowthSoftware), dcf_midcycle (Cyclical), residual_income (Bank), residual_income_insurer (Insurer, needs filed statements), reit_ffo_dividend (Reit). A class with [] has no admissible model yet and is refused with its lens named.",
     "Inadmissible is Failed with the lens named: the reader learns what the right measurement is.",
     "Anything that fits no class gets a class added to the boundary variant and a row here, never a place in OperatingCompany.",
+    "HoldingCompany (81): one listed company whose consolidated statements hold parts that need different lenses, an insurer beside a land developer for the first such name; refused with the sum-of-the-parts lens named, because no single model on the consolidated statements reads either part correctly. A conglomerate whose parts share a lens is not this class.",
     "Reit (18): the FFO-covered dividend discounted at the CAPM cost of equity with the REIT industry beta, FFO per NAREIT from filed tags; the lens is on FFO, not AFFO, because AFFO's adjustments are not reliably tagged, and every record says so. The distribution rule (a U.S. REIT distributes at least 90% of its REIT taxable income excluding net capital gain; jurisdiction-specific) is recorded here and not used: the payout is observed. A mortgage REIT is not this lens; none is classed Reit today.",
     "HighGrowthSoftware (21): the DCF is admissible. A growth path that reverts inside the explicit horizon is the anchor at conservative persistence, and the implied readouts say what the price needs and for how long; stock compensation stays inside EBIT as the filed expense, no add-back. Unprofitable stays refused: negative free cash flow makes the DCF meaningless, not conservative, and the solvers have nothing to invert.",
     "Cyclical (22): earnings set by a commodity price or an industry cycle the company does not control. The DCF runs on the through-cycle return on invested capital applied to today's capital, from filed data only: no price deck. Unprofitable (renamed from PreProfit, 22) is a state, not a forecast: no history of profit to normalise from, valued on runway against the catalyst calendar. A company that was profitable and is through a break is Cyclical with a declared scope limit, never Unprofitable."
@@ -128,6 +129,12 @@
       "never": "any directional valuation",
       "floor_basis_default": "no floor by construction: held as a hedge without a directional thesis",
       "floor_present_default": false
+    },
+    "HoldingCompany": {
+      "lens": "the sum of the parts, each part on its own class's lens; never one model on the consolidated statements",
+      "admissible_models": [],
+      "never": "an FCFF DCF, residual income or any multiple on the consolidated statements: the parts need lenses that cannot share one set of statements, and a consolidated cash flow blends an insurer's float or a developer's land inventory into an operating business's free cash flow",
+      "floor_basis_default": "the sum of the parts, each at its own class's floor"
     }
   }
 }

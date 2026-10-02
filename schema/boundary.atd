@@ -300,6 +300,7 @@ type entity_class = [
   | ConstructionStage    (* percent complete, distance to first production, debt paydown *)
   | UnderBid             (* the announced offer price; all other valuation suspended *)
   | Ballast              (* nothing; held as a hedge, no directional thesis *)
+  | HoldingCompany       (* parts that need different lenses under one set of statements (81): the sum of the parts, each on its own class's lens *)
 ]
 type status = [ Ok | Failed ]
 type signal = [ Buy | Hold | Sell ]
