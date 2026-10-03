@@ -249,6 +249,8 @@ type financials = {
   ~market_provider : string;     (* where price, market cap and currencies came from; always the vendor feed *)
   ~provider_reason : string;     (* why this statements provider was chosen *)
   ~statements_unavailable : string;   (* why the provider had no statements for this ticker; empty when it had *)
+  ~rd_history : rd_year list;         (* the filed annual research and development expense, newest first, up to twelve fiscal years, in financial_currency; empty with the reason below *)
+  ?rd_history_reason : string option; (* why rd_history is empty: no filed facts, or no research and development line in them *)
   ?identity_mismatch : string option; (* the ticker no longer names the filer the universe entry declared (map_cik); the record is refused before anything else *)
   ?latest_filing : string option;     (* ISO date of the newest annual filing the statements come from *)
   ?cross_check : cross_check option;  (* the vendor's statements compared with the filed ones *)
@@ -1146,6 +1148,50 @@ type runway_period = {
   free_cash_flow : float;
 }
 
+(* One fiscal year's research and development expense as filed. *)
+type rd_year = {
+  period_end : string;
+  value : float;
+  tag : string;      (* the element it was filed under *)
+  filed : string;    (* ISO date of the filing the value was read from *)
+}
+
+(* The R&D shadow: what the generic DCF would read if research and development were an
+   investment and not a cost. A shadow beside the headline, never the headline: fair_value,
+   margin_of_safety and signal on the record are untouched by it. The expense of the latest
+   year and of the [amortization_years] years before it is capitalised straight-line: the
+   research asset joins invested capital, the year's amortisation replaces the year's expense
+   in operating profit, and the net investment joins reinvestment. Free cash flow is unchanged
+   by construction (the expense was cash either way), so the shadow differs from the headline
+   only through the return on capital and the reinvestment rate, that is through the starting
+   growth. *)
+type rd_shadow = {
+  amortization_years : int;           (* the declared straight-line life, params.json rd_amortization_years *)
+  amortization_years_source : string;
+  rd_latest : float;                  (* the latest fiscal year's expense *)
+  rd_years : string list;             (* the fiscal year ends read: the latest and the amortization_years before it *)
+  rd_tag : string;                    (* the element of the latest year's expense *)
+  research_asset : float;             (* the unamortised balance: sum over k = 0..N-1 of expense(t-k) * (N-k)/N *)
+  amortization : float;               (* this year's: sum over k = 1..N of expense(t-k) / N *)
+  nopat : float;                      (* the headline's *)
+  nopat_adjusted : float;             (* nopat + rd_latest - amortization: the expense stays fully deductible, so the add-back is untaxed *)
+  invested_capital : float;           (* the headline's *)
+  invested_capital_adjusted : float;  (* invested_capital + research_asset *)
+  roic : float nullable;              (* the headline's *)
+  roic_adjusted : float nullable;
+  reinvestment_rate : float nullable; (* the headline's *)
+  reinvestment_rate_adjusted : float nullable;
+  growth_source : growth_source;      (* the headline's *)
+  growth_source_adjusted : growth_source;
+  g0 : float;                         (* the headline's starting growth *)
+  g0_adjusted : float;
+  fcff : float;                       (* identical on both sides, recorded as the check *)
+  headline_fair_value : float;        (* the DCF's own value on the unadjusted statements, before any gate *)
+  fair_value : float;                 (* what the headline would be with research and development capitalised *)
+  margin_of_safety : float;           (* (fair_value - price) / price, the shadow's *)
+  scope_limits : string list;
+}
+
 type runway = {
   period_end : string;                    (* the latest fiscal period *)
   cash : float;                           (* cash and short-term investments, the cash definition *)
@@ -1218,4 +1264,6 @@ type valuation = {
   ?earnings_reason : string option;             (* (68) present instead: why there is no block *)
   ?runway : runway option;                      (* (76) on an Unprofitable record: cash against the burn as this tool reads it, and the releases inside it; never a fair value, a floor or a signal *)
   ?runway_reason : string option;               (* (76) present instead on an Unprofitable record: why there is no readout *)
+  ?rd_shadow : rd_shadow option;                (* on a record routed to the generic DCF: the value with research and development capitalised, beside the headline and never replacing it *)
+  ?rd_shadow_reason : string option;            (* present instead on such a record: why there is no shadow *)
 }

@@ -9,6 +9,17 @@ is negative.
 Nothing is sampled: fair value is monotone in terminal growth below the discount rate, so
 the probability is the belief's CDF at the implied long-run growth, in closed form.
 
+## What ships, and what does not
+
+The tracked `reference/beliefs.json` carries one default per entity class and no belief on
+any name. The defaults are deliberately plain: long-run growth near the economy's, or a
+long-run return on equity near the cost of equity, each with a wide band. They exist so a
+fresh clone produces a complete record, not because anyone holds them about a particular
+company. A record built on one says so in `belief.source`; a `probability_overpaid` under a
+class default is a statement about that default and not about the reader's view. Whoever
+runs a clone should read the six and either keep them knowingly or pass their own with
+`--beliefs`, kept outside the repository.
+
 ## Rules of use, in this order
 
 1. **A belief is yours.** It is declared, dated, and carries a why. The tool never

@@ -1256,6 +1256,7 @@ class Params:
     frontier_seed: IntScalar
     terminal_growth_rate: CountryTable
     unwired: Any
+    rd_amortization_years: Optional[IntScalar] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Params':
@@ -1276,6 +1277,7 @@ class Params:
                 frontier_seed=IntScalar.from_json(x['frontier_seed']) if 'frontier_seed' in x else _atd_missing_json_field('Params', 'frontier_seed'),
                 terminal_growth_rate=CountryTable.from_json(x['terminal_growth_rate']) if 'terminal_growth_rate' in x else _atd_missing_json_field('Params', 'terminal_growth_rate'),
                 unwired=(lambda x: x)(x['unwired']) if 'unwired' in x else _atd_missing_json_field('Params', 'unwired'),
+                rd_amortization_years=IntScalar.from_json(x['rd_amortization_years']) if 'rd_amortization_years' in x else None,
             )
         else:
             _atd_bad_json('Params', x)
@@ -1297,6 +1299,8 @@ class Params:
         res['frontier_seed'] = (lambda x: x.to_json())(self.frontier_seed)
         res['terminal_growth_rate'] = (lambda x: x.to_json())(self.terminal_growth_rate)
         res['unwired'] = (lambda x: x)(self.unwired)
+        if self.rd_amortization_years is not None:
+            res['rd_amortization_years'] = (lambda x: x.to_json())(self.rd_amortization_years)
         return res
 
     @classmethod

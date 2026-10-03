@@ -786,6 +786,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the R&D shadow: `rd_shadow` on every record routed to the generic DCF, the value with
+  research and development capitalised straight-line over the declared
+  `rd_amortization_years`, beside the headline and never replacing it, or `rd_shadow_reason`;
+  the fetch adds `rd_history`. A readout, not a branch: no new `Failed` string; every record
+  is byte-identical with the two new fields stripped.
 - the ticker-identity guard: `map_cik` on the universe entry, the CIK the SEC's ticker map
   gave when the entry was last confirmed; the fetch compares it on every run, live and
   point-in-time, and a difference refuses the record first, ahead of the class. One new

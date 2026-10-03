@@ -61,6 +61,15 @@ record naming the refresher to run. First run, in this order:
 5. `uv run python/fetch_all.py`.
 6. `dune exec atemoya -- data/financials --out output`.
 
+**The beliefs a fresh clone runs on are not yours.** `reference/beliefs.json` ships six
+class defaults, each a textbook starting point (long-run growth near the economy's, with a
+wide band) and none a view on any company; it ships no belief on any name. Every
+`probability_overpaid` on a first run comes from one of them, and the record says so in
+`belief.source` ("class default for ..."). Read the six before relying on a number built on
+them, and either keep them knowingly or declare your own in a file of the same format
+passed with `--beliefs`, which overrides them and never needs committing; `docs/beliefs.md`
+has the rules.
+
 ## What it produces
 
 | output | what it is | command |
@@ -75,6 +84,7 @@ record naming the refresher to run. First run, in this order:
 | view | every vertical on a declared view's side, ranked by EV per dollar at risk | `uv run python/express.py data/views/mine.json` |
 | fills | empirical fill positions from the trade tape, read back into the view tool | `uv run python/fill_model.py AAPL` |
 | stretch | six price measures with own-history percentiles and two counts on every record; the summary lists every name at or above 3 on either side | the same run, `output/summary.txt` |
+| R&D shadow | what the generic DCF would say with research and development capitalised, beside the headline and never replacing it | the same run, `rd_shadow` on the record |
 | studies | what the records' own judgments preceded against SPY, and the same rows sorted by plain cheapness; descriptive, a declared holdout unread | `uv run python/anchor_study.py`, `baseline_study.py` |
 | consensus | the Street's dated bar per name and each name's surprise history; never on a record | `uv run python/consensus.py`, daily |
 

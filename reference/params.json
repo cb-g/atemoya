@@ -104,6 +104,15 @@
     "as_of": "2026-09-19",
     "max_age_days": 400
   },
+  "rd_amortization_years": {
+    "value": 5,
+    "source": "assumption: research and development capitalised straight-line over five years for every industry, the middle of the two-to-ten-year range Damodaran's R&D conversion uses by industry; a declared choice for the shadow, never an estimate from a filing",
+    "as_of": "2026-10-03",
+    "max_age_days": 400,
+    "notes": [
+      "Read by the R&D shadow only. No headline value depends on it."
+    ]
+  },
   "terminal_growth_rate": {
     "source": "IMF World Economic Outlook, April 2026 vintage: gross domestic product, current prices, national currency (series NGDP, unit XDC, current prices), percent change at the last year of the projection horizon, 2031; transcribed by hand",
     "as_of": "2026-04-14",

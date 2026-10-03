@@ -157,6 +157,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     earnings_calendar = None;
     earnings_calendar_reason = None;
     identity_mismatch = None;
+    rd_history = [];
+    rd_history_reason = None;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -246,7 +248,7 @@ let params_json =
   "growth_clamp_upper": {"value": 0.5, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mean_reversion_lambda": {"value": 0.25, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
   "mature_market_erp": {"value": 0.0423, "source": "Damodaran mature base", "as_of": "2026-01-01", "max_age_days": 400},
-  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "interest_evidence_floor": {"value": 0.005, "source": "seed", "as_of": "2026-09-24", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
+  "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "interest_evidence_floor": {"value": 0.005, "source": "seed", "as_of": "2026-09-24", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "rd_amortization_years": {"value": 2, "source": "seed life", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
     "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03, "Brazil": 0.035}},
@@ -2060,6 +2062,57 @@ let test_stretch_alert_rule () =
   check_error "the tracked universe refuses a thesis" (Universe.load_string {|{"tickers": [{"ticker": "TEST", "entity_class": "OperatingCompany", "why": "w", "thesis": "long"}]}|}) [ "unknown field(s) thesis" ];
   let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
   Alcotest.check valuation "json round trip" v again
+
+(* The R&D shadow on invented figures, life 2: expense 100, 80, 60 newest first.
+   asset = 100 * 2/2 + 80 * 1/2 = 140;  amortisation = 80/2 + 60/2 = 70;  net investment 30. *)
+let test_rd_shadow () =
+  let year period_end value : Boundary_t.rd_year = { period_end; value; tag = "ResearchAndDevelopmentExpense"; filed = "2025-11-01" } in
+  let three = [ year "2025-09-30" 100.; year "2024-09-30" 80.; year "2023-09-30" 60. ] in
+  let s = get (Rd_shadow.schedule ~life:2 ~latest:"2025-09-30" three) in
+  Alcotest.(check (float 1e-9)) "research asset" 140. s.research_asset;
+  Alcotest.(check (float 1e-9)) "amortisation" 70. s.amortization;
+  Alcotest.(check (list string)) "the years read" [ "2025-09-30"; "2024-09-30"; "2023-09-30" ] s.rd_years;
+  (* a 53-week year end still counts as the year before; an older year past the life is ignored *)
+  let s53 = get (Rd_shadow.schedule ~life:2 ~latest:"2025-09-30" [ year "2025-09-30" 100.; year "2024-09-28" 80.; year "2023-09-30" 60.; year "2022-09-30" 999. ]) in
+  Alcotest.(check (float 1e-9)) "same asset" 140. s53.research_asset;
+  check_error "too few years" (Rd_shadow.schedule ~life:2 ~latest:"2025-09-30" [ year "2025-09-30" 100.; year "2024-09-30" 80. ])
+    [ "2 consecutive fiscal years of research and development are filed up to 2025-09-30; a 2-year life needs 3" ];
+  check_error "a gap is not a shorter schedule" (Rd_shadow.schedule ~life:2 ~latest:"2025-09-30" [ year "2025-09-30" 100.; year "2023-09-30" 60.; year "2022-09-30" 50. ])
+    [ "not consecutive: 2023-09-30 is followed by 2025-09-30" ];
+  check_error "the latest year itself is not filed" (Rd_shadow.schedule ~life:2 ~latest:"2025-09-30" [ year "2024-09-30" 80.; year "2023-09-30" 60. ])
+    [ "no research and development expense is filed for the fiscal period ending 2025-09-30; the newest is 2024-09-30" ];
+  check_error "nothing filed" (Rd_shadow.schedule ~life:2 ~latest:"2025-09-30" []) [ "no research and development expense is filed" ];
+  (* on a record: the headline is untouched, the free cash flow is the same on both sides,
+     and the after-tax operating profit and the capital carry the schedule *)
+  let plain = run (financials (history ())) in
+  let v = run { (financials (history ())) with rd_history = three } in
+  Alcotest.check status "still Ok" `Ok v.status;
+  Alcotest.(check (option (float 1e-12))) "headline fair value untouched" plain.fair_value v.fair_value;
+  Alcotest.(check (option signal)) "headline signal untouched" plain.signal v.signal;
+  (match (v.rd_shadow, v.inputs) with
+  | Some b, Some (`Dcf i) ->
+      Alcotest.(check (option string)) "no reason beside a block" None v.rd_shadow_reason;
+      Alcotest.(check int) "the declared life" 2 b.amortization_years;
+      Alcotest.(check (float 1e-6)) "free cash flow unchanged by construction" i.fcff b.fcff;
+      Alcotest.(check (float 1e-6)) "nopat gains the net investment untaxed" (i.nopat +. 30.) b.nopat_adjusted;
+      Alcotest.(check (float 1e-6)) "capital gains the asset" (i.invested_capital +. 140.) b.invested_capital_adjusted;
+      Alcotest.(check (float 1e-9)) "the headline's own value recorded" (Option.get v.fair_value) b.headline_fair_value;
+      Alcotest.(check (float 1e-9)) "the shadow's margin is on the record's price" ((b.fair_value -. i.price) /. i.price) b.margin_of_safety;
+      Alcotest.(check bool) "the limits ride on the block" true (List.length b.scope_limits = 4)
+  | _ -> Alcotest.fail "no shadow block on a completed DCF with a full history");
+  Alcotest.(check (option string)) "no history: the reason, and no block"
+    (Some "the record carries no research and development history: fetched before the shadow existed") plain.rd_shadow_reason;
+  Alcotest.(check bool) "no block" true (Option.is_none plain.rd_shadow);
+  let unfiled = run { (financials (history ())) with rd_history_reason = Some "the filer's facts carry no annual research and development expense" } in
+  Alcotest.(check (option string)) "the fetch's reason is carried" (Some "the filer's facts carry no annual research and development expense") unfiled.rd_shadow_reason;
+  let short = run { (financials (history ())) with rd_history = [ year "2025-09-30" 100. ] } in
+  check_mentions "too short on a record" (Option.value short.rd_shadow_reason ~default:"") [ "a 2-year life needs 3" ];
+  (* a record not routed to the generic DCF carries neither field *)
+  let wrapper = run ~declared:(Some (declaration `Wrapper)) { (financials (history ())) with rd_history = three } in
+  Alcotest.(check bool) "neither on a wrapper" true (Option.is_none wrapper.rd_shadow && Option.is_none wrapper.rd_shadow_reason);
+  (* cross-currency: the history converts with the statements *)
+  let converted = Fx.convert ~rate:2. { (financials (history ())) with rd_history = three } in
+  Alcotest.(check (list (float 1e-9))) "converted" [ 200.; 160.; 120. ] (List.map (fun (y : Boundary_t.rd_year) -> y.value) converted.rd_history)
 
 let test_flow_chart_names_every_reason () =
   let chart =
@@ -4197,6 +4250,7 @@ let () =
           Alcotest.test_case "the bracketing expiries" `Quick test_earnings_bracket;
           Alcotest.test_case "the implied event move, and the negative case" `Quick test_earnings_implied_move;
           Alcotest.test_case "the mark and the block" `Quick test_earnings_spans_and_block;
+          Alcotest.test_case "the R&D shadow: schedule, invariants, reasons" `Quick test_rd_shadow;
         ] );
       ( "runway readout",
         [

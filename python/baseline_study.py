@@ -32,7 +32,10 @@ anchor study prints them:
    each measure, one line each;
 5. the same difference within each model's own rows, the quintiles re-cut there, because a
    margin of safety from one model does not rank against another's and the pooled cut in
-   2 and 4 mixes them.
+   2 and 4 mixes them;
+6. the R&D shadow: on the generic DCF's rows that carry one, the shadow's margin of safety
+   in quintiles beside the headline's and the earnings yield on the same rows, the rank
+   correlation of the two margins and how many rows change quintile.
 
 **Descriptive only**, under the anchor study's rules: no statistic the sample can carry, a
 cell under MIN_CELL rows a count alone, nothing fed back into a model, a belief or a
@@ -129,6 +132,55 @@ def load_measures(records: list[Record], pit: Path) -> dict[tuple[str, str], Mea
     return out
 
 
+def load_shadow_margins(records: list[Record], pit_out: Path) -> dict[tuple[str, str], float]:
+    """The R&D shadow's margin of safety per (name, date), from the date's own valuations
+    file; only the records that carry a block."""
+    out: dict[tuple[str, str], float] = {}
+    for d in sorted({r.as_of for r in records}):
+        path = pit_out / d / "valuations.jsonl"
+        if not path.exists():
+            continue
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            v = cast(Json, json.loads(line))
+            block = v.get("rd_shadow")
+            if isinstance(block, dict):
+                margin = study.as_float(cast(Json, block).get("margin_of_safety"))
+                if margin is not None:
+                    out[(str(v["ticker"]), d)] = margin
+    return out
+
+
+def shadow_section(valued: list[Record], shadow: dict[tuple[str, str], float], measures: dict[tuple[str, str], Measures]) -> list[str]:
+    """On the generic DCF's rows that carry an R&D shadow: the shadow's margin of safety, the
+    headline's and the earnings yield, each cut into quintiles on those same rows."""
+    rows = [r for r in valued if r.model == "dcf" and (r.ticker, r.as_of) in shadow]
+    title = f"the R&D shadow: {len(rows)} generic-DCF rows on {len({r.ticker for r in rows})} names carry one"
+    lines = ["", title, "-" * len(title)]
+    if not rows:
+        return lines + ["  none: the panel was built before the shadow, or no row has the research and development history it needs"]
+    q_shadow = quintiles_within_date([(r, shadow[(r.ticker, r.as_of)]) for r in rows])
+    q_head = quintiles_within_date([(r, cast(float, r.margin_of_safety)) for r in rows])
+    lines += quintile_block("by the shadow's margin of safety", rows, q_shadow) + [""]
+    lines += quintile_block("the same rows by the headline's margin of safety", rows, q_head) + [""]
+    lines += ["the cheapest quintile's median excess less the dearest's, on those rows:",
+              spread_line("shadow margin of safety", rows, q_shadow), spread_line("headline margin of safety", rows, q_head)]
+    with_yield = [(r, cast(float, measures[(r.ticker, r.as_of)].earnings_yield)) for r in rows if measures[(r.ticker, r.as_of)].earnings_yield is not None]
+    lines.append(spread_line("earnings_yield", [r for r, _ in with_yield], quintiles_within_date(with_yield)))
+    per_date: list[float] = []
+    moved = sum(1 for r in rows if q_shadow.get((r.ticker, r.as_of)) != q_head.get((r.ticker, r.as_of)))
+    for d in sorted({r.as_of for r in rows}):
+        pairs = [(shadow[(r.ticker, d)], cast(float, r.margin_of_safety)) for r in rows if r.as_of == d]
+        rho = spearman([a for a, _ in pairs], [b for _, b in pairs])
+        if rho is not None:
+            per_date.append(rho)
+    if per_date:
+        lines.append(f"  rank correlation of the shadow's margin with the headline's, within the date: median {statistics.median(per_date):+.2f} over {len(per_date)} dates (lowest {min(per_date):+.2f})")
+    lines.append(f"  rows whose quintile differs between the two: {moved} of {len(rows)}")
+    return lines
+
+
 def quintiles_within_date(rows: list[tuple[Record, float]]) -> dict[tuple[str, str], int]:
     """1 the lowest value, 5 the highest, cut within each date over exactly the rows given."""
     by_date: dict[str, list[tuple[Record, float]]] = {}
@@ -188,7 +240,8 @@ def spread_line(label: str, rows: list[Record], q: dict[tuple[str, str], int]) -
     return f"  {label}: {', '.join(parts)}"
 
 
-def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_of: date, holdout_line: str) -> str:
+def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_of: date, holdout_line: str,
+           shadow: dict[tuple[str, str], float] | None = None) -> str:
     dates = sorted({r.as_of for r in records})
     lines = [
         f"The naive baseline: {len(records)} panel rows, {len({r.ticker for r in records})} names, {len(dates)} quarter-ends {dates[0]} to {dates[-1]}, closes cut at {as_of.isoformat()}.",
@@ -243,6 +296,7 @@ def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_
             lines += [f"{model}, {len(rows)} rows on {len({r.ticker for r in rows})} names carrying {name}:",
                       spread_line(name, rows, quintiles_within_date(both)),
                       spread_line("margin of safety", rows, quintiles_within_date([(r, cast(float, r.margin_of_safety)) for r in rows]))]
+    lines += shadow_section(valued, shadow or {}, measures)
     return "\n".join(lines) + "\n"
 
 
@@ -267,7 +321,7 @@ def main(argv: list[str]) -> int:
         json.dumps({"ticker": r.ticker, "as_of": r.as_of, "status": r.status, "margin_of_safety": r.margin_of_safety, "excess": r.excess,
                     **{m: measures[(r.ticker, r.as_of)].get(m) for m in MEASURES}, "measures_reason": measures[(r.ticker, r.as_of)].reason},
                    sort_keys=True) + "\n" for r in records))
-    text = report(records, measures, as_of, holdout_line)
+    text = report(records, measures, as_of, holdout_line, load_shadow_margins(records, panel.parent))
     (out / "tables.txt").write_text(text)
     sys.stdout.write(text)
     return 0

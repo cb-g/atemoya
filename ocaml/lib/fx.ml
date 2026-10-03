@@ -114,4 +114,9 @@ let convert ~rate (fin : financials) =
       delta_nwc_composition = scale_composition rate p.delta_nwc_composition;
     }
   in
-  { fin with periods = List.map period fin.periods; currency = fin.trading_currency }
+  {
+    fin with
+    periods = List.map period fin.periods;
+    rd_history = List.map (fun (y : rd_year) -> { y with value = y.value *. rate }) fin.rd_history;
+    currency = fin.trading_currency;
+  }
