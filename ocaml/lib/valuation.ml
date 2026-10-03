@@ -714,6 +714,11 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                     run_model ~fin:converted ~conversion ~model ~class_check ~rule ~country
                       (with_required_return assumptions))))
   in
+  (* Before anything else: a ticker that no longer names the declared filer is another
+     company's data under this entry's class and scope limits, and nothing below is safe. *)
+  match original.identity_mismatch with
+  | Some why -> failed ~floor:(floor_default ()) ("ticker identity: " ^ why)
+  | None -> (
   match Params.classification_threshold ~hold_vintage params ~today with
   | Error reason -> failed ~floor:(floor_default ()) reason
   | Ok threshold -> (
@@ -738,4 +743,4 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                       | None ->
                           failed ~model ~class_check ~floor:(floor_of_rule rule)
                             "country not determinable from the fetch"
-                      | Some country -> value ~model ~class_check ~rule ~country)))))
+                      | Some country -> value ~model ~class_check ~rule ~country))))))

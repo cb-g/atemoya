@@ -156,6 +156,7 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     stretch_reason = None;
     earnings_calendar = None;
     earnings_calendar_reason = None;
+    identity_mismatch = None;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -889,6 +890,11 @@ let test_inadmissible_refuses_with_lens () =
   Alcotest.(check (list string)) "one code per limit, in order" [ "build_out"; "one_off_in_window" ] coded.scope_limit_codes;
   let ragged = run ~declared:(Some (declaration ~scope_limits:[ "a"; "b" ] ~scope_limit_codes:[ "build_out" ] `Wrapper)) (financials (history ())) in
   Alcotest.(check (list string)) "codes that do not match the limits are no coding" [ "uncoded"; "uncoded" ] ragged.scope_limit_codes;
+  (* the identity guard: a ticker that no longer names the declared filer is refused first,
+     ahead of the class refusal that would otherwise hide it *)
+  let moved = run ~declared:(Some (declaration `Wrapper)) { (financials (history ())) with identity_mismatch = Some "SEC's ticker map gives CIK 0000000002 (OTHER CO) for TEST, the universe entry declared CIK 0000000001" } in
+  check_reason moved [ "ticker identity: SEC's ticker map gives CIK 0000000002 (OTHER CO) for TEST" ];
+  check_nulls moved;
   Alcotest.(check (list string)) "no limit, no code" [] (run (financials (history ()))).scope_limit_codes;
   match v.class_check with
   | None -> Alcotest.fail "no class_check evidence"
@@ -2064,7 +2070,7 @@ let test_flow_chart_names_every_reason () =
       if not (contains chart needle) then
         Alcotest.failf "docs/flow.md does not mention the reason %S" needle)
     [ "entity_class not declared"; "class disagreement: declared OperatingCompany";
-      "no admissibility row for entity class"; "dcf not admissible for";
+      "no admissibility row for entity class"; "dcf not admissible for"; "ticker identity:";
       "country not determinable from the fetch"; "no risk-free curve for country";
       "has no"; "days old, older than its max_age_days"; "later than the valuation date";
       "no fiscal periods in statements"; "missing market data"; "missing statement fields for fiscal period ending";

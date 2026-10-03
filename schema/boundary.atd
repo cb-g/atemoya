@@ -249,6 +249,7 @@ type financials = {
   ~market_provider : string;     (* where price, market cap and currencies came from; always the vendor feed *)
   ~provider_reason : string;     (* why this statements provider was chosen *)
   ~statements_unavailable : string;   (* why the provider had no statements for this ticker; empty when it had *)
+  ?identity_mismatch : string option; (* the ticker no longer names the filer the universe entry declared (map_cik); the record is refused before anything else *)
   ?latest_filing : string option;     (* ISO date of the newest annual filing the statements come from *)
   ?cross_check : cross_check option;  (* the vendor's statements compared with the filed ones *)
   ?submissions_latest_annual : submission option;   (* every CIK-resolved record (14); absent with the reason below *)

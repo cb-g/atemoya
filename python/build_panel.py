@@ -201,6 +201,7 @@ def main(argv: list[str]) -> int:
     entries = universe_file.load(universe_path).tickers
     tickers = [e.ticker for e in entries]
     ciks = {e.ticker: e.cik for e in entries if e.cik}
+    map_ciks = {e.ticker: e.map_cik for e in entries if e.map_cik}
     ratios = {e.ticker: e.adr_ratio for e in entries if e.adr_ratio is not None}
     sec = fetch.SecContext()
     histories: dict[str, pit.History] = {}
@@ -214,7 +215,7 @@ def main(argv: list[str]) -> int:
     summary: list[str] = ["point-in-time panel: one descriptive table per date, no statistic", ""]
     market: list[str] = ["point-in-time market-implied (37): one descriptive table per date, no statistic; every number risk-neutral, the market's risk pricing and not a forecast", ""]
     for d in dates:
-        pit_dir = pit.run_date(d, tickers, histories=histories, quotes=quotes, sec=sec, vendors=vendors, ciks=ciks, ratios=ratios, insiders=insiders)
+        pit_dir = pit.run_date(d, tickers, histories=histories, quotes=quotes, sec=sec, vendors=vendors, ciks=ciks, ratios=ratios, insiders=insiders, map_ciks=map_ciks)
         valuations = run_batch(pit_dir, d, binary, options)
         day_rows: list[dict[str, object]] = []
         for line in valuations.read_text().splitlines():

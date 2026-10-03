@@ -204,6 +204,7 @@ type universe_entry = {
   ~scope_limits : string list;          (* durable: what the models cannot see for this name; carried verbatim *)
   ~scope_limit_codes : string list;     (* one code per scope limit, in the same order, each from the file's scope_codes; a reader filters on the code and reads the text *)
   ?cik : string option;                 (* an identifier, not a number (22): the SEC filer to read instead of the ticker map's, with the reason in why *)
+  ?map_cik : string option;             (* the CIK the SEC's ticker map gave for this ticker when the entry was declared, ten digits; a guard, never read for statements: the fetch refuses the record when the map gives another, since a ticker can pass to a different company *)
   ?lei : string option;                 (* (73) the Legal Entity Identifier whose ESEF annual reports on filings.xbrl.org are the statements, for a name with no SEC filer; declared, never resolved from the vendor *)
   ?adr_ratio : float option;            (* (42) ordinary shares per depositary receipt, positive, from the 20-F's deposit-agreement disclosure cited in why; absent means 1 *)
   ?build_out_return : declared_build_out option;      (* (60) the after-tax return the new capital earns once earning, a decimal *)

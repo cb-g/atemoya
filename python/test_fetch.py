@@ -175,3 +175,13 @@ def test_vendor_operating_cash_flow_row_is_read_any_sign() -> None:
     out = fetch._cashflow_values({"Cash Flow From Continuing Operating Activities": 12.0e6})  # pyright: ignore[reportPrivateUsage]
     assert out["operating_cash_flow"] == 12.0e6
     assert fetch._cashflow_values({})["operating_cash_flow"] is None  # pyright: ignore[reportPrivateUsage]
+
+
+def test_the_identity_guard_names_what_the_map_gives_now() -> None:
+    table: dict[str, object] = {"0": {"cik_str": 2, "ticker": "TKR", "title": "OTHER CO"}, "1": {"cik_str": 7, "ticker": "SAME", "title": "SAME CO"}}
+    assert fetch.identity_mismatch("SAME", table, "0000000007") is None
+    assert fetch.identity_mismatch("TKR", table, None) is None
+    moved = fetch.identity_mismatch("TKR", table, "0000000001")
+    assert moved is not None and "gives CIK 0000000002 (OTHER CO) for TKR, the universe entry declared CIK 0000000001" in moved
+    gone = fetch.identity_mismatch("GONE", table, "0000000001")
+    assert gone is not None and "no longer lists GONE" in gone

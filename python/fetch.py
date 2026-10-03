@@ -37,6 +37,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import fields
 from datetime import date, datetime, timezone
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 import yfinance as yf
@@ -638,6 +639,29 @@ def cik_of(symbol: str, table: Mapping[str, object], declared: str | None) -> tu
     return fetch_sec.cik_for(symbol, table), "SEC's ticker map"
 
 
+def identity_mismatch(symbol: str, table: Mapping[str, object], map_cik: str | None) -> str | None:
+    """Why the ticker no longer names the filer the universe entry declared, or None. A ticker
+    is a label an exchange reissues; the entry's map_cik is the CIK the SEC's ticker map gave
+    when a person declared the class, and a different one now means the class, the why and
+    the scope limits describe another company. No map_cik, no guard."""
+    if not map_cik:
+        return None
+    current = fetch_sec.cik_for(symbol, table)
+    if current == map_cik:
+        return None
+    if current is None:
+        return (f"SEC's ticker map no longer lists {symbol}, which the universe entry declared as CIK {map_cik}; "
+                f"confirm what the ticker names now and redeclare the entry")
+    title = ""
+    for raw in table.values():
+        if isinstance(raw, dict):
+            row = cast(dict[str, object], raw)
+            if str(row.get("cik_str", "")).zfill(10) == current and str(row.get("ticker", "")).upper() == symbol.upper():
+                title = str(row.get("title", ""))
+    return (f"SEC's ticker map gives CIK {current} ({title}) for {symbol}, the universe entry declared CIK {map_cik}; "
+            f"the ticker may have passed to another company: confirm what it names now and redeclare the entry")
+
+
 def stretch_of(symbol: str, as_of: date) -> tuple[boundary.Stretch | None, str | None]:
     """(52) The stretch block from the vendor's closes and volume on or before the date."""
     import pit  # noqa: PLC0415
@@ -956,6 +980,7 @@ def main(argv: list[str]) -> int:
         financials, shadow = fetch(symbol, as_of, sec,
                                    depth=periods_needed(entry.entity_class if entry else None, sec.admissibility, sec.params),
                                    declared_cik=entry.cik if entry else None, declared_lei=entry.lei if entry else None)
+        financials.identity_mismatch = identity_mismatch(symbol, sec.tickers, entry.map_cik if entry else None)
         # allow_nan=False: a NaN that slipped through is a bug here, not invalid JSON
         # for the other side to choke on.
         text = financials.to_json_string(indent=2, allow_nan=False)

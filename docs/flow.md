@@ -13,6 +13,7 @@ file.
 | stage | reason as the record carries it |
 |---|---|
 | read | stderr: cannot read financials; no record |
+| declaration | ticker identity: SEC's ticker map gives CIK (now) ((title)) for (ticker), the universe entry declared CIK (map_cik); or: no longer lists (ticker); refused before anything else |
 | declaration | entity_class not declared |
 | declaration | entity_class not declared; statements indicate (Bank or Insurer) (evidence) |
 | declaration | class disagreement: declared OperatingCompany, statements indicate (Bank or Insurer) (evidence) |
@@ -785,6 +786,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the ticker-identity guard: `map_cik` on the universe entry, the CIK the SEC's ticker map
+  gave when the entry was last confirmed; the fetch compares it on every run, live and
+  point-in-time, and a difference refuses the record first, ahead of the class. One new
+  `Failed` string, in the declaration stage; no record moves.
 - SPCX: the ticker passed from a SPAC-strategy fund to Space Exploration Technologies on its
   listing, and the entry still described the fund; it is rewritten and the class is
   `Unprofitable`. No new `Failed` string; no other record moves.

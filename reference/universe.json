@@ -8,7 +8,8 @@
     "Filers declared by CIK 2026-09-30 (79): Toyota's Tokyo line and AstraZeneca's London line read their own 20-F statements, which are the same IFRS accounts each home line trades on. MUFG's is not declared, its 20-F being US GAAP against the J-GAAP the Tokyo line trades on; the difference is written on its entry.",
     "Thirty-two names added 2026-10-02 (81) at the request of the downstream project that runs a clone, twenty asked on the first and twelve on the second, the class judgments delegated to the tool as in brief 71 and drafted from the vendor's statements, the filers' own forms and their announcements, so each why says what was read; the user may reclassify any by editing this file. Howard Hughes needed a class this file did not have: since buying an insurer it consolidates a land developer and an insurer, and per the admissibility rule a name that fits no class gets a class added, HoldingCompany, refused with the sum of the parts named, rather than a place in OperatingCompany. Strategy is a Wrapper and not a new class, because the premium or discount to the bitcoin it holds is the wrapper lens exactly. Thales and Saab declare the LEI read from their own ESEF reports' facts.",
     "Scope limit codes, 2026-10-03, at the request of the downstream project that runs a clone: every scope limit carries one code from scope_codes below, in scope_limit_codes beside it and in the same order, so a reader can filter by rule and still read the text. A code is stable once here: the vocabulary is added to and never renamed. On the same day Enbridge moves from OperatingCompany to RegulatedUtility, the downstream reader not confirming the class and the user agreeing, since most of its earnings are regulated or contracted and its own scope limit already said a DCF misreads the rate base; and Okta gains the goodwill limit that its capped growth rests on.",
-    "SPCX, 2026-10-03: the downstream project that runs a clone pointed out that the entry still described the SPAC-strategy fund that used the ticker; the ticker has named Space Exploration Technologies since its listing in June 2026, which the ticker map and the fetched statements confirm, so the entry is rewritten and the class is Unprofitable. A ticker can change hands; the class check did not flag it, since a wrapper's refusal reads no statements."
+    "SPCX, 2026-10-03: the downstream project that runs a clone pointed out that the entry still described the SPAC-strategy fund that used the ticker; the ticker has named Space Exploration Technologies since its listing in June 2026, which the ticker map and the fetched statements confirm, so the entry is rewritten and the class is Unprofitable. A ticker can change hands; the class check did not flag it, since a wrapper's refusal reads no statements.",
+    "map_cik, 2026-10-03: a ticker is a label an exchange reissues, and SPCX passed from a fund to a company without the entry noticing. Every entry whose ticker is in the ticker map of the Securities and Exchange Commission now declares map_cik, the CIK the map gave on the day a person last confirmed the entry. The fetch compares it with the map on every run and the record is refused, before anything else, when they differ; the entry is then read again by a person and redeclared. It is a guard and is never read for statements, which is what cik is for. The names outside the map, the foreign lines and a few funds, carry none and are not guarded."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -43,96 +44,114 @@
     {
       "ticker": "AAPL",
       "entity_class": "OperatingCompany",
-      "why": "a plain operating company: positive, stable free cash flow with no structural break"
+      "why": "a plain operating company: positive, stable free cash flow with no structural break",
+      "map_cik": "0000320193"
     },
     {
       "ticker": "MSFT",
       "entity_class": "OperatingCompany",
-      "why": "a plain operating company with a small net interest income line every year, which must not read as a bank"
+      "why": "a plain operating company with a small net interest income line every year, which must not read as a bank",
+      "map_cik": "0000789019"
     },
     {
       "ticker": "GOOGL",
       "entity_class": "OperatingCompany",
-      "why": "a plain operating company"
+      "why": "a plain operating company",
+      "map_cik": "0001652044"
     },
     {
       "ticker": "JNJ",
       "entity_class": "OperatingCompany",
-      "why": "a plain operating company; files no operating income line, so its EBIT is derived from filed tags"
+      "why": "a plain operating company; files no operating income line, so its EBIT is derived from filed tags",
+      "map_cik": "0000200406"
     },
     {
       "ticker": "KO",
       "entity_class": "OperatingCompany",
-      "why": "a plain operating company with negative net interest income"
+      "why": "a plain operating company with negative net interest income",
+      "map_cik": "0000021344"
     },
     {
       "ticker": "COST",
       "entity_class": "OperatingCompany",
-      "why": "a plain operating company"
+      "why": "a plain operating company",
+      "map_cik": "0000909832"
     },
     {
       "ticker": "XOM",
       "entity_class": "Cyclical",
       "why": "an integrated oil company: earnings set by the oil price; the filer of record is the pre-reincorporation entity, declared by CIK because the ticker map points at the new holding company, which has filed quarterlies only",
+      "map_cik": "0002115436",
       "cik": "0000034088"
     },
     {
       "ticker": "CVX",
       "entity_class": "Cyclical",
-      "why": "an integrated oil company: earnings set by the oil price; files no operating income line, so its EBIT is derived from filed tags"
+      "why": "an integrated oil company: earnings set by the oil price; files no operating income line, so its EBIT is derived from filed tags",
+      "map_cik": "0000093410"
     },
     {
       "ticker": "COP",
       "entity_class": "Cyclical",
-      "why": "an exploration and production company: earnings set by the oil and gas price"
+      "why": "an exploration and production company: earnings set by the oil and gas price",
+      "map_cik": "0001163165"
     },
     {
       "ticker": "VLO",
       "entity_class": "Cyclical",
-      "why": "a refiner: earnings set by crack spreads it does not control"
+      "why": "a refiner: earnings set by crack spreads it does not control",
+      "map_cik": "0001035002"
     },
     {
       "ticker": "JPM",
       "entity_class": "Bank",
-      "why": "a U.S. bank: judged on price to book against return on equity"
+      "why": "a U.S. bank: judged on price to book against return on equity",
+      "map_cik": "0000019617"
     },
     {
       "ticker": "BAC",
       "entity_class": "Bank",
-      "why": "a U.S. bank; files no common-dividend payment line under the usual tag, so the ordinary-dividend tag stands in"
+      "why": "a U.S. bank; files no common-dividend payment line under the usual tag, so the ordinary-dividend tag stands in",
+      "map_cik": "0000070858"
     },
     {
       "ticker": "NU",
       "entity_class": "Bank",
       "why": "a Brazilian digital bank reporting in U.S. dollars, filing under IFRS on a 20-F; adr_ratio: the NYSE line is the Class A ordinary share itself, not a receipt; declared at one so the check runs on this cross-currency name.",
+      "map_cik": "0001691493",
       "adr_ratio": 1
     },
     {
       "ticker": "IBN",
       "entity_class": "Bank",
       "why": "an Indian bank ADR reporting in rupees under a dollar listing; adr_ratio: one American depositary share is two equity shares (20-F, deposit agreement).",
+      "map_cik": "0001103838",
       "adr_ratio": 2
     },
     {
       "ticker": "ITUB",
       "entity_class": "Bank",
       "why": "a Brazilian bank ADR filing under IFRS on a 20-F; adr_ratio: one American depositary share is one preferred share (20-F, deposit agreement).",
+      "map_cik": "0001132597",
       "adr_ratio": 1
     },
     {
       "ticker": "ALL",
       "entity_class": "Insurer",
-      "why": "a U.S. property and casualty insurer, valued on AOCI-adjusted book from filed statements"
+      "why": "a U.S. property and casualty insurer, valued on AOCI-adjusted book from filed statements",
+      "map_cik": "0000899051"
     },
     {
       "ticker": "MET",
       "entity_class": "Insurer",
-      "why": "a U.S. life insurer, valued on AOCI-adjusted book from filed statements"
+      "why": "a U.S. life insurer, valued on AOCI-adjusted book from filed statements",
+      "map_cik": "0001099219"
     },
     {
       "ticker": "PGR",
       "entity_class": "Insurer",
-      "why": "a U.S. property and casualty insurer, valued on AOCI-adjusted book from filed statements"
+      "why": "a U.S. property and casualty insurer, valued on AOCI-adjusted book from filed statements",
+      "map_cik": "0000080661"
     },
     {
       "ticker": "ALV.DE",
@@ -143,27 +162,32 @@
       "ticker": "HDB",
       "entity_class": "Bank",
       "why": "an Indian bank ADR filing under U.S. GAAP on a 20-F, reporting in rupees; adr_ratio: one American depositary share is three equity shares (20-F, deposit agreement).",
+      "map_cik": "0001144967",
       "adr_ratio": 3
     },
     {
       "ticker": "GS",
       "entity_class": "Bank",
-      "why": "a fee-heavy investment bank: the vendor's industry label says capital markets, the statements say bank, and the declaration wins"
+      "why": "a fee-heavy investment bank: the vendor's industry label says capital markets, the statements say bank, and the declaration wins",
+      "map_cik": "0000886982"
     },
     {
       "ticker": "MS",
       "entity_class": "Bank",
-      "why": "a fee-heavy investment bank whose net interest income sits close to the bank threshold; the declaration wins"
+      "why": "a fee-heavy investment bank whose net interest income sits close to the bank threshold; the declaration wins",
+      "map_cik": "0000895421"
     },
     {
       "ticker": "KSPI",
       "entity_class": "Bank",
-      "why": "a Kazakh fintech that is a bank by its statements, reporting in tenge under a dollar listing"
+      "why": "a Kazakh fintech that is a bank by its statements, reporting in tenge under a dollar listing",
+      "map_cik": "0001985487"
     },
     {
       "ticker": "TSM",
       "entity_class": "OperatingCompany",
       "why": "a Taiwanese foundry filing under IFRS on a 20-F, reporting in Taiwan dollars; adr_ratio: one American depositary share is five ordinary shares (20-F, deposit agreement).",
+      "map_cik": "0001046179",
       "adr_ratio": 5
     },
     {
@@ -180,12 +204,14 @@
       "ticker": "SAP",
       "entity_class": "OperatingCompany",
       "why": "a German software company filing under IFRS on a 20-F, reporting in euros under a dollar listing; adr_ratio: one American depositary receipt is one ordinary share (20-F, deposit agreement).",
+      "map_cik": "0001000184",
       "adr_ratio": 1
     },
     {
       "ticker": "SONY",
       "entity_class": "OperatingCompany",
       "why": "a Japanese conglomerate filing under IFRS on a 20-F, reporting in yen under a dollar listing; adr_ratio: one American depositary share is one share of common stock (20-F, deposit agreement).",
+      "map_cik": "0000313838",
       "adr_ratio": 1
     },
     {
@@ -197,7 +223,8 @@
     {
       "ticker": "SPY",
       "entity_class": "Wrapper",
-      "why": "an exchange-traded fund: a wrapper with no country and no operating business"
+      "why": "an exchange-traded fund: a wrapper with no country and no operating business",
+      "map_cik": "0000884394"
     },
     {
       "ticker": "DUK",
@@ -208,62 +235,74 @@
       ],
       "scope_limit_codes": [
         "commodity_exposure"
-      ]
+      ],
+      "map_cik": "0001326160"
     },
     {
       "ticker": "O",
       "entity_class": "Reit",
-      "why": "a net-lease REIT: accounting earnings are dominated by real-estate depreciation, so it is valued on the dividend FFO covers"
+      "why": "a net-lease REIT: accounting earnings are dominated by real-estate depreciation, so it is valued on the dividend FFO covers",
+      "map_cik": "0000726728"
     },
     {
       "ticker": "FNV",
       "entity_class": "Royalty",
-      "why": "a precious-metals royalty company; a cost screen has its sign inverted for this class"
+      "why": "a precious-metals royalty company; a cost screen has its sign inverted for this class",
+      "map_cik": "0001456346"
     },
     {
       "ticker": "CRWD",
       "entity_class": "HighGrowthSoftware",
-      "why": "security software compounding revenue; a DCF whose growth reverts inside the horizon cannot see it"
+      "why": "security software compounding revenue; a DCF whose growth reverts inside the horizon cannot see it",
+      "map_cik": "0001535527"
     },
     {
       "ticker": "PLD",
       "entity_class": "Reit",
-      "why": "an industrial REIT, valued on the dividend FFO covers"
+      "why": "an industrial REIT, valued on the dividend FFO covers",
+      "map_cik": "0001045609"
     },
     {
       "ticker": "SPG",
       "entity_class": "Reit",
-      "why": "a mall REIT, valued on the dividend FFO covers where its filings supply the dividend line"
+      "why": "a mall REIT, valued on the dividend FFO covers where its filings supply the dividend line",
+      "map_cik": "0001063761"
     },
     {
       "ticker": "NVDA",
       "entity_class": "OperatingCompany",
-      "why": "accelerated computing; positive, growing free cash flow"
+      "why": "accelerated computing; positive, growing free cash flow",
+      "map_cik": "0001045810"
     },
     {
       "ticker": "AVGO",
       "entity_class": "OperatingCompany",
-      "why": "semiconductors and infrastructure software; a free-cash-flow business"
+      "why": "semiconductors and infrastructure software; a free-cash-flow business",
+      "map_cik": "0001730168"
     },
     {
       "ticker": "META",
       "entity_class": "OperatingCompany",
-      "why": "an advertising platform; large positive free cash flow"
+      "why": "an advertising platform; large positive free cash flow",
+      "map_cik": "0001326801"
     },
     {
       "ticker": "AMD",
       "entity_class": "OperatingCompany",
-      "why": "semiconductors; positive free cash flow"
+      "why": "semiconductors; positive free cash flow",
+      "map_cik": "0000002488"
     },
     {
       "ticker": "SMCI",
       "entity_class": "OperatingCompany",
-      "why": "server hardware; an operating business on thin margins"
+      "why": "server hardware; an operating business on thin margins",
+      "map_cik": "0001375365"
     },
     {
       "ticker": "PLTR",
       "entity_class": "HighGrowthSoftware",
-      "why": "software compounding revenue, profitable"
+      "why": "software compounding revenue, profitable",
+      "map_cik": "0001321655"
     },
     {
       "ticker": "INTC",
@@ -274,37 +313,44 @@
       ],
       "scope_limit_codes": [
         "structural_break"
-      ]
+      ],
+      "map_cik": "0000050863"
     },
     {
       "ticker": "PG",
       "entity_class": "OperatingCompany",
-      "why": "consumer staples: decades of stable free cash flow"
+      "why": "consumer staples: decades of stable free cash flow",
+      "map_cik": "0000080424"
     },
     {
       "ticker": "PEP",
       "entity_class": "OperatingCompany",
-      "why": "beverages and snacks: a second staples filer with its own tag habits"
+      "why": "beverages and snacks: a second staples filer with its own tag habits",
+      "map_cik": "0000077476"
     },
     {
       "ticker": "HD",
       "entity_class": "OperatingCompany",
-      "why": "retail with large leases on both sides of the balance sheet; the leases-excluded debt definition is tested here"
+      "why": "retail with large leases on both sides of the balance sheet; the leases-excluded debt definition is tested here",
+      "map_cik": "0000354950"
     },
     {
       "ticker": "MCD",
       "entity_class": "OperatingCompany",
-      "why": "a franchisor: franchise economics with heavy leases on both sides"
+      "why": "a franchisor: franchise economics with heavy leases on both sides",
+      "map_cik": "0000063908"
     },
     {
       "ticker": "UNP",
       "entity_class": "OperatingCompany",
-      "why": "a railroad: capital-intensive with regulated pricing power"
+      "why": "a railroad: capital-intensive with regulated pricing power",
+      "map_cik": "0000100885"
     },
     {
       "ticker": "LMT",
       "entity_class": "OperatingCompany",
-      "why": "a defence contractor: government-set margins, pension-heavy"
+      "why": "a defence contractor: government-set margins, pension-heavy",
+      "map_cik": "0000936468"
     },
     {
       "ticker": "ORCL",
@@ -315,17 +361,20 @@
       ],
       "scope_limit_codes": [
         "build_out"
-      ]
+      ],
+      "map_cik": "0001341439"
     },
     {
       "ticker": "CSCO",
       "entity_class": "OperatingCompany",
-      "why": "mature networking, cash-rich: cash plus short-term investments matter here"
+      "why": "mature networking, cash-rich: cash plus short-term investments matter here",
+      "map_cik": "0000858877"
     },
     {
       "ticker": "TXN",
       "entity_class": "OperatingCompany",
-      "why": "analogue semiconductors, the least cyclical of the semiconductors; kept a plain operating company on purpose"
+      "why": "analogue semiconductors, the least cyclical of the semiconductors; kept a plain operating company on purpose",
+      "map_cik": "0000097476"
     },
     {
       "ticker": "ABBV",
@@ -336,32 +385,38 @@
       ],
       "scope_limit_codes": [
         "product_transition"
-      ]
+      ],
+      "map_cik": "0001551152"
     },
     {
       "ticker": "TSLA",
       "entity_class": "OperatingCompany",
-      "why": "autos and energy: profitable and capex-heavy; declared a plain operating company rather than cyclical, a judgment"
+      "why": "autos and energy: profitable and capex-heavy; declared a plain operating company rather than cyclical, a judgment",
+      "map_cik": "0001318605"
     },
     {
       "ticker": "NOW",
       "entity_class": "HighGrowthSoftware",
-      "why": "subscription software, profitable and compounding"
+      "why": "subscription software, profitable and compounding",
+      "map_cik": "0001373715"
     },
     {
       "ticker": "ADBE",
       "entity_class": "HighGrowthSoftware",
-      "why": "subscription software at mature growth; the boundary with a plain operating company"
+      "why": "subscription software at mature growth; the boundary with a plain operating company",
+      "map_cik": "0000796343"
     },
     {
       "ticker": "UBER",
       "entity_class": "HighGrowthSoftware",
-      "why": "a platform recently profitable; declared software rather than a plain operating company, a judgment"
+      "why": "a platform recently profitable; declared software rather than a plain operating company, a judgment",
+      "map_cik": "0001543151"
     },
     {
       "ticker": "MU",
       "entity_class": "Cyclical",
-      "why": "memory semiconductors: the textbook cycle"
+      "why": "memory semiconductors: the textbook cycle",
+      "map_cik": "0000723125"
     },
     {
       "ticker": "CAT",
@@ -372,7 +427,8 @@
       ],
       "scope_limit_codes": [
         "captive_finance"
-      ]
+      ],
+      "map_cik": "0000018230"
     },
     {
       "ticker": "F",
@@ -383,125 +439,149 @@
       ],
       "scope_limit_codes": [
         "captive_finance"
-      ]
+      ],
+      "map_cik": "0000037996"
     },
     {
       "ticker": "NUE",
       "entity_class": "Cyclical",
-      "why": "steel: a commodity cyclical on domestic filings"
+      "why": "steel: a commodity cyclical on domestic filings",
+      "map_cik": "0000073309"
     },
     {
       "ticker": "SHEL",
       "entity_class": "Cyclical",
       "why": "an integrated oil company filing under IFRS on a 20-F: the mid-cycle model on an IFRS filer; adr_ratio: one American depositary share is two ordinary shares (20-F, deposit agreement).",
+      "map_cik": "0001306965",
       "adr_ratio": 2
     },
     {
       "ticker": "BP",
       "entity_class": "Cyclical",
       "why": "an integrated oil company filing under IFRS on a 20-F; a second one; adr_ratio: one American depositary share is six ordinary shares (20-F, deposit agreement).",
+      "map_cik": "0000313807",
       "adr_ratio": 6
     },
     {
       "ticker": "DAL",
       "entity_class": "Cyclical",
-      "why": "an airline: cyclical, lease-heavy, with loss years inside the window"
+      "why": "an airline: cyclical, lease-heavy, with loss years inside the window",
+      "map_cik": "0000027904"
     },
     {
       "ticker": "WFC",
       "entity_class": "Bank",
-      "why": "a large U.S. bank under an asset cap"
+      "why": "a large U.S. bank under an asset cap",
+      "map_cik": "0000072971"
     },
     {
       "ticker": "PNC",
       "entity_class": "Bank",
-      "why": "a regional U.S. bank"
+      "why": "a regional U.S. bank",
+      "map_cik": "0000713676"
     },
     {
       "ticker": "HSBC",
       "entity_class": "Bank",
       "why": "a bank filing under IFRS on a 20-F: the net interest income signature under IFRS tags; adr_ratio: one American depositary share is five ordinary shares (20-F, deposit agreement).",
+      "map_cik": "0001089113",
       "adr_ratio": 5
     },
     {
       "ticker": "SCHW",
       "entity_class": "Bank",
-      "why": "a broker-bank: whether the net interest income signature fires is the test; declared a bank, a judgment"
+      "why": "a broker-bank: whether the net interest income signature fires is the test; declared a bank, a judgment",
+      "map_cik": "0000316709"
     },
     {
       "ticker": "AIG",
       "entity_class": "Insurer",
-      "why": "a property and casualty and life insurer, AOCI-heavy"
+      "why": "a property and casualty and life insurer, AOCI-heavy",
+      "map_cik": "0000005272"
     },
     {
       "ticker": "TRV",
       "entity_class": "Insurer",
-      "why": "a property and casualty insurer with clean premium rows"
+      "why": "a property and casualty insurer with clean premium rows",
+      "map_cik": "0000086312"
     },
     {
       "ticker": "AFL",
       "entity_class": "Insurer",
-      "why": "a supplemental health insurer, Japan-heavy: foreign exchange inside an insurer"
+      "why": "a supplemental health insurer, Japan-heavy: foreign exchange inside an insurer",
+      "map_cik": "0000004977"
     },
     {
       "ticker": "UNH",
       "entity_class": "Insurer",
-      "why": "managed care: premiums are filed, but whether it is an insurer or a plain operating company is the judgment; the signature decides the consistency check either way"
+      "why": "managed care: premiums are filed, but whether it is an insurer or a plain operating company is the judgment; the signature decides the consistency check either way",
+      "map_cik": "0000731766"
     },
     {
       "ticker": "AMT",
       "entity_class": "Reit",
-      "why": "towers: FFO on a REIT that is not property in the usual sense"
+      "why": "towers: FFO on a REIT that is not property in the usual sense",
+      "map_cik": "0001053507"
     },
     {
       "ticker": "EQIX",
       "entity_class": "Reit",
-      "why": "data centres: heavy recurring capex, where the FFO caveat bites hardest"
+      "why": "data centres: heavy recurring capex, where the FFO caveat bites hardest",
+      "map_cik": "0001101239"
     },
     {
       "ticker": "PSA",
       "entity_class": "Reit",
-      "why": "self storage: simple FFO"
+      "why": "self storage: simple FFO",
+      "map_cik": "0001393311"
     },
     {
       "ticker": "WELL",
       "entity_class": "Reit",
-      "why": "healthcare real estate: acquisitions inside the FFO growth window"
+      "why": "healthcare real estate: acquisitions inside the FFO growth window",
+      "map_cik": "0000766704"
     },
     {
       "ticker": "NEE",
       "entity_class": "RegulatedUtility",
-      "why": "a regulated utility with its rate base in a build-out"
+      "why": "a regulated utility with its rate base in a build-out",
+      "map_cik": "0000753308"
     },
     {
       "ticker": "SO",
       "entity_class": "RegulatedUtility",
-      "why": "a regulated utility with a nuclear build history"
+      "why": "a regulated utility with a nuclear build history",
+      "map_cik": "0000092122"
     },
     {
       "ticker": "VST",
       "entity_class": "MerchantPower",
-      "why": "merchant power: no rate base"
+      "why": "merchant power: no rate base",
+      "map_cik": "0001692819"
     },
     {
       "ticker": "NEM",
       "entity_class": "Miner",
-      "why": "a gold miner: the NAV lens, which the tool refuses to replace with a DCF"
+      "why": "a gold miner: the NAV lens, which the tool refuses to replace with a DCF",
+      "map_cik": "0001164727"
     },
     {
       "ticker": "FCX",
       "entity_class": "Miner",
-      "why": "a copper miner: the NAV lens, which the tool refuses to replace with a DCF"
+      "why": "a copper miner: the NAV lens, which the tool refuses to replace with a DCF",
+      "map_cik": "0000831259"
     },
     {
       "ticker": "RIVN",
       "entity_class": "Unprofitable",
-      "why": "unprofitable: runway against the catalyst calendar, refused by the tool"
+      "why": "unprofitable: runway against the catalyst calendar, refused by the tool",
+      "map_cik": "0001874178"
     },
     {
       "ticker": "SNOW",
       "entity_class": "Unprofitable",
-      "why": "GAAP losses with positive free cash flow; declared unprofitable rather than software, exactly the judgment the class text settles"
+      "why": "GAAP losses with positive free cash flow; declared unprofitable rather than software, exactly the judgment the class text settles",
+      "map_cik": "0001640147"
     },
     {
       "ticker": "AMZN",
@@ -513,6 +593,7 @@
       "scope_limit_codes": [
         "build_out"
       ],
+      "map_cik": "0001018724",
       "build_out_return": {
         "value": 0.22,
         "why": "the after-tax return on capital the new capacity earns once earning, after depreciation, as a filing states it; the record's own return on opening capital is 0.2650 for FY2025, 0.3262 for FY2024 and 0.2043 for FY2023, and this sits a little under the latest because the capital being spent now is data-centre shell, power and accelerators bought into a shortage and written off over six years or less, while that return is earned on a base built over twenty years",
@@ -527,7 +608,8 @@
     {
       "ticker": "ABT",
       "entity_class": "OperatingCompany",
-      "why": "Diagnostics, devices and nutrition; a diversified operating company on filed statements."
+      "why": "Diagnostics, devices and nutrition; a diversified operating company on filed statements.",
+      "map_cik": "0000001800"
     },
     {
       "ticker": "HCA",
@@ -538,22 +620,26 @@
       ],
       "scope_limit_codes": [
         "leases_excluded"
-      ]
+      ],
+      "map_cik": "0000860730"
     },
     {
       "ticker": "ACM",
       "entity_class": "OperatingCompany",
-      "why": "Engineering and design services; project revenue with pass-through subcontract costs, an operating company all the same."
+      "why": "Engineering and design services; project revenue with pass-through subcontract costs, an operating company all the same.",
+      "map_cik": "0000868857"
     },
     {
       "ticker": "XYL",
       "entity_class": "OperatingCompany",
-      "why": "Water technology; an industrial operating company."
+      "why": "Water technology; an industrial operating company.",
+      "map_cik": "0001524472"
     },
     {
       "ticker": "GILD",
       "entity_class": "OperatingCompany",
-      "why": "Pharmaceuticals; an operating company whose growth depends on a pipeline the model does not see."
+      "why": "Pharmaceuticals; an operating company whose growth depends on a pipeline the model does not see.",
+      "map_cik": "0000882095"
     },
     {
       "ticker": "TEVA",
@@ -565,6 +651,7 @@
       "scope_limit_codes": [
         "balance_sheet"
       ],
+      "map_cik": "0000818686",
       "adr_ratio": 1
     },
     {
@@ -576,12 +663,14 @@
       ],
       "scope_limit_codes": [
         "product_transition"
-      ]
+      ],
+      "map_cik": "0000875045"
     },
     {
       "ticker": "CI",
       "entity_class": "Insurer",
-      "why": "Managed care and health services; premiums earned are the largest line, the insurer signature fires as it did for UnitedHealth, so the residual-income model on AOCI-adjusted book from filed statements applies."
+      "why": "Managed care and health services; premiums earned are the largest line, the insurer signature fires as it did for UnitedHealth, so the residual-income model on AOCI-adjusted book from filed statements applies.",
+      "map_cik": "0001739940"
     },
     {
       "ticker": "ICE",
@@ -592,7 +681,8 @@
       ],
       "scope_limit_codes": [
         "pass_through_balances"
-      ]
+      ],
+      "map_cik": "0001571949"
     },
     {
       "ticker": "CME",
@@ -603,32 +693,38 @@
       ],
       "scope_limit_codes": [
         "pass_through_balances"
-      ]
+      ],
+      "map_cik": "0001156375"
     },
     {
       "ticker": "CBOE",
       "entity_class": "OperatingCompany",
-      "why": "Options and equities exchanges; a fee business, an operating company."
+      "why": "Options and equities exchanges; a fee business, an operating company.",
+      "map_cik": "0001374310"
     },
     {
       "ticker": "MA",
       "entity_class": "OperatingCompany",
-      "why": "A payments network; fees on volume, no net-interest signature, an operating company."
+      "why": "A payments network; fees on volume, no net-interest signature, an operating company.",
+      "map_cik": "0001141391"
     },
     {
       "ticker": "INTU",
       "entity_class": "HighGrowthSoftware",
-      "why": "Subscription software with recurring revenue; profitable, valued on the DCF under the software lens."
+      "why": "Subscription software with recurring revenue; profitable, valued on the DCF under the software lens.",
+      "map_cik": "0000896878"
     },
     {
       "ticker": "WDAY",
       "entity_class": "HighGrowthSoftware",
-      "why": "Cloud enterprise software with subscription revenue; the software lens."
+      "why": "Cloud enterprise software with subscription revenue; the software lens.",
+      "map_cik": "0001327811"
     },
     {
       "ticker": "VEEV",
       "entity_class": "HighGrowthSoftware",
-      "why": "Vertical cloud software for life sciences; subscription revenue, profitable; the software lens."
+      "why": "Vertical cloud software for life sciences; subscription revenue, profitable; the software lens.",
+      "map_cik": "0001393052"
     },
     {
       "ticker": "OKTA",
@@ -639,17 +735,20 @@
       ],
       "scope_limit_codes": [
         "goodwill_heavy"
-      ]
+      ],
+      "map_cik": "0001660134"
     },
     {
       "ticker": "GWRE",
       "entity_class": "HighGrowthSoftware",
-      "why": "Insurance-industry cloud software with subscription revenue; the software lens."
+      "why": "Insurance-industry cloud software with subscription revenue; the software lens.",
+      "map_cik": "0001528396"
     },
     {
       "ticker": "SE",
       "entity_class": "HighGrowthSoftware",
       "why": "E-commerce, gaming and payments filing a 20-F from Singapore under IFRS; recurring platform revenue, profitable; the software lens; adr_ratio: one American depositary share is one Class A ordinary share (20-F, deposit agreement).",
+      "map_cik": "0001703399",
       "adr_ratio": 1
     },
     {
@@ -661,7 +760,8 @@
       ],
       "scope_limit_codes": [
         "mixed_business"
-      ]
+      ],
+      "map_cik": "0001099590"
     },
     {
       "ticker": "HOOD",
@@ -674,18 +774,21 @@
       "scope_limit_codes": [
         "mixed_business",
         "pass_through_balances"
-      ]
+      ],
+      "map_cik": "0001783879"
     },
     {
       "ticker": "GRAB",
       "entity_class": "HighGrowthSoftware",
       "why": "Mobility, delivery and financial services filing a 20-F from Singapore; platform revenue, GAAP-profitable on the latest filing, so the software lens, confirmed by the user; adr_ratio: one American depositary share is one Class A ordinary share (20-F, deposit agreement).",
+      "map_cik": "0001855612",
       "adr_ratio": 1
     },
     {
       "ticker": "TEM",
       "entity_class": "Unprofitable",
-      "why": "Diagnostics and data platform, GAAP loss-making on the filing; the runway lens, no model."
+      "why": "Diagnostics and data platform, GAAP loss-making on the filing; the runway lens, no model.",
+      "map_cik": "0001717115"
     },
     {
       "ticker": "FSLR",
@@ -696,32 +799,38 @@
       ],
       "scope_limit_codes": [
         "policy_dependent"
-      ]
+      ],
+      "map_cik": "0001274494"
     },
     {
       "ticker": "LEU",
       "entity_class": "Cyclical",
-      "why": "Uranium enrichment services; earnings swing with contract pricing and utility demand; the through-cycle model."
+      "why": "Uranium enrichment services; earnings swing with contract pricing and utility demand; the through-cycle model.",
+      "map_cik": "0001065059"
     },
     {
       "ticker": "CEG",
       "entity_class": "MerchantPower",
-      "why": "Merchant nuclear and gas generation selling into power markets; the merchant-power class by its text, refused by design and judged on its capacity and price lens instead."
+      "why": "Merchant nuclear and gas generation selling into power markets; the merchant-power class by its text, refused by design and judged on its capacity and price lens instead.",
+      "map_cik": "0001868275"
     },
     {
       "ticker": "VICI",
       "entity_class": "Reit",
-      "why": "Gaming and hospitality triple-net REIT; the FFO-covered dividend model."
+      "why": "Gaming and hospitality triple-net REIT; the FFO-covered dividend model.",
+      "map_cik": "0001705696"
     },
     {
       "ticker": "STAG",
       "entity_class": "Reit",
-      "why": "Industrial REIT; the FFO-covered dividend model."
+      "why": "Industrial REIT; the FFO-covered dividend model.",
+      "map_cik": "0001479094"
     },
     {
       "ticker": "DNN",
       "entity_class": "ConstructionStage",
-      "why": "Uranium developer with no production, a 40-F filer from Canada; construction-stage by the filing, refused by design; Miner once production starts."
+      "why": "Uranium developer with no production, a 40-F filer from Canada; construction-stage by the filing, refused by design; Miner once production starts.",
+      "map_cik": "0001063259"
     },
     {
       "ticker": "PDN.TO",
@@ -731,27 +840,32 @@
     {
       "ticker": "NEXT",
       "entity_class": "ConstructionStage",
-      "why": "LNG export terminal under construction with no operating revenue; construction-stage, refused by design."
+      "why": "LNG export terminal under construction with no operating revenue; construction-stage, refused by design.",
+      "map_cik": "0001612720"
     },
     {
       "ticker": "BEAM",
       "entity_class": "Unprofitable",
-      "why": "Pre-revenue gene-editing biotech; the runway lens, no model."
+      "why": "Pre-revenue gene-editing biotech; the runway lens, no model.",
+      "map_cik": "0001745999"
     },
     {
       "ticker": "DYN",
       "entity_class": "Unprofitable",
-      "why": "Pre-revenue biotech; the runway lens, no model."
+      "why": "Pre-revenue biotech; the runway lens, no model.",
+      "map_cik": "0001818794"
     },
     {
       "ticker": "TAC",
       "entity_class": "MerchantPower",
-      "why": "TransAlta, a Canadian power generator filing a 40-F, selling into the Alberta merchant market; the merchant-power class by its text, refused by design, confirmed by the user against the brief's oil-field-services reading."
+      "why": "TransAlta, a Canadian power generator filing a 40-F, selling into the Alberta merchant market; the merchant-power class by its text, refused by design, confirmed by the user against the brief's oil-field-services reading.",
+      "map_cik": "0001144800"
     },
     {
       "ticker": "RKLB",
       "entity_class": "Unprofitable",
-      "why": "Launch and space systems, GAAP loss-making on the filing; the runway lens; if free cash flow has turned positive on the filing the operating-company class is the right one, confirmed by the user."
+      "why": "Launch and space systems, GAAP loss-making on the filing; the runway lens; if free cash flow has turned positive on the filing the operating-company class is the right one, confirmed by the user.",
+      "map_cik": "0001819994"
     },
     {
       "ticker": "VG",
@@ -763,6 +877,7 @@
       "scope_limit_codes": [
         "build_out"
       ],
+      "map_cik": "0002007855",
       "build_out_return": {
         "value": 0.14,
         "why": "the after-tax return on capital a new train earns once earning, after depreciation; the record's own return on opening capital is 0.1467 for FY2025, earned while two of the three trains were still commissioning, and this sits just under it because the commissioning cargoes that lifted it were sold at spot while the capacity is contracted on twenty-year take-or-pay at a fixed liquefaction fee, a spread rather than a market price",
@@ -782,7 +897,8 @@
     {
       "ticker": "GLDM",
       "entity_class": "Wrapper",
-      "why": "A gold ETF; a wrapper, refused by design."
+      "why": "A gold ETF; a wrapper, refused by design.",
+      "map_cik": "0001618181"
     },
     {
       "ticker": "IBDS",
@@ -797,42 +913,50 @@
     {
       "ticker": "BSTZ",
       "entity_class": "Wrapper",
-      "why": "A closed-end fund; a wrapper, refused by design."
+      "why": "A closed-end fund; a wrapper, refused by design.",
+      "map_cik": "0001768666"
     },
     {
       "ticker": "BST",
       "entity_class": "Wrapper",
-      "why": "A closed-end fund; a wrapper, refused by design."
+      "why": "A closed-end fund; a wrapper, refused by design.",
+      "map_cik": "0001616678"
     },
     {
       "ticker": "AIO",
       "entity_class": "Wrapper",
-      "why": "A closed-end fund; a wrapper, refused by design."
+      "why": "A closed-end fund; a wrapper, refused by design.",
+      "map_cik": "0001778114"
     },
     {
       "ticker": "BUI",
       "entity_class": "Wrapper",
-      "why": "A closed-end fund of utilities and infrastructure, not a REIT; a wrapper, refused by design."
+      "why": "A closed-end fund of utilities and infrastructure, not a REIT; a wrapper, refused by design.",
+      "map_cik": "0001528988"
     },
     {
       "ticker": "IDE",
       "entity_class": "Wrapper",
-      "why": "A closed-end fund; a wrapper, refused by design."
+      "why": "A closed-end fund; a wrapper, refused by design.",
+      "map_cik": "0001417802"
     },
     {
       "ticker": "FDUS",
       "entity_class": "Bdc",
-      "why": "Fidus Investment, a business development company lending to lower-middle-market companies; the net asset value the filing marks each quarter is the anchor, and whether net investment income covers the distribution is the check."
+      "why": "Fidus Investment, a business development company lending to lower-middle-market companies; the net asset value the filing marks each quarter is the anchor, and whether net investment income covers the distribution is the check.",
+      "map_cik": "0001513363"
     },
     {
       "ticker": "MAIN",
       "entity_class": "Bdc",
-      "why": "Main Street Capital, a business development company lending to and taking equity in lower-middle-market companies, internally managed; the net asset value lens, with the coverage of its monthly distribution the check."
+      "why": "Main Street Capital, a business development company lending to and taking equity in lower-middle-market companies, internally managed; the net asset value lens, with the coverage of its monthly distribution the check.",
+      "map_cik": "0001396440"
     },
     {
       "ticker": "GBDC",
       "entity_class": "Bdc",
-      "why": "Golub Capital BDC, a business development company holding first-lien loans to sponsor-backed borrowers; the net asset value lens, with the coverage of the distribution the check."
+      "why": "Golub Capital BDC, a business development company holding first-lien loans to sponsor-backed borrowers; the net asset value lens, with the coverage of the distribution the check.",
+      "map_cik": "0001476765"
     },
     {
       "ticker": "SPCX",
@@ -847,7 +971,8 @@
         "vendor_statements",
         "build_out",
         "mixed_business"
-      ]
+      ],
+      "map_cik": "0001181412"
     },
     {
       "ticker": "ROP.SW",
@@ -863,7 +988,8 @@
       ],
       "scope_limit_codes": [
         "short_history"
-      ]
+      ],
+      "map_cik": "0001818874"
     },
     {
       "ticker": "ASML.AS",
@@ -921,6 +1047,7 @@
       "ticker": "RIO",
       "entity_class": "Miner",
       "why": "a dual-listed iron ore and aluminium miner filing under IFRS on a 20-F in dollars: the net asset value lens, which the tool refuses to replace with a discounted cash flow; adr_ratio: one American depositary share is one ordinary share of the London company (20-F, deposit agreement).",
+      "map_cik": "0000863064",
       "adr_ratio": 1,
       "scope_limits": [
         "the cover page counts the London company's shares alone while the statements and the market capitalisation cover both lines of the dual-listed structure, so the receipt check disagrees by the Australian company's share count"
@@ -933,18 +1060,21 @@
       "ticker": "UL",
       "entity_class": "OperatingCompany",
       "why": "a consumer goods company filing under IFRS on a 20-F, reporting in euros under a dollar listing; adr_ratio: one American depositary share is one ordinary share (20-F, deposit agreement).",
+      "map_cik": "0000217410",
       "adr_ratio": 1
     },
     {
       "ticker": "BHP",
       "entity_class": "Miner",
       "why": "a diversified miner filing under IFRS on a 20-F in dollars: the net asset value lens, which the tool refuses to replace with a discounted cash flow; adr_ratio: one American depositary share is two ordinary shares (20-F, deposit agreement).",
+      "map_cik": "0000811809",
       "adr_ratio": 2
     },
     {
       "ticker": "ENPH",
       "entity_class": "Cyclical",
-      "why": "solar microinverters sold into a residential market whose demand fell by about half when rates rose and subsidies changed; through-cycle return on today's capital is the question rather than one year's free cash flow."
+      "why": "solar microinverters sold into a residential market whose demand fell by about half when rates rose and subsidies changed; through-cycle return on today's capital is the question rather than one year's free cash flow.",
+      "map_cik": "0001463101"
     },
     {
       "ticker": "AXON",
@@ -955,12 +1085,14 @@
       ],
       "scope_limit_codes": [
         "mixed_business"
-      ]
+      ],
+      "map_cik": "0001069183"
     },
     {
       "ticker": "DECK",
       "entity_class": "OperatingCompany",
-      "why": "a footwear brand owner whose fiscal year ends in March; the discounted cash flow on stable free cash flow."
+      "why": "a footwear brand owner whose fiscal year ends in March; the discounted cash flow on stable free cash flow.",
+      "map_cik": "0000910521"
     },
     {
       "ticker": "WSM",
@@ -971,7 +1103,8 @@
       ],
       "scope_limit_codes": [
         "leases_excluded"
-      ]
+      ],
+      "map_cik": "0000719955"
     },
     {
       "ticker": "CROX",
@@ -984,7 +1117,8 @@
       "scope_limit_codes": [
         "acquired_history",
         "one_off_in_window"
-      ]
+      ],
+      "map_cik": "0001334036"
     },
     {
       "ticker": "APD",
@@ -995,12 +1129,14 @@
       ],
       "scope_limit_codes": [
         "build_out"
-      ]
+      ],
+      "map_cik": "0000002969"
     },
     {
       "ticker": "EXC",
       "entity_class": "RegulatedUtility",
-      "why": "a regulated electric and gas delivery utility; a discounted cash flow reads rate-base construction as value destruction."
+      "why": "a regulated electric and gas delivery utility; a discounted cash flow reads rate-base construction as value destruction.",
+      "map_cik": "0001109357"
     },
     {
       "ticker": "KMI",
@@ -1011,12 +1147,14 @@
       ],
       "scope_limit_codes": [
         "commodity_exposure"
-      ]
+      ],
+      "map_cik": "0001506307"
     },
     {
       "ticker": "ARCC",
       "entity_class": "Bdc",
-      "why": "the largest business development company: a portfolio of private loans and equity stakes marked to fair value every quarter, so the net asset value per share the filing states is the anchor."
+      "why": "the largest business development company: a portfolio of private loans and equity stakes marked to fair value every quarter, so the net asset value per share the filing states is the anchor.",
+      "map_cik": "0001287750"
     },
     {
       "ticker": "NKE",
@@ -1027,12 +1165,14 @@
       ],
       "scope_limit_codes": [
         "trough_window"
-      ]
+      ],
+      "map_cik": "0000320187"
     },
     {
       "ticker": "NFLX",
       "entity_class": "OperatingCompany",
-      "why": "Netflix, subscription streaming; a plain operating company with positive, growing free cash flow and no structural break."
+      "why": "Netflix, subscription streaming; a plain operating company with positive, growing free cash flow and no structural break.",
+      "map_cik": "0001065280"
     },
     {
       "ticker": "CRCL",
@@ -1045,12 +1185,14 @@
       "scope_limit_codes": [
         "policy_dependent",
         "contract_terms"
-      ]
+      ],
+      "map_cik": "0001876042"
     },
     {
       "ticker": "BE",
       "entity_class": "Unprofitable",
-      "why": "Bloom Energy, solid-oxide fuel cells; GAAP loss-making on every filed year with free cash flow only lately positive, so the runway lens, no model; the operating-company class becomes the right one once a filed year shows a profit and positive free cash flow together."
+      "why": "Bloom Energy, solid-oxide fuel cells; GAAP loss-making on every filed year with free cash flow only lately positive, so the runway lens, no model; the operating-company class becomes the right one once a filed year shows a profit and positive free cash flow together.",
+      "map_cik": "0001664703"
     },
     {
       "ticker": "GEV",
@@ -1061,7 +1203,8 @@
       ],
       "scope_limit_codes": [
         "carve_out_history"
-      ]
+      ],
+      "map_cik": "0001996810"
     },
     {
       "ticker": "SNDK",
@@ -1072,12 +1215,14 @@
       ],
       "scope_limit_codes": [
         "carve_out_history"
-      ]
+      ],
+      "map_cik": "0002023554"
     },
     {
       "ticker": "CRWV",
       "entity_class": "Unprofitable",
-      "why": "CoreWeave, GPU cloud capacity; GAAP loss-making on every filed year with free cash flow deeply negative under a debt-funded build-out, so the runway lens, no model."
+      "why": "CoreWeave, GPU cloud capacity; GAAP loss-making on every filed year with free cash flow deeply negative under a debt-funded build-out, so the runway lens, no model.",
+      "map_cik": "0001769628"
     },
     {
       "ticker": "CCB",
@@ -1088,7 +1233,8 @@
       ],
       "scope_limit_codes": [
         "mixed_business"
-      ]
+      ],
+      "map_cik": "0001437958"
     },
     {
       "ticker": "TCS.NS",
@@ -1131,7 +1277,8 @@
       ],
       "scope_limit_codes": [
         "acquired_history"
-      ]
+      ],
+      "map_cik": "0002004711"
     },
     {
       "ticker": "QXO",
@@ -1144,7 +1291,8 @@
       "scope_limit_codes": [
         "acquired_history",
         "goodwill_heavy"
-      ]
+      ],
+      "map_cik": "0001236275"
     },
     {
       "ticker": "PLNT",
@@ -1155,7 +1303,8 @@
       ],
       "scope_limit_codes": [
         "balance_sheet"
-      ]
+      ],
+      "map_cik": "0001637207"
     },
     {
       "ticker": "BROS",
@@ -1168,7 +1317,8 @@
       "scope_limit_codes": [
         "build_out",
         "ownership_structure"
-      ]
+      ],
+      "map_cik": "0001866581"
     },
     {
       "ticker": "BAM",
@@ -1181,12 +1331,14 @@
       "scope_limit_codes": [
         "acquired_history",
         "market_marks"
-      ]
+      ],
+      "map_cik": "0001937926"
     },
     {
       "ticker": "TBBB",
       "entity_class": "Unprofitable",
-      "why": "BBB Foods, the Mexican hard-discount grocer Tiendas 3B, listed in New York in dollars and reporting in pesos under IFRS on a 20-F, so a cross-currency name with Mexico as its domicile; free cash flow is positive on every filed year while the GAAP result is a loss on all but one, the latest year's on non-cash charges, which is the state the class text calls unprofitable, so the runway lens until a second profitable year is filed."
+      "why": "BBB Foods, the Mexican hard-discount grocer Tiendas 3B, listed in New York in dollars and reporting in pesos under IFRS on a 20-F, so a cross-currency name with Mexico as its domicile; free cash flow is positive on every filed year while the GAAP result is a loss on all but one, the latest year's on non-cash charges, which is the state the class text calls unprofitable, so the runway lens until a second profitable year is filed.",
+      "map_cik": "0001978954"
     },
     {
       "ticker": "SEE.L",
@@ -1196,7 +1348,8 @@
     {
       "ticker": "CHYM",
       "entity_class": "Unprofitable",
-      "why": "Chime Financial, a consumer fintech earning interchange on debit cards issued by partner banks; it holds no charter and takes no deposits of its own; GAAP loss-making on every filed year, the latest on the listing's stock compensation, with free cash flow thinly positive, so the runway lens, no model, exactly the judgment the class text settles."
+      "why": "Chime Financial, a consumer fintech earning interchange on debit cards issued by partner banks; it holds no charter and takes no deposits of its own; GAAP loss-making on every filed year, the latest on the listing's stock compensation, with free cash flow thinly positive, so the runway lens, no model, exactly the judgment the class text settles.",
+      "map_cik": "0001795586"
     },
     {
       "ticker": "0700.HK",
@@ -1232,7 +1385,8 @@
       ],
       "scope_limit_codes": [
         "mixed_business"
-      ]
+      ],
+      "map_cik": "0001321741"
     },
     {
       "ticker": "TLN",
@@ -1243,7 +1397,8 @@
       ],
       "scope_limit_codes": [
         "carve_out_history"
-      ]
+      ],
+      "map_cik": "0001622536"
     },
     {
       "ticker": "CLS",
@@ -1254,12 +1409,14 @@
       ],
       "scope_limit_codes": [
         "concentration"
-      ]
+      ],
+      "map_cik": "0001030894"
     },
     {
       "ticker": "TTD",
       "entity_class": "HighGrowthSoftware",
-      "why": "The Trade Desk, a self-service software platform on which advertisers and their agencies buy digital advertising; revenue compounds, GAAP-profitable with positive free cash flow on every filed year, its large stock compensation kept inside EBIT as filed; the software lens."
+      "why": "The Trade Desk, a self-service software platform on which advertisers and their agencies buy digital advertising; revenue compounds, GAAP-profitable with positive free cash flow on every filed year, its large stock compensation kept inside EBIT as filed; the software lens.",
+      "map_cik": "0001671933"
     },
     {
       "ticker": "BX",
@@ -1272,7 +1429,8 @@
       "scope_limit_codes": [
         "market_marks",
         "pass_through_balances"
-      ]
+      ],
+      "map_cik": "0001393818"
     },
     {
       "ticker": "OWL",
@@ -1283,7 +1441,8 @@
       ],
       "scope_limit_codes": [
         "acquired_history"
-      ]
+      ],
+      "map_cik": "0001823945"
     },
     {
       "ticker": "PS",
@@ -1296,7 +1455,8 @@
       "scope_limit_codes": [
         "market_marks",
         "short_history"
-      ]
+      ],
+      "map_cik": "0002026053"
     },
     {
       "ticker": "GOGO",
@@ -1307,7 +1467,8 @@
       ],
       "scope_limit_codes": [
         "acquired_history"
-      ]
+      ],
+      "map_cik": "0001537054"
     },
     {
       "ticker": "IONQ",
@@ -1318,7 +1479,8 @@
       ],
       "scope_limit_codes": [
         "acquired_history"
-      ]
+      ],
+      "map_cik": "0001824920"
     },
     {
       "ticker": "IBM",
@@ -1331,7 +1493,8 @@
       "scope_limit_codes": [
         "captive_finance",
         "carve_out_history"
-      ]
+      ],
+      "map_cik": "0000051143"
     },
     {
       "ticker": "LLY",
@@ -1344,7 +1507,8 @@
       "scope_limit_codes": [
         "build_out",
         "concentration"
-      ]
+      ],
+      "map_cik": "0000059478"
     },
     {
       "ticker": "MXT.AX",
@@ -1359,12 +1523,14 @@
     {
       "ticker": "PSUS",
       "entity_class": "Wrapper",
-      "why": "Pershing Square USA, a closed-end fund registered under the Investment Company Act holding a concentrated portfolio of listed equities, managed by the asset manager listed beside it; a wrapper, refused by design."
+      "why": "Pershing Square USA, a closed-end fund registered under the Investment Company Act holding a concentrated portfolio of listed equities, managed by the asset manager listed beside it; a wrapper, refused by design.",
+      "map_cik": "0002002660"
     },
     {
       "ticker": "RDDT",
       "entity_class": "HighGrowthSoftware",
-      "why": "Reddit, an advertising-funded community platform with data licensing beside it; revenue compounds and the latest filed year is GAAP-profitable with positive free cash flow, after loss years that include the listing's stock compensation; declared software rather than a plain operating company, the judgment already made for the recently profitable platform here."
+      "why": "Reddit, an advertising-funded community platform with data licensing beside it; revenue compounds and the latest filed year is GAAP-profitable with positive free cash flow, after loss years that include the listing's stock compensation; declared software rather than a plain operating company, the judgment already made for the recently profitable platform here.",
+      "map_cik": "0001713445"
     },
     {
       "ticker": "NBIS",
@@ -1375,7 +1541,8 @@
       ],
       "scope_limit_codes": [
         "carve_out_history"
-      ]
+      ],
+      "map_cik": "0001513845"
     },
     {
       "ticker": "SPOT",
@@ -1388,7 +1555,8 @@
       "scope_limit_codes": [
         "contract_terms",
         "country_basis"
-      ]
+      ],
+      "map_cik": "0001639920"
     },
     {
       "ticker": "BKNG",
@@ -1399,7 +1567,8 @@
       ],
       "scope_limit_codes": [
         "rebound_window"
-      ]
+      ],
+      "map_cik": "0001075531"
     },
     {
       "ticker": "EXPE",
@@ -1410,7 +1579,8 @@
       ],
       "scope_limit_codes": [
         "rebound_window"
-      ]
+      ],
+      "map_cik": "0001324424"
     },
     {
       "ticker": "ABNB",
@@ -1421,7 +1591,8 @@
       ],
       "scope_limit_codes": [
         "pass_through_balances"
-      ]
+      ],
+      "map_cik": "0001559720"
     },
     {
       "ticker": "HHH",
@@ -1434,7 +1605,8 @@
       "scope_limit_codes": [
         "acquired_history",
         "carve_out_history"
-      ]
+      ],
+      "map_cik": "0001981792"
     },
     {
       "ticker": "AEHR",
@@ -1445,7 +1617,8 @@
       ],
       "scope_limit_codes": [
         "concentration"
-      ]
+      ],
+      "map_cik": "0001040470"
     },
     {
       "ticker": "LITE",
@@ -1458,7 +1631,8 @@
       "scope_limit_codes": [
         "one_off_in_window",
         "acquired_history"
-      ]
+      ],
+      "map_cik": "0001633978"
     },
     {
       "ticker": "BWXT",
@@ -1469,7 +1643,8 @@
       ],
       "scope_limit_codes": [
         "acquired_history"
-      ]
+      ],
+      "map_cik": "0001486957"
     },
     {
       "ticker": "ENB",
@@ -1482,7 +1657,8 @@
       "scope_limit_codes": [
         "mixed_business",
         "build_out"
-      ]
+      ],
+      "map_cik": "0000895728"
     },
     {
       "ticker": "MP",
@@ -1495,12 +1671,14 @@
       "scope_limit_codes": [
         "policy_dependent",
         "loss_making"
-      ]
+      ],
+      "map_cik": "0001801368"
     },
     {
       "ticker": "ZETA",
       "entity_class": "Unprofitable",
-      "why": "Zeta Global, marketing technology and data sold by subscription and usage; a GAAP net loss on every filed year with the operating line only lately positive, and positive free cash flow from stock compensation added back; the runway lens, no model, exactly the judgment the class text settles for a filer with no profitable year; the software class becomes the right one once a filed year shows a GAAP profit and positive free cash flow together."
+      "why": "Zeta Global, marketing technology and data sold by subscription and usage; a GAAP net loss on every filed year with the operating line only lately positive, and positive free cash flow from stock compensation added back; the runway lens, no model, exactly the judgment the class text settles for a filer with no profitable year; the software class becomes the right one once a filed year shows a GAAP profit and positive free cash flow together.",
+      "map_cik": "0001851003"
     },
     {
       "ticker": "COIN",
@@ -1515,7 +1693,8 @@
         "market_marks",
         "pass_through_balances",
         "acquired_history"
-      ]
+      ],
+      "map_cik": "0001679788"
     },
     {
       "ticker": "MSTR",
@@ -1526,17 +1705,20 @@
       ],
       "scope_limit_codes": [
         "ownership_structure"
-      ]
+      ],
+      "map_cik": "0001050446"
     },
     {
       "ticker": "GD",
       "entity_class": "OperatingCompany",
-      "why": "General Dynamics, business jets, nuclear submarines, combat vehicles and defence technology services; positive, stable free cash flow; an operating company, as the defence contractor here is."
+      "why": "General Dynamics, business jets, nuclear submarines, combat vehicles and defence technology services; positive, stable free cash flow; an operating company, as the defence contractor here is.",
+      "map_cik": "0000040533"
     },
     {
       "ticker": "NOC",
       "entity_class": "OperatingCompany",
-      "why": "Northrop Grumman, aircraft, strategic missiles, space systems and mission systems for defence customers; positive, stable free cash flow; an operating company, as the defence contractor here is."
+      "why": "Northrop Grumman, aircraft, strategic missiles, space systems and mission systems for defence customers; positive, stable free cash flow; an operating company, as the defence contractor here is.",
+      "map_cik": "0001133421"
     },
     {
       "ticker": "RTX",
@@ -1547,7 +1729,8 @@
       ],
       "scope_limit_codes": [
         "one_off_in_window"
-      ]
+      ],
+      "map_cik": "0000101829"
     },
     {
       "ticker": "HO.PA",

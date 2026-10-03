@@ -81,9 +81,10 @@ def main(argv: list[str]) -> int:
     entries = universe_file.load(universe_path).tickers
     tickers = [e.ticker for e in entries]
     ciks = {e.ticker: e.cik for e in entries if e.cik}
+    map_ciks = {e.ticker: e.map_cik for e in entries if e.map_cik}
     print(f"{len(tickers)} tickers from {universe_path}")
     if as_of is not None:
-        written = pit.run_date(as_of, tickers, histories={}, quotes={}, sec=fetch.SecContext(), ciks=ciks)
+        written = pit.run_date(as_of, tickers, histories={}, quotes={}, sec=fetch.SecContext(), ciks=ciks, map_ciks=map_ciks)
         print(f"point-in-time {as_of}: {written} (batch: dune exec atemoya -- {written} --reference {written}/reference --fetched {written}/reference --today {as_of} --out output/pit/{as_of})")
         return 0
     if out is None:

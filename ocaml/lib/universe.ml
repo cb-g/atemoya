@@ -1,5 +1,5 @@
 let allowed_fields =
-  [ "ticker"; "entity_class"; "why"; "scope_limits"; "scope_limit_codes"; "cik"; "lei"; "adr_ratio"; "build_out_return"; "build_out_lag_years" ]
+  [ "ticker"; "entity_class"; "why"; "scope_limits"; "scope_limit_codes"; "cik"; "map_cik"; "lei"; "adr_ratio"; "build_out_return"; "build_out_lag_years" ]
 
 (* (60) A build-out declaration is exactly a value, the evidence for it and a date: a number
    with no why is not a declaration, and one of the two without the other says nothing. *)

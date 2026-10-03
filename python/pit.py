@@ -442,7 +442,8 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
 
 def run_date(d: date, tickers: list[str], *, histories: dict[str, History], quotes: dict[str, tuple[fetch.Quote | None, fetch.Profile | None]],
              sec: SecLike, out_root: Path = PIT_ROOT, vendors: dict[str, list[boundary.FiscalPeriod]] | None = None,
-             ciks: Mapping[str, str] | None = None, ratios: Mapping[str, float] | None = None, insiders: bool = True) -> Path:
+             ciks: Mapping[str, str] | None = None, ratios: Mapping[str, float] | None = None, insiders: bool = True,
+             map_ciks: Mapping[str, str] | None = None) -> Path:
     """data/pit/<D>/ with a record per ticker and the reference as of D. The vendor's live
     statements (fetched once per ticker) supply the same-period cross-check; [ciks] are the
     universe entries' declared filers (25), [ratios] their declared receipt ratios (42);
@@ -462,6 +463,8 @@ def run_date(d: date, tickers: list[str], *, histories: dict[str, History], quot
             vendors[symbol] = fetch.vendor_periods(yf.Ticker(symbol), [])
         quote, profile = quotes[symbol]
         records.append(record(symbol, d, sec, histories[symbol], quote, profile, vendors[symbol], declared_cik=ciks.get(symbol), adr_ratio=ratios.get(symbol), insiders=insiders))
+        # the identity guard reads today's map: a ticker that has changed hands has no history under this entry either
+        records[-1].identity_mismatch = fetch.identity_mismatch(symbol, sec.tickers, (map_ciks or {}).get(symbol))
     countries: set[str] = set()
     currencies: set[str] = set()
     fx_sources = reference.FxSources.from_json_string((REFERENCE / "fx_sources.json").read_text())

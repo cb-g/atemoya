@@ -5291,6 +5291,7 @@ class Financials:
     market_provider: str = field(default_factory=lambda: "")
     provider_reason: str = field(default_factory=lambda: "")
     statements_unavailable: str = field(default_factory=lambda: "")
+    identity_mismatch: Optional[str] = None
     latest_filing: Optional[str] = None
     cross_check: Optional[CrossCheck] = None
     submissions_latest_annual: Optional[Submission] = None
@@ -5331,6 +5332,7 @@ class Financials:
                 market_provider=_atd_read_string(x['market_provider']) if 'market_provider' in x else "",
                 provider_reason=_atd_read_string(x['provider_reason']) if 'provider_reason' in x else "",
                 statements_unavailable=_atd_read_string(x['statements_unavailable']) if 'statements_unavailable' in x else "",
+                identity_mismatch=_atd_read_string(x['identity_mismatch']) if 'identity_mismatch' in x else None,
                 latest_filing=_atd_read_string(x['latest_filing']) if 'latest_filing' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
                 submissions_latest_annual=Submission.from_json(x['submissions_latest_annual']) if 'submissions_latest_annual' in x else None,
@@ -5373,6 +5375,8 @@ class Financials:
         res['market_provider'] = _atd_write_string(self.market_provider)
         res['provider_reason'] = _atd_write_string(self.provider_reason)
         res['statements_unavailable'] = _atd_write_string(self.statements_unavailable)
+        if self.identity_mismatch is not None:
+            res['identity_mismatch'] = _atd_write_string(self.identity_mismatch)
         if self.latest_filing is not None:
             res['latest_filing'] = _atd_write_string(self.latest_filing)
         if self.cross_check is not None:

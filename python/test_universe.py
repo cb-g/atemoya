@@ -278,3 +278,13 @@ def test_the_loader_holds_codes_to_the_limits_and_the_vocabulary() -> None:
                           (["rebound"], "is not in the file's scope_codes"), ("build_out", "must be a list of strings")):
         with pytest.raises(universe.UniverseError, match=needle):
             universe.load_text(text(codes))
+
+
+def test_map_cik_is_ten_digits_and_spcx_declares_the_company() -> None:
+    raw = json.loads((ROOT / "reference" / "universe.json").read_text())["tickers"]
+    by = {e["ticker"]: e for e in raw}
+    assert by["SPCX"]["map_cik"] == "0001181412" and "map_cik" not in by["SAAB-B.ST"]
+    assert sum("map_cik" in e for e in raw) == 182
+    bad = json.dumps({"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "map_cik": "123"}]})
+    with pytest.raises(universe.UniverseError, match="map_cik must be a ten-digit CIK"):
+        universe.load_text(bad)

@@ -441,6 +441,7 @@ class UniverseEntry:
     scope_limits: List[str] = field(default_factory=lambda: [])
     scope_limit_codes: List[str] = field(default_factory=lambda: [])
     cik: Optional[str] = None
+    map_cik: Optional[str] = None
     lei: Optional[str] = None
     adr_ratio: Optional[float] = None
     build_out_return: Optional[DeclaredBuildOut] = None
@@ -456,6 +457,7 @@ class UniverseEntry:
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
                 scope_limit_codes=_atd_read_list(_atd_read_string)(x['scope_limit_codes']) if 'scope_limit_codes' in x else [],
                 cik=_atd_read_string(x['cik']) if 'cik' in x else None,
+                map_cik=_atd_read_string(x['map_cik']) if 'map_cik' in x else None,
                 lei=_atd_read_string(x['lei']) if 'lei' in x else None,
                 adr_ratio=_atd_read_float(x['adr_ratio']) if 'adr_ratio' in x else None,
                 build_out_return=DeclaredBuildOut.from_json(x['build_out_return']) if 'build_out_return' in x else None,
@@ -473,6 +475,8 @@ class UniverseEntry:
         res['scope_limit_codes'] = _atd_write_list(_atd_write_string)(self.scope_limit_codes)
         if self.cik is not None:
             res['cik'] = _atd_write_string(self.cik)
+        if self.map_cik is not None:
+            res['map_cik'] = _atd_write_string(self.map_cik)
         if self.lei is not None:
             res['lei'] = _atd_write_string(self.lei)
         if self.adr_ratio is not None:

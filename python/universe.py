@@ -15,7 +15,7 @@ from typing import Any, cast
 
 import reference
 
-ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "scope_limit_codes", "cik", "lei", "adr_ratio",
+ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "scope_limit_codes", "cik", "map_cik", "lei", "adr_ratio",
            "build_out_return", "build_out_lag_years")
 REQUIRED = ("ticker", "entity_class", "why")
 # (60) A build-out declaration is exactly a value, the evidence for it and a date. A number
@@ -43,6 +43,9 @@ def _check_entry(index: int, entry: object, vocabulary: frozenset[str] = frozens
     missing = [k for k in REQUIRED if not isinstance(fields.get(k), str) or not str(fields[k]).strip()]
     if missing:
         raise UniverseError(f"universe entry {name} lacks {', '.join(missing)}")
+    map_cik = fields.get("map_cik")
+    if map_cik is not None and (not isinstance(map_cik, str) or not re.fullmatch(r"[0-9]{10}", map_cik)):
+        raise UniverseError(f"universe entry {name}: map_cik must be a ten-digit CIK as a string, not {map_cik!r}")
     lei = fields.get("lei")
     if lei is not None and (not isinstance(lei, str) or not LEI.fullmatch(lei)):
         raise UniverseError(f"universe entry {name}: lei must be a twenty-character Legal Entity Identifier (letters and digits), not {lei!r}")
