@@ -581,30 +581,53 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         }
   in
   (* A derived ebit (any recipe but operating income) runs the dcf only when the record's
-     cross-check found it within threshold of the vendor's operating income; a miss, or no
-     figure to check against, is the policy's Failed. *)
+     cross-check found it within threshold of the vendor's operating income. Where it
+     misses, the third recipe stands in if the period carries one and it passes the same
+     threshold against the same vendor figure: the statements then come back with that
+     figure as the period's ebit, its recipe and its composition. Otherwise, or with no
+     figure to check against, the policy's Failed. *)
+  let alternative_recipe = "revenues_less_costs_and_expenses" in
   let ebit_policy (fin : financials) =
     let policy = params.field_definitions.refinement_policy in
     match Period.latest fin with
-    | Some ({ ebit_recipe = Some recipe; _ } : fiscal_period) when recipe <> "operating_income" -> (
+    | Some ({ ebit_recipe = Some recipe; _ } as latest : fiscal_period) when recipe <> "operating_income" -> (
         let check =
           Option.bind original.cross_check (fun (c : cross_check) ->
               List.find_opt (fun (f : field_check) -> f.field = "ebit") c.fields)
         in
         match check with
-        | Some { agree = Some true; _ } -> Ok ()
-        | Some ({ agree = Some false; _ } as f) ->
-            Error
-              (Printf.sprintf "%s (%s: derived %.4g against the vendor's %.4g, %.1f%% beyond the %g%% threshold)"
-                 policy.on_miss recipe
-                 (Option.value f.primary ~default:nan) (Option.value f.secondary ~default:nan)
-                 (Option.value f.relative_difference ~default:nan *. 100.)
-                 (match original.cross_check with Some c -> c.threshold *. 100. | None -> nan))
+        | Some { agree = Some true; _ } -> Ok fin
+        | Some ({ agree = Some false; _ } as f) -> (
+            let threshold = match original.cross_check with Some c -> c.threshold | None -> nan in
+            (* the check is in the statements' own currency, so the third figure is read from
+               the original period; the value the model runs on is the converted one *)
+            let passes =
+              match (Option.bind (Period.latest original) (fun (p : fiscal_period) -> p.ebit_alternative), f.secondary) with
+              | Some alt, Some vendor ->
+                  let scale = Float.max (Float.abs alt) (Float.abs vendor) in
+                  scale > 0. && Float.abs (alt -. vendor) /. scale <= threshold
+              | _ -> false
+            in
+            match (passes, latest.ebit_alternative) with
+            | true, Some alt ->
+                let swap (p : fiscal_period) =
+                  if p.period_end = latest.period_end then
+                    { p with ebit = Some alt; ebit_recipe = Some alternative_recipe; ebit_composition = latest.ebit_alternative_composition }
+                  else p
+                in
+                Ok { fin with periods = List.map swap fin.periods }
+            | _ ->
+                Error
+                  (Printf.sprintf "%s (%s: derived %.4g against the vendor's %.4g, %.1f%% beyond the %g%% threshold)"
+                     policy.on_miss recipe
+                     (Option.value f.primary ~default:nan) (Option.value f.secondary ~default:nan)
+                     (Option.value f.relative_difference ~default:nan *. 100.)
+                     (threshold *. 100.)))
         | _ ->
             Error
               (Printf.sprintf "%s (%s: no vendor operating income to check against)" policy.on_miss
                  recipe))
-    | _ -> Ok ()
+    | _ -> Ok fin
   in
   let run_model ~fin ?conversion ~model ~class_check ~rule ~country assumptions =
     let failed = failed ~fin ~model ~class_check ~floor:(floor_of_rule rule) in
@@ -624,7 +647,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     | `Dcf -> (
         match ebit_policy fin with
         | Error reason -> { (failed reason) with rd_shadow_reason = Some "no completed DCF to shadow" }
-        | Ok () -> (
+        | Ok fin -> (
             let class_name = match declared with Some c -> Admissibility.class_name c | None -> "" in
             match Dcf.value ~declared:class_name assumptions ~country fin with
             | Error reason ->

@@ -141,6 +141,8 @@ type fiscal_period = {
   ?weighted_shares_tag : string option;
   ?ebit_recipe : string option;               (* "operating_income" | "pretax_plus_interest" *)
   ?ebit_composition : composition option;
+  ?ebit_alternative : float option;            (* the third recipe beside a derived ebit: revenues less the filer's total costs and expenses, plus interest expense where it is inside those costs; read by the EBIT policy only when the derived figure misses the cross-check *)
+  ?ebit_alternative_composition : composition option;
   ?interest_expense : float option;           (* the filed interest expense line, first present of the ebit definition's tags or vendor rows (25); the mid-cycle model's bottom-up NOPAT reads it *)
   ?interest_expense_row : string option;
   ?depreciation_amortization_candidates : component list option;   (* (27) every D&A total tag filed for the period with its value; depreciation_amortization_row names the largest, taken *)

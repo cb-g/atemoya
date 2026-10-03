@@ -78,6 +78,8 @@ let convert ~rate (fin : financials) =
     {
       p with
       ebit = scale rate p.ebit;
+      ebit_alternative = scale rate p.ebit_alternative;
+      ebit_alternative_composition = scale_composition rate p.ebit_alternative_composition;
       pretax_income = scale rate p.pretax_income;
       tax_provision = scale rate p.tax_provision;
       total_revenue = scale rate p.total_revenue;

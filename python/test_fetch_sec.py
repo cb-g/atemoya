@@ -429,6 +429,18 @@ def test_ebit_recipe_from_filed_tags_when_operating_income_is_absent() -> None:
     assert q.ebit is not None and math.isclose(q.ebit, (32.581 + 0.971 - 1.056 + 2.0 - 3.0) * 1e9)
     with_operating = period({**jnj, "OperatingIncomeLoss": usd(fact("2025-12-31", 25.6e9, start="2025-01-01"))})
     assert (with_operating.ebit, with_operating.ebit_recipe, with_operating.ebit_row) == (25.6e9, "operating_income", "OperatingIncomeLoss")
+    # the third recipe rides beside a derived figure only (invented figures): revenues less the
+    # filer's total costs and expenses, plus interest unless it is filed as non-operating
+    assert p.ebit_alternative is None and with_operating.ebit_alternative is None   # no total costs filed; and never beside a filed operating income
+    totals = {"Revenues": usd(fact("2025-12-31", 100e9, start="2025-01-01")), "CostsAndExpenses": usd(fact("2025-12-31", 70e9, start="2025-01-01"))}
+    below = period({**jnj, **totals})
+    assert below.ebit_recipe == "pretax_plus_interest_less_nonoperating" and below.ebit_alternative == 30e9   # interest filed as non-operating: not added back
+    assert components(below.ebit_alternative_composition) == [("total_revenue", 100e9, "Revenues"), ("costs_and_expenses", -70e9, "CostsAndExpenses")]
+    inside = {k: v for k, v in jnj.items() if k != "InterestExpenseNonoperating"}
+    inside["InterestExpense"] = usd(fact("2025-12-31", 2e9, start="2025-01-01"))
+    within = period({**inside, **totals})
+    assert within.ebit_alternative == 32e9   # interest inside the costs: added back
+    assert within.ebit_alternative_composition is not None and within.ebit_alternative_composition.definition == "revenues_less_costs_and_expenses"
     no_interest = period({"IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest": usd(fact("2025-12-31", 1e9, start="2025-01-01"))})
     assert no_interest.ebit is None and no_interest.ebit_recipe is None and no_interest.ebit_composition is None
     assert len(DEFS.ebit.recipes) == 1 + DEFS.refinement_policy.max_refinements_per_field

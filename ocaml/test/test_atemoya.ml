@@ -112,6 +112,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     preferred_outside_equity;
     common_dividends_paid;
     common_dividends_paid_row = None;
+    ebit_alternative = None;
+    ebit_alternative_composition = None;
   }
 
 let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
@@ -2828,7 +2830,7 @@ let test_definitions_gate () =
   Alcotest.(check (option model)) "routed before the gate" (Some `Dcf) v.model;
   Alcotest.(check bool) "nothing computed" true (Option.is_none v.inputs);
   let v = run (financials [ defined_period ~ebit_recipe:"vendor_ebit_row" "2025-09-30"; defined_period "2024-09-30" ]) in
-  check_reason v [ "field definition mismatch: ebit recipe follows \"vendor_ebit_row\", reference/field_definitions.json defines \"operating_income | pretax_plus_interest_less_nonoperating\"" ];
+  check_reason v [ "field definition mismatch: ebit recipe follows \"vendor_ebit_row\", reference/field_definitions.json defines \"operating_income | pretax_plus_interest_less_nonoperating | revenues_less_costs_and_expenses\"" ];
   (* the gate sits before the filing-age gate *)
   let v = run (filed ~latest_filing:"2025-01-01" stale) in
   check_reason v [ "field definition mismatch" ];
@@ -3072,14 +3074,41 @@ let test_ebit_policy_gate () =
   check_reason miss
     [ "operating income not filed; derived EBIT misses the cross-check (pretax_plus_interest_less_nonoperating: derived 2.529e+04 against the vendor's 2.56e+04, 1.2% beyond the 2% threshold)" ];
   Alcotest.(check bool) "nothing computed" true (Option.is_none miss.inputs);
+  (* the third recipe: where the derived figure misses and the period carries revenues less
+     costs and expenses within the threshold of the same vendor figure, the DCF runs on that *)
+  let with_alternative value =
+    List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 0 then { p with ebit_alternative = Some value } else p) periods
+  in
+  (* the fixture's own scale: the derived 1200 misses a vendor figure of 1100, the third at 1105 is within 2% of it *)
+  let small ~agree : Boundary_t.cross_check =
+    { a_cross_check with
+      fields = [ { field = "ebit"; primary = Some 1200.; secondary = Some 1100.; relative_difference = Some (100. /. 1200.); agree = Some agree } ];
+      disagreements = (if agree then 0 else 1) }
+  in
+  let third = run (filed ~cross_check:(small ~agree:false) (with_alternative 1105.)) in
+  Alcotest.check status "the third recipe within the threshold runs" `Ok third.status;
+  (match third.inputs with
+  | Some (`Dcf i) ->
+      Alcotest.(check (option approx)) "on its figure" (Some 1105.) i.ebit;
+      Alcotest.(check (option string)) "under its name" (Some "revenues_less_costs_and_expenses") i.ebit_recipe
+  | _ -> Alcotest.fail "no dcf inputs on the third recipe");
+  let third_misses = run (filed ~cross_check:(small ~agree:false) (with_alternative 1000.)) in
+  check_reason third_misses [ "operating income not filed; derived EBIT misses the cross-check (pretax_plus_interest_less_nonoperating: derived 1200 against the vendor's 1100" ];
+  (* never a first choice: a derived figure that passes is used whatever the third says *)
+  let unused = run (filed ~cross_check:(small ~agree:true) (with_alternative 1000.)) in
+  (match unused.inputs with
+  | Some (`Dcf i) -> Alcotest.(check (option string)) "the derived recipe stands" (Some "pretax_plus_interest_less_nonoperating") i.ebit_recipe
+  | _ -> Alcotest.fail "no dcf inputs");
+  Alcotest.(check (option approx)) "and its value is the one without a third figure" ok.fair_value unused.fair_value;
   let unchecked = run (filed periods) in
   check_reason unchecked [ "operating income not filed; derived EBIT misses the cross-check (pretax_plus_interest_less_nonoperating: no vendor operating income to check against)" ];
   let reported = run (filed ~cross_check:(ebit_check ~agree:false) (List.map (derived_ebit_period ~recipe:"operating_income") [ "2025-09-30"; "2024-09-30"; "2023-09-30" ])) in
   Alcotest.check status "filed operating income is never gated" `Ok reported.status;
   let bank = run ~declared:(Some (declaration `Bank)) (filed ~cross_check:(ebit_check ~agree:false) [ { (bank_period ()) with ebit_recipe = Some "pretax_plus_interest_less_nonoperating" }; { (bank_period ()) with period_end = "2024-09-30"; ebit_recipe = Some "pretax_plus_interest_less_nonoperating" } ]) in
   Alcotest.(check bool) "the gate is a dcf gate" true (bank.failed_reason = None || not (contains (Option.get bank.failed_reason) "derived EBIT"));
-  Alcotest.(check int) "policy allows one refinement" 1 params.field_definitions.refinement_policy.max_refinements_per_field;
-  Alcotest.(check int) "recipes: operating income plus one derived" 2 (List.length params.field_definitions.ebit.recipes)
+  Alcotest.(check int) "policy allows two refinements since the fallback recipe" 2 params.field_definitions.refinement_policy.max_refinements_per_field;
+  Alcotest.(check (list string)) "recipes: operating income, one derived, and the fallback the user added on 2026-10-03"
+    [ "operating_income"; "pretax_plus_interest_less_nonoperating"; "revenues_less_costs_and_expenses" ] params.field_definitions.ebit.recipes
 
 let test_summary_implied_line () =
   let rename t (v : Boundary_t.valuation) = { v with ticker = t } in

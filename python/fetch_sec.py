@@ -970,6 +970,28 @@ def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: 
     return sum(p.value for p in parts), _label(parts), _composition(defs.delta_nwc.name, parts)
 
 
+ALTERNATIVE_RECIPE = "revenues_less_costs_and_expenses"
+
+
+def ebit_alternative(facts: Facts, defs: reference.FieldDefinitions, end: date, revenue: float | None, revenue_row: str | None, *, taxonomy: str = "us-gaap") -> tuple[float | None, boundary.Composition | None]:
+    """The third recipe, a fallback and never a first choice: revenues less the filer's own
+    total of costs and expenses, plus interest expense where the interest is inside those
+    costs (it is not when filed under an element that names it non-operating). Two filed
+    totals and no judgment about what is non-operating; computed only when the section
+    names a total-costs element and the filer files it. The EBIT policy reads it only where
+    the derived figure misses the cross-check, and holds it to the same threshold."""
+    d = defs.ebit.ifrs if taxonomy == "ifrs-full" else defs.ebit.xbrl
+    costs = facts.first(d.costs_and_expenses, end, instant=False) if d.costs_and_expenses else None
+    if revenue is None or revenue_row is None or costs is None:
+        return None, None
+    parts = [boundary.Component(name="total_revenue", value=revenue, row=revenue_row),
+             boundary.Component(name="costs_and_expenses", value=-costs[0], row=costs[1])]
+    interest = facts.first(d.interest_expense, end, instant=False)
+    if interest is not None and interest[1] not in d.interest_nonoperating:
+        parts.append(boundary.Component(name="interest_expense", value=interest[0], row=interest[1]))
+    return sum(p.value for p in parts), _composition(ALTERNATIVE_RECIPE, parts)
+
+
 def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: float | None, pretax_row: str | None, *, taxonomy: str = "us-gaap") -> tuple[float | None, str | None, str | None, boundary.Composition | None]:
     """Operating income as filed; else pretax income plus interest expense less the
     non-operating income pretax carries (interest income, other non-operating income,
@@ -1266,6 +1288,9 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                     chosen_cash=(cash_value, cash_row, cash_composition), chosen_debt=(debt, debt_row, debt_composition))
             nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
+        # the third recipe rides beside a derived figure only; a filed operating income needs none
+        alt_value, alt_composition = (ebit_alternative(facts, defs, end, v["total_revenue"], r["total_revenue"], taxonomy=taxonomy)
+                                      if ebit_recipe is not None and ebit_recipe != "operating_income" else (None, None))
         ffo_value, _, ffo_composition, ffo_unavailable = ffo(facts, defs, end, taxonomy=taxonomy)
         nav_line, nii_line, dps_line = bdc_lines(facts, defs, end) if not ifrs else (None, None, None)
         # (61) what a later filing says about this period, recorded and not taken; and
@@ -1315,6 +1340,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 cash_row=cash_row, book_equity_row=r["book_equity"], net_income_row=r["net_income"],
                 net_interest_income_row=r["net_interest_income"],
                 ebit_recipe=ebit_recipe, ebit_composition=ebit_composition,
+                ebit_alternative=alt_value, ebit_alternative_composition=alt_composition,
                 interest_expense=interest_value, interest_expense_row=interest_row, interest_recipe=interest_recipe,
                 cash_composition=cash_composition,
                 total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,

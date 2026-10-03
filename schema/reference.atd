@@ -455,6 +455,8 @@ type ebit_rows = {
   interest_income : string list;
   other_nonoperating : string list;
   equity_method : string list;
+  ~costs_and_expenses : string list;        (* the filer's own total of costs and expenses, for the third recipe; empty where the section has none *)
+  ~interest_nonoperating : string list;     (* interest elements that by their meaning sit below the operating line, so are not inside costs and expenses and are not added back *)
 }
 
 (* How many times a derived recipe may be refined, and the Failed reason when the refined

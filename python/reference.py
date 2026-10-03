@@ -2144,6 +2144,8 @@ class EbitRows:
     interest_income: List[str]
     other_nonoperating: List[str]
     equity_method: List[str]
+    costs_and_expenses: List[str] = field(default_factory=lambda: [])
+    interest_nonoperating: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'EbitRows':
@@ -2154,6 +2156,8 @@ class EbitRows:
                 interest_income=_atd_read_list(_atd_read_string)(x['interest_income']) if 'interest_income' in x else _atd_missing_json_field('EbitRows', 'interest_income'),
                 other_nonoperating=_atd_read_list(_atd_read_string)(x['other_nonoperating']) if 'other_nonoperating' in x else _atd_missing_json_field('EbitRows', 'other_nonoperating'),
                 equity_method=_atd_read_list(_atd_read_string)(x['equity_method']) if 'equity_method' in x else _atd_missing_json_field('EbitRows', 'equity_method'),
+                costs_and_expenses=_atd_read_list(_atd_read_string)(x['costs_and_expenses']) if 'costs_and_expenses' in x else [],
+                interest_nonoperating=_atd_read_list(_atd_read_string)(x['interest_nonoperating']) if 'interest_nonoperating' in x else [],
             )
         else:
             _atd_bad_json('EbitRows', x)
@@ -2165,6 +2169,8 @@ class EbitRows:
         res['interest_income'] = _atd_write_list(_atd_write_string)(self.interest_income)
         res['other_nonoperating'] = _atd_write_list(_atd_write_string)(self.other_nonoperating)
         res['equity_method'] = _atd_write_list(_atd_write_string)(self.equity_method)
+        res['costs_and_expenses'] = _atd_write_list(_atd_write_string)(self.costs_and_expenses)
+        res['interest_nonoperating'] = _atd_write_list(_atd_write_string)(self.interest_nonoperating)
         return res
 
     @classmethod

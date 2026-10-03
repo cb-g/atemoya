@@ -100,8 +100,12 @@ Both providers assemble cash, total debt, the change in working capital and ebit
 period records the components summed, and a record fetched under another definition fails
 rather than being valued under this one. A derived ebit (no operating income filed) runs
 the DCF only when the cross-check finds it within threshold of the vendor's operating
-income; the refinement policy in that file allows one refinement of a recipe and names
-the `Failed` reason for a miss.
+income. Where it misses, a third recipe stands in if it passes the same check: revenues
+less the filer's own total of costs and expenses, plus interest where the interest is inside
+those costs, carried on the period as `ebit_alternative` with its composition and named on
+the record as `revenues_less_costs_and_expenses` when used. It is a fallback and never a
+first choice. The refinement policy in that file allows two refinements of a recipe and
+names the `Failed` reason for a miss.
 
 ## Readouts and diffs
 

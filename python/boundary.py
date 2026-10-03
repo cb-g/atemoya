@@ -5364,6 +5364,8 @@ class FiscalPeriod:
     weighted_shares_tag: Optional[str] = None
     ebit_recipe: Optional[str] = None
     ebit_composition: Optional[Composition] = None
+    ebit_alternative: Optional[float] = None
+    ebit_alternative_composition: Optional[Composition] = None
     interest_expense: Optional[float] = None
     interest_expense_row: Optional[str] = None
     depreciation_amortization_candidates: Optional[List[Component]] = None
@@ -5459,6 +5461,8 @@ class FiscalPeriod:
                 weighted_shares_tag=_atd_read_string(x['weighted_shares_tag']) if 'weighted_shares_tag' in x else None,
                 ebit_recipe=_atd_read_string(x['ebit_recipe']) if 'ebit_recipe' in x else None,
                 ebit_composition=Composition.from_json(x['ebit_composition']) if 'ebit_composition' in x else None,
+                ebit_alternative=_atd_read_float(x['ebit_alternative']) if 'ebit_alternative' in x else None,
+                ebit_alternative_composition=Composition.from_json(x['ebit_alternative_composition']) if 'ebit_alternative_composition' in x else None,
                 interest_expense=_atd_read_float(x['interest_expense']) if 'interest_expense' in x else None,
                 interest_expense_row=_atd_read_string(x['interest_expense_row']) if 'interest_expense_row' in x else None,
                 depreciation_amortization_candidates=_atd_read_list(Component.from_json)(x['depreciation_amortization_candidates']) if 'depreciation_amortization_candidates' in x else None,
@@ -5604,6 +5608,10 @@ class FiscalPeriod:
             res['ebit_recipe'] = _atd_write_string(self.ebit_recipe)
         if self.ebit_composition is not None:
             res['ebit_composition'] = (lambda x: x.to_json())(self.ebit_composition)
+        if self.ebit_alternative is not None:
+            res['ebit_alternative'] = _atd_write_float(self.ebit_alternative)
+        if self.ebit_alternative_composition is not None:
+            res['ebit_alternative_composition'] = (lambda x: x.to_json())(self.ebit_alternative_composition)
         if self.interest_expense is not None:
             res['interest_expense'] = _atd_write_float(self.interest_expense)
         if self.interest_expense_row is not None:

@@ -790,6 +790,12 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the third EBIT recipe: revenues less the filer's total costs and expenses, plus interest
+  where it sits inside those costs, a fallback the policy reads only where the derived
+  figure misses the vendor cross-check and this one passes the same threshold; the user's
+  decision, reversing "there is no third recipe". With `IncreaseDecreaseInDueToAffiliates`
+  classified as a working-capital liability line, one record changes status. No new
+  `Failed` string.
 - India's curve: from the manual tier to the OECD ten-year through FRED, which answers the
   refresher but lags about two months, so a rupee record is still refused on the 45-day gate
   on most days. No new `Failed` string; no record's status moves.
