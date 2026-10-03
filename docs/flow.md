@@ -790,6 +790,9 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- India's curve: from the manual tier to the OECD ten-year through FRED, which answers the
+  refresher but lags about two months, so a rupee record is still refused on the 45-day gate
+  on most days. No new `Failed` string; no record's status moves.
 - three statement rules: `IncreaseDecreaseInDueFromRelatedParties` is a working-capital asset
   line (Sea), the IFRS deferred-income-with-contract-liabilities adjustment a working-capital
   line (Spotify), and the IFRS depreciation chain ends on the cash-flow reconciliation's own

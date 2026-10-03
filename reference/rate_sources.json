@@ -369,19 +369,22 @@
       ]
     },
     "India": {
-      "tier": "manual",
-      "source": "hand-copied sovereign yield curve",
-      "parser": "manual",
+      "tier": "fred_oecd_10y",
+      "source": "OECD long-term government bond yield (10y, monthly average) via FRED, series INDIRLTLT01STM",
+      "parser": "fred_oecd_10y",
+      "series": {
+        "10y": "INDIRLTLT01STM"
+      },
+      "substitute": {
+        "7y": "10y"
+      },
       "tenors": [
-        "1y",
-        "3y",
-        "5y",
         "7y",
         "10y"
       ],
       "notes": [
-        "No programmatic source verified on 2026-09-18. Refresh by hand from the RBI Database on Indian Economy or the CCIL benchmark curve: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors.",
-        "FRED carries no OECD series for India (IRLTLT01INM156N does not exist)."
+        "as_of is the end of the observation month, the point at which the monthly average is complete",
+        "Moved from the manual tier on 2026-10-03: the series answered python/refresh_rates.py with a dated observation before this entry was written. It is a monthly average that reaches FRED about two months after the month ends, so on most days it is older than the 45-day gate and an Indian-rupee record is refused for a stale rate, naming this refresher; that is the honest state of a source that slow, and no hand copy stands in for it. The Reserve Bank of India's database and the CCIL benchmark curve were not probed for a scripted daily source."
       ]
     },
     "China": {
