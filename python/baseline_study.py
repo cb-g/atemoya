@@ -35,7 +35,10 @@ anchor study prints them:
    2 and 4 mixes them;
 6. the R&D shadow: on the generic DCF's rows that carry one, the shadow's margin of safety
    in quintiles beside the headline's and the earnings yield on the same rows, the rank
-   correlation of the two margins and how many rows change quintile.
+   correlation of the two margins and how many rows change quintile;
+7. the options-implied expected return: every row that carries one, in quintiles of it
+   within the date, with the earnings yield and the margin of safety on the same rows and
+   its rank correlation with each. The options store is young, so this is a few dates.
 
 **Descriptive only**, under the anchor study's rules: no statistic the sample can carry, a
 cell under MIN_CELL rows a count alone, nothing fed back into a model, a belief or a
@@ -152,6 +155,58 @@ def load_shadow_margins(records: list[Record], pit_out: Path) -> dict[tuple[str,
     return out
 
 
+def load_expected_returns(records: list[Record], pit_out: Path) -> dict[tuple[str, str], float]:
+    """The options-implied expected return per (name, date), from the date's own valuations
+    file; only the records that carry the block, whatever their status."""
+    out: dict[tuple[str, str], float] = {}
+    for d in sorted({r.as_of for r in records}):
+        path = pit_out / d / "valuations.jsonl"
+        if not path.exists():
+            continue
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            v = cast(Json, json.loads(line))
+            block = v.get("options_expected_return")
+            if isinstance(block, dict):
+                value = study.as_float(cast(Json, block).get("expected_return"))
+                if value is not None:
+                    out[(str(v["ticker"]), d)] = value
+    return out
+
+
+def expected_return_section(records: list[Record], expected: dict[tuple[str, str], float], measures: dict[tuple[str, str], Measures]) -> list[str]:
+    """Every row that carries the options-implied expected return, valued or refused, cut
+    into quintiles of it within the date (5 the highest expected return), with the earnings
+    yield beside it on the same rows. The options store is young, so few dates carry it and
+    the year-ahead cells are mostly counts."""
+    rows = [r for r in records if (r.ticker, r.as_of) in expected]
+    dates = sorted({r.as_of for r in rows})
+    title = f"the options-implied expected return: {len(rows)} rows on {len({r.ticker for r in rows})} names over {len(dates)} dates carry one"
+    lines = ["", title, "-" * len(title)]
+    if not rows:
+        return lines + ["  none: the panel's dates precede the options store, or the batch ran without it"]
+    lines.append(f"  dates: {', '.join(dates)}; quintile 1 the lowest expected return, 5 the highest")
+    q = quintiles_within_date([(r, expected[(r.ticker, r.as_of)]) for r in rows])
+    lines += quintile_block("by options-implied expected return", rows, q) + [""]
+    lines += ["the highest quintile's median excess less the lowest's, on those rows:", spread_line("options-implied expected return", rows, q)]
+    with_yield = [(r, cast(float, measures[(r.ticker, r.as_of)].earnings_yield)) for r in rows if measures[(r.ticker, r.as_of)].earnings_yield is not None]
+    lines.append(spread_line("earnings_yield (cheapest less dearest)", [r for r, _ in with_yield], quintiles_within_date(with_yield)))
+    valued = [(r, r.margin_of_safety) for r in rows if r.status == "Ok" and r.margin_of_safety is not None]
+    lines.append(spread_line("margin of safety (cheapest less dearest)", [r for r, _ in valued], quintiles_within_date(valued)))
+    for label, other in (("the earnings yield", {k: m.earnings_yield for k, m in measures.items()}),
+                         ("the margin of safety", {(r.ticker, r.as_of): r.margin_of_safety for r in rows if r.status == "Ok"})):
+        per_date: list[float] = []
+        for d in dates:
+            pairs = [(expected[(r.ticker, d)], x) for r in rows if r.as_of == d and (x := other.get((r.ticker, d))) is not None]
+            rho = spearman([a for a, _ in pairs], [b for _, b in pairs])
+            if rho is not None:
+                per_date.append(rho)
+        if per_date:
+            lines.append(f"  rank correlation with {label}, within the date: median {statistics.median(per_date):+.2f} over {len(per_date)} dates (lowest {min(per_date):+.2f}, highest {max(per_date):+.2f})")
+    return lines
+
+
 def shadow_section(valued: list[Record], shadow: dict[tuple[str, str], float], measures: dict[tuple[str, str], Measures]) -> list[str]:
     """On the generic DCF's rows that carry an R&D shadow: the shadow's margin of safety, the
     headline's and the earnings yield, each cut into quintiles on those same rows."""
@@ -241,7 +296,7 @@ def spread_line(label: str, rows: list[Record], q: dict[tuple[str, str], int]) -
 
 
 def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_of: date, holdout_line: str,
-           shadow: dict[tuple[str, str], float] | None = None) -> str:
+           shadow: dict[tuple[str, str], float] | None = None, expected: dict[tuple[str, str], float] | None = None) -> str:
     dates = sorted({r.as_of for r in records})
     lines = [
         f"The naive baseline: {len(records)} panel rows, {len({r.ticker for r in records})} names, {len(dates)} quarter-ends {dates[0]} to {dates[-1]}, closes cut at {as_of.isoformat()}.",
@@ -297,6 +352,7 @@ def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_
                       spread_line(name, rows, quintiles_within_date(both)),
                       spread_line("margin of safety", rows, quintiles_within_date([(r, cast(float, r.margin_of_safety)) for r in rows]))]
     lines += shadow_section(valued, shadow or {}, measures)
+    lines += expected_return_section(records, expected or {}, measures)
     return "\n".join(lines) + "\n"
 
 
@@ -321,7 +377,8 @@ def main(argv: list[str]) -> int:
         json.dumps({"ticker": r.ticker, "as_of": r.as_of, "status": r.status, "margin_of_safety": r.margin_of_safety, "excess": r.excess,
                     **{m: measures[(r.ticker, r.as_of)].get(m) for m in MEASURES}, "measures_reason": measures[(r.ticker, r.as_of)].reason},
                    sort_keys=True) + "\n" for r in records))
-    text = report(records, measures, as_of, holdout_line, load_shadow_margins(records, panel.parent))
+    text = report(records, measures, as_of, holdout_line, load_shadow_margins(records, panel.parent),
+                  load_expected_returns(records, panel.parent))
     (out / "tables.txt").write_text(text)
     sys.stdout.write(text)
     return 0

@@ -109,3 +109,19 @@ def test_the_shadow_section_reads_blocks_from_the_dates_own_valuations(tmp_path:
     assert "10 generic-DCF rows on 10 names carry one" in text
     assert "median -1.00 over 1 dates" in text and "rows whose quintile differs between the two: 8 of 10" in text
     assert "none: the panel was built before the shadow" in "\n".join(base.shadow_section(rows, {}, measures))
+
+
+def test_the_expected_return_section_reads_every_status_and_says_when_there_is_none(tmp_path: Path) -> None:
+    day = tmp_path / "2026-03-31"
+    day.mkdir()
+    rows = [record(f"N{i}", "2026-03-31", mos=float(i), excess=0.01 * i) for i in range(10)]
+    rows[0].status = "Failed"
+    (day / "valuations.jsonl").write_text("".join(json.dumps({"ticker": r.ticker, "options_expected_return": {"expected_return": 0.05 + 0.01 * i}}) + "\n" for i, r in enumerate(rows)))
+    expected = base.load_expected_returns(rows, tmp_path)
+    assert len(expected) == 10 and expected[("N9", "2026-03-31")] == 0.05 + 0.09
+    measures = {(r.ticker, r.as_of): base.Measures(earnings_yield=0.01 * i) for i, r in enumerate(rows)}
+    text = "\n".join(base.expected_return_section(rows, expected, measures))
+    assert "10 rows on 10 names over 1 dates carry one" in text
+    assert "rank correlation with the earnings yield, within the date: median +1.00 over 1 dates" in text
+    assert "rank correlation with the margin of safety" in text
+    assert "none: the panel's dates precede the options store" in "\n".join(base.expected_return_section(rows, {}, measures))

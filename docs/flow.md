@@ -786,6 +786,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the expected-return lens on the point-in-time path: the risk-free rate it reads keeps its
+  vintage there, as the valuation's own parameters do, where it had refused every record with
+  a parameter dated after the date; and `baseline_study.py` gains its section. No new
+  `Failed` string; no record moves outside `--options` on a point-in-time date.
 - the options-implied expected return: under `--options`, `options_expected_return` on every
   record of a name that is not a fund, Martin and Wagner's expected return from three
   risk-neutral variances, beside CAPM and the declared required return, or its reason. A

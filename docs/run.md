@@ -228,7 +228,13 @@ safety's, both cut on that same set; the within-date rank correlation of the two
 cheapest quintile's median less the dearest's, pooled and then within each model's own rows,
 since a margin of safety from one model does not rank against another's. It answers one
 question the anchor study cannot: whether the anchor did anything a plain cheapness sort did
-not. Descriptive only, under the same rules; it writes `output/baseline_study/`.
+not. Two further sections read blocks from each date's own valuations file: the R&D
+shadow's margin of safety beside the headline's on the generic DCF's rows, and the
+options-implied expected return in quintiles within the date on every row that carries one,
+with the earnings yield and the margin of safety on the same rows and its rank correlation
+with each. The options store begins in April 2025, so the second is a handful of
+quarter-ends in one market and its year-ahead cells are near the small-cell floor.
+Descriptive only, under the same rules; it writes `output/baseline_study/`.
 
 ### The holdout
 

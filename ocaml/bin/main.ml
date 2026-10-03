@@ -280,17 +280,19 @@ let () =
     match options with
     | None -> results
     | Some lookup ->
+        let fins = List.filter_map (read "financials" Boundary_j.read_financials) files in
         let caps =
           List.filter_map
-            (fun path ->
-              Option.bind (read "financials" Boundary_j.read_financials path) (fun (fin : Boundary_t.financials) ->
-                  Option.map (fun cap -> (fin.ticker, cap)) fin.market_cap))
-            files
+            (fun (fin : Boundary_t.financials) -> Option.map (fun cap -> (fin.ticker, cap)) fin.market_cap)
+            fins
         in
+        (* On a point-in-time run the parameters keep their vintage, as the valuation's own
+           do: a parameter dated after the valuation date is anachronistic there, not an error. *)
+        let hold_vintage = List.exists (fun (fin : Boundary_t.financials) -> Option.is_some fin.point_in_time) fins in
         let rf =
           Result.map
             (fun (a : Dcf.assumptions) -> a.risk_free_rate.value)
-            (Params.resolve params ~today:o.today ~country:"United States" ~industry:None)
+            (Params.resolve ~hold_vintage params ~today:o.today ~country:"United States" ~industry:None)
         in
         Expected_return.annotate ~lookup ~rf ~caps results
   in
