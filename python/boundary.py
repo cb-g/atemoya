@@ -2034,6 +2034,77 @@ class PointInTime:
 
 
 @dataclass
+class OptionsExpectedReturn:
+    """Original type: options_expected_return = { ... }
+    """
+
+    snapshot_date: str
+    expiry: str
+    horizon_years: float
+    risk_free_rate: float
+    svix2: float
+    strike_range: List[float]
+    benchmark: str
+    benchmark_expiry: str
+    market_svix2: float
+    average_svix2: float
+    names_in_average: int
+    in_average: bool
+    expected_excess_return: float
+    expected_return: float
+    scope_limits: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'OptionsExpectedReturn':
+        if isinstance(x, dict):
+            return cls(
+                snapshot_date=_atd_read_string(x['snapshot_date']) if 'snapshot_date' in x else _atd_missing_json_field('OptionsExpectedReturn', 'snapshot_date'),
+                expiry=_atd_read_string(x['expiry']) if 'expiry' in x else _atd_missing_json_field('OptionsExpectedReturn', 'expiry'),
+                horizon_years=_atd_read_float(x['horizon_years']) if 'horizon_years' in x else _atd_missing_json_field('OptionsExpectedReturn', 'horizon_years'),
+                risk_free_rate=_atd_read_float(x['risk_free_rate']) if 'risk_free_rate' in x else _atd_missing_json_field('OptionsExpectedReturn', 'risk_free_rate'),
+                svix2=_atd_read_float(x['svix2']) if 'svix2' in x else _atd_missing_json_field('OptionsExpectedReturn', 'svix2'),
+                strike_range=_atd_read_list(_atd_read_float)(x['strike_range']) if 'strike_range' in x else _atd_missing_json_field('OptionsExpectedReturn', 'strike_range'),
+                benchmark=_atd_read_string(x['benchmark']) if 'benchmark' in x else _atd_missing_json_field('OptionsExpectedReturn', 'benchmark'),
+                benchmark_expiry=_atd_read_string(x['benchmark_expiry']) if 'benchmark_expiry' in x else _atd_missing_json_field('OptionsExpectedReturn', 'benchmark_expiry'),
+                market_svix2=_atd_read_float(x['market_svix2']) if 'market_svix2' in x else _atd_missing_json_field('OptionsExpectedReturn', 'market_svix2'),
+                average_svix2=_atd_read_float(x['average_svix2']) if 'average_svix2' in x else _atd_missing_json_field('OptionsExpectedReturn', 'average_svix2'),
+                names_in_average=_atd_read_int(x['names_in_average']) if 'names_in_average' in x else _atd_missing_json_field('OptionsExpectedReturn', 'names_in_average'),
+                in_average=_atd_read_bool(x['in_average']) if 'in_average' in x else _atd_missing_json_field('OptionsExpectedReturn', 'in_average'),
+                expected_excess_return=_atd_read_float(x['expected_excess_return']) if 'expected_excess_return' in x else _atd_missing_json_field('OptionsExpectedReturn', 'expected_excess_return'),
+                expected_return=_atd_read_float(x['expected_return']) if 'expected_return' in x else _atd_missing_json_field('OptionsExpectedReturn', 'expected_return'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('OptionsExpectedReturn', 'scope_limits'),
+            )
+        else:
+            _atd_bad_json('OptionsExpectedReturn', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['snapshot_date'] = _atd_write_string(self.snapshot_date)
+        res['expiry'] = _atd_write_string(self.expiry)
+        res['horizon_years'] = _atd_write_float(self.horizon_years)
+        res['risk_free_rate'] = _atd_write_float(self.risk_free_rate)
+        res['svix2'] = _atd_write_float(self.svix2)
+        res['strike_range'] = _atd_write_list(_atd_write_float)(self.strike_range)
+        res['benchmark'] = _atd_write_string(self.benchmark)
+        res['benchmark_expiry'] = _atd_write_string(self.benchmark_expiry)
+        res['market_svix2'] = _atd_write_float(self.market_svix2)
+        res['average_svix2'] = _atd_write_float(self.average_svix2)
+        res['names_in_average'] = _atd_write_int(self.names_in_average)
+        res['in_average'] = _atd_write_bool(self.in_average)
+        res['expected_excess_return'] = _atd_write_float(self.expected_excess_return)
+        res['expected_return'] = _atd_write_float(self.expected_return)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'OptionsExpectedReturn':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class MidcycleExclusion:
     """Original type: midcycle_exclusion = { ... }
     """
@@ -4756,6 +4827,8 @@ class Valuation:
     earnings_reason: Optional[str] = None
     runway: Optional[Runway] = None
     runway_reason: Optional[str] = None
+    options_expected_return: Optional[OptionsExpectedReturn] = None
+    options_expected_return_reason: Optional[str] = None
     rd_shadow: Optional[RdShadow] = None
     rd_shadow_reason: Optional[str] = None
 
@@ -4817,6 +4890,8 @@ class Valuation:
                 earnings_reason=_atd_read_string(x['earnings_reason']) if 'earnings_reason' in x else None,
                 runway=Runway.from_json(x['runway']) if 'runway' in x else None,
                 runway_reason=_atd_read_string(x['runway_reason']) if 'runway_reason' in x else None,
+                options_expected_return=OptionsExpectedReturn.from_json(x['options_expected_return']) if 'options_expected_return' in x else None,
+                options_expected_return_reason=_atd_read_string(x['options_expected_return_reason']) if 'options_expected_return_reason' in x else None,
                 rd_shadow=RdShadow.from_json(x['rd_shadow']) if 'rd_shadow' in x else None,
                 rd_shadow_reason=_atd_read_string(x['rd_shadow_reason']) if 'rd_shadow_reason' in x else None,
             )
@@ -4911,6 +4986,10 @@ class Valuation:
             res['runway'] = (lambda x: x.to_json())(self.runway)
         if self.runway_reason is not None:
             res['runway_reason'] = _atd_write_string(self.runway_reason)
+        if self.options_expected_return is not None:
+            res['options_expected_return'] = (lambda x: x.to_json())(self.options_expected_return)
+        if self.options_expected_return_reason is not None:
+            res['options_expected_return_reason'] = _atd_write_string(self.options_expected_return_reason)
         if self.rd_shadow is not None:
             res['rd_shadow'] = (lambda x: x.to_json())(self.rd_shadow)
         if self.rd_shadow_reason is not None:

@@ -2238,6 +2238,56 @@ let synthetic_chain ?(snapshot_date = "2026-09-01") ?(expiries = [ ("2027-03-19"
   { Boundary_t.ticker = "TEST"; snapshot_date; snapshot_timestamp = snapshot_date ^ "T21:00:00.000";
     source = "synthetic lognormal"; underlying_close = spot; underlying_source = "fixture"; fetched_at = snapshot_date; quotes }
 
+(* The options-implied expected return on flat synthetic smiles: twelve stocks at 30% vol,
+   one at 50%, the benchmark at 15%, equal capitalisations. *)
+let test_expected_return () =
+  (* a flat smile of total variance w, integrated wide, is exp w - 1; a narrower range is less *)
+  let flat w : Market_implied.svi = { a = w; b = 0.; rho = 0.; m = 0.; sigma = 0.1 } in
+  Alcotest.(check (float 1e-4)) "flat smile, wide" (exp 0.09 -. 1.) (Expected_return.svix2 (flat 0.09) ~forward:100.);
+  Alcotest.(check bool) "a narrower strike range understates" true
+    (Expected_return.svix2 ~lower:(-0.3) ~upper:0.3 (flat 0.09) ~forward:100. < Expected_return.svix2 (flat 0.09) ~forward:100.);
+  let vols = ("SPY", 0.15) :: ("HOT", 0.50) :: List.init 12 (fun i -> (Printf.sprintf "S%02d" i, 0.30)) in
+  let lookup ticker =
+    match List.assoc_opt ticker vols with
+    | Some vol -> Ok { (synthetic_chain ~vol_of:(fun _ -> vol) ()) with ticker }
+    | None -> Error "no options data"
+  in
+  let named t = { (run (financials (history ()))) with ticker = t } in
+  let fund = { (run ~declared:(Some (declaration `Wrapper)) (financials (history ()))) with ticker = "S00" } in
+  let records = named "HOT" :: named "NONE" :: List.init 12 (fun i -> named (Printf.sprintf "S%02d" i)) in
+  let caps = List.map (fun (v : Boundary_t.valuation) -> (v.ticker, 100.)) records in
+  let out = Expected_return.annotate ~lookup ~rf:(Ok 0.04) ~caps records in
+  let find t = List.find (fun (v : Boundary_t.valuation) -> v.ticker = t) out in
+  let block t = match (find t).options_expected_return with Some b -> b | None -> Alcotest.failf "%s: no block" t in
+  let plain = block "S03" and hot = block "HOT" in
+  Alcotest.(check int) "thirteen names in the average" 13 plain.names_in_average;
+  Alcotest.(check string) "the name's own expiry" "2028-01-21" plain.expiry;
+  Alcotest.(check bool) "variances ordered: benchmark below a stock below the hot one" true
+    (plain.market_svix2 < plain.svix2 && plain.svix2 < hot.svix2);
+  Alcotest.(check (float 1e-12)) "the formula" (1.04 *. (plain.market_svix2 +. ((plain.svix2 -. plain.average_svix2) /. 2.))) plain.expected_excess_return;
+  Alcotest.(check (float 1e-12)) "the return is the rate plus the excess" (0.04 +. hot.expected_excess_return) hot.expected_return;
+  (* the paper's identity: the capitalisation-weighted mean of the excess is the market's term *)
+  let mean = List.fold_left (fun acc t -> acc +. (block t).expected_excess_return) 0. ("HOT" :: List.init 12 (Printf.sprintf "S%02d")) /. 13. in
+  Alcotest.(check (float 1e-9)) "the weighted mean excess is the benchmark's variance grossed up" (1.04 *. plain.market_svix2) mean;
+  Alcotest.(check bool) "nothing else on the record moves" true
+    ({ (find "S03") with options_expected_return = None } = named "S03");
+  Alcotest.(check (option string)) "no chain: the store's reason" (Some "no options data") (find "NONE").options_expected_return_reason;
+  (* a fund carries neither field; too few names, no benchmark and no rate are reasons on every stock *)
+  let with_fund = Expected_return.annotate ~lookup ~rf:(Ok 0.04) ~caps (fund :: List.tl records) in
+  let f = List.hd with_fund in
+  Alcotest.(check bool) "a fund is left alone" true (Option.is_none f.options_expected_return && Option.is_none f.options_expected_return_reason);
+  let few = Expected_return.annotate ~lookup ~rf:(Ok 0.04) ~caps [ named "HOT"; named "S01" ] in
+  check_mentions "too few names" (Option.value (List.hd few).options_expected_return_reason ~default:"") [ "2 names in the run carry a usable chain"; "the average needs 10" ];
+  let no_bench = Expected_return.annotate ~lookup:(fun t -> if t = "SPY" then Error "no options data" else lookup t) ~rf:(Ok 0.04) ~caps records in
+  check_mentions "no benchmark" (Option.value (List.hd no_bench).options_expected_return_reason ~default:"") [ "no benchmark variance from SPY: no options data" ];
+  let no_rate = Expected_return.annotate ~lookup ~rf:(Error "stale") ~caps records in
+  check_mentions "no rate" (Option.value (List.hd no_rate).options_expected_return_reason ~default:"") [ "no risk-free rate for the benchmark's currency: stale" ];
+  (* a name with no capitalisation still gets its block, and says it is outside the mean *)
+  let uncapped = Expected_return.annotate ~lookup ~rf:(Ok 0.04) ~caps:(List.filter (fun (t, _) -> t <> "HOT") caps) records in
+  (match (List.hd uncapped).options_expected_return with
+  | Some b -> Alcotest.(check bool) "outside the mean" false b.in_average; Alcotest.(check int) "twelve in it" 12 b.names_in_average
+  | None -> Alcotest.fail "no block")
+
 let test_market_implied_chain () =
   let chain = synthetic_chain () in
   (* expiry selection: the longest at least 365 days out with eight quoted strikes each side;
@@ -4251,6 +4301,7 @@ let () =
           Alcotest.test_case "the implied event move, and the negative case" `Quick test_earnings_implied_move;
           Alcotest.test_case "the mark and the block" `Quick test_earnings_spans_and_block;
           Alcotest.test_case "the R&D shadow: schedule, invariants, reasons" `Quick test_rd_shadow;
+          Alcotest.test_case "the options-implied expected return" `Quick test_expected_return;
         ] );
       ( "runway readout",
         [

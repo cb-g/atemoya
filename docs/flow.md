@@ -786,6 +786,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the options-implied expected return: under `--options`, `options_expected_return` on every
+  record of a name that is not a fund, Martin and Wagner's expected return from three
+  risk-neutral variances, beside CAPM and the declared required return, or its reason. A
+  lens read after the batch; no new `Failed` string; no other field of any record moves.
 - planned sales and the share of holdings sold: each insider window gains `plan_sales`,
   `plan_sellers`, `plan_dollars_sold` and `sellers_detail`, which the downstream project asked
   for to tell stock-pay selling from unusual selling. Counts and lists only; no new `Failed`

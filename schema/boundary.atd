@@ -1164,6 +1164,27 @@ type runway_period = {
   free_cash_flow : float;
 }
 
+(* The options-implied expected return (Martin and Wagner, JF 2019): a required return read
+   from option prices alone, beside CAPM and the declared one. Every variance is risk-neutral
+   and annualised. Present only under --options, on a record of a name that is not a fund. *)
+type options_expected_return = {
+  snapshot_date : string;             (* the chain's, the same as the benchmark's *)
+  expiry : string;                    (* the name's longest expiry at least 365 days out with eight quoted strikes each side *)
+  horizon_years : float;
+  risk_free_rate : float;             (* of the benchmark's currency, at the record's tenor *)
+  svix2 : float;                      (* the name's risk-neutral return variance: 2 / F^2 times the integral of out-of-the-money option prices over strike, on the fitted smile, per year *)
+  strike_range : float list;          (* the lowest and the highest strike the integral ran between, as multiples of the forward *)
+  benchmark : string;
+  benchmark_expiry : string;
+  market_svix2 : float;               (* the benchmark fund's *)
+  average_svix2 : float;              (* the market-capitalisation-weighted mean of svix2 over the names in the run with a usable chain *)
+  names_in_average : int;
+  in_average : bool;                  (* false when this name has no market capitalisation on the record and was left out of the mean *)
+  expected_excess_return : float;     (* (1 + rf) * (market_svix2 + (svix2 - average_svix2) / 2), per year *)
+  expected_return : float;            (* risk_free_rate + expected_excess_return *)
+  scope_limits : string list;
+}
+
 (* One fiscal year's research and development expense as filed. *)
 type rd_year = {
   period_end : string;
@@ -1280,6 +1301,8 @@ type valuation = {
   ?earnings_reason : string option;             (* (68) present instead: why there is no block *)
   ?runway : runway option;                      (* (76) on an Unprofitable record: cash against the burn as this tool reads it, and the releases inside it; never a fair value, a floor or a signal *)
   ?runway_reason : string option;               (* (76) present instead on an Unprofitable record: why there is no readout *)
+  ?options_expected_return : options_expected_return option;   (* under --options: the Martin-Wagner expected return from the options store, beside cost_of_equity_capm *)
+  ?options_expected_return_reason : string option;             (* present instead under --options on a name that is not a fund: why there is none *)
   ?rd_shadow : rd_shadow option;                (* on a record routed to the generic DCF: the value with research and development capitalised, beside the headline and never replacing it *)
   ?rd_shadow_reason : string option;            (* present instead on such a record: why there is no shadow *)
 }

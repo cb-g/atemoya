@@ -371,6 +371,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       runway_reason;
       rd_shadow = None;
       rd_shadow_reason = None;
+      options_expected_return = None;
+      options_expected_return_reason = None;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,

@@ -90,6 +90,39 @@ which is a reading and not a gap.
 it. The expiry is not reselected and no number in the readout moves; a reader is told whether
 the horizon they are being shown carries the release.
 
+## The options-implied expected return
+
+Under `--options` every record of a name that is not a fund also carries
+`options_expected_return`, or `options_expected_return_reason`: the expected return that
+Martin and Wagner ("What is the expected return on a stock?", Journal of Finance, 2019)
+read from option prices alone. It sits beside `cost_of_equity_capm` and the declared
+required return and replaces neither; no fair value, margin of safety or signal reads it,
+and it is the same whatever the record's status, because nothing in it reads the valuation.
+
+It needs three risk-neutral variances and no beta, no history and no model of the company.
+For one expiry, SVIX squared is `2 / F²` times the integral over strikes of the
+out-of-the-money option price, puts below the forward and calls above, taken on the fitted
+smile and divided by the horizon in years. The expiry is the readout's own, the longest at
+least 365 days out with eight quoted strikes on each side. Then
+
+    expected excess return = (1 + rf) × (market + (stock − average) / 2)
+
+with `market` the benchmark fund's figure (SPY), `stock` the name's and `average` the
+market-capitalisation-weighted mean of `stock` over the names in the run that have a usable
+chain on the benchmark's snapshot date. By construction the weighted mean of the excess over
+those names is the market's term. The block carries each of the three, the count of names in
+the mean, the strike range the integral ran over and the risk-free rate.
+
+What limits it, and rides on the block: the integral runs only between the lowest and the
+highest quoted strike the fit read, nothing being taken from an extrapolated wing, so every
+variance understates and a name quoted over a narrower range understates more; the paper's
+average runs over every index member and this one over the names the store holds; each
+name's variance is read at its own longest expiry, a few months apart across names;
+single-stock options are American and the inversion is European; and under the paper's
+assumptions the formula is an equality, without them a lower bound, and either way the
+market's risk pricing and not a forecast. Fewer than ten names with a chain is a reason, not
+an average.
+
 ## What it is not
 
 Every field is risk-neutral: it embeds the market's risk pricing and is not a forecast.

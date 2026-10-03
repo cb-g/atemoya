@@ -274,6 +274,26 @@ let () =
       files
   in
   let results = List.map fst paired in
+  (* The options-implied expected return, under --options: a cross-section, so it is read
+     after the batch, from the chains and the fetched market capitalisations alone. *)
+  let results =
+    match options with
+    | None -> results
+    | Some lookup ->
+        let caps =
+          List.filter_map
+            (fun path ->
+              Option.bind (read "financials" Boundary_j.read_financials path) (fun (fin : Boundary_t.financials) ->
+                  Option.map (fun cap -> (fin.ticker, cap)) fin.market_cap))
+            files
+        in
+        let rf =
+          Result.map
+            (fun (a : Dcf.assumptions) -> a.risk_free_rate.value)
+            (Params.resolve params ~today:o.today ~country:"United States" ~industry:None)
+        in
+        Expected_return.annotate ~lookup ~rf ~caps results
+  in
   (* A previous run's valuations.jsonl, one record per line; an unreadable line is
      reported and skipped, an unreadable file exits. *)
   let baseline =
