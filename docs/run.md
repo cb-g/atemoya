@@ -293,6 +293,53 @@ whoever does it adds the date and the tree to the file's `opened` list. The held
 share the 2022-2026 regime on the dates before the cut, so they are a holdout on names; only
 the later dates are a holdout on time.
 
+## The broad panel and its study
+
+The anchor study and the naive baseline read eighteen quarter-ends on a hundred and
+seventy-eight names inside one market, and every fundamentals-based sort failed there the
+same way. That cannot tell a measure that never worked from one that did not work lately,
+or either from a sample that was chosen. Two commands build the longer, wider sample:
+
+    uv run python/broad_panel.py --retry-missing    # -> data/broad/panel.jsonl
+    uv run python/broad_study.py                    # -> output/broad_study/tables.txt
+
+`broad_panel.py` takes every SEC filer with a ticker today and forms a row each June from
+2010 on, from the fiscal year before: the filed flows and balance sheet from SEC's frames
+API, a market value from the cover-page share count (never restated, moved onto today's
+split basis by the splits after its month, times June's split-adjusted close), and the next
+twelve months' dividend-adjusted return beside SPY's. The first build takes about an hour,
+most of it the frames; the vendor rate-limits a long run of bulk price requests, which is
+what `--retry-missing` is for. Nothing fetched is tracked.
+
+`broad_study.py` cuts each measure into quintiles within the formation year, for the
+formations before 2022 and for those from 2022, and prints the top quintile's median excess
+less the bottom's, pooled and year by year. The measures are the earnings yield,
+book-to-price, gross profitability, the accruals ratio, the nine-signal score, and a
+peer-implied gap after Bartram and Grinblatt: each June, market value per dollar of assets
+regressed across the companies on equity, revenue, net income and operating cash flow per
+dollar of assets, the fitted value being what the market pays that year for those accounts
+elsewhere. The main tables are on filers reporting current assets, which leaves banks and
+insurers out; the held-out names are left out of everything.
+
+**What it found on the first build (2026-10-03), descriptively.** About 30,600 rows on 3,100
+filers, 26,200 with a return. Before 2022, twelve formations: the earnings yield sorted
+nothing (the cheapest fifth level with the dearest, ahead in three years of twelve),
+book-to-price and the peer-implied gap ran a few points the wrong way, gross profitability
+ran four points the right way and was ahead in eight years of twelve, the score two points
+the right way in six of eleven. From 2022, four formations: the earnings yield ran ten
+points the right way and the score nine, ahead in three and in all four of the years, where
+on the anchor study's hundred and seventy-eight names over the same years the cheapest ran
+behind the dearest. So two things the narrower studies could not say: cheapness was not
+working for a decade before 2022, on survivors at least; and its failure since 2022 is a
+property of the names in the universe here as much as of the market, a universe assembled
+in 2026 by readers who asked for names, many of them because of what their prices had done.
+
+**What it is not.** Survivors only: a filer is in the panel only if it has a ticker today,
+about a third of 2011's filers, so the failed and the acquired are missing and a sort that
+would have held them looks better than it was. A frame carries the latest figure reported
+for a period, later restatements included. A filer with several share classes is missing.
+Sixteen formations are sixteen. Nothing here feeds a model, a belief or a signal.
+
 ## Share counts and point-in-time
 
 Two share counts live in `reference/field_definitions.json` and are never interchanged: a

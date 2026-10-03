@@ -89,6 +89,7 @@ has the rules.
 | base rate | how often companies of the same size grew as fast as the record assumes and as the price needs, from filed history | the same run, `base_rate` on the record; `uv run python/base_rates.py` builds the table |
 | options-implied expected return | a required return read from option prices alone (Martin and Wagner), beside CAPM and the declared one | `... --options data/options`, `options_expected_return` on the record |
 | studies | what the records' own judgments preceded against SPY, and the same rows sorted by plain cheapness; descriptive, a declared holdout unread | `uv run python/anchor_study.py`, `baseline_study.py` |
+| broad panel | every SEC filer with a ticker today, each June since 2010, and what cheapness, quality and a peer-implied gap did before 2022 and since; survivors only, descriptive | `uv run python/broad_panel.py --retry-missing`, `broad_study.py` |
 | consensus | the Street's dated bar per name and each name's surprise history; never on a record | `uv run python/consensus.py`, daily |
 
 ## Rules

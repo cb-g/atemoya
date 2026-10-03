@@ -790,6 +790,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the broad panel and its study: `python/broad_panel.py` forms a row each June since 2010 for
+  every SEC filer with a ticker today, from SEC's frames and bulk monthly bars, and
+  `python/broad_study.py` reads cheapness, quality and a peer-implied gap on it before 2022
+  and since. Side tools: no record, no `Failed` string, nothing on the valuation path.
 - quality: `quality` on every record whose statements are filed, Piotroski's nine signals
   with the accruals ratio and gross profitability, from two fiscal years and no model, or
   `quality_reason`; the fetch adds `quality_lines`. A readout; no new `Failed` string; every
