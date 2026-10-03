@@ -9,7 +9,8 @@
     "Thirty-two names added 2026-10-02 (81) at the request of the downstream project that runs a clone, twenty asked on the first and twelve on the second, the class judgments delegated to the tool as in brief 71 and drafted from the vendor's statements, the filers' own forms and their announcements, so each why says what was read; the user may reclassify any by editing this file. Howard Hughes needed a class this file did not have: since buying an insurer it consolidates a land developer and an insurer, and per the admissibility rule a name that fits no class gets a class added, HoldingCompany, refused with the sum of the parts named, rather than a place in OperatingCompany. Strategy is a Wrapper and not a new class, because the premium or discount to the bitcoin it holds is the wrapper lens exactly. Thales and Saab declare the LEI read from their own ESEF reports' facts.",
     "Scope limit codes, 2026-10-03, at the request of the downstream project that runs a clone: every scope limit carries one code from scope_codes below, in scope_limit_codes beside it and in the same order, so a reader can filter by rule and still read the text. A code is stable once here: the vocabulary is added to and never renamed. On the same day Enbridge moves from OperatingCompany to RegulatedUtility, the downstream reader not confirming the class and the user agreeing, since most of its earnings are regulated or contracted and its own scope limit already said a DCF misreads the rate base; and Okta gains the goodwill limit that its capped growth rests on.",
     "SPCX, 2026-10-03: the downstream project that runs a clone pointed out that the entry still described the SPAC-strategy fund that used the ticker; the ticker has named Space Exploration Technologies since its listing in June 2026, which the ticker map and the fetched statements confirm, so the entry is rewritten and the class is Unprofitable. A ticker can change hands; the class check did not flag it, since a wrapper's refusal reads no statements.",
-    "map_cik, 2026-10-03: a ticker is a label an exchange reissues, and SPCX passed from a fund to a company without the entry noticing. Every entry whose ticker is in the ticker map of the Securities and Exchange Commission now declares map_cik, the CIK the map gave on the day a person last confirmed the entry. The fetch compares it with the map on every run and the record is refused, before anything else, when they differ; the entry is then read again by a person and redeclared. It is a guard and is never read for statements, which is what cik is for. The names outside the map, the foreign lines and a few funds, carry none and are not guarded."
+    "map_cik, 2026-10-03: a ticker is a label an exchange reissues, and SPCX passed from a fund to a company without the entry noticing. Every entry whose ticker is in the ticker map of the Securities and Exchange Commission now declares map_cik, the CIK the map gave on the day a person last confirmed the entry. The fetch compares it with the map on every run and the record is refused, before anything else, when they differ; the entry is then read again by a person and redeclared. It is a guard and is never read for statements, which is what cik is for. The names outside the map, the foreign lines and a few funds, carry none and are not guarded.",
+    "Mid-cycle recipe, 2026-10-03: the mid-cycle model reads the filed operating income after tax where every year in the window carries one, and stays on net income plus interest where a filer reports none. The limits that described the old reading were rewritten on the same day: Caterpillar's captive-finance limit now says what the operating-income reading does with the arm, Lumentum's limit about its note-extinguishment loss is gone because that loss no longer enters the window, and Coinbase's says where its crypto marks can still enter."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -423,7 +424,7 @@
       "entity_class": "Cyclical",
       "why": "heavy equipment: the industrial cycle rather than a commodity price",
       "scope_limits": [
-        "captive finance arm: its interest is an operating cost that the bottom-up NOPAT adds back as financing; the through-cycle return is overstated by the arm's funding cost"
+        "captive finance arm: its interest is an operating cost inside the filed operating income while its debt, which funds a lending book, sits inside invested capital, so the through-cycle return on capital is diluted by the arm's leverage"
       ],
       "scope_limit_codes": [
         "captive_finance"
@@ -1625,12 +1626,12 @@
       "entity_class": "Cyclical",
       "why": "Lumentum, optical and photonic components and modules for telecom and data-centre networks, whose fiscal year ends at the turn of June and July; profitable, then operating losses through the telecom downturn, then profitable again on data-centre demand, so through-cycle return on today's capital is the question; the class text puts a company that was profitable and went through a break here rather than among the unprofitable.",
       "scope_limits": [
-        "the latest year's GAAP net loss is a one-time non-cash loss on extinguishing convertible notes settled in shares; the mid-cycle model builds its after-tax operating profit from net income plus interest, so that loss enters the window as an operating year and alone turns the mean return on capital negative, though the filer reported positive operating income that year; without it the window holds one observation fewer than the floor, so the name refuses either way, but the reason the record gives is the loss and not the business",
-        "acquisitions inside the window add businesses the earlier years do not carry"
+        "acquisitions inside the window add businesses the earlier years do not carry",
+        "the through-cycle return is a mean over years before the present demand for its optical components, so the model reads a business a fraction of the one the price describes"
       ],
       "scope_limit_codes": [
-        "one_off_in_window",
-        "acquired_history"
+        "acquired_history",
+        "backward_looking"
       ],
       "map_cik": "0001633978"
     },
@@ -1685,7 +1686,7 @@
       "entity_class": "Cyclical",
       "why": "Coinbase, a crypto-asset exchange, custodian and staking provider earning transaction fees on trading volume and interest on the stablecoin reserves it shares in; earnings set by crypto-asset prices and trading activity it does not control, with loss years and profit years inside the window, so through-cycle return on today's capital is the question.",
       "scope_limits": [
-        "crypto assets held for investment are marked to fair value through the income statement, so earnings carry a market position as well as a business, and the mid-cycle model, which builds its after-tax operating profit from net income plus interest, reads that position as operating return",
+        "crypto assets held for investment are marked to fair value through the income statement, so earnings carry a market position as well as a business; the mid-cycle model reads the filed operating income, and whatever part of those marks the filer presents inside it is read as operating return",
         "customer cash and crypto held in custody sit on their own balance-sheet lines against matching liabilities, outside the cash the record reads, and are not the company's",
         "structural: a derivatives exchange bought inside the window adds a business the earlier years do not carry"
       ],

@@ -25,13 +25,33 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
   let sorted = List.sort (fun (p : fiscal_period) (q : fiscal_period) -> compare q.period_end p.period_end) fin.periods in
   let window = take a.midcycle_window_years.value sorted in
   let tax_rate = a.statutory_tax_rate.value in
-  (* NOPAT bottom-up from filed lines (25): net income + interest expense x (1 - t). No
-     operating-income line is needed, and the through-cycle mean dampens one-offs. *)
-  let nopat_of (p : fiscal_period) =
+  (* Two recipes, chosen per name and named on the record. Where every period in the window
+     carries an operating-income line the filer itself reported, NOPAT is that line after
+     tax, at the period's effective rate where one is derivable by the DCF's own rule and the
+     statutory rate otherwise: a loss on extinguishing debt, a mark on an investment or any
+     other non-operating item then never enters the window as an operating year. Otherwise
+     NOPAT is bottom-up from filed lines (25), net income + interest expense x (1 - t): the
+     filers with no operating-income line have only a derived one, which is not held to a
+     filed figure year by year, and a window must not mix the two. *)
+  let filed_operating_income =
+    window <> []
+    && List.for_all
+         (fun (p : fiscal_period) -> Option.is_some p.ebit && p.ebit_recipe = Some "operating_income")
+         window
+  in
+  let nopat_recipe = if filed_operating_income then "operating_income_after_tax" else "nopat_bottom_up" in
+  let bottom_up (p : fiscal_period) =
     match (p.net_income, p.interest_expense) with
-    | Some ni, Some ie -> Some (ni, ie, ni +. (ie *. (1. -. tax_rate)))
+    | Some ni, Some ie -> Some (ni +. (ie *. (1. -. tax_rate)))
     | _ -> None
   in
+  let period_tax (p : fiscal_period) =
+    fst (Dcf.tax_rate ~statutory:tax_rate ~pretax_income:p.pretax_income ~tax_provision:p.tax_provision)
+  in
+  let nopat_of (p : fiscal_period) =
+    if filed_operating_income then Option.map (fun ebit -> ebit *. (1. -. period_tax p)) p.ebit else bottom_up p
+  in
+  let nopat_fields = if filed_operating_income then [ "ebit" ] else [ "net_income"; "interest_expense" ] in
   let recipe_of (p : fiscal_period) = Option.value p.interest_recipe ~default:"" in
   let exclude period_end sum missing = { period_end; sum; missing } in
   (* Consecutive pairs in the window: the period's nopat over the previous period's capital;
@@ -40,13 +60,16 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
     | (t : fiscal_period) :: ((prior : fiscal_period) :: _ as rest) -> (
         let obs, excl = pairs rest in
         match (nopat_of t, invested_capital prior) with
-        | Some (net_income, interest_expense, nopat), Some ic when ic > 0. ->
-            ( { period_end = t.period_end; prior_period_end = prior.period_end; net_income; interest_expense;
-                interest_recipe = recipe_of t; nopat; invested_capital_prior = ic; roic = nopat /. ic }
+        | Some nopat, Some ic when ic > 0. ->
+            ( { period_end = t.period_end; prior_period_end = prior.period_end; net_income = t.net_income;
+                interest_expense = t.interest_expense; interest_recipe = recipe_of t;
+                ebit = (if filed_operating_income then t.ebit else None);
+                tax_rate = (if filed_operating_income then Some (period_tax t) else None);
+                nopat_bottom_up = bottom_up t; nopat; invested_capital_prior = ic; roic = nopat /. ic }
               :: obs,
               excl )
         | None, _ ->
-            (obs, List.map (fun f -> exclude t.period_end "roic" f) (Period.missing t [ "net_income"; "interest_expense" ]) @ excl)
+            (obs, List.map (fun f -> exclude t.period_end "roic" f) (Period.missing t nopat_fields) @ excl)
         | Some _, None ->
             (obs, List.map (fun f -> exclude t.period_end "roic" ("prior period's " ^ f)) (Period.missing prior [ "book_equity"; "total_debt"; "cash" ]) @ excl)
         | Some _, Some _ -> (obs, exclude t.period_end "roic" "positive prior invested capital" :: excl))
@@ -77,11 +100,11 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
     List.fold_right
       (fun (p : fiscal_period) (ends, r, n, excl) ->
         match (nopat_of p, p.capex, p.depreciation_amortization, p.delta_nwc) with
-        | Some (_, _, nopat), Some c, Some d, Some w -> (p.period_end :: ends, r +. (c -. d +. w), n +. nopat, excl)
+        | Some nopat, Some c, Some d, Some w -> (p.period_end :: ends, r +. (c -. d +. w), n +. nopat, excl)
         | _ ->
             ( ends, r, n,
               List.map (fun f -> exclude p.period_end "reinvestment" f)
-                (Period.missing p [ "net_income"; "interest_expense"; "capex"; "depreciation_amortization"; "delta_nwc" ])
+                (Period.missing p (nopat_fields @ [ "capex"; "depreciation_amortization"; "delta_nwc" ]))
               @ excl ))
       window ([], 0., 0., [])
   in
@@ -163,10 +186,8 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
                 let equity_value = enterprise_value -. net_debt in
                 let fair_value = equity_value /. shares in
                 (* The spot readout (27): the latest period's own fcff when it carries the flows. *)
-                let nopat_spot = Option.map (fun (_, _, n) -> n) (nopat_of latest) in
-                let spot_missing =
-                  Period.missing latest [ "net_income"; "interest_expense"; "depreciation_amortization"; "capex"; "delta_nwc" ]
-                in
+                let nopat_spot = nopat_of latest in
+                let spot_missing = Period.missing latest (nopat_fields @ [ "depreciation_amortization"; "capex"; "delta_nwc" ]) in
                 let spot_fcff =
                   match (nopat_spot, latest.depreciation_amortization, latest.capex, latest.delta_nwc) with
                   | Some n, Some d, Some c, Some w -> Some (n +. d -. c -. w)
@@ -187,8 +208,8 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
                       price;
                       market_cap;
                       shares;
-                      ebit = Option.map (fun n -> n /. (1. -. tax_rate)) nopat_spot;
-                      ebit_recipe = Some "nopat_bottom_up";
+                      ebit = (if filed_operating_income then latest.ebit else Option.map (fun n -> n /. (1. -. tax_rate)) nopat_spot);
+                      ebit_recipe = Some (if filed_operating_income then "operating_income" else "nopat_bottom_up");
                       ebit_composition = None;
                       tax_rate;
                       tax_rate_source = `Statutory;
@@ -241,7 +262,12 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
                   Ok
                     ( {
                         dcf;
-                        nopat_recipe = "nopat_bottom_up";
+                        nopat_recipe;
+                        roic_mid_bottom_up =
+                          (* the other recipe's mean on the same observations, a readout: where it
+                             is far from roic_mid, non-operating items are the difference *)
+                          (let both = List.filter_map (fun (o : roic_observation) -> Option.map (fun n -> n /. o.invested_capital_prior) o.nopat_bottom_up) observations in
+                           if filed_operating_income && List.length both = n_obs then Some (mean both) else None);
                         midcycle_window_years = a.midcycle_window_years;
                         window = List.map (fun (p : fiscal_period) -> p.period_end) window;
                         observations;

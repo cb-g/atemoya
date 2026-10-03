@@ -347,10 +347,14 @@ at all:
    interest expense or interest paid for the period gives total debt 0, recorded as "no
    debt line filed and no interest expense filed; taken as 0". Either present without the
    other leaves the field null: a filer paying interest owes something.
-3. **The mid-cycle model's NOPAT is bottom-up.** Net income plus interest expense times
-   one minus the statutory rate, per period from filed lines, so no operating-income line
-   is needed and the EBIT policy does not apply on that path; the through-cycle mean is
-   what dampens one-offs.
+3. **The mid-cycle model's NOPAT has two recipes, one per name.** Where every year in the
+   window carries an operating-income line the filer itself reported, NOPAT is that line
+   after tax, at the year's effective rate where the DCF's rule derives one and the
+   statutory rate otherwise, so a non-operating one-off never enters the window. Where a
+   filer reports none, it is bottom-up: net income plus interest expense times one minus
+   the statutory rate, per period from filed lines, and the through-cycle mean is what
+   dampens one-offs. A window never mixes the two; `nopat_recipe` names the one used, and
+   the EBIT policy does not apply on that path under either.
 4. **The latest-period gate is the model's.** `required_on_latest_period` in the
    definitions names, per model, what the latest fiscal period must carry: everything the
    DCF reads (FCFF is that year), the balance sheet only for the mid-cycle model (its
@@ -786,6 +790,12 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the mid-cycle recipe: where every year in the window carries a filed operating-income line
+  the model's NOPAT is that line after tax, at the year's effective rate where derivable,
+  so a non-operating one-off no longer enters the window as an operating year; where a filer
+  reports none it stays bottom-up from net income and interest. `nopat_recipe` names which,
+  `roic_mid_bottom_up` records the other mean beside it. Nine `Cyclical` records move; no new
+  `Failed` string; every record outside the class is byte-identical.
 - the expected-return lens on the point-in-time path: the risk-free rate it reads keeps its
   vintage there, as the valuation's own parameters do, where it had refused every record with
   a parameter dated after the date; and `baseline_study.py` gains its section. No new

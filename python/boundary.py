@@ -949,12 +949,15 @@ class RoicObservation:
 
     period_end: str
     prior_period_end: str
-    net_income: float
-    interest_expense: float
     nopat: float
     invested_capital_prior: float
     roic: float
+    net_income: Optional[float] = None
+    interest_expense: Optional[float] = None
     interest_recipe: str = field(default_factory=lambda: "")
+    ebit: Optional[float] = None
+    tax_rate: Optional[float] = None
+    nopat_bottom_up: Optional[float] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'RoicObservation':
@@ -962,12 +965,15 @@ class RoicObservation:
             return cls(
                 period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('RoicObservation', 'period_end'),
                 prior_period_end=_atd_read_string(x['prior_period_end']) if 'prior_period_end' in x else _atd_missing_json_field('RoicObservation', 'prior_period_end'),
-                net_income=_atd_read_float(x['net_income']) if 'net_income' in x else _atd_missing_json_field('RoicObservation', 'net_income'),
-                interest_expense=_atd_read_float(x['interest_expense']) if 'interest_expense' in x else _atd_missing_json_field('RoicObservation', 'interest_expense'),
                 nopat=_atd_read_float(x['nopat']) if 'nopat' in x else _atd_missing_json_field('RoicObservation', 'nopat'),
                 invested_capital_prior=_atd_read_float(x['invested_capital_prior']) if 'invested_capital_prior' in x else _atd_missing_json_field('RoicObservation', 'invested_capital_prior'),
                 roic=_atd_read_float(x['roic']) if 'roic' in x else _atd_missing_json_field('RoicObservation', 'roic'),
+                net_income=_atd_read_float(x['net_income']) if 'net_income' in x else None,
+                interest_expense=_atd_read_float(x['interest_expense']) if 'interest_expense' in x else None,
                 interest_recipe=_atd_read_string(x['interest_recipe']) if 'interest_recipe' in x else "",
+                ebit=_atd_read_float(x['ebit']) if 'ebit' in x else None,
+                tax_rate=_atd_read_float(x['tax_rate']) if 'tax_rate' in x else None,
+                nopat_bottom_up=_atd_read_float(x['nopat_bottom_up']) if 'nopat_bottom_up' in x else None,
             )
         else:
             _atd_bad_json('RoicObservation', x)
@@ -976,12 +982,20 @@ class RoicObservation:
         res: Dict[str, Any] = {}
         res['period_end'] = _atd_write_string(self.period_end)
         res['prior_period_end'] = _atd_write_string(self.prior_period_end)
-        res['net_income'] = _atd_write_float(self.net_income)
-        res['interest_expense'] = _atd_write_float(self.interest_expense)
         res['nopat'] = _atd_write_float(self.nopat)
         res['invested_capital_prior'] = _atd_write_float(self.invested_capital_prior)
         res['roic'] = _atd_write_float(self.roic)
+        if self.net_income is not None:
+            res['net_income'] = _atd_write_float(self.net_income)
+        if self.interest_expense is not None:
+            res['interest_expense'] = _atd_write_float(self.interest_expense)
         res['interest_recipe'] = _atd_write_string(self.interest_recipe)
+        if self.ebit is not None:
+            res['ebit'] = _atd_write_float(self.ebit)
+        if self.tax_rate is not None:
+            res['tax_rate'] = _atd_write_float(self.tax_rate)
+        if self.nopat_bottom_up is not None:
+            res['nopat_bottom_up'] = _atd_write_float(self.nopat_bottom_up)
         return res
 
     @classmethod
@@ -2357,6 +2371,7 @@ class MidcycleInputs:
     fcff_mid: float
     spot_fcff: Optional[float]
     spot_to_midcycle: Optional[float]
+    roic_mid_bottom_up: Optional[float] = None
     exclusions: List[MidcycleExclusion] = field(default_factory=lambda: [])
     reinvestment_rate_measured: Optional[float] = None
     reinvestment_floor_applied: bool = field(default_factory=lambda: False)
@@ -2383,6 +2398,7 @@ class MidcycleInputs:
                 fcff_mid=_atd_read_float(x['fcff_mid']) if 'fcff_mid' in x else _atd_missing_json_field('MidcycleInputs', 'fcff_mid'),
                 spot_fcff=_atd_read_nullable(_atd_read_float)(x['spot_fcff']) if 'spot_fcff' in x else _atd_missing_json_field('MidcycleInputs', 'spot_fcff'),
                 spot_to_midcycle=_atd_read_nullable(_atd_read_float)(x['spot_to_midcycle']) if 'spot_to_midcycle' in x else _atd_missing_json_field('MidcycleInputs', 'spot_to_midcycle'),
+                roic_mid_bottom_up=_atd_read_float(x['roic_mid_bottom_up']) if 'roic_mid_bottom_up' in x else None,
                 exclusions=_atd_read_list(MidcycleExclusion.from_json)(x['exclusions']) if 'exclusions' in x else [],
                 reinvestment_rate_measured=_atd_read_float(x['reinvestment_rate_measured']) if 'reinvestment_rate_measured' in x else None,
                 reinvestment_floor_applied=_atd_read_bool(x['reinvestment_floor_applied']) if 'reinvestment_floor_applied' in x else False,
@@ -2410,6 +2426,8 @@ class MidcycleInputs:
         res['fcff_mid'] = _atd_write_float(self.fcff_mid)
         res['spot_fcff'] = _atd_write_nullable(_atd_write_float)(self.spot_fcff)
         res['spot_to_midcycle'] = _atd_write_nullable(_atd_write_float)(self.spot_to_midcycle)
+        if self.roic_mid_bottom_up is not None:
+            res['roic_mid_bottom_up'] = _atd_write_float(self.roic_mid_bottom_up)
         res['exclusions'] = _atd_write_list((lambda x: x.to_json()))(self.exclusions)
         if self.reinvestment_rate_measured is not None:
             res['reinvestment_rate_measured'] = _atd_write_float(self.reinvestment_rate_measured)

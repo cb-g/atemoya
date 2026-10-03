@@ -642,10 +642,13 @@ type reit_inputs = {
 type roic_observation = {
   period_end : string;
   prior_period_end : string;
-  net_income : float;
-  interest_expense : float;
+  ?net_income : float option;         (* as filed; an input on the bottom-up recipe, a readout beside the operating-income one *)
+  ?interest_expense : float option;
   ~interest_recipe : string;          (* filed | net_nonoperating_interest | interest_paid_stands_in (31) *)
-  nopat : float;                      (* net_income + interest_expense * (1 - statutory tax rate) *)
+  ?ebit : float option;               (* the filed operating income, on the operating-income recipe *)
+  ?tax_rate : float option;           (* on that recipe: the period's effective rate where derivable by the DCF's rule, else the statutory rate *)
+  ?nopat_bottom_up : float option;    (* net_income + interest_expense * (1 - statutory tax rate), where both are filed; the nopat on the bottom-up recipe, a readout on the other *)
+  nopat : float;                      (* operating_income_after_tax: ebit * (1 - tax_rate); nopat_bottom_up: the line above *)
   invested_capital_prior : float;     (* book_equity + total_debt - cash at prior_period_end *)
   roic : float;                       (* nopat / invested_capital_prior *)
 }
@@ -670,7 +673,8 @@ type midcycle_exclusion = {
    wacc, path, terminal, net debt, shares) is exactly the DCF's. *)
 type midcycle_inputs = {
   dcf : inputs;
-  nopat_recipe : string;              (* nopat_bottom_up (25): net income + interest expense x (1 - statutory tax rate), per period *)
+  nopat_recipe : string;              (* operating_income_after_tax when every period in the window carries a filed operating-income line; else nopat_bottom_up (25): net income + interest expense x (1 - statutory tax rate), per period. One recipe per name, never mixed inside a window *)
+  ?roic_mid_bottom_up : float option; (* on the operating-income recipe, the bottom-up mean on the same observations, for the reader: far from roic_mid means non-operating items are the difference *)
   midcycle_window_years : int_parameter;
   window : string list;               (* the fiscal period ends in the window, newest first: every annual period the record carries, up to midcycle_window_years *)
   observations : roic_observation list;   (* one per consecutive pair in the window with net income, interest expense and a positive prior invested capital; at least 8 *)

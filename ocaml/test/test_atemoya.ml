@@ -1343,8 +1343,10 @@ let test_midcycle_arithmetic () =
   Alcotest.(check int) "nine observations from ten periods" 9 (List.length m.observations);
   Alcotest.(check string) "nopat is bottom-up" "nopat_bottom_up" m.nopat_recipe;
   let first = List.hd m.observations in
-  check_float "net income filed" (0.79 *. 1100.) first.net_income;
-  check_float "interest expense filed" 100. first.interest_expense;
+  Alcotest.(check (option approx)) "net income filed" (Some (0.79 *. 1100.)) first.net_income;
+  Alcotest.(check (option approx)) "interest expense filed" (Some 100.) first.interest_expense;
+  Alcotest.(check (option approx)) "no operating income on this recipe" None first.ebit;
+  Alcotest.(check (option approx)) "and no second mean beside it" None m.roic_mid_bottom_up;
   check_float "nopat = net income + interest x (1 - t)" (0.79 *. 1200.) first.nopat;
   Alcotest.(check (option approx)) "spot nopat's pre-tax equivalent stands in for ebit" (Some 1200.) m.dcf.ebit;
   Alcotest.(check (option string)) "and says so" (Some "nopat_bottom_up") m.dcf.ebit_recipe;
@@ -1384,6 +1386,46 @@ let test_midcycle_arithmetic () =
   | Some g -> Alcotest.(check bool) "implied_g0 at the fair value recovers g0" true (Float.abs (g -. m.dcf.g0) < 1e-4)
   | None -> Alcotest.failf "no level: %s" (Option.value readouts.level.reason ~default:""));
   Alcotest.(check string) "the readout is the dcf's" "implied_g0" readouts.level_name
+
+(* The operating-income recipe: the same ten years, each now filing its operating income,
+   and the latest year's net income carrying a one-off loss of 2000 that is not operating. *)
+let test_midcycle_operating_income () =
+  let filed =
+    List.mapi
+      (fun i (p : Boundary_t.fiscal_period) ->
+        { p with
+          ebit = Some (List.nth midcycle_ebits i); ebit_recipe = Some "operating_income"; pretax_income = None; tax_provision = None;
+          net_income = (if i = 0 then Some (-2000.) else p.net_income) })
+      (midcycle_periods ())
+  in
+  let value periods = Dcf_midcycle.value assumptions ~country:"United States" ~required:balance_sheet (financials periods) in
+  let m, fair_value = get (value filed) in
+  Alcotest.(check string) "the recipe is named" "operating_income_after_tax" m.nopat_recipe;
+  Alcotest.(check (option string)) "and the engine's inputs say whose line it is" (Some "operating_income") m.dcf.ebit_recipe;
+  let first = List.hd m.observations in
+  Alcotest.(check (option approx)) "the filed operating income" (Some 1200.) first.ebit;
+  Alcotest.(check (option approx)) "at the statutory rate where no effective one is derivable" (Some 0.21) first.tax_rate;
+  check_float "nopat = operating income after tax" (0.79 *. 1200.) first.nopat;
+  Alcotest.(check (option approx)) "the bottom-up figure beside it carries the one-off" (Some (-2000. +. 79.)) first.nopat_bottom_up;
+  check_float "the one-off never enters the mean" 0.079 m.roic_mid;
+  (match m.roic_mid_bottom_up with
+  | Some b -> Alcotest.(check bool) "the other recipe's mean is recorded and lower" true (b < 0.079 -. 0.03)
+  | None -> Alcotest.fail "no bottom-up mean beside the operating one");
+  (* the same statements on the bottom-up recipe read the loss as an operating year *)
+  let mixed = List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 4 then { p with ebit_recipe = Some "pretax_plus_interest_less_nonoperating" } else p) filed in
+  let b, bottom_value = get (value mixed) in
+  Alcotest.(check string) "one derived year puts the whole window on the bottom-up recipe" "nopat_bottom_up" b.nopat_recipe;
+  Alcotest.(check bool) "which reads the one-off, and values lower" true (b.roic_mid < m.roic_mid && bottom_value < fair_value);
+  Alcotest.(check (option approx)) "with no second mean" None b.roic_mid_bottom_up;
+  (* a period with a derivable effective rate is taxed at it *)
+  let taxed = List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 0 then { p with pretax_income = Some 1000.; tax_provision = Some 300. } else p) filed in
+  let t, _ = get (value taxed) in
+  let top = List.hd t.observations in
+  Alcotest.(check (option approx)) "the period's effective rate" (Some 0.3) top.tax_rate;
+  check_float "applied to its operating income" (0.7 *. 1200.) top.nopat;
+  (* a year with no operating income at all is not a filed window either *)
+  let hole = List.mapi (fun i (p : Boundary_t.fiscal_period) -> if i = 3 then { p with ebit = None } else p) filed in
+  Alcotest.(check string) "a missing year falls to the bottom-up recipe" "nopat_bottom_up" (fst (get (value hole))).nopat_recipe
 
 let test_midcycle_scale_floor () =
   (* (55) The same ten years (2025 back to 2016), but the oldest was a hundredth of today's
@@ -4301,6 +4343,7 @@ let () =
           Alcotest.test_case "the implied event move, and the negative case" `Quick test_earnings_implied_move;
           Alcotest.test_case "the mark and the block" `Quick test_earnings_spans_and_block;
           Alcotest.test_case "the R&D shadow: schedule, invariants, reasons" `Quick test_rd_shadow;
+          Alcotest.test_case "mid-cycle on filed operating income" `Quick test_midcycle_operating_income;
           Alcotest.test_case "the options-implied expected return" `Quick test_expected_return;
         ] );
       ( "runway readout",

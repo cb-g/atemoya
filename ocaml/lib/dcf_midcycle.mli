@@ -4,10 +4,19 @@
     [Error reason]. On the shared definitions (cash, debt, delta_nwc, ebit recipe), per
     period t in the window (every annual period the record carries, newest first, up
     to [midcycle_window_years]): invested capital [IC_t = book_equity + total_debt -
-    cash], [NOPAT_t = net_income_t + interest_expense_t * (1 - statutory tax rate)]
-    bottom-up from filed lines (25: no operating-income line is needed and the EBIT
-    policy does not apply on this path; the through-cycle mean is what dampens
-    one-offs), [ROIC_t = NOPAT_t / IC_(t-1)] on beginning capital, so N periods give at
+    cash]. [NOPAT_t] follows one of two recipes, chosen per name and named in
+    [nopat_recipe], never mixed inside a window. Where every period in the window carries
+    an operating-income line the filer itself reported ([ebit_recipe = operating_income]),
+    [NOPAT_t = ebit_t * (1 - tax_t)], [tax_t] the period's effective rate where the DCF's
+    own rule derives one and the statutory rate otherwise: a loss on extinguishing debt, a
+    mark on an investment or any other non-operating item then never enters the window as
+    an operating year, and [roic_mid_bottom_up] records the other recipe's mean beside it.
+    Otherwise [NOPAT_t = net_income_t + interest_expense_t * (1 - statutory tax rate)],
+    bottom-up from filed lines (25): a filer with no operating-income line has only a
+    derived one, which is not held to a filed figure year by year, and the through-cycle
+    mean is then what dampens one-offs. The EBIT policy does not apply on this path under
+    either recipe: the first reads only filed lines and the second reads none.
+    [ROIC_t = NOPAT_t / IC_(t-1)] on beginning capital, so N periods give at
     most N-1 observations. A period whose opening capital is below
     [midcycle_scale_floor * IC_latest] is left out of the return average and listed as an
     exclusion reading "opening capital below the scale floor" (55): the ratio would be a
