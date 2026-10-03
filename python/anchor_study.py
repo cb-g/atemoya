@@ -43,6 +43,7 @@ BENCHMARK = "SPY"
 HORIZONS = (63, 126, 252)   # trading days: a quarter, a half year, a year
 MIN_CELL = 10               # below this a cell is a count, never a median
 FAMILIES = ("by class", "gate", "point-in-time")
+HOLDOUT = REPO_ROOT / "reference" / "holdout.json"
 PO_BUCKETS = (("below 0.25", 0.0, 0.25), ("0.25 to 0.75", 0.25, 0.75), ("0.75 and above", 0.75, 1.0000001))
 
 
@@ -111,6 +112,31 @@ def load_panel(path: Path, pit_out: Path) -> list[Record]:
             failed_reason=reason, family=family_of(reason) if str(r["status"]) == "Failed" else None,
             price_date=cast(str | None, r.get("price_date"))))
     return out
+
+
+@dataclass(frozen=True)
+class Holdout:
+    """reference/holdout.json: the names and the dates put aside before the models change."""
+    names: frozenset[str]
+    dates_after: str
+
+    def holds(self, ticker: str, as_of: str) -> bool:
+        return ticker in self.names or as_of > self.dates_after
+
+
+def load_holdout(path: Path = HOLDOUT) -> Holdout:
+    raw = cast(dict[str, object], json.loads(path.read_text()))
+    return Holdout(names=frozenset(cast(list[str], raw["names"])), dates_after=str(raw["dates_after"]))
+
+
+def set_aside(records: list[Record], holdout: Holdout, *, opened: bool) -> tuple[list[Record], str]:
+    """The rows the study may read and the line that says what was put aside. A study never
+    reads a held-out row unless it is run with --holdout, and then it says so first."""
+    held = [r for r in records if holdout.holds(r.ticker, r.as_of)]
+    if opened:
+        return records, f"HOLDOUT OPENED: {len(held)} held-out rows on {len({r.ticker for r in held})} names are in the tables below; record the opening in reference/holdout.json."
+    kept = [r for r in records if not holdout.holds(r.ticker, r.as_of)]
+    return kept, f"Holdout (reference/holdout.json): {len(held)} rows set aside, {len(holdout.names)} names and every date after {holdout.dates_after}; not read."
 
 
 # --- closes and forward returns ------------------------------------------------------------
@@ -259,13 +285,14 @@ def sign_agreement(records: list[Record], horizon: int) -> list[str]:
     return lines
 
 
-def report(records: list[Record], as_of: date) -> str:
+def report(records: list[Record], as_of: date, holdout_line: str | None = None) -> str:
     ok = [r for r in records if r.status == "Ok"]
     failed = [r for r in records if r.status == "Failed"]
     dates = sorted({r.as_of for r in records})
     lines = [
         f"The anchor study (80): {len(records)} panel rows, {len({r.ticker for r in records})} names, {len(dates)} quarter-ends {dates[0]} to {dates[-1]}, closes cut at {as_of.isoformat()}.",
         "Descriptive only: counts, medians and quartiles on the sample as it is, the excess over SPY at +63, +126 and +252 trading days from the date's price. No statistic the sample can carry; the names on one date move with the market and are not independent tests. A cell under ten rows is a count alone.",
+        *([holdout_line] if holdout_line else []),
         "",
     ]
     lines += block("by status", [("Ok", ok), ("Failed", failed)]) + [""]
@@ -290,16 +317,18 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--panel", type=Path, default=PANEL)
     parser.add_argument("--as-of", type=date.fromisoformat, default=date.today(), help="the day the closes are cut at; the study repeats byte for byte at the same cut")
     parser.add_argument("--out", type=Path, default=OUT)
+    parser.add_argument("--holdout", action="store_true", help="read the held-out names and dates too; a one-time act, recorded in reference/holdout.json")
     args = parser.parse_args(argv)
     panel: Path = args.panel
     as_of: date = args.as_of
     out: Path = args.out
-    records = load_panel(panel, panel.parent)
+    opened: bool = args.holdout
+    records, holdout_line = set_aside(load_panel(panel, panel.parent), load_holdout(), opened=opened)
     attach_forward(records, as_of)
     assign_quintiles(records)
     out.mkdir(parents=True, exist_ok=True)
     (out / "records.jsonl").write_text("".join(json.dumps(asdict(r), sort_keys=True) + "\n" for r in records))
-    text = report(records, as_of)
+    text = report(records, as_of, holdout_line)
     (out / "tables.txt").write_text(text)
     sys.stdout.write(text)
     return 0

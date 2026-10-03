@@ -17,6 +17,7 @@ dune exec atemoya -- --entity-class OperatingCompany --out output data/financial
 uv run python/build_panel.py                    # every quarter-end 2022-03-31 .. 2026-06-30 -> output/pit/panel.jsonl, panel_summary.txt
 uv run python/build_panel.py --no-insiders      # (80) the same without the Form 4 read, hours of paced fetching the anchor study does not need; the per-name vendor fetch is cached for the day under data/pit/names/
 uv run python/anchor_study.py --as-of 2026-09-30  # (80) what the panel's judgments preceded: excess over SPY at +63/+126/+252 trading days, by signal, quintile, belief, model, class and refusal family -> output/anchor_study/
+uv run python/baseline_study.py --as-of 2026-09-30  # the same rows sorted by earnings yield, book-to-price and EBIT/EV beside the margin of safety -> output/baseline_study/
 uv run python/consensus.py                     # (82) today's consensus bar for every name, the release history, output/consensus/; at each sitting or daily
 ```
 
@@ -136,6 +137,31 @@ rows prints its count alone. Nothing here feeds a model, a belief or a signal. T
 are cut at `--as-of` and cached under `data/anchor_study/` so the study repeats byte for
 byte; delete the directory to re-fetch. Rebuild the panel first (`build_panel.py`) when the
 code has moved since it was written, or the study reads yesterday's judgments.
+
+### The naive baseline
+
+`uv run python/baseline_study.py` puts three measures that need no model beside the anchor
+on the same rows and the same forward windows: the earnings yield, book-to-price and EBIT
+over enterprise value, each from the point-in-time boundary file the valuation itself read
+(`data/pit/<date>/<TICKER>.json`), statements in another currency converted through USD at
+the date's own rates. It prints each measure's quintiles within the date on every row that
+carries it; on the rows the anchor valued, the measure's quintiles beside the margin of
+safety's, both cut on that same set; the within-date rank correlation of the two; and the
+cheapest quintile's median less the dearest's, pooled and then within each model's own rows,
+since a margin of safety from one model does not rank against another's. It answers one
+question the anchor study cannot: whether the anchor did anything a plain cheapness sort did
+not. Descriptive only, under the same rules; it writes `output/baseline_study/`.
+
+### The holdout
+
+`reference/holdout.json` declares what no study reads: the thirty-two names that joined
+after the panel was built, and every date after 2026-06-30. Both studies drop those rows and
+say how many in the third line of their tables. They were put aside on 2026-10-03, before
+any model changed in answer to the two studies, because a change suggested by a sample
+cannot be tested on it. `--holdout` on either study reads them; that is a one-time act, and
+whoever does it adds the date and the tree to the file's `opened` list. The held-out names
+share the 2022-2026 regime on the dates before the cut, so they are a holdout on names; only
+the later dates are a holdout on time.
 
 ## Share counts and point-in-time
 

@@ -785,6 +785,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the naive baseline and the holdout: `python/baseline_study.py` sorts the anchor study's
+  rows by earnings yield, book-to-price and EBIT over enterprise value beside the margin of
+  safety, and `reference/holdout.json` puts thirty-two names and every date after 2026-06-30
+  aside from both studies before any model changes. A study, not a branch: no new `Failed`
+  string; no record moves.
 - two fixes the downstream project asked for: `fetch_all.py` refuses to start, exit 2, when
   `data/financials` is a real directory, since the batch would go on valuing it instead of
   the new snapshot; and a release history the vendor answers with no past release is `none`,

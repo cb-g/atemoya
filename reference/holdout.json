@@ -1,0 +1,11 @@
+{
+  "declared": "2026-10-03",
+  "why": "The anchor study (80) and the naive baseline were read on 178 names over the quarter-ends 2022-03-31 to 2026-06-30. Every model change after that reading is made with that sample already seen, so a later study on the same rows measures the change against what suggested it. Two sets are put aside before any model changes: the names that joined after the panel was built, never valued through time, and every date after the last one read. They are opened once, deliberately, after the model work, and the opening is written here.",
+  "dates_after": "2026-06-30",
+  "names": [
+    "CLS", "TTD", "BX", "OWL", "PS", "GOGO", "IONQ", "IBM", "LLY", "MXT.AX", "MOT.AX", "PSUS", "RDDT", "NBIS", "SPOT", "BKNG",
+    "EXPE", "ABNB", "HHH", "AEHR", "LITE", "BWXT", "ENB", "MP", "ZETA", "COIN", "MSTR", "GD", "NOC", "RTX", "HO.PA", "SAAB-B.ST"
+  ],
+  "limits": "The held-out names share the 2022-2026 regime with the sample on every date before the cut, so they are a holdout on names and not on time; only the dates after the cut are both. The names were chosen by a downstream reader, not at random.",
+  "opened": []
+}
