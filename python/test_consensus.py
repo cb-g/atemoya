@@ -8,6 +8,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 import consensus as c
 
 
@@ -196,6 +198,46 @@ def test_the_summary_pools_and_says_what_is_missing() -> None:
     assert "pooled, last 12: 9 beats in 12 releases over 1 names" in text and "no EPS history" in text
 
 
+def test_a_history_the_vendor_answers_empty_is_none_and_a_raising_vendor_is_failed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import fetch
+    import fetch_sec
+    from types import SimpleNamespace
+
+    def identity() -> str:
+        return "t"
+
+    def table(agent: str) -> dict[str, str]:
+        return {}
+
+    def tags() -> dict[str, Any]:
+        return {}
+
+    def cik_of(ticker: str, table: dict[str, str], cik: str | None) -> tuple[str | None, str]:
+        return None, ""
+
+    monkeypatch.setattr(fetch_sec, "identity", identity)
+    monkeypatch.setattr(fetch_sec, "tickers_table", table)
+    monkeypatch.setattr(fetch_sec, "load_tags", tags)
+    monkeypatch.setattr(fetch, "cik_of", cik_of)
+    monkeypatch.setattr(c, "PACE_SECONDS", 0)
+
+    def vendor(ticker: str) -> list[tuple[date, str, float | None, float | None]]:
+        if ticker == "F":
+            raise RuntimeError("down")
+        return []
+
+    def quiet(_: str) -> None:
+        return None
+
+    monkeypatch.setattr(c, "vendor_releases", vendor)
+    entries = [SimpleNamespace(ticker="E", cik=None), SimpleNamespace(ticker="F", cik=None)]
+    c.run_history(entries, tmp_path, date(2026, 10, 3), log=quiet)
+    empty = json.loads((tmp_path / "history/E.json").read_text())
+    assert empty["status"] == "none" and empty["reason"] == c.NO_RELEASES and empty["releases"] == []
+    down = json.loads((tmp_path / "history/F.json").read_text())
+    assert down["status"] == "failed" and down["reason"].startswith("vendor failed: RuntimeError")
+
+
 def test_the_chart_names_every_state_the_files_carry() -> None:
     """The record's reasons are held to docs/flow.md by the OCaml suite; the side output's
     states are held to its own table here, so a new state lands in the chart or fails."""
@@ -203,8 +245,7 @@ def test_the_chart_names_every_state_the_files_carry() -> None:
     states = [c.GAP_REASON, c.NO_FILER, c.NO_PERIOD, c.NO_REVENUE_PAIRS, c.ZERO_ESTIMATE,
               "vendor failed:", "the vendor carries no consensus for this name",
               "the vendor lists the periods but no EPS or revenue estimate in any",
-              "name(s) failed; rerun today to retry them", "no consensus",
-              "the vendor's dated earnings table carries no past release with a reported figure"]
+              "name(s) failed; rerun today to retry them", "no consensus", c.NO_RELEASES]
     source = Path(c.__file__).read_text()
     for s in states:
         assert s in chart, s

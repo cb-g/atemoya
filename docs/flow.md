@@ -660,7 +660,8 @@ states are written into its files, not into a record:
 | a day's manifest | gap | no run on this day; a consensus bar cannot be taken after the fact |
 | a release | no period | no filed fiscal period ends 1 to 120 days before the release |
 | a release, filed quarters | no filer | no SEC filer for this name: no filed period ends or quarterly revenue |
-| a name's history | failed | the vendor's dated earnings table carries no past release with a reported figure |
+| a name's history | failed | vendor failed: (exception) |
+| a name's history | none: the vendor answered and has no past release | the vendor's dated earnings table carries no past release with a reported figure |
 | a window | zero estimate | estimate is zero: no surprise in percent |
 | a summary | no pairs | no revenue bar was snapshotted before a release whose filed quarter is on disk |
 
@@ -784,6 +785,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- two fixes the downstream project asked for: `fetch_all.py` refuses to start, exit 2, when
+  `data/financials` is a real directory, since the batch would go on valuing it instead of
+  the new snapshot; and a release history the vendor answers with no past release is `none`,
+  not `failed`, as the daily snapshot already told the two apart. No new `Failed` string; no
+  record moves.
 - consensus and surprise (82): a side output the downstream project asked for, drawn off
   the universe and never reaching the record. `python/consensus.py` takes each name's
   Street bar every day it runs, this and next quarter and both fiscal years with mean, low,

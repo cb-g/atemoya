@@ -35,7 +35,9 @@ Fetched, under `data/consensus/` (never tracked):
   filed fiscal period that ends 1 to 120 days before it, or null with the reason. For a name
   with SEC filings, the quarterly revenue as first filed: a three-month figure where one is
   filed, else the fourth quarter derived as the fiscal year less the nine months to the
-  third quarter, both filed, and labelled so.
+  third quarter, both filed, and labelled so. `status` "ok"; "none" when the vendor answers
+  and its table carries no past release with a reported figure, which is the vendor having
+  nothing and not a fetch that failed; "failed" with the exception when the fetch fails.
 
 Derived, under `output/consensus/` (regenerated from `data/` alone, no fetch):
 
@@ -94,6 +96,7 @@ SOURCE_HISTORY = "vendor dated earnings table (yfinance 1.7.0 get_earnings_dates
 BASIS = "Street-adjusted EPS as the vendor carries it, not GAAP"
 ESTIMATE_AS_OF = "the last consensus before the release; the source gives no earlier date for it"
 GAP_REASON = "no run on this day; a consensus bar cannot be taken after the fact"
+NO_RELEASES = "the vendor's dated earnings table carries no past release with a reported figure"
 NO_FILER = "no SEC filer for this name: no filed period ends or quarterly revenue"
 NO_PERIOD = f"no filed fiscal period ends 1 to {MAX_REPORT_LAG_DAYS} days before the release"
 NO_REVENUE_PAIRS = "no revenue bar was snapshotted before a release whose filed quarter is on disk"
@@ -583,7 +586,7 @@ def run_history(entries: list[Any], root: Path, today: date, log: Callable[[str]
             record["status"], record["reason"] = "ok", None
             record["releases"] = release_rows(rows, today, ends)
             if not record["releases"]:
-                record["status"], record["reason"] = "failed", "the vendor's dated earnings table carries no past release with a reported figure"
+                record["status"], record["reason"] = "none", NO_RELEASES
         except Exception as e:  # noqa: BLE001
             record["status"], record["reason"], record["releases"] = "failed", f"vendor failed: {type(e).__name__}: {e}", []
         record["filed_revenue"] = quarters

@@ -8,7 +8,9 @@ second fetch on the same date gets a -2, -3 suffix, a snapshot is never overwrit
 data/financials becomes a symlink to it, so the batch's default input is always the latest
 snapshot and every earlier one stays valuable by path. The shadow-yfinance records are part
 of the snapshot. There is one universe, reference/universe.json, growing to every name
-anyone classifies; --universe FILE points the fetch at another file of the same format.
+anyone classifies. A real directory at data/financials (an early fetch.py run leaves one)
+stops the run before any fetch, exit 2, because the batch would go on reading it instead of
+the new snapshot. --universe FILE points the fetch at another file of the same format.
 This is the fetch half of the batch; fetch.py decides the statements provider per ticker.
 Valuation is the other half and never refetches:
 
@@ -45,14 +47,23 @@ def snapshot_dir(today: str, root: Path = SNAPSHOTS) -> Path:
     return candidate
 
 
+def stale_latest(latest: Path = LATEST) -> str | None:
+    """The reason the run cannot go on when data/financials is a real directory: the batch's
+    documented input would stay on it and value old files without a word."""
+    if latest.exists() and not latest.is_symlink():
+        return (f"{latest} is a real directory, not the symlink to the latest snapshot; the batch would "
+                f"read it instead of the new snapshot. Move or remove it and rerun, or pass --out <dir> "
+                f"and value that directory")
+    return None
+
+
 def point_latest(snapshot: Path, latest: Path = LATEST) -> None:
     """data/financials -> the snapshot, as a relative symlink; a real directory there is
-    left alone and reported, never replaced."""
+    never replaced: main refuses to start on one."""
     if latest.is_symlink():
         latest.unlink()
     elif latest.exists():
-        print(f"{latest} is a directory, not a symlink; left in place. The snapshot is {snapshot}")
-        return
+        raise FileExistsError(stale_latest(latest))
     latest.symlink_to(os.path.relpath(snapshot, latest.parent))
 
 
@@ -76,6 +87,10 @@ def main(argv: list[str]) -> int:
         print(f"point-in-time {as_of}: {written} (batch: dune exec atemoya -- {written} --reference {written}/reference --fetched {written}/reference --today {as_of} --out output/pit/{as_of})")
         return 0
     if out is None:
+        stale = stale_latest(LATEST)
+        if stale is not None:
+            print(stale, file=sys.stderr)
+            return 2
         out = snapshot_dir(datetime.now(timezone.utc).strftime("%Y-%m-%d"))
         code = fetch.main([*tickers, "--out", str(out), "--universe", str(universe_path)])
         if code == 0:
