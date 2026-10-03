@@ -788,6 +788,14 @@ def test_ifrs_depreciation_excludes_impairment_by_recipe() -> None:
     assert ifrs_dna_period(f("AmortisationExpense", 9186.1e6)).depreciation_amortization is None
     p = ifrs_dna_period({**f("DepreciationExpense", 653610.5e6), **f("AmortisationExpense", 9186.1e6), **f("DepreciationAndAmortisationExpense", 17822e6)})
     assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (17822e6, "pure")
+    # the cash-flow reconciliation's own pair, last and both required (invented figures); the
+    # expense pair beats it when both pairs are filed
+    p = ifrs_dna_period({**f("AdjustmentsForDepreciationExpense", 700e6), **f("AdjustmentsForAmortisationExpense", 300e6)})
+    assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (1000e6, "sum_of_adjustment_components_ifrs")
+    assert components(p.depreciation_amortization_composition) == [("component", 700e6, "AdjustmentsForDepreciationExpense"), ("component", 300e6, "AdjustmentsForAmortisationExpense")]
+    assert ifrs_dna_period(f("AdjustmentsForDepreciationExpense", 700e6)).depreciation_amortization is None
+    p = ifrs_dna_period({**f("AdjustmentsForDepreciationExpense", 700e6), **f("AdjustmentsForAmortisationExpense", 300e6), **f("DepreciationExpense", 650e6), **f("AmortisationExpense", 250e6)})
+    assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (900e6, "sum_of_components_ifrs")
     p = ifrs_dna_period({**f("DepreciationExpense", 653610.5e6), **f("AmortisationExpense", 9186.1e6), **f("AdjustmentsForDepreciationAndAmortisationExpense", 1311e6)})
     assert (p.depreciation_amortization, p.depreciation_amortization_recipe) == (1311e6, "total")
 

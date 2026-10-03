@@ -790,6 +790,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- three statement rules: `IncreaseDecreaseInDueFromRelatedParties` is a working-capital asset
+  line (Sea), the IFRS deferred-income-with-contract-liabilities adjustment a working-capital
+  line (Spotify), and the IFRS depreciation chain ends on the cash-flow reconciliation's own
+  pair where nothing earlier is filed (Spotify). Measured on every cached filer: only null
+  fields gain a value. Two records change status; no new `Failed` string.
 - two revenue elements: `RevenuesNetOfInterestExpense` and
   `RevenueFromContractWithCustomerIncludingAssessedTax` join the us-gaap revenue list, which
   left fifteen filers with no revenue or a part of it on some year. Measured on every cached

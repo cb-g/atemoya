@@ -2271,6 +2271,7 @@ class DnaIfrs:
     totals: List[str]
     inclusive_adjustment: List[str] = field(default_factory=lambda: [])
     components: List[str] = field(default_factory=lambda: [])
+    adjustment_components: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'DnaIfrs':
@@ -2285,6 +2286,7 @@ class DnaIfrs:
                 totals=_atd_read_list(_atd_read_string)(x['totals']) if 'totals' in x else _atd_missing_json_field('DnaIfrs', 'totals'),
                 inclusive_adjustment=_atd_read_list(_atd_read_string)(x['inclusive_adjustment']) if 'inclusive_adjustment' in x else [],
                 components=_atd_read_list(_atd_read_string)(x['components']) if 'components' in x else [],
+                adjustment_components=_atd_read_list(_atd_read_string)(x['adjustment_components']) if 'adjustment_components' in x else [],
             )
         else:
             _atd_bad_json('DnaIfrs', x)
@@ -2300,6 +2302,7 @@ class DnaIfrs:
         res['totals'] = _atd_write_list(_atd_write_string)(self.totals)
         res['inclusive_adjustment'] = _atd_write_list(_atd_write_string)(self.inclusive_adjustment)
         res['components'] = _atd_write_list(_atd_write_string)(self.components)
+        res['adjustment_components'] = _atd_write_list(_atd_write_string)(self.adjustment_components)
         return res
 
     @classmethod

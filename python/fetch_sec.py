@@ -522,6 +522,12 @@ def depreciation_ifrs(facts: "Facts", defs: reference.FieldDefinitions, end: dat
     parts = [boundary.Component(name="component", value=v, row=tag) for tag in d.components if (v := facts.at(tag, end, instant=False)) is not None]
     if d.components and len(parts) == len(d.components):
         return sum(p.value for p in parts), _label(parts), None, "sum_of_components_ifrs", _composition(definition.name, parts)
+    # the cash-flow reconciliation's own pair, every tag required: Spotify files neither a
+    # total nor the expense pair, only the two adjustment lines (verified against the
+    # vendor's row, see the definition's notes)
+    parts = [boundary.Component(name="component", value=v, row=tag) for tag in d.adjustment_components if (v := facts.at(tag, end, instant=False)) is not None]
+    if d.adjustment_components and len(parts) == len(d.adjustment_components):
+        return sum(p.value for p in parts), _label(parts), None, "sum_of_adjustment_components_ifrs", _composition(definition.name, parts)
     return None, None, None, None, None
 
 
