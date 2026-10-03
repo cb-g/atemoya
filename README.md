@@ -86,7 +86,6 @@ has the rules.
 | stretch | six price measures with own-history percentiles and two counts on every record; the summary lists every name at or above 3 on either side | the same run, `output/summary.txt` |
 | base rate | how often companies of the same size grew as fast as the record assumes and as the price needs, from filed history | the same run, `base_rate` on the record; `uv run python/base_rates.py` builds the table |
 | options-implied expected return | a required return read from option prices alone (Martin and Wagner), beside CAPM and the declared one | `... --options data/options`, `options_expected_return` on the record |
-| R&D shadow | what the generic DCF would say with research and development capitalised, beside the headline and never replacing it | the same run, `rd_shadow` on the record |
 | studies | what the records' own judgments preceded against SPY, and the same rows sorted by plain cheapness; descriptive, a declared holdout unread | `uv run python/anchor_study.py`, `baseline_study.py` |
 | consensus | the Street's dated bar per name and each name's surprise history; never on a record | `uv run python/consensus.py`, daily |
 
@@ -112,5 +111,7 @@ has the rules.
   point-in-time.
 - `docs/flow.md`: the stages from ticker to record as one chart, and every `Failed`
   reason against its stage.
+- `docs/tried.md`: what was built, measured and taken out again, and what would have to be
+  different for it to be worth building again.
 - `docs/beliefs.md`, `docs/required-return.md`, `docs/market-implied.md`,
   `docs/frontier.md`, `docs/hedging.md`: each tool in full.

@@ -1735,193 +1735,6 @@ class ReceiptCheck:
 
 
 @dataclass
-class Fundamental:
-    """Original type: growth_source = [ ... | Fundamental | ... ]
-    """
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'Fundamental'
-
-    @staticmethod
-    def to_json() -> Any:
-        return 'fundamental'
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class HistoricalCappedAtRoic:
-    """Original type: growth_source = [ ... | Historical_capped_at_roic | ... ]
-    """
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'HistoricalCappedAtRoic'
-
-    @staticmethod
-    def to_json() -> Any:
-        return 'historical_capped_at_roic'
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class Historical:
-    """Original type: growth_source = [ ... | Historical | ... ]
-    """
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return 'Historical'
-
-    @staticmethod
-    def to_json() -> Any:
-        return 'historical'
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class GrowthSource:
-    """Original type: growth_source = [ ... ]
-    """
-
-    value: Union[Fundamental, HistoricalCappedAtRoic, Historical]
-
-    @property
-    def kind(self) -> str:
-        """Name of the class representing this variant."""
-        return self.value.kind
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'GrowthSource':
-        if isinstance(x, str):
-            if x == 'fundamental':
-                return cls(Fundamental())
-            if x == 'historical_capped_at_roic':
-                return cls(HistoricalCappedAtRoic())
-            if x == 'historical':
-                return cls(Historical())
-            _atd_bad_json('GrowthSource', x)
-        _atd_bad_json('GrowthSource', x)
-
-    def to_json(self) -> Any:
-        return self.value.to_json()
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'GrowthSource':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class RdShadow:
-    """Original type: rd_shadow = { ... }
-    """
-
-    amortization_years: int
-    amortization_years_source: str
-    rd_latest: float
-    rd_years: List[str]
-    rd_tag: str
-    research_asset: float
-    amortization: float
-    nopat: float
-    nopat_adjusted: float
-    invested_capital: float
-    invested_capital_adjusted: float
-    roic: Optional[float]
-    roic_adjusted: Optional[float]
-    reinvestment_rate: Optional[float]
-    reinvestment_rate_adjusted: Optional[float]
-    growth_source: GrowthSource
-    growth_source_adjusted: GrowthSource
-    g0: float
-    g0_adjusted: float
-    fcff: float
-    headline_fair_value: float
-    fair_value: float
-    margin_of_safety: float
-    scope_limits: List[str]
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'RdShadow':
-        if isinstance(x, dict):
-            return cls(
-                amortization_years=_atd_read_int(x['amortization_years']) if 'amortization_years' in x else _atd_missing_json_field('RdShadow', 'amortization_years'),
-                amortization_years_source=_atd_read_string(x['amortization_years_source']) if 'amortization_years_source' in x else _atd_missing_json_field('RdShadow', 'amortization_years_source'),
-                rd_latest=_atd_read_float(x['rd_latest']) if 'rd_latest' in x else _atd_missing_json_field('RdShadow', 'rd_latest'),
-                rd_years=_atd_read_list(_atd_read_string)(x['rd_years']) if 'rd_years' in x else _atd_missing_json_field('RdShadow', 'rd_years'),
-                rd_tag=_atd_read_string(x['rd_tag']) if 'rd_tag' in x else _atd_missing_json_field('RdShadow', 'rd_tag'),
-                research_asset=_atd_read_float(x['research_asset']) if 'research_asset' in x else _atd_missing_json_field('RdShadow', 'research_asset'),
-                amortization=_atd_read_float(x['amortization']) if 'amortization' in x else _atd_missing_json_field('RdShadow', 'amortization'),
-                nopat=_atd_read_float(x['nopat']) if 'nopat' in x else _atd_missing_json_field('RdShadow', 'nopat'),
-                nopat_adjusted=_atd_read_float(x['nopat_adjusted']) if 'nopat_adjusted' in x else _atd_missing_json_field('RdShadow', 'nopat_adjusted'),
-                invested_capital=_atd_read_float(x['invested_capital']) if 'invested_capital' in x else _atd_missing_json_field('RdShadow', 'invested_capital'),
-                invested_capital_adjusted=_atd_read_float(x['invested_capital_adjusted']) if 'invested_capital_adjusted' in x else _atd_missing_json_field('RdShadow', 'invested_capital_adjusted'),
-                roic=_atd_read_nullable(_atd_read_float)(x['roic']) if 'roic' in x else _atd_missing_json_field('RdShadow', 'roic'),
-                roic_adjusted=_atd_read_nullable(_atd_read_float)(x['roic_adjusted']) if 'roic_adjusted' in x else _atd_missing_json_field('RdShadow', 'roic_adjusted'),
-                reinvestment_rate=_atd_read_nullable(_atd_read_float)(x['reinvestment_rate']) if 'reinvestment_rate' in x else _atd_missing_json_field('RdShadow', 'reinvestment_rate'),
-                reinvestment_rate_adjusted=_atd_read_nullable(_atd_read_float)(x['reinvestment_rate_adjusted']) if 'reinvestment_rate_adjusted' in x else _atd_missing_json_field('RdShadow', 'reinvestment_rate_adjusted'),
-                growth_source=GrowthSource.from_json(x['growth_source']) if 'growth_source' in x else _atd_missing_json_field('RdShadow', 'growth_source'),
-                growth_source_adjusted=GrowthSource.from_json(x['growth_source_adjusted']) if 'growth_source_adjusted' in x else _atd_missing_json_field('RdShadow', 'growth_source_adjusted'),
-                g0=_atd_read_float(x['g0']) if 'g0' in x else _atd_missing_json_field('RdShadow', 'g0'),
-                g0_adjusted=_atd_read_float(x['g0_adjusted']) if 'g0_adjusted' in x else _atd_missing_json_field('RdShadow', 'g0_adjusted'),
-                fcff=_atd_read_float(x['fcff']) if 'fcff' in x else _atd_missing_json_field('RdShadow', 'fcff'),
-                headline_fair_value=_atd_read_float(x['headline_fair_value']) if 'headline_fair_value' in x else _atd_missing_json_field('RdShadow', 'headline_fair_value'),
-                fair_value=_atd_read_float(x['fair_value']) if 'fair_value' in x else _atd_missing_json_field('RdShadow', 'fair_value'),
-                margin_of_safety=_atd_read_float(x['margin_of_safety']) if 'margin_of_safety' in x else _atd_missing_json_field('RdShadow', 'margin_of_safety'),
-                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('RdShadow', 'scope_limits'),
-            )
-        else:
-            _atd_bad_json('RdShadow', x)
-
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['amortization_years'] = _atd_write_int(self.amortization_years)
-        res['amortization_years_source'] = _atd_write_string(self.amortization_years_source)
-        res['rd_latest'] = _atd_write_float(self.rd_latest)
-        res['rd_years'] = _atd_write_list(_atd_write_string)(self.rd_years)
-        res['rd_tag'] = _atd_write_string(self.rd_tag)
-        res['research_asset'] = _atd_write_float(self.research_asset)
-        res['amortization'] = _atd_write_float(self.amortization)
-        res['nopat'] = _atd_write_float(self.nopat)
-        res['nopat_adjusted'] = _atd_write_float(self.nopat_adjusted)
-        res['invested_capital'] = _atd_write_float(self.invested_capital)
-        res['invested_capital_adjusted'] = _atd_write_float(self.invested_capital_adjusted)
-        res['roic'] = _atd_write_nullable(_atd_write_float)(self.roic)
-        res['roic_adjusted'] = _atd_write_nullable(_atd_write_float)(self.roic_adjusted)
-        res['reinvestment_rate'] = _atd_write_nullable(_atd_write_float)(self.reinvestment_rate)
-        res['reinvestment_rate_adjusted'] = _atd_write_nullable(_atd_write_float)(self.reinvestment_rate_adjusted)
-        res['growth_source'] = (lambda x: x.to_json())(self.growth_source)
-        res['growth_source_adjusted'] = (lambda x: x.to_json())(self.growth_source_adjusted)
-        res['g0'] = _atd_write_float(self.g0)
-        res['g0_adjusted'] = _atd_write_float(self.g0_adjusted)
-        res['fcff'] = _atd_write_float(self.fcff)
-        res['headline_fair_value'] = _atd_write_float(self.headline_fair_value)
-        res['fair_value'] = _atd_write_float(self.fair_value)
-        res['margin_of_safety'] = _atd_write_float(self.margin_of_safety)
-        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
-        return res
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'RdShadow':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
 class PriceQuantile:
     """Original type: price_quantile = { ... }
     """
@@ -2147,6 +1960,95 @@ class MidcycleExclusion:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'MidcycleExclusion':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Fundamental:
+    """Original type: growth_source = [ ... | Fundamental | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Fundamental'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'fundamental'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class HistoricalCappedAtRoic:
+    """Original type: growth_source = [ ... | Historical_capped_at_roic | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'HistoricalCappedAtRoic'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'historical_capped_at_roic'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Historical:
+    """Original type: growth_source = [ ... | Historical | ... ]
+    """
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return 'Historical'
+
+    @staticmethod
+    def to_json() -> Any:
+        return 'historical'
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class GrowthSource:
+    """Original type: growth_source = [ ... ]
+    """
+
+    value: Union[Fundamental, HistoricalCappedAtRoic, Historical]
+
+    @property
+    def kind(self) -> str:
+        """Name of the class representing this variant."""
+        return self.value.kind
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'GrowthSource':
+        if isinstance(x, str):
+            if x == 'fundamental':
+                return cls(Fundamental())
+            if x == 'historical_capped_at_roic':
+                return cls(HistoricalCappedAtRoic())
+            if x == 'historical':
+                return cls(Historical())
+            _atd_bad_json('GrowthSource', x)
+        _atd_bad_json('GrowthSource', x)
+
+    def to_json(self) -> Any:
+        return self.value.to_json()
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'GrowthSource':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -4917,8 +4819,6 @@ class Valuation:
     options_expected_return_reason: Optional[str] = None
     base_rate: Optional[BaseRate] = None
     base_rate_reason: Optional[str] = None
-    rd_shadow: Optional[RdShadow] = None
-    rd_shadow_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Valuation':
@@ -4982,8 +4882,6 @@ class Valuation:
                 options_expected_return_reason=_atd_read_string(x['options_expected_return_reason']) if 'options_expected_return_reason' in x else None,
                 base_rate=BaseRate.from_json(x['base_rate']) if 'base_rate' in x else None,
                 base_rate_reason=_atd_read_string(x['base_rate_reason']) if 'base_rate_reason' in x else None,
-                rd_shadow=RdShadow.from_json(x['rd_shadow']) if 'rd_shadow' in x else None,
-                rd_shadow_reason=_atd_read_string(x['rd_shadow_reason']) if 'rd_shadow_reason' in x else None,
             )
         else:
             _atd_bad_json('Valuation', x)
@@ -5084,10 +4982,6 @@ class Valuation:
             res['base_rate'] = (lambda x: x.to_json())(self.base_rate)
         if self.base_rate_reason is not None:
             res['base_rate_reason'] = _atd_write_string(self.base_rate_reason)
-        if self.rd_shadow is not None:
-            res['rd_shadow'] = (lambda x: x.to_json())(self.rd_shadow)
-        if self.rd_shadow_reason is not None:
-            res['rd_shadow_reason'] = _atd_write_string(self.rd_shadow_reason)
         return res
 
     @classmethod
@@ -5133,44 +5027,6 @@ class Restatement:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'Restatement':
-        return cls.from_json(json.loads(x))
-
-    def to_json_string(self, **kw: Any) -> str:
-        return json.dumps(self.to_json(), **kw)
-
-
-@dataclass
-class RdYear:
-    """Original type: rd_year = { ... }
-    """
-
-    period_end: str
-    value: float
-    tag: str
-    filed: str
-
-    @classmethod
-    def from_json(cls, x: Any) -> 'RdYear':
-        if isinstance(x, dict):
-            return cls(
-                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('RdYear', 'period_end'),
-                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('RdYear', 'value'),
-                tag=_atd_read_string(x['tag']) if 'tag' in x else _atd_missing_json_field('RdYear', 'tag'),
-                filed=_atd_read_string(x['filed']) if 'filed' in x else _atd_missing_json_field('RdYear', 'filed'),
-            )
-        else:
-            _atd_bad_json('RdYear', x)
-
-    def to_json(self) -> Any:
-        res: Dict[str, Any] = {}
-        res['period_end'] = _atd_write_string(self.period_end)
-        res['value'] = _atd_write_float(self.value)
-        res['tag'] = _atd_write_string(self.tag)
-        res['filed'] = _atd_write_string(self.filed)
-        return res
-
-    @classmethod
-    def from_json_string(cls, x: str) -> 'RdYear':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -5680,8 +5536,6 @@ class Financials:
     market_provider: str = field(default_factory=lambda: "")
     provider_reason: str = field(default_factory=lambda: "")
     statements_unavailable: str = field(default_factory=lambda: "")
-    rd_history: List[RdYear] = field(default_factory=lambda: [])
-    rd_history_reason: Optional[str] = None
     identity_mismatch: Optional[str] = None
     latest_filing: Optional[str] = None
     cross_check: Optional[CrossCheck] = None
@@ -5723,8 +5577,6 @@ class Financials:
                 market_provider=_atd_read_string(x['market_provider']) if 'market_provider' in x else "",
                 provider_reason=_atd_read_string(x['provider_reason']) if 'provider_reason' in x else "",
                 statements_unavailable=_atd_read_string(x['statements_unavailable']) if 'statements_unavailable' in x else "",
-                rd_history=_atd_read_list(RdYear.from_json)(x['rd_history']) if 'rd_history' in x else [],
-                rd_history_reason=_atd_read_string(x['rd_history_reason']) if 'rd_history_reason' in x else None,
                 identity_mismatch=_atd_read_string(x['identity_mismatch']) if 'identity_mismatch' in x else None,
                 latest_filing=_atd_read_string(x['latest_filing']) if 'latest_filing' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
@@ -5768,9 +5620,6 @@ class Financials:
         res['market_provider'] = _atd_write_string(self.market_provider)
         res['provider_reason'] = _atd_write_string(self.provider_reason)
         res['statements_unavailable'] = _atd_write_string(self.statements_unavailable)
-        res['rd_history'] = _atd_write_list((lambda x: x.to_json()))(self.rd_history)
-        if self.rd_history_reason is not None:
-            res['rd_history_reason'] = _atd_write_string(self.rd_history_reason)
         if self.identity_mismatch is not None:
             res['identity_mismatch'] = _atd_write_string(self.identity_mismatch)
         if self.latest_filing is not None:

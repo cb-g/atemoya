@@ -119,6 +119,5 @@ let convert ~rate (fin : financials) =
   {
     fin with
     periods = List.map period fin.periods;
-    rd_history = List.map (fun (y : rd_year) -> { y with value = y.value *. rate }) fin.rd_history;
     currency = fin.trading_currency;
   }

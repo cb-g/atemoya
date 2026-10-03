@@ -369,8 +369,6 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       earnings_reason = snd (earnings_of inputs);
       runway;
       runway_reason;
-      rd_shadow = None;
-      rd_shadow_reason = None;
       options_expected_return = None;
       options_expected_return_reason = None;
       base_rate = None;
@@ -646,20 +644,12 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     match model with
     | `Dcf -> (
         match ebit_policy fin with
-        | Error reason -> { (failed reason) with rd_shadow_reason = Some "no completed DCF to shadow" }
+        | Error reason -> failed reason
         | Ok fin -> (
             let class_name = match declared with Some c -> Admissibility.class_name c | None -> "" in
             match Dcf.value ~declared:class_name assumptions ~country fin with
-            | Error reason ->
-                { (failed_with_build_out reason) with rd_shadow_reason = Some "no completed DCF to shadow" }
-            | Ok (inputs, fair_value) ->
-                (* The R&D shadow rides beside whatever the headline concludes, a gate's
-                   refusal included: it is computed from the same statements and moves nothing. *)
-                let rd_shadow, rd_shadow_reason =
-                  Rd_shadow.of_dcf ~declared:class_name ~life:params.params.rd_amortization_years assumptions ~country fin
-                    ~headline:(inputs, fair_value)
-                in
-                { (finish ~price:inputs.price (`Dcf inputs) fair_value) with rd_shadow; rd_shadow_reason }))
+            | Error reason -> failed_with_build_out reason
+            | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Dcf inputs) fair_value))
     | `Residual_income -> (
         match Residual_income.value assumptions ~country fin with
         | Error reason -> failed reason

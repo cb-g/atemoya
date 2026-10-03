@@ -122,41 +122,6 @@ every moved input of every record is classified (price, new filing, restatement,
 row, rate or FX, unexplained) in a stability report, so two fetches with nothing having
 happened can be shown to agree.
 
-## The R&D shadow
-
-Accounting expenses research and development in the year it is spent, so a company that
-invests through its income statement shows less profit and less capital than one that
-builds plants, and the return on capital and the reinvestment the DCF derives its starting
-growth from are both misread. The shadow answers what the generic DCF would say if that
-spending were an investment. It is a shadow: `rd_shadow` rides beside the headline on every
-record routed to the generic DCF, and the record's `fair_value`, `margin_of_safety` and
-`signal` are never moved by it. `rd_shadow.fair_value` and `rd_shadow.margin_of_safety` are
-what the headline would be.
-
-The fetch reads the filed annual expense per fiscal year from the filer's facts
-(`rd_history` on the boundary record, up to twelve years, each with its element and filing
-date; cut at the date on the point-in-time path). The life is declared,
-`rd_amortization_years` in `reference/params.json`, five years for every industry. With
-N the life: the research asset is the sum over k = 0..N-1 of expense(t-k) × (N-k)/N, the
-year's amortisation the sum over k = 1..N of expense(t-k) / N. The latest period is restated,
-the asset joining book equity, the expense joining capital spending, the amortisation joining
-depreciation, and operating profit gaining the net investment grossed up for tax so that the
-after-tax figure gains it untaxed, the expense staying deductible. Free cash flow is the
-same on both sides by construction, and the block records it as the check; the shadow
-differs from the headline only through the return on capital and the reinvestment rate,
-that is through the starting growth. The same DCF then runs on the restated statements.
-
-The block carries the life and its source, the years read, the asset and the amortisation,
-and the headline's figure beside the adjusted one for after-tax operating profit, invested
-capital, return on capital, reinvestment rate, growth source and starting growth. Where
-there is no block, `rd_shadow_reason` says why: no completed DCF to shadow; no filed facts
-for the name (the vendor path carries too few years); no research and development line in
-the filer's facts; fewer consecutive filed years than the life needs, which is never read as
-a shorter schedule; or the DCF's own refusal on the restated statements. Its scope limits
-ride on the block: one life for every industry, every dollar capitalised as if it earned,
-and selling and marketing spend left out. `baseline_study.py` puts the shadow's margin of
-safety beside the headline's on the panel's rows.
-
 ## Scope limit codes
 
 A record's `scope_limits` say in prose what the model cannot see for the name. Beside them,
@@ -233,8 +198,7 @@ safety's, both cut on that same set; the within-date rank correlation of the two
 cheapest quintile's median less the dearest's, pooled and then within each model's own rows,
 since a margin of safety from one model does not rank against another's. It answers one
 question the anchor study cannot: whether the anchor did anything a plain cheapness sort did
-not. Two further sections read blocks from each date's own valuations file: the R&D
-shadow's margin of safety beside the headline's on the generic DCF's rows, and the
+not. A further section reads a block from each date's own valuations file: the
 options-implied expected return in quintiles within the date on every row that carries one,
 with the earnings yield and the margin of safety on the same rows and its rank correlation
 with each. The options store begins in April 2025, so the second is a handful of

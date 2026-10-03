@@ -33,7 +33,6 @@ import boundary
 import fetch
 import fetch_sec
 import reference
-import rd
 import refresh_fx
 import refresh_rates as rr
 
@@ -415,8 +414,6 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         rates_unavailable=rates_unavailable,
     )
     provider = fetch_sec.PROVIDER if why is None else "yfinance"
-    # the R&D shadow's history, from the same facts cut at the date
-    rd_years, rd_reason = rd.of_record(facts if why is None else None, decision.taxonomy if decision is not None else "", filing_currency if why is None else None, sec.tags)
     return boundary.Financials(
         ticker=symbol, as_of=f"{d.isoformat()}T00:00:00+00:00",
         currency=currency, financial_currency=filing_currency if why is None else (quote.financial_currency if quote else None),
@@ -429,7 +426,7 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         vendor_financial_currency=(quote.financial_currency if quote else None) if why is None else None,
         market_provider="yfinance (closes and splits), SEC dei (shares)", provider_reason=(decision.reason if decision is not None and why is None else why or ""),
         latest_filing=fetch_sec.latest_filing(periods) if why is None else None,
-        cross_check=check, rd_history=rd_years, rd_history_reason=rd_reason,
+        cross_check=check,
         submissions_latest_annual=submission, point_in_time=pit,
         stretch=stretch_block, stretch_reason=stretch_reason,
         insiders=insiders_block, insiders_reason=insiders_reason,

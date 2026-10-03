@@ -790,6 +790,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the R&D shadow is removed: measured on the panel it ranked names as the headline did, and
+  the reason is structural, so the block, its fetch field, its parameter and its study
+  section are gone; `docs/tried.md` records what was learned. Every record is byte-identical
+  with the two fields it carried stripped; no new `Failed` string.
 - the third EBIT recipe: revenues less the filer's total costs and expenses, plus interest
   where it sits inside those costs, a fallback the policy reads only where the derived
   figure misses the vendor cross-check and this one passes the same threshold; the user's

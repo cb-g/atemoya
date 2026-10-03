@@ -136,7 +136,6 @@ type params = {
   sensitivity_steps : sensitivity_steps;   (* (23) *)
   frontier_draws : int_scalar;        (* (35) draws from the joint belief distribution; a change is a decision *)
   frontier_seed : int_scalar;         (* (35) the sampler's seed; a change is a decision *)
-  ?rd_amortization_years : int_scalar option;   (* the R&D shadow's straight-line life in years; absent in a reference directory from before the shadow, which then carries the reason *)
   terminal_growth_rate : country_table;
   unwired : abstract;                 (* kept verbatim from the original parameter file; never read *)
 }

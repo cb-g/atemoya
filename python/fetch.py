@@ -47,7 +47,6 @@ import boundary
 import fetch_dart
 import fetch_esef
 import fetch_sec
-import rd
 import reference
 import earnings
 import universe as universe_file
@@ -982,12 +981,6 @@ def main(argv: list[str]) -> int:
                                    depth=periods_needed(entry.entity_class if entry else None, sec.admissibility, sec.params),
                                    declared_cik=entry.cik if entry else None, declared_lei=entry.lei if entry else None)
         financials.identity_mismatch = identity_mismatch(symbol, sec.tickers, entry.map_cik if entry else None)
-        # the R&D shadow's history: read beside the statements from the same cached facts, moving none of them
-        filed_facts = None
-        if financials.provider == fetch_sec.PROVIDER:
-            filer, _ = cik_of(symbol, sec.tickers, entry.cik if entry else None)
-            filed_facts = fetch_sec.companyfacts(filer, sec.user_agent) if filer else None
-        financials.rd_history, financials.rd_history_reason = rd.of_record(filed_facts, financials.taxonomy, financials.financial_currency, sec.tags)
         # allow_nan=False: a NaN that slipped through is a bug here, not invalid JSON
         # for the other side to choke on.
         text = financials.to_json_string(indent=2, allow_nan=False)
