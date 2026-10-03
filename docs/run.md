@@ -145,6 +145,16 @@ the shadow's margin of safety beside the headline's on the panel's rows. Its lim
 the block: the higher of two estimates is a rule and not a forecast, and revenue history
 still reads a rebound or an acquisition as growth.
 
+**Measured, and it stays a shadow (the user's decision, 2026-10-03).** On the panel, 644
+generic-DCF rows on 42 names over eighteen quarter-ends with the holdout unread, the
+shadow's margin of safety ranked names as the headline's did: a rank correlation within the
+date of 0.97 at the median, 105 rows changing quintile, the cheapest fifth less the dearest
+10.5 points below at a year against 12.3 for the headline and 9.9 for the earnings yield.
+It moves levels, a third of the valued names by a fifth to two fifths, and not the order.
+So it is not promoted: a rule that only ever raises values, with no evidence it sorts
+better, does not replace the headline. It stays on the record because it shows how much a
+name's value rests on the growth rule. The holdout was not opened for it.
+
 ## Scope limit codes
 
 A record's `scope_limits` say in prose what the model cannot see for the name. Beside them,
