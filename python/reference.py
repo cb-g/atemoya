@@ -3112,6 +3112,97 @@ class ClassBeliefs:
 
 
 @dataclass
+class BaseRateTable:
+    """Original type: base_rate_table = { ... }
+    """
+
+    horizon_years: int
+    bucket: str
+    lower: float
+    upper: Optional[float]
+    n: int
+    not_reported_at_end: int
+    percentiles: List[float]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BaseRateTable':
+        if isinstance(x, dict):
+            return cls(
+                horizon_years=_atd_read_int(x['horizon_years']) if 'horizon_years' in x else _atd_missing_json_field('BaseRateTable', 'horizon_years'),
+                bucket=_atd_read_string(x['bucket']) if 'bucket' in x else _atd_missing_json_field('BaseRateTable', 'bucket'),
+                lower=_atd_read_float(x['lower']) if 'lower' in x else _atd_missing_json_field('BaseRateTable', 'lower'),
+                upper=_atd_read_nullable(_atd_read_float)(x['upper']) if 'upper' in x else _atd_missing_json_field('BaseRateTable', 'upper'),
+                n=_atd_read_int(x['n']) if 'n' in x else _atd_missing_json_field('BaseRateTable', 'n'),
+                not_reported_at_end=_atd_read_int(x['not_reported_at_end']) if 'not_reported_at_end' in x else _atd_missing_json_field('BaseRateTable', 'not_reported_at_end'),
+                percentiles=_atd_read_list(_atd_read_float)(x['percentiles']) if 'percentiles' in x else _atd_missing_json_field('BaseRateTable', 'percentiles'),
+            )
+        else:
+            _atd_bad_json('BaseRateTable', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['horizon_years'] = _atd_write_int(self.horizon_years)
+        res['bucket'] = _atd_write_string(self.bucket)
+        res['lower'] = _atd_write_float(self.lower)
+        res['upper'] = _atd_write_nullable(_atd_write_float)(self.upper)
+        res['n'] = _atd_write_int(self.n)
+        res['not_reported_at_end'] = _atd_write_int(self.not_reported_at_end)
+        res['percentiles'] = _atd_write_list(_atd_write_float)(self.percentiles)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BaseRateTable':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BaseRates:
+    """Original type: base_rates = { ... }
+    """
+
+    source: str
+    built: str
+    first_year: int
+    last_year: int
+    tables: List[BaseRateTable]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BaseRates':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('BaseRates', 'source'),
+                built=_atd_read_string(x['built']) if 'built' in x else _atd_missing_json_field('BaseRates', 'built'),
+                first_year=_atd_read_int(x['first_year']) if 'first_year' in x else _atd_missing_json_field('BaseRates', 'first_year'),
+                last_year=_atd_read_int(x['last_year']) if 'last_year' in x else _atd_missing_json_field('BaseRates', 'last_year'),
+                tables=_atd_read_list(BaseRateTable.from_json)(x['tables']) if 'tables' in x else _atd_missing_json_field('BaseRates', 'tables'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('BaseRates', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['built'] = _atd_write_string(self.built)
+        res['first_year'] = _atd_write_int(self.first_year)
+        res['last_year'] = _atd_write_int(self.last_year)
+        res['tables'] = _atd_write_list((lambda x: x.to_json()))(self.tables)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BaseRates':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Admissibility:
     """Original type: admissibility = { ... }
     """

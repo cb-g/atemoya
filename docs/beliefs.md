@@ -20,6 +20,25 @@ class default is a statement about that default and not about the reader's view.
 runs a clone should read the six and either keep them knowingly or pass their own with
 `--beliefs`, kept outside the repository.
 
+## The outside view beside it
+
+A belief is the inside view: what you hold about this company. `base_rate` on a record is
+the outside view, and it is not a belief: how often companies of the same starting size
+actually grew their revenue, over five years, as fast as the record's own growth path
+assumes (`headline_growth`, `headline_share`) and as fast as the price needs
+(`implied_growth`, `implied_share`, from `implied_g0` decaying as the model's path does).
+`uv run python/base_rates.py` builds the table from SEC's frames, one request per revenue
+element and calendar year since 2009, about ten thousand companies, into
+`data/reference/base_rates.json`; without it the record says so. A share is held to between
+one and ninety-nine per cent, the table's resolution.
+
+Read it with its limits, which ride on the block. The record's growth is of free cash flow
+and the class's is of revenue. The needed growth is solved on the record's own base cash
+flow, so where that base is held down by a build-out or a trough the needed growth is
+overstated. The class is survivors only, with the count of those that did not report at the
+end beside it. The windows overlap and all lie in the years since 2009. Nothing reads the
+block: it informs the why of a belief, as rule 1 below says history may, and never sets one.
+
 ## Rules of use, in this order
 
 1. **A belief is yours.** It is declared, dated, and carries a why. The tool never

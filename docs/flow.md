@@ -790,6 +790,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the base rate: `base_rate` on a dollar record valued by a DCF-shaped model, how often
+  companies of the same starting size grew as fast over five years as the record's path and
+  as the path the price needs, from the table `python/base_rates.py` builds out of SEC's
+  frames; or `base_rate_reason`. A readout; no new `Failed` string; every record is
+  byte-identical with the two fields stripped.
 - the mid-cycle recipe: where every year in the window carries a filed operating-income line
   the model's NOPAT is that line after tax, at the year's effective rate where derivable,
   so a non-operating one-off no longer enters the window as an operating year; where a filer

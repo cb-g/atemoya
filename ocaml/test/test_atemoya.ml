@@ -319,6 +319,7 @@ let params : Params.t =
             "Bank": {"mean": 0, "sd": 1.0, "floor": -2, "ceiling": 3, "why": "the long run converges to the cost of equity", "as_of": "2026-09-23"},
             "Insurer": {"mean": 0, "sd": 1.0, "floor": -2, "ceiling": 2, "why": "the same, narrower above", "as_of": "2026-09-23"}}}|};
     required_returns = Reference_j.required_returns_of_string {|{"classes": {}, "names": {}}|};
+    base_rates = None;
   }
 
 let declaration ?(scope_limits = []) ?(scope_limit_codes = []) ?adr_ratio ?build_out_return ?build_out_lag_years entity_class =
@@ -2104,6 +2105,54 @@ let test_stretch_alert_rule () =
   check_error "the tracked universe refuses a thesis" (Universe.load_string {|{"tickers": [{"ticker": "TEST", "entity_class": "OperatingCompany", "why": "w", "thesis": "long"}]}|}) [ "unknown field(s) thesis" ];
   let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
   Alcotest.check valuation "json round trip" v again
+
+(* The base rate on an invented table: the 1st to 99th percentiles are -0.49, -0.48, ..., 0.49,
+   so the percentile rank of a growth g is 0.50 + g and the share at or above it 0.50 - g. *)
+let test_base_rate () =
+  let uniform = List.init 99 (fun i -> (float_of_int (i + 1) /. 100.) -. 0.5) in
+  check_float "share at the median" 0.5 (Base_rates.share_at_or_above uniform 0.);
+  check_float "a tenth above it" 0.4 (Base_rates.share_at_or_above uniform 0.1);
+  check_float "between two points" 0.455 (Base_rates.share_at_or_above uniform 0.045);
+  check_float "beyond the top is the table's resolution, not zero" 0.01 (Base_rates.share_at_or_above uniform 3.);
+  check_float "below the bottom likewise" 0.99 (Base_rates.share_at_or_above uniform (-3.));
+  Alcotest.(check (option approx)) "compound over the first years of a path" (Some ((1.1 *. 1.21) ** 0.5 -. 1.)) (Base_rates.compound [ 0.1; 0.21; 9. ] ~years:2);
+  Alcotest.(check (option approx)) "a path shorter than the horizon" None (Base_rates.compound [ 0.1 ] ~years:5);
+  let table lower upper : Reference_t.base_rate_table =
+    { horizon_years = 5; bucket = "test class"; lower; upper; n = 1234; not_reported_at_end = 56; percentiles = uniform }
+  in
+  let rates : Reference_t.base_rates =
+    { source = "invented"; built = "2026-10-03"; first_year = 2009; last_year = 2025; tables = [ table 1000. (Some 100000.) ]; notes = [] }
+  in
+  let run_with rates fin = Valuation.run { params with base_rates = rates } ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) fin in
+  let v = run_with (Some rates) (financials (history ())) in
+  let plain = run (financials (history ())) in
+  Alcotest.(check (option (float 1e-12))) "the headline is untouched" plain.fair_value v.fair_value;
+  (match v.base_rate with
+  | Some b ->
+      Alcotest.(check string) "the class" "test class" b.bucket;
+      check_float "the latest year's revenue" 10000. b.starting_revenue;
+      Alcotest.(check int) "the class's count" 1234 b.n;
+      Alcotest.(check string) "the years" "2009 to 2025" b.years;
+      let path = match v.inputs with Some (`Dcf i) -> i.growth_path | _ -> Alcotest.fail "not a dcf" in
+      let own = Option.get (Base_rates.compound path ~years:5) in
+      check_float "the record's own path, compounded over five years" own b.headline_growth;
+      check_float "its share read off the table" (Base_rates.share_at_or_above uniform own) b.headline_share;
+      check_float "the median is the 50th percentile" 0. b.median_growth;
+      (match (b.implied_growth, b.implied_share) with
+      | Some g, Some share ->
+          (* the fixture is priced below its fair value, so the price needs less growth than the path has *)
+          Alcotest.(check bool) "the price needs less than the record assumes" true (g < own);
+          check_float "and its share is read off the same table" (Base_rates.share_at_or_above uniform g) share
+      | _ -> Alcotest.failf "no implied side: %s" (Option.value b.implied_reason ~default:""));
+      Alcotest.(check int) "the limits ride on the block" 6 (List.length b.scope_limits)
+  | None -> Alcotest.failf "no block: %s" (Option.value v.base_rate_reason ~default:""));
+  Alcotest.(check (option string)) "no table fetched" (Some "base rates not fetched: run python/base_rates.py") plain.base_rate_reason;
+  let small = run_with (Some { rates with tables = [ table 1e9 None ] }) (financials (history ())) in
+  check_mentions "no table for the size" (Option.value small.base_rate_reason ~default:"") [ "no 5-year table for a starting revenue of 1e+04 dollars" ];
+  let euro = run_with (Some rates) (financials ~currency:(Some "EUR") (history ())) in
+  check_mentions "not in dollars" (Option.value euro.base_rate_reason ~default:"") [ "the reference class is in dollars and the record is in EUR" ];
+  let wrapper = Valuation.run { params with base_rates = Some rates } ~today ~model_version:"test" ~declaration:(Some (declaration `Wrapper)) (financials (history ())) in
+  Alcotest.(check bool) "neither field off a DCF-shaped record" true (Option.is_none wrapper.base_rate && Option.is_none wrapper.base_rate_reason)
 
 (* The R&D shadow on invented figures, life 2: expense 100, 80, 60 newest first.
    asset = 100 * 2/2 + 80 * 1/2 = 140;  amortisation = 80/2 + 60/2 = 70;  net investment 30. *)
@@ -4344,6 +4393,7 @@ let () =
           Alcotest.test_case "the mark and the block" `Quick test_earnings_spans_and_block;
           Alcotest.test_case "the R&D shadow: schedule, invariants, reasons" `Quick test_rd_shadow;
           Alcotest.test_case "mid-cycle on filed operating income" `Quick test_midcycle_operating_income;
+          Alcotest.test_case "the base rate beside the growth" `Quick test_base_rate;
           Alcotest.test_case "the options-implied expected return" `Quick test_expected_return;
         ] );
       ( "runway readout",

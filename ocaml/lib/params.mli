@@ -25,6 +25,8 @@ type t = {
   fx_sources : Reference_t.fx_sources;
   fx_rates : Reference_t.fx_rates option;
       (** fetched by python/refresh_fx.py to data/reference, never tracked (29); [None] when absent *)
+  base_rates : Reference_t.base_rates option;
+      (** fetched by python/base_rates.py to data/reference, never tracked; [None] when absent *)
   rate_sources : Reference_t.rate_sources;
       (** the tracked curve registry: where each country's curve comes from, and which
           domiciles are declared to have none (54) *)

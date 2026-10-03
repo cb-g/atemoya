@@ -373,6 +373,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       rd_shadow_reason = None;
       options_expected_return = None;
       options_expected_return_reason = None;
+      base_rate = None;
+      base_rate_reason = None;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,
@@ -516,6 +518,17 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     | None -> floor_undeclared
   in
   (* After a model produced a fair value: applicability, sanity bound, signal, floor. *)
+  (* The base rate, on a DCF-shaped record: how often companies of this size grew as fast as
+     the record's path and as the path the price needs. Other models carry neither field. *)
+  let base_rate_of ~(fin : financials) ~price (inputs : model_inputs) =
+    let dcf = match inputs with `Dcf i -> Some i | `Dcf_midcycle m -> Some m.dcf | _ -> None in
+    match dcf with
+    | None -> (None, None)
+    | Some i ->
+        Base_rates.of_inputs params.base_rates ~currency:fin.currency
+          ~revenue:(Option.bind (Period.latest fin) (fun (p : fiscal_period) -> p.total_revenue))
+          ~inputs:i ~implied:(Implied.of_inputs inputs ~price)
+  in
   let conclude ~fin ~model ~class_check ~rule ~price ~(assumptions : Dcf.assumptions) (inputs : model_inputs) fair_value =
     let failed = failed ~fin ~model ~class_check ~inputs ~floor:(floor_of_rule rule) in
     if fair_value <= 0. then
@@ -537,6 +550,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
              ~floor:(floor_verified ~currency inputs ~fair_value)
              ())
           with
+          base_rate = fst (base_rate_of ~fin ~price inputs);
+          base_rate_reason = snd (base_rate_of ~fin ~price inputs);
           implied = Result.to_option (Implied.of_inputs inputs ~price);
           implied_reason = (match Implied.of_inputs inputs ~price with Error r -> Some r | Ok _ -> None);
           sensitivity = Result.to_option (Sensitivity.of_inputs params.params.sensitivity_steps inputs ~fair_value);

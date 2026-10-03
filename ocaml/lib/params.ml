@@ -11,6 +11,7 @@ type t = {
   admissibility : admissibility;
   fx_sources : fx_sources;
   fx_rates : fx_rates option;           (* fetched (29): likewise *)
+  base_rates : base_rates option;       (* fetched by python/base_rates.py: likewise *)
   rate_sources : rate_sources;          (* the tracked curve registry; its no_curve_fallback is a declaration, read here and nowhere else (54) *)
   xbrl_tags : xbrl_tags;
   field_definitions : field_definitions;
@@ -50,6 +51,7 @@ let load ~dir ~fetched =
   let* fx_sources = read Reference_j.read_fx_sources (file "fx_sources.json") in
   let* rate_sources = read Reference_j.read_rate_sources (file "rate_sources.json") in
   let* fx_rates = read_fetched Reference_j.read_fx_rates (fetched_file "fx_rates.json") in
+  let* base_rates = read_fetched Reference_j.read_base_rates (fetched_file "base_rates.json") in
   let* xbrl_tags = read Reference_j.read_xbrl_tags (file "xbrl_tags.json") in
   let* field_definitions =
     read Reference_j.read_field_definitions (file "field_definitions.json")
@@ -75,6 +77,7 @@ let load ~dir ~fetched =
       admissibility;
       fx_sources;
       fx_rates;
+      base_rates;
       rate_sources;
       xbrl_tags;
       field_definitions;

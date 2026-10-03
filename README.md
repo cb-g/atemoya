@@ -57,7 +57,7 @@ record naming the refresher to run. First run, in this order:
 1. `cp .env.example .env`.
 2. Obtain a FRED API key and set `FRED_API_KEY` in `.env`.
 3. Set `SEC_EDGAR_IDENTITY` in `.env` (name and email, sent as the User-Agent).
-4. `uv run python/refresh_rates.py --all` and `uv run python/refresh_fx.py --all`.
+4. `uv run python/refresh_rates.py --all`, `uv run python/refresh_fx.py --all` and `uv run python/base_rates.py`.
 5. `uv run python/fetch_all.py`.
 6. `dune exec atemoya -- data/financials --out output`.
 
@@ -84,6 +84,7 @@ has the rules.
 | view | every vertical on a declared view's side, ranked by EV per dollar at risk | `uv run python/express.py data/views/mine.json` |
 | fills | empirical fill positions from the trade tape, read back into the view tool | `uv run python/fill_model.py AAPL` |
 | stretch | six price measures with own-history percentiles and two counts on every record; the summary lists every name at or above 3 on either side | the same run, `output/summary.txt` |
+| base rate | how often companies of the same size grew as fast as the record assumes and as the price needs, from filed history | the same run, `base_rate` on the record; `uv run python/base_rates.py` builds the table |
 | options-implied expected return | a required return read from option prices alone (Martin and Wagner), beside CAPM and the declared one | `... --options data/options`, `options_expected_return` on the record |
 | R&D shadow | what the generic DCF would say with research and development capitalised, beside the headline and never replacing it | the same run, `rd_shadow` on the record |
 | studies | what the records' own judgments preceded against SPY, and the same rows sorted by plain cheapness; descriptive, a declared holdout unread | `uv run python/anchor_study.py`, `baseline_study.py` |

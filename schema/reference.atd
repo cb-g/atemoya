@@ -50,6 +50,28 @@ type risk_free_rates = {
   ~notes : string list;
 }
 
+(* Base rates of sales growth (python/base_rates.py): fetched, never tracked. One table per
+   horizon and starting-size bucket: the 1st to 99th percentile of the compound annual
+   growth of revenue among the companies that filed revenue at both ends. *)
+type base_rate_table = {
+  horizon_years : int;
+  bucket : string;                    (* the label the record prints *)
+  lower : float;                      (* starting revenue in dollars, inclusive *)
+  upper : float nullable;             (* exclusive; null on the top bucket *)
+  n : int;
+  not_reported_at_end : int;          (* started in the bucket, no revenue filed at the end: left out, counted *)
+  percentiles : float list;           (* 99 values *)
+}
+
+type base_rates = {
+  source : string;
+  built : string;
+  first_year : int;
+  last_year : int;
+  tables : base_rate_table list;
+  ~notes : string list;
+}
+
 (* One value per country: equity risk premium, statutory tax rate, terminal growth. *)
 type country_table = {
   source : string;

@@ -1189,6 +1189,26 @@ type options_expected_return = {
   scope_limits : string list;
 }
 
+(* The base rate beside the growth the record uses and the growth the price needs: how often
+   companies of this size grew their revenue that fast over five years. The outside view,
+   a frequency from filed history; never a belief, never an input to a fair value. On a
+   record valued by a DCF-shaped model whose statements and price are in dollars. *)
+type base_rate = {
+  horizon_years : int;                (* 5 *)
+  starting_revenue : float;           (* the latest fiscal year's, dollars *)
+  bucket : string;                    (* the starting-size class it falls in *)
+  n : int;                            (* companies with revenue at both ends of a window in that class *)
+  not_reported_at_end : int;          (* started in the class and filed no revenue at the end: left out, so the frequencies describe survivors *)
+  years : string;                     (* the calendar years the table covers *)
+  median_growth : float;              (* the class's median compound annual revenue growth over the horizon *)
+  headline_growth : float;            (* the compound annual growth over the horizon on the record's own growth path *)
+  headline_share : float;             (* the share of the class that grew at least that fast; held to [0.01, 0.99], the table's resolution *)
+  ?implied_growth : float option;     (* the same on the path the price needs (implied_g0 decaying as the model's does); absent with the reason *)
+  ?implied_share : float option;
+  ?implied_reason : string option;
+  scope_limits : string list;
+}
+
 (* One fiscal year's research and development expense as filed. *)
 type rd_year = {
   period_end : string;
@@ -1307,6 +1327,8 @@ type valuation = {
   ?runway_reason : string option;               (* (76) present instead on an Unprofitable record: why there is no readout *)
   ?options_expected_return : options_expected_return option;   (* under --options: the Martin-Wagner expected return from the options store, beside cost_of_equity_capm *)
   ?options_expected_return_reason : string option;             (* present instead under --options on a name that is not a fund: why there is none *)
+  ?base_rate : base_rate option;                (* on a dollar record valued by a DCF-shaped model: how often companies of this size grew as fast as the record assumes and as the price needs *)
+  ?base_rate_reason : string option;            (* present instead on such a record: why there is none *)
   ?rd_shadow : rd_shadow option;                (* on a record routed to the generic DCF: the value with research and development capitalised, beside the headline and never replacing it *)
   ?rd_shadow_reason : string option;            (* present instead on such a record: why there is no shadow *)
 }

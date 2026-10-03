@@ -4787,6 +4787,74 @@ class BeliefMap:
 
 
 @dataclass
+class BaseRate:
+    """Original type: base_rate = { ... }
+    """
+
+    horizon_years: int
+    starting_revenue: float
+    bucket: str
+    n: int
+    not_reported_at_end: int
+    years: str
+    median_growth: float
+    headline_growth: float
+    headline_share: float
+    scope_limits: List[str]
+    implied_growth: Optional[float] = None
+    implied_share: Optional[float] = None
+    implied_reason: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BaseRate':
+        if isinstance(x, dict):
+            return cls(
+                horizon_years=_atd_read_int(x['horizon_years']) if 'horizon_years' in x else _atd_missing_json_field('BaseRate', 'horizon_years'),
+                starting_revenue=_atd_read_float(x['starting_revenue']) if 'starting_revenue' in x else _atd_missing_json_field('BaseRate', 'starting_revenue'),
+                bucket=_atd_read_string(x['bucket']) if 'bucket' in x else _atd_missing_json_field('BaseRate', 'bucket'),
+                n=_atd_read_int(x['n']) if 'n' in x else _atd_missing_json_field('BaseRate', 'n'),
+                not_reported_at_end=_atd_read_int(x['not_reported_at_end']) if 'not_reported_at_end' in x else _atd_missing_json_field('BaseRate', 'not_reported_at_end'),
+                years=_atd_read_string(x['years']) if 'years' in x else _atd_missing_json_field('BaseRate', 'years'),
+                median_growth=_atd_read_float(x['median_growth']) if 'median_growth' in x else _atd_missing_json_field('BaseRate', 'median_growth'),
+                headline_growth=_atd_read_float(x['headline_growth']) if 'headline_growth' in x else _atd_missing_json_field('BaseRate', 'headline_growth'),
+                headline_share=_atd_read_float(x['headline_share']) if 'headline_share' in x else _atd_missing_json_field('BaseRate', 'headline_share'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('BaseRate', 'scope_limits'),
+                implied_growth=_atd_read_float(x['implied_growth']) if 'implied_growth' in x else None,
+                implied_share=_atd_read_float(x['implied_share']) if 'implied_share' in x else None,
+                implied_reason=_atd_read_string(x['implied_reason']) if 'implied_reason' in x else None,
+            )
+        else:
+            _atd_bad_json('BaseRate', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['horizon_years'] = _atd_write_int(self.horizon_years)
+        res['starting_revenue'] = _atd_write_float(self.starting_revenue)
+        res['bucket'] = _atd_write_string(self.bucket)
+        res['n'] = _atd_write_int(self.n)
+        res['not_reported_at_end'] = _atd_write_int(self.not_reported_at_end)
+        res['years'] = _atd_write_string(self.years)
+        res['median_growth'] = _atd_write_float(self.median_growth)
+        res['headline_growth'] = _atd_write_float(self.headline_growth)
+        res['headline_share'] = _atd_write_float(self.headline_share)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        if self.implied_growth is not None:
+            res['implied_growth'] = _atd_write_float(self.implied_growth)
+        if self.implied_share is not None:
+            res['implied_share'] = _atd_write_float(self.implied_share)
+        if self.implied_reason is not None:
+            res['implied_reason'] = _atd_write_string(self.implied_reason)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BaseRate':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Valuation:
     """Original type: valuation = { ... }
     """
@@ -4847,6 +4915,8 @@ class Valuation:
     runway_reason: Optional[str] = None
     options_expected_return: Optional[OptionsExpectedReturn] = None
     options_expected_return_reason: Optional[str] = None
+    base_rate: Optional[BaseRate] = None
+    base_rate_reason: Optional[str] = None
     rd_shadow: Optional[RdShadow] = None
     rd_shadow_reason: Optional[str] = None
 
@@ -4910,6 +4980,8 @@ class Valuation:
                 runway_reason=_atd_read_string(x['runway_reason']) if 'runway_reason' in x else None,
                 options_expected_return=OptionsExpectedReturn.from_json(x['options_expected_return']) if 'options_expected_return' in x else None,
                 options_expected_return_reason=_atd_read_string(x['options_expected_return_reason']) if 'options_expected_return_reason' in x else None,
+                base_rate=BaseRate.from_json(x['base_rate']) if 'base_rate' in x else None,
+                base_rate_reason=_atd_read_string(x['base_rate_reason']) if 'base_rate_reason' in x else None,
                 rd_shadow=RdShadow.from_json(x['rd_shadow']) if 'rd_shadow' in x else None,
                 rd_shadow_reason=_atd_read_string(x['rd_shadow_reason']) if 'rd_shadow_reason' in x else None,
             )
@@ -5008,6 +5080,10 @@ class Valuation:
             res['options_expected_return'] = (lambda x: x.to_json())(self.options_expected_return)
         if self.options_expected_return_reason is not None:
             res['options_expected_return_reason'] = _atd_write_string(self.options_expected_return_reason)
+        if self.base_rate is not None:
+            res['base_rate'] = (lambda x: x.to_json())(self.base_rate)
+        if self.base_rate_reason is not None:
+            res['base_rate_reason'] = _atd_write_string(self.base_rate_reason)
         if self.rd_shadow is not None:
             res['rd_shadow'] = (lambda x: x.to_json())(self.rd_shadow)
         if self.rd_shadow_reason is not None:
