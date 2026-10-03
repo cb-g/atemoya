@@ -152,6 +152,18 @@ quarter is null, a split and an issue not being told apart; and a bank or an ins
 no current section and no gross profit, so three signals are null there and no score is
 formed. `baseline_study.py` reads the block on the panel's rows.
 
+**Measured on the panel (2026-10-03), and it is a description, not a signal.** 2,361 rows on
+141 names over eighteen quarter-ends carry the block, 989 with all nine signals, the holdout
+unread. A score of seven to nine ran four points below SPY at a year and a score of four to
+six three below, so the score separated nothing; the fifty-nine rows scoring three or less,
+on ten names, ran well above, a handful of speculative names in a market that paid for
+them. The interaction the literature documents did not appear: cheap and high-scoring ran
+eight points below at a year, cheap and low-scoring six below, and dear and low-scoring was
+the best cell. Gross profitability sorted nothing. The accruals ratio was the one measure
+on its documented side, the lowest fifth about four points ahead of the highest at a year,
+which is small on this sample. So quality is on the record as a reading of the statements
+and feeds no model, belief or signal.
+
 ## The growth shadow
 
 The generic DCF picks its starting growth by a switch. With positive after-tax operating
