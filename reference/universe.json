@@ -7,7 +7,8 @@
     "lei (73): a Legal Entity Identifier declared on an entry names the filer whose ESEF annual reports on filings.xbrl.org are its statements, for a name with no SEC filer; read from the filer's own report cover and never resolved from the vendor, whose ISIN lookup returned nothing for three of the four names and a wrong code for one. Declared 2026-09-29 on Sanofi, Air Liquide, ASML and Novo Nordisk; Allianz is not on the aggregator and stays on the vendor.",
     "Filers declared by CIK 2026-09-30 (79): Toyota's Tokyo line and AstraZeneca's London line read their own 20-F statements, which are the same IFRS accounts each home line trades on. MUFG's is not declared, its 20-F being US GAAP against the J-GAAP the Tokyo line trades on; the difference is written on its entry.",
     "Thirty-two names added 2026-10-02 (81) at the request of the downstream project that runs a clone, twenty asked on the first and twelve on the second, the class judgments delegated to the tool as in brief 71 and drafted from the vendor's statements, the filers' own forms and their announcements, so each why says what was read; the user may reclassify any by editing this file. Howard Hughes needed a class this file did not have: since buying an insurer it consolidates a land developer and an insurer, and per the admissibility rule a name that fits no class gets a class added, HoldingCompany, refused with the sum of the parts named, rather than a place in OperatingCompany. Strategy is a Wrapper and not a new class, because the premium or discount to the bitcoin it holds is the wrapper lens exactly. Thales and Saab declare the LEI read from their own ESEF reports' facts.",
-    "Scope limit codes, 2026-10-03, at the request of the downstream project that runs a clone: every scope limit carries one code from scope_codes below, in scope_limit_codes beside it and in the same order, so a reader can filter by rule and still read the text. A code is stable once here: the vocabulary is added to and never renamed. On the same day Enbridge moves from OperatingCompany to RegulatedUtility, the downstream reader not confirming the class and the user agreeing, since most of its earnings are regulated or contracted and its own scope limit already said a DCF misreads the rate base; and Okta gains the goodwill limit that its capped growth rests on."
+    "Scope limit codes, 2026-10-03, at the request of the downstream project that runs a clone: every scope limit carries one code from scope_codes below, in scope_limit_codes beside it and in the same order, so a reader can filter by rule and still read the text. A code is stable once here: the vocabulary is added to and never renamed. On the same day Enbridge moves from OperatingCompany to RegulatedUtility, the downstream reader not confirming the class and the user agreeing, since most of its earnings are regulated or contracted and its own scope limit already said a DCF misreads the rate base; and Okta gains the goodwill limit that its capped growth rests on.",
+    "SPCX, 2026-10-03: the downstream project that runs a clone pointed out that the entry still described the SPAC-strategy fund that used the ticker; the ticker has named Space Exploration Technologies since its listing in June 2026, which the ticker map and the fetched statements confirm, so the entry is rewritten and the class is Unprofitable. A ticker can change hands; the class check did not flag it, since a wrapper's refusal reads no statements."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -835,8 +836,18 @@
     },
     {
       "ticker": "SPCX",
-      "entity_class": "Wrapper",
-      "why": "A SPAC-strategy ETF; a wrapper, refused by design."
+      "entity_class": "Unprofitable",
+      "why": "Space Exploration Technologies, launch, satellite connectivity and artificial intelligence, three segments in one set of statements; the ticker belonged to a SPAC-strategy fund until the company listed under it, and the ticker map at the Securities and Exchange Commission now names the company. A loss on the latest year, operating and net, with capital spending at several times depreciation and free cash flow deeply negative under the build-out, so the runway lens, no model; the operating-company or cyclical class becomes the question once filed years show a profit.",
+      "scope_limits": [
+        "no annual report is filed yet, only quarterly ones since the listing, so the annual statements come from the vendor",
+        "capital spending runs at several times depreciation on capacity that is not yet earning",
+        "three businesses of different kinds, launch, connectivity and artificial intelligence, sit in one set of statements that no single lens reads"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "build_out",
+        "mixed_business"
+      ]
     },
     {
       "ticker": "ROP.SW",

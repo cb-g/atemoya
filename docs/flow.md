@@ -785,6 +785,9 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- SPCX: the ticker passed from a SPAC-strategy fund to Space Exploration Technologies on its
+  listing, and the entry still described the fund; it is rewritten and the class is
+  `Unprofitable`. No new `Failed` string; no other record moves.
 - scope limit codes, Enbridge and Okta: every scope limit carries a stable code beside its
   text, declared in `reference/universe.json` under `scope_codes` and emitted on the record
   as `scope_limit_codes`, which the downstream project asked for so a reader can filter by
