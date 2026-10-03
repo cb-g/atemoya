@@ -790,6 +790,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the rule panel and its study: `python/rule_panel.py` runs the point-in-time fetch and the
+  binary on the five hundred largest filers each June since 2013, admitted by an
+  industry-code rule checked against the declared classes, and `python/rule_study.py` reads
+  the margin of safety beside the earnings yield on it. Side tools: no record on the
+  valuation path moves and there is no new `Failed` string.
 - the broad panel and its study: `python/broad_panel.py` forms a row each June since 2010 for
   every SEC filer with a ticker today, from SEC's frames and bulk monthly bars, and
   `python/broad_study.py` reads cheapness, quality and a peer-implied gap on it before 2022

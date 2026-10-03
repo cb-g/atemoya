@@ -330,9 +330,55 @@ the right way in six of eleven. From 2022, four formations: the earnings yield r
 points the right way and the score nine, ahead in three and in all four of the years, where
 on the anchor study's hundred and seventy-eight names over the same years the cheapest ran
 behind the dearest. So two things the narrower studies could not say: cheapness was not
-working for a decade before 2022, on survivors at least; and its failure since 2022 is a
-property of the names in the universe here as much as of the market, a universe assembled
-in 2026 by readers who asked for names, many of them because of what their prices had done.
+working for a decade before 2022, on survivors at least; and its failure since 2022 is not
+the whole market's. The first reading of that, that the universe here was chosen in
+hindsight, was half the story: the rule study below shows the same failure among the five
+hundred largest filers chosen by size alone, so it belongs to large companies since 2022,
+which is what this universe mostly holds, as much as to how its names were picked.
+
+### The rule panel: this tool's own DCF on a universe chosen by a rule
+
+    uv run python/rule_panel.py --check-rule     # the industry-code rule against the declared classes
+    uv run python/rule_panel.py                  # -> data/broad/rule/panel.jsonl, about an hour the first time
+    uv run python/rule_study.py                  # -> output/rule_study/tables.txt
+
+`rule_panel.py` runs the real pipeline, the point-in-time fetch and the OCaml binary, on
+names chosen by a rule that reads nothing later than the date: each 30 June from 2013, the
+five hundred largest filers by market value among those reporting current assets, the
+held-out names left out. A class is declared by a person and nobody reads a thousand
+filers, so the study declares one rule for all and says so: a filer whose SEC industry code
+is not in the module's exclusion table runs as an operating company under the generic DCF,
+and every other is left out, never valued. `--check-rule` measured that table against the
+classes declared here before it was used and it was narrowed once on what that showed; it
+agrees with a person on 153 of 184 names, and where it differs it mostly runs a name a
+person called cyclical or unprofitable. No vendor statements are fetched, so there is no
+cross-check and a filer with no filed operating income is refused; no vendor profile, so
+every name has a beta of one. Rates are point-in-time, read from 2009 into the study's own
+cache; the other parameter tables are the 2026 vintage.
+
+**What it found on the first build (2026-10-04), descriptively.** 5,193 records on 745
+filers over thirteen Junes, 2,755 valued. On the valued rows, cut within the date:
+
+- before 2022, nine formations: the margin of safety sorted nothing, the cheapest fifth
+  level with the dearest and ahead in five years of nine; the earnings yield on the same
+  rows ran four points the wrong way, ahead in three of nine; the nine-signal score ran
+  five points the right way, ahead in seven of nine;
+- from 2022, four formations: the margin of safety ran nine points the wrong way and the
+  earnings yield ten, each ahead in one year of four; the score one point the right way,
+  ahead in three of four;
+- the margin of safety's rank correlation with the earnings yield within the date is 0.55
+  before 2022 and 0.67 since, so the anchor is again in good part the cheapness sort, a
+  little better than it before 2022 and no different since;
+- the growth shadow ranked as the headline did, and the refused rows did as the valued.
+
+So on names not picked in hindsight the generic DCF still does not sort returns, in either
+stretch, and the score is the one measure that leaned the right way in both. And one
+finding about the model's level: the median margin of safety on a date ran from above one
+in the low-rate years to below zero since 2023. The discount rate follows the risk-free
+rate while the terminal growth does not, so with rates at their lowest most large
+companies read as worth double their price, and 264 records met the sanity bound. The cut
+is always within the date, so the tables above do not depend on it, but a level that moves
+that far with rates is a property of the model to look at on its own.
 
 **What it is not.** Survivors only: a filer is in the panel only if it has a ticker today,
 about a third of 2011's filers, so the failed and the acquired are missing and a sort that
