@@ -32,7 +32,8 @@ def form4(*, owner: str = "Doe Jane", owner_cik: str = "0000000009", director: s
 </ownershipDocument>""".encode()
 
 
-def line(code: str, when: str, shares: float, price: str | None, after: float | None = 1000.) -> str:
+def line(code: str, when: str, shares: float, price: str | None, after: float | None = 1000., trust: str | None = None) -> str:
+    nature_xml = "" if trust is None else f"<ownershipNature><directOrIndirectOwnership><value>I</value></directOrIndirectOwnership><natureOfOwnership><value>{trust}</value></natureOfOwnership></ownershipNature>"
     price_xml = f"<transactionPricePerShare><value>{price}</value></transactionPricePerShare>" if price is not None \
         else "<transactionPricePerShare><footnoteId id=\"F1\"/></transactionPricePerShare>"
     after_xml = f"<postTransactionAmounts><sharesOwnedFollowingTransaction><value>{after}</value></sharesOwnedFollowingTransaction></postTransactionAmounts>" if after is not None else ""
@@ -47,6 +48,7 @@ def line(code: str, when: str, shares: float, price: str | None, after: float | 
         <transactionAcquiredDisposedCode><value>{'A' if code in ('P', 'A', 'M') else 'D'}</value></transactionAcquiredDisposedCode>
       </transactionAmounts>
       {after_xml}
+      {nature_xml}
     </nonDerivativeTransaction>"""
 
 
@@ -218,3 +220,33 @@ def test_the_chief_test_reads_the_title_as_filed() -> None:
                             ("CFO", True), ("EVP and Chief Accounting Officer", False),
                             ("Chief Technology Officer", False), ("VP (Pres., Products Pipelines)", False)):
         assert bool(insiders.CHIEF.search(f"officer: {title}")) is expected, title
+
+
+def test_the_window_tells_planned_sales_apart_and_gives_each_sellers_share() -> None:
+    """Three sellers: one on a marked plan selling a tenth of the holding, one unmarked
+    selling half, one whose filing gives no holdings figure."""
+    as_of = date(2026, 6, 1)
+    planned = insiders.parse_form4(form4(owner="Plan", owner_cik="7", plan="1",
+                                         transactions=line("S", "2026-05-10", 60, "10", after=940.) + line("S", "2026-05-11", 40, "10", after=900.)),
+                                   "p", date(2026, 5, 12))[0]
+    unusual = insiders.parse_form4(form4(owner="Half", owner_cik="8", transactions=line("S", "2026-05-20", 500, "10", after=500.)), "h", date(2026, 5, 21))[0]
+    blank = insiders.parse_form4(form4(owner="Blank", owner_cik="9", transactions=line("S", "2026-05-22", 5, "10", after=None)), "b", date(2026, 5, 23))[0]
+    w = insiders.window(insiders.deduplicate(planned + unusual + blank), as_of, 90)
+    assert w.sellers == 3 and w.dollars_sold == 6050
+    assert (w.plan_sales, w.plan_sellers, w.plan_dollars_sold) == (2, 1, 1000)
+    assert [s.owner for s in w.sellers_detail] == ["Half", "Plan", "Blank"]   # largest dollars first
+    half, plan, none = w.sellers_detail
+    assert half.fraction_of_holdings_sold == 0.5 and half.plan_dollars_sold == 0 and half.sales == 1
+    assert plan.shares_sold == 100 and plan.shares_owned_after == 900 and plan.fraction_of_holdings_sold == 0.1
+    assert plan.plan_dollars_sold == plan.dollars_sold == 1000 and plan.sales == 2
+    assert none.shares_owned_after is None and none.fraction_of_holdings_sold is None
+    # holdings are filed per ownership line: a direct sale and a sale from a trust are two
+    # balances, summed, and never the sales of both over the balance of one
+    two = insiders.parse_form4(form4(owner="Two", owner_cik="5", transactions=line("S", "2026-05-10", 100, "10", after=100.)
+                                     + line("S", "2026-05-11", 100, "10", after=1700., trust="By Trust")), "t", date(2026, 5, 12))[0]
+    assert {t.ownership for t in two} == {"D", "I: By Trust"}
+    both = insiders.window(two, as_of, 90).sellers_detail[0]
+    assert both.shares_owned_after == 1800 and both.fraction_of_holdings_sold == 0.1
+    # buyers alone leave the seller side empty
+    quiet = insiders.window(buy("Jane", "2026-05-04"), as_of, 90)
+    assert quiet.sellers_detail == [] and quiet.plan_sales == 0 and quiet.plan_dollars_sold == 0

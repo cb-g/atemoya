@@ -38,6 +38,8 @@ NO_FILINGS = "no insider transactions filed in the year to the date"
 SCOPE_LIMITS = [
     "Form 4 covers directors, officers and ten-percent owners of SEC registrants only; a foreign private issuer files none",
     "a purchase or sale under a rule 10b5-1 plan is scheduled, not decided, and is marked on the transaction where the filing says so",
+    "the plan marking is a checkbox on the filing, in use on forms filed from April 2023, and covers every line of the filing: an earlier sale reads unmarked, and a filing mixing planned and unplanned sales reads as one",
+    "the share of holdings sold is over the ownership lines the seller sold from, each line's balance as its last sale in the window reported it; shares on a line with no sale in the window, and options and unvested awards, are not in it, so the share overstates what was sold of everything the seller holds",
     "open-market purchases and sales only: awards, exercises, tax withholding and gifts are counted by code and never summed",
 ]
 
@@ -56,6 +58,7 @@ class Transaction:
     filed: date
     shares_owned_after: float | None
     plan_10b5_1: bool
+    ownership: str = "D"   # the line's ownership as filed: D, or I and its nature (a trust, a spouse); holdings are reported per such line
 
     @property
     def dollars(self) -> float:
@@ -117,6 +120,14 @@ def relationship_of(owner: ET.Element) -> str:
     return "; ".join(parts) or "not stated"
 
 
+def ownership_of(line: ET.Element) -> str:
+    """Direct, or indirect with its stated nature. A filer reports the holdings left after a
+    transaction per ownership line, so two lines of one owner are two separate balances."""
+    kind = _text(line, "ownershipNature/directOrIndirectOwnership") or "D"
+    nature = _text(line, "ownershipNature/natureOfOwnership")
+    return kind if kind == "D" or not nature else f"{kind}: {nature}"
+
+
 def parse_form4(body: bytes, accession: str, filed: date, issuer_cik: str | None = None) -> tuple[list[Transaction], Counter[str]]:
     """One filing's open-market purchases and sales, and a count of every other code seen.
 
@@ -170,7 +181,7 @@ def parse_form4(body: bytes, accession: str, filed: date, issuer_cik: str | None
             owner=who, owner_cik=cik, relationship=relationship, transaction_date=transaction_date,
             code=code, shares=shares, price_per_share=price, accession=accession, filed=filed,
             shares_owned_after=_number(t, "postTransactionAmounts/sharesOwnedFollowingTransaction"),
-            plan_10b5_1=plan))
+            plan_10b5_1=plan, ownership=ownership_of(t)))
     return out, excluded
 
 
@@ -221,6 +232,33 @@ def deduplicate(transactions: list[Transaction]) -> list[Transaction]:
     return sorted(best.values(), key=lambda t: (t.transaction_date, t.accession))
 
 
+def sellers(sells: list[Transaction]) -> list[boundary.InsiderSeller]:
+    """Per seller: the sales summed, the part under a marked plan, and the share of reported
+    holdings sold. Holdings are filed per ownership line (direct, each trust, a spouse), so
+    the balance is read per line, from the last sale on that line in the window, and summed
+    over the lines the seller sold from: the share is what was sold over what those lines
+    held before the sales began. One line without a figure leaves both absent rather than a
+    share of a partly unknown holding."""
+    by_owner: dict[str, list[Transaction]] = {}
+    for t in sells:
+        by_owner.setdefault(t.owner, []).append(t)
+    out: list[boundary.InsiderSeller] = []
+    for owner, lines in by_owner.items():
+        latest = max(lines, key=lambda t: (t.transaction_date, t.filed, t.accession))
+        shares = sum(t.shares for t in lines)
+        last_on_line: dict[str, Transaction] = {}
+        for t in sorted(lines, key=lambda t: (t.transaction_date, t.filed, t.accession, -(t.shares_owned_after if t.shares_owned_after is not None else float("inf")))):
+            last_on_line[t.ownership] = t
+        balances = [t.shares_owned_after for t in last_on_line.values()]
+        after = None if any(b is None for b in balances) else sum(b for b in balances if b is not None)
+        out.append(boundary.InsiderSeller(
+            owner=owner, relationship=latest.relationship, sales=len(lines), shares_sold=shares,
+            dollars_sold=sum(t.dollars for t in lines), plan_dollars_sold=sum(t.dollars for t in lines if t.plan_10b5_1),
+            shares_owned_after=after,
+            fraction_of_holdings_sold=None if after is None or shares + after <= 0 else shares / (shares + after)))
+    return sorted(out, key=lambda s: (-s.dollars_sold, s.owner))
+
+
 def window(transactions: list[Transaction], as_of: date, days: int) -> boundary.InsiderWindow:
     """One window's counts and dollars. Public because the through-time study (67) reads one
     window from a cache filled for that window alone, and must not claim the other."""
@@ -231,11 +269,14 @@ def window(transactions: list[Transaction], as_of: date, days: int) -> boundary.
     bought = sum(t.dollars for t in buys)
     sold = sum(t.dollars for t in sells)
     largest = max(buys, key=lambda t: t.dollars, default=None)
+    planned = [t for t in sells if t.plan_10b5_1]
     return boundary.InsiderWindow(
         days=days, buyers=len({t.owner for t in buys}), sellers=len({t.owner for t in sells}),
         dollars_bought=bought, dollars_sold=sold, net_dollars=bought - sold,
         largest_purchase=None if largest is None else largest.to_boundary(),
-        ceo_or_cfo_bought=any(CHIEF.search(t.relationship) for t in buys))
+        ceo_or_cfo_bought=any(CHIEF.search(t.relationship) for t in buys),
+        plan_sales=len(planned), plan_sellers=len({t.owner for t in planned}),
+        plan_dollars_sold=sum(t.dollars for t in planned), sellers_detail=sellers(sells))
 
 
 def cluster(transactions: list[Transaction], as_of: date, days: int = 90) -> boundary.InsiderCluster | None:

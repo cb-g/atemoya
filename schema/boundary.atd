@@ -932,6 +932,18 @@ type insider_transaction = {
   ~plan_10b5_1 : bool;                (* the filing's plan marking, where it carries one: scheduled, not decided *)
 }
 
+(* One seller inside a window: what they sold and how much of what they reported holding. *)
+type insider_seller = {
+  owner : string;
+  relationship : string;
+  sales : int;                        (* open-market sale lines in the window *)
+  shares_sold : float;
+  dollars_sold : float;
+  plan_dollars_sold : float;          (* of dollars_sold, the part on filings that mark a Rule 10b5-1 plan *)
+  ?shares_owned_after : float option; (* summed over the ownership lines sold from (direct, each trust), each as its last sale in the window reported it; absent when a line gives none *)
+  ?fraction_of_holdings_sold : float option;  (* shares_sold / (shares_sold + shares_owned_after); absent with shares_owned_after *)
+}
+
 type insider_window = {
   days : int;                         (* 90 or 365, ending at as_of *)
   buyers : int;                       (* distinct owners with at least one purchase *)
@@ -941,6 +953,10 @@ type insider_window = {
   net_dollars : float;                (* bought less sold *)
   ?largest_purchase : insider_transaction option;
   ceo_or_cfo_bought : bool;           (* any buyer whose filed officer title names a chief executive or chief financial officer *)
+  ~plan_sales : int;                  (* sale lines on filings that mark a Rule 10b5-1 plan: scheduled, not decided *)
+  ~plan_sellers : int;                (* distinct sellers with at least one such sale *)
+  ~plan_dollars_sold : float;         (* of dollars_sold, the part on such filings *)
+  ~sellers_detail : insider_seller list;   (* every seller in the window, largest dollars first *)
 }
 
 (* Two distinct insiders buying on the open market inside one fourteen-day window, which is

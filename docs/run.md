@@ -364,6 +364,21 @@ financial officer. `cluster_buy` is true when **two distinct insiders** bought o
 market inside any fourteen-day window in the trailing ninety days — one insider buying twice
 is not a cluster, which is the point of the rule — with the window's dates and buyers listed.
 
+**Telling routine sales from unusual ones.** Most insider selling is stock pay being sold
+on a schedule, so each window also says how much of its selling was scheduled and how much
+of a holding each seller let go. `plan_sales`, `plan_sellers` and `plan_dollars_sold` count
+the sale lines, the sellers and the dollars on filings that mark a Rule 10b5-1 plan, the
+form's own checkbox. `sellers_detail` lists every seller in the window, largest dollars
+first: the sales, shares and dollars, the part under a marked plan, and
+`fraction_of_holdings_sold`, the shares sold over what the seller's ownership lines held
+before the sales began. Holdings are filed per ownership line (direct, each trust), so the
+balance is read per line from its last sale in the window and summed over the lines sold
+from; a line with no figure leaves the share absent. Three limits ride on the block: the
+checkbox is in use on forms filed from April 2023 and covers the whole filing, so an earlier
+sale reads unmarked; lines with no sale in the window, options and unvested awards are not
+in the holdings, so the share overstates what was sold of everything the seller owns; and
+nothing here weighs or scores a sale.
+
 **The cut is on the filing date, not the transaction date.** A Form 4 carries no filing date
 in its XML and its signature date disagrees with the index often enough to matter, so the
 index is the only source for it. The point-in-time path reads the same index with everything

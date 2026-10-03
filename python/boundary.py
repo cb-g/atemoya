@@ -3074,6 +3074,58 @@ class InsiderTransaction:
 
 
 @dataclass
+class InsiderSeller:
+    """Original type: insider_seller = { ... }
+    """
+
+    owner: str
+    relationship: str
+    sales: int
+    shares_sold: float
+    dollars_sold: float
+    plan_dollars_sold: float
+    shares_owned_after: Optional[float] = None
+    fraction_of_holdings_sold: Optional[float] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'InsiderSeller':
+        if isinstance(x, dict):
+            return cls(
+                owner=_atd_read_string(x['owner']) if 'owner' in x else _atd_missing_json_field('InsiderSeller', 'owner'),
+                relationship=_atd_read_string(x['relationship']) if 'relationship' in x else _atd_missing_json_field('InsiderSeller', 'relationship'),
+                sales=_atd_read_int(x['sales']) if 'sales' in x else _atd_missing_json_field('InsiderSeller', 'sales'),
+                shares_sold=_atd_read_float(x['shares_sold']) if 'shares_sold' in x else _atd_missing_json_field('InsiderSeller', 'shares_sold'),
+                dollars_sold=_atd_read_float(x['dollars_sold']) if 'dollars_sold' in x else _atd_missing_json_field('InsiderSeller', 'dollars_sold'),
+                plan_dollars_sold=_atd_read_float(x['plan_dollars_sold']) if 'plan_dollars_sold' in x else _atd_missing_json_field('InsiderSeller', 'plan_dollars_sold'),
+                shares_owned_after=_atd_read_float(x['shares_owned_after']) if 'shares_owned_after' in x else None,
+                fraction_of_holdings_sold=_atd_read_float(x['fraction_of_holdings_sold']) if 'fraction_of_holdings_sold' in x else None,
+            )
+        else:
+            _atd_bad_json('InsiderSeller', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['owner'] = _atd_write_string(self.owner)
+        res['relationship'] = _atd_write_string(self.relationship)
+        res['sales'] = _atd_write_int(self.sales)
+        res['shares_sold'] = _atd_write_float(self.shares_sold)
+        res['dollars_sold'] = _atd_write_float(self.dollars_sold)
+        res['plan_dollars_sold'] = _atd_write_float(self.plan_dollars_sold)
+        if self.shares_owned_after is not None:
+            res['shares_owned_after'] = _atd_write_float(self.shares_owned_after)
+        if self.fraction_of_holdings_sold is not None:
+            res['fraction_of_holdings_sold'] = _atd_write_float(self.fraction_of_holdings_sold)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'InsiderSeller':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class InsiderWindow:
     """Original type: insider_window = { ... }
     """
@@ -3086,6 +3138,10 @@ class InsiderWindow:
     net_dollars: float
     ceo_or_cfo_bought: bool
     largest_purchase: Optional[InsiderTransaction] = None
+    plan_sales: int = field(default_factory=lambda: 0)
+    plan_sellers: int = field(default_factory=lambda: 0)
+    plan_dollars_sold: float = field(default_factory=lambda: 0.0)
+    sellers_detail: List[InsiderSeller] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'InsiderWindow':
@@ -3099,6 +3155,10 @@ class InsiderWindow:
                 net_dollars=_atd_read_float(x['net_dollars']) if 'net_dollars' in x else _atd_missing_json_field('InsiderWindow', 'net_dollars'),
                 ceo_or_cfo_bought=_atd_read_bool(x['ceo_or_cfo_bought']) if 'ceo_or_cfo_bought' in x else _atd_missing_json_field('InsiderWindow', 'ceo_or_cfo_bought'),
                 largest_purchase=InsiderTransaction.from_json(x['largest_purchase']) if 'largest_purchase' in x else None,
+                plan_sales=_atd_read_int(x['plan_sales']) if 'plan_sales' in x else 0,
+                plan_sellers=_atd_read_int(x['plan_sellers']) if 'plan_sellers' in x else 0,
+                plan_dollars_sold=_atd_read_float(x['plan_dollars_sold']) if 'plan_dollars_sold' in x else 0.0,
+                sellers_detail=_atd_read_list(InsiderSeller.from_json)(x['sellers_detail']) if 'sellers_detail' in x else [],
             )
         else:
             _atd_bad_json('InsiderWindow', x)
@@ -3114,6 +3174,10 @@ class InsiderWindow:
         res['ceo_or_cfo_bought'] = _atd_write_bool(self.ceo_or_cfo_bought)
         if self.largest_purchase is not None:
             res['largest_purchase'] = (lambda x: x.to_json())(self.largest_purchase)
+        res['plan_sales'] = _atd_write_int(self.plan_sales)
+        res['plan_sellers'] = _atd_write_int(self.plan_sellers)
+        res['plan_dollars_sold'] = _atd_write_float(self.plan_dollars_sold)
+        res['sellers_detail'] = _atd_write_list((lambda x: x.to_json()))(self.sellers_detail)
         return res
 
     @classmethod

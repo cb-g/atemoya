@@ -786,6 +786,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- planned sales and the share of holdings sold: each insider window gains `plan_sales`,
+  `plan_sellers`, `plan_dollars_sold` and `sellers_detail`, which the downstream project asked
+  for to tell stock-pay selling from unusual selling. Counts and lists only; no new `Failed`
+  string; a record on a snapshot fetched before them is byte-identical.
 - the R&D shadow: `rd_shadow` on every record routed to the generic DCF, the value with
   research and development capitalised straight-line over the declared
   `rd_amortization_years`, beside the headline and never replacing it, or `rd_shadow_reason`;
