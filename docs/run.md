@@ -194,6 +194,7 @@ codes, as a `--universe` file from before them does; no tracked limit reads it.
 | `balance_sheet` | the balance sheet's own shape, heavy debt or negative book equity, limits what the model can read |
 | `ownership_structure` | the listed line owns only part of the business, counts only part of the shares, or ranks behind other claims |
 | `country_basis` | the country that chooses the risk premium is not the legal domicile |
+| `filer_tagging` | the filer's own tagging puts a line under an element that means something else, so a field the record reads is not what its name says |
 | `loss_making` | loss-making on the latest filed years |
 
 ## The anchor study

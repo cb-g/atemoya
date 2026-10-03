@@ -790,6 +790,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- two revenue elements: `RevenuesNetOfInterestExpense` and
+  `RevenueFromContractWithCustomerIncludingAssessedTax` join the us-gaap revenue list, which
+  left fifteen filers with no revenue or a part of it on some year. Measured on every cached
+  filer: only the revenue field and the restated-tag list move. One record changes status;
+  no new `Failed` string.
 - the base rate: `base_rate` on a dollar record valued by a DCF-shaped model, how often
   companies of the same starting size grew as fast over five years as the record's path and
   as the path the price needs, from the table `python/base_rates.py` builds out of SEC's

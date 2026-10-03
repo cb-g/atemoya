@@ -37,7 +37,9 @@
       "kind": "duration",
       "tags": [
         "Revenues",
+        "RevenuesNetOfInterestExpense",
         "RevenueFromContractWithCustomerExcludingAssessedTax",
+        "RevenueFromContractWithCustomerIncludingAssessedTax",
         "SalesRevenueNet"
       ]
     },
