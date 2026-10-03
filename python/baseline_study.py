@@ -38,7 +38,10 @@ anchor study prints them:
    correlation of the two margins and how many rows change quintile;
 7. the options-implied expected return: every row that carries one, in quintiles of it
    within the date, with the earnings yield and the margin of safety on the same rows and
-   its rank correlation with each. The options store is young, so this is a few dates.
+   its rank correlation with each. The options store is young, so this is a few dates;
+8. quality: every row that carries the block, by the nine-signal score in three groups, by
+   the accruals ratio and by gross profitability in quintiles, and the score against
+   cheapness in four cells.
 
 **Descriptive only**, under the anchor study's rules: no statistic the sample can carry, a
 cell under MIN_CELL rows a count alone, nothing fed back into a model, a belief or a
@@ -185,6 +188,72 @@ def shadow_section(valued: list[Record], shadow: dict[tuple[str, str], float], m
     return lines
 
 
+@dataclass
+class QualityRow:
+    f_score: int | None
+    accruals_ratio: float | None
+    gross_profitability: float | None
+
+
+def load_quality(records: list[Record], pit_out: Path) -> dict[tuple[str, str], QualityRow]:
+    """The quality block per (name, date), from the date's own valuations file; every
+    record that carries one, whatever its status."""
+    out: dict[tuple[str, str], QualityRow] = {}
+    for d in sorted({r.as_of for r in records}):
+        path = pit_out / d / "valuations.jsonl"
+        if not path.exists():
+            continue
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            v = cast(Json, json.loads(line))
+            block = v.get("quality")
+            if isinstance(block, dict):
+                b = cast(Json, block)
+                score = b.get("f_score")
+                out[(str(v["ticker"]), d)] = QualityRow(
+                    f_score=score if isinstance(score, int) and not isinstance(score, bool) else None,
+                    accruals_ratio=study.as_float(b.get("accruals_ratio")), gross_profitability=study.as_float(b.get("gross_profitability")))
+    return out
+
+
+F_GROUPS = (("0 to 3", 0, 3), ("4 to 6", 4, 6), ("7 to 9", 7, 9))
+HIGH_QUALITY = 6   # at or above: the higher half of the score's range
+
+
+def quality_section(records: list[Record], quality: dict[tuple[str, str], QualityRow], measures: dict[tuple[str, str], Measures]) -> list[str]:
+    """Every row that carries the quality block, valued or refused: the nine-signal score in
+    three groups; the accruals ratio and gross profitability in quintiles within the date;
+    and the score against cheapness, the half of each date's rows with the higher earnings
+    yield split by a score at or above HIGH_QUALITY, which is the interaction the literature
+    documents (a cheap company improving against a cheap company deteriorating)."""
+    rows = [r for r in records if (r.ticker, r.as_of) in quality]
+    title = f"quality: {len(rows)} rows on {len({r.ticker for r in rows})} names carry the block"
+    lines = ["", title, "-" * len(title)]
+    if not rows:
+        return lines + ["  none: the panel was built before the block existed"]
+    scored = [r for r in rows if quality[(r.ticker, r.as_of)].f_score is not None]
+    lines += study.block(f"by the nine-signal score ({len(scored)} rows carry all nine)",
+                         [(label, [r for r in scored if lo <= cast(int, quality[(r.ticker, r.as_of)].f_score) <= hi]) for label, lo, hi in F_GROUPS]) + [""]
+    for name, label in (("accruals_ratio", "accruals ratio, quintile 1 the lowest (cash ahead of earnings), 5 the highest"),
+                        ("gross_profitability", "gross profitability, quintile 1 the lowest, 5 the highest")):
+        have = [(r, x) for r in rows if (x := cast(float | None, getattr(quality[(r.ticker, r.as_of)], name))) is not None]
+        q = quintiles_within_date(have)
+        lines += quintile_block(f"by {label} ({len(have)} rows)", [r for r, _ in have], q) + [spread_line(f"{name}, highest less lowest", [r for r, _ in have], q), ""]
+    both = [(r, x) for r in scored if (x := measures[(r.ticker, r.as_of)].earnings_yield) is not None]
+    medians: dict[str, float] = {}
+    for d in {r.as_of for r, _ in both}:
+        medians[d] = statistics.median([x for r, x in both if r.as_of == d])
+
+    def cell_of(cheap: bool, high: bool) -> list[Record]:
+        return [r for r, x in both if (x > medians[r.as_of]) == cheap and (cast(int, quality[(r.ticker, r.as_of)].f_score) >= HIGH_QUALITY) == high]
+
+    lines += study.block(f"cheapness against quality ({len(both)} rows carry both; cheap is above the date's median earnings yield, high is a score of {HIGH_QUALITY} or more)",
+                         [("cheap, high quality", cell_of(True, True)), ("cheap, low quality", cell_of(True, False)),
+                          ("dear, high quality", cell_of(False, True)), ("dear, low quality", cell_of(False, False))])
+    return lines
+
+
 def load_expected_returns(records: list[Record], pit_out: Path) -> dict[tuple[str, str], float]:
     """The options-implied expected return per (name, date), from the date's own valuations
     file; only the records that carry the block, whatever their status."""
@@ -297,7 +366,8 @@ def spread_line(label: str, rows: list[Record], q: dict[tuple[str, str], int]) -
 
 
 def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_of: date, holdout_line: str,
-           expected: dict[tuple[str, str], float] | None = None, shadow: dict[tuple[str, str], float] | None = None) -> str:
+           expected: dict[tuple[str, str], float] | None = None, shadow: dict[tuple[str, str], float] | None = None,
+           quality: dict[tuple[str, str], QualityRow] | None = None) -> str:
     dates = sorted({r.as_of for r in records})
     lines = [
         f"The naive baseline: {len(records)} panel rows, {len({r.ticker for r in records})} names, {len(dates)} quarter-ends {dates[0]} to {dates[-1]}, closes cut at {as_of.isoformat()}.",
@@ -354,6 +424,7 @@ def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_
                       spread_line("margin of safety", rows, quintiles_within_date([(r, cast(float, r.margin_of_safety)) for r in rows]))]
     lines += shadow_section(valued, shadow or {}, measures)
     lines += expected_return_section(records, expected or {}, measures)
+    lines += quality_section(records, quality or {}, measures)
     return "\n".join(lines) + "\n"
 
 
@@ -379,7 +450,7 @@ def main(argv: list[str]) -> int:
                     **{m: measures[(r.ticker, r.as_of)].get(m) for m in MEASURES}, "measures_reason": measures[(r.ticker, r.as_of)].reason},
                    sort_keys=True) + "\n" for r in records))
     text = report(records, measures, as_of, holdout_line, load_expected_returns(records, panel.parent),
-                  load_shadow_margins(records, panel.parent))
+                  load_shadow_margins(records, panel.parent), load_quality(records, panel.parent))
     (out / "tables.txt").write_text(text)
     sys.stdout.write(text)
     return 0

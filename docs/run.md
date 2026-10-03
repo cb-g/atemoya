@@ -122,6 +122,36 @@ every moved input of every record is classified (price, new filing, restatement,
 row, rate or FX, unexplained) in a stability report, so two fetches with nothing having
 happened can be shown to agree.
 
+## Quality
+
+`quality` on a record is quality from the filed statements alone, independent of every
+model here: Piotroski's nine yes-or-no signals of profitability, balance-sheet strength and
+operating efficiency, with the accruals ratio and gross profitability beside them. It reads
+the latest two fiscal years and nothing else, so it is the same on a valued record and a
+refused one, and nothing reads it. It is on every record whose statements are filed;
+`quality_reason` says why there is none (the statements come from another provider, fewer
+than two fiscal periods, or two periods that are not consecutive years).
+
+The signals, latest year against the year before, assets at each year's end: return on
+assets positive; operating cash flow positive; return on assets higher; operating cash flow
+above net income; debt over assets lower; current ratio higher; no more shares; gross
+margin higher; asset turnover higher. Each carries the two figures it compared. A signal
+whose lines are not all filed is null, never guessed; `f_score` is the count passed and is
+null unless all nine are available, and `signals_passed` with `signals_available` say what
+is there. `accruals_ratio` is net income less operating cash flow over average total
+assets, high meaning earnings ahead of cash; `gross_profitability` is gross profit over
+total assets.
+
+The fetch reads five filed lines per fiscal year beside the statements (`quality_lines` on
+the boundary record: total assets, current assets, current liabilities, gross profit, cost
+of revenue, each with its element; cut at the date on the point-in-time path) and moves no
+statement field. Its limits ride on the block: nine yes-or-no signals carry no magnitudes;
+assets are year-end figures and leverage reads the record's financial debt, where the
+original reads the opening balance and long-term debt; a share count up by more than a
+quarter is null, a split and an issue not being told apart; and a bank or an insurer files
+no current section and no gross profit, so three signals are null there and no score is
+formed. `baseline_study.py` reads the block on the panel's rows.
+
 ## The growth shadow
 
 The generic DCF picks its starting growth by a switch. With positive after-tax operating
@@ -231,9 +261,10 @@ safety's, both cut on that same set; the within-date rank correlation of the two
 cheapest quintile's median less the dearest's, pooled and then within each model's own rows,
 since a margin of safety from one model does not rank against another's. It answers one
 question the anchor study cannot: whether the anchor did anything a plain cheapness sort did
-not. Two further sections read blocks from each date's own valuations file: the growth
-shadow's margin of safety beside the headline's on the generic DCF's rows, and the
-options-implied expected return in quintiles within the date on every row that carries one,
+not. Further sections read blocks from each date's own valuations file: quality, by the
+nine-signal score, the accruals ratio, gross profitability and the score against cheapness;
+the growth shadow's margin of safety beside the headline's on the generic DCF's rows; and
+the options-implied expected return in quintiles within the date on every row that carries one,
 with the earnings yield and the margin of safety on the same rows and its rank correlation
 with each. The options store begins in April 2025, so the second is a handful of
 quarter-ends in one market and its year-ahead cells are near the small-cell floor.

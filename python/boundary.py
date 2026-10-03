@@ -1735,6 +1735,97 @@ class ReceiptCheck:
 
 
 @dataclass
+class QualitySignal:
+    """Original type: quality_signal = { ... }
+    """
+
+    name: str
+    passed: Optional[bool]
+    current: Optional[float]
+    prior: Optional[float]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'QualitySignal':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('QualitySignal', 'name'),
+                passed=_atd_read_nullable(_atd_read_bool)(x['passed']) if 'passed' in x else _atd_missing_json_field('QualitySignal', 'passed'),
+                current=_atd_read_nullable(_atd_read_float)(x['current']) if 'current' in x else _atd_missing_json_field('QualitySignal', 'current'),
+                prior=_atd_read_nullable(_atd_read_float)(x['prior']) if 'prior' in x else _atd_missing_json_field('QualitySignal', 'prior'),
+            )
+        else:
+            _atd_bad_json('QualitySignal', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['passed'] = _atd_write_nullable(_atd_write_bool)(self.passed)
+        res['current'] = _atd_write_nullable(_atd_write_float)(self.current)
+        res['prior'] = _atd_write_nullable(_atd_write_float)(self.prior)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'QualitySignal':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Quality:
+    """Original type: quality = { ... }
+    """
+
+    period_end: str
+    prior_period_end: str
+    signals: List[QualitySignal]
+    signals_available: int
+    f_score: Optional[int]
+    signals_passed: int
+    accruals_ratio: Optional[float]
+    gross_profitability: Optional[float]
+    scope_limits: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Quality':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('Quality', 'period_end'),
+                prior_period_end=_atd_read_string(x['prior_period_end']) if 'prior_period_end' in x else _atd_missing_json_field('Quality', 'prior_period_end'),
+                signals=_atd_read_list(QualitySignal.from_json)(x['signals']) if 'signals' in x else _atd_missing_json_field('Quality', 'signals'),
+                signals_available=_atd_read_int(x['signals_available']) if 'signals_available' in x else _atd_missing_json_field('Quality', 'signals_available'),
+                f_score=_atd_read_nullable(_atd_read_int)(x['f_score']) if 'f_score' in x else _atd_missing_json_field('Quality', 'f_score'),
+                signals_passed=_atd_read_int(x['signals_passed']) if 'signals_passed' in x else _atd_missing_json_field('Quality', 'signals_passed'),
+                accruals_ratio=_atd_read_nullable(_atd_read_float)(x['accruals_ratio']) if 'accruals_ratio' in x else _atd_missing_json_field('Quality', 'accruals_ratio'),
+                gross_profitability=_atd_read_nullable(_atd_read_float)(x['gross_profitability']) if 'gross_profitability' in x else _atd_missing_json_field('Quality', 'gross_profitability'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('Quality', 'scope_limits'),
+            )
+        else:
+            _atd_bad_json('Quality', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['prior_period_end'] = _atd_write_string(self.prior_period_end)
+        res['signals'] = _atd_write_list((lambda x: x.to_json()))(self.signals)
+        res['signals_available'] = _atd_write_int(self.signals_available)
+        res['f_score'] = _atd_write_nullable(_atd_write_int)(self.f_score)
+        res['signals_passed'] = _atd_write_int(self.signals_passed)
+        res['accruals_ratio'] = _atd_write_nullable(_atd_write_float)(self.accruals_ratio)
+        res['gross_profitability'] = _atd_write_nullable(_atd_write_float)(self.gross_profitability)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Quality':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class PriceQuantile:
     """Original type: price_quantile = { ... }
     """
@@ -4882,6 +4973,8 @@ class Valuation:
     runway_reason: Optional[str] = None
     options_expected_return: Optional[OptionsExpectedReturn] = None
     options_expected_return_reason: Optional[str] = None
+    quality: Optional[Quality] = None
+    quality_reason: Optional[str] = None
     growth_shadow: Optional[GrowthShadow] = None
     base_rate: Optional[BaseRate] = None
     base_rate_reason: Optional[str] = None
@@ -4946,6 +5039,8 @@ class Valuation:
                 runway_reason=_atd_read_string(x['runway_reason']) if 'runway_reason' in x else None,
                 options_expected_return=OptionsExpectedReturn.from_json(x['options_expected_return']) if 'options_expected_return' in x else None,
                 options_expected_return_reason=_atd_read_string(x['options_expected_return_reason']) if 'options_expected_return_reason' in x else None,
+                quality=Quality.from_json(x['quality']) if 'quality' in x else None,
+                quality_reason=_atd_read_string(x['quality_reason']) if 'quality_reason' in x else None,
                 growth_shadow=GrowthShadow.from_json(x['growth_shadow']) if 'growth_shadow' in x else None,
                 base_rate=BaseRate.from_json(x['base_rate']) if 'base_rate' in x else None,
                 base_rate_reason=_atd_read_string(x['base_rate_reason']) if 'base_rate_reason' in x else None,
@@ -5045,6 +5140,10 @@ class Valuation:
             res['options_expected_return'] = (lambda x: x.to_json())(self.options_expected_return)
         if self.options_expected_return_reason is not None:
             res['options_expected_return_reason'] = _atd_write_string(self.options_expected_return_reason)
+        if self.quality is not None:
+            res['quality'] = (lambda x: x.to_json())(self.quality)
+        if self.quality_reason is not None:
+            res['quality_reason'] = _atd_write_string(self.quality_reason)
         if self.growth_shadow is not None:
             res['growth_shadow'] = (lambda x: x.to_json())(self.growth_shadow)
         if self.base_rate is not None:
@@ -5096,6 +5195,58 @@ class Restatement:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'Restatement':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class QualityLines:
+    """Original type: quality_lines = { ... }
+    """
+
+    period_end: str
+    rows: List[Tuple[str, str]]
+    total_assets: Optional[float] = None
+    current_assets: Optional[float] = None
+    current_liabilities: Optional[float] = None
+    gross_profit: Optional[float] = None
+    cost_of_revenue: Optional[float] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'QualityLines':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('QualityLines', 'period_end'),
+                rows=_atd_read_assoc_object_into_list(_atd_read_string)(x['rows']) if 'rows' in x else _atd_missing_json_field('QualityLines', 'rows'),
+                total_assets=_atd_read_float(x['total_assets']) if 'total_assets' in x else None,
+                current_assets=_atd_read_float(x['current_assets']) if 'current_assets' in x else None,
+                current_liabilities=_atd_read_float(x['current_liabilities']) if 'current_liabilities' in x else None,
+                gross_profit=_atd_read_float(x['gross_profit']) if 'gross_profit' in x else None,
+                cost_of_revenue=_atd_read_float(x['cost_of_revenue']) if 'cost_of_revenue' in x else None,
+            )
+        else:
+            _atd_bad_json('QualityLines', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['rows'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.rows)
+        if self.total_assets is not None:
+            res['total_assets'] = _atd_write_float(self.total_assets)
+        if self.current_assets is not None:
+            res['current_assets'] = _atd_write_float(self.current_assets)
+        if self.current_liabilities is not None:
+            res['current_liabilities'] = _atd_write_float(self.current_liabilities)
+        if self.gross_profit is not None:
+            res['gross_profit'] = _atd_write_float(self.gross_profit)
+        if self.cost_of_revenue is not None:
+            res['cost_of_revenue'] = _atd_write_float(self.cost_of_revenue)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'QualityLines':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -5605,6 +5756,8 @@ class Financials:
     market_provider: str = field(default_factory=lambda: "")
     provider_reason: str = field(default_factory=lambda: "")
     statements_unavailable: str = field(default_factory=lambda: "")
+    quality_lines: List[QualityLines] = field(default_factory=lambda: [])
+    quality_lines_reason: Optional[str] = None
     identity_mismatch: Optional[str] = None
     latest_filing: Optional[str] = None
     cross_check: Optional[CrossCheck] = None
@@ -5646,6 +5799,8 @@ class Financials:
                 market_provider=_atd_read_string(x['market_provider']) if 'market_provider' in x else "",
                 provider_reason=_atd_read_string(x['provider_reason']) if 'provider_reason' in x else "",
                 statements_unavailable=_atd_read_string(x['statements_unavailable']) if 'statements_unavailable' in x else "",
+                quality_lines=_atd_read_list(QualityLines.from_json)(x['quality_lines']) if 'quality_lines' in x else [],
+                quality_lines_reason=_atd_read_string(x['quality_lines_reason']) if 'quality_lines_reason' in x else None,
                 identity_mismatch=_atd_read_string(x['identity_mismatch']) if 'identity_mismatch' in x else None,
                 latest_filing=_atd_read_string(x['latest_filing']) if 'latest_filing' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
@@ -5689,6 +5844,9 @@ class Financials:
         res['market_provider'] = _atd_write_string(self.market_provider)
         res['provider_reason'] = _atd_write_string(self.provider_reason)
         res['statements_unavailable'] = _atd_write_string(self.statements_unavailable)
+        res['quality_lines'] = _atd_write_list((lambda x: x.to_json()))(self.quality_lines)
+        if self.quality_lines_reason is not None:
+            res['quality_lines_reason'] = _atd_write_string(self.quality_lines_reason)
         if self.identity_mismatch is not None:
             res['identity_mismatch'] = _atd_write_string(self.identity_mismatch)
         if self.latest_filing is not None:

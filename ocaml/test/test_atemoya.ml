@@ -159,6 +159,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     earnings_calendar = None;
     earnings_calendar_reason = None;
     identity_mismatch = None;
+    quality_lines = [];
+    quality_lines_reason = None;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -2153,6 +2155,64 @@ let test_base_rate () =
   check_mentions "not in dollars" (Option.value euro.base_rate_reason ~default:"") [ "the reference class is in dollars and the record is in EUR" ];
   let wrapper = Valuation.run { params with base_rates = Some rates } ~today ~model_version:"test" ~declaration:(Some (declaration `Wrapper)) (financials (history ())) in
   Alcotest.(check bool) "neither field off a DCF-shaped record" true (Option.is_none wrapper.base_rate && Option.is_none wrapper.base_rate_reason)
+
+(* Quality on two invented years. Latest: net income 100, operating cash flow 150, assets
+   1000, debt 200, current assets 300 over current liabilities 150, 100 shares, gross profit
+   400 on revenue 1000. The year before: net income 80, assets 1000, debt 300, 280 over 160,
+   100 shares, cost of revenue 650 on revenue 900. Every one of the nine passes. *)
+let test_quality () =
+  let year period_end ~ni ~cfo ~debt ~revenue ~shares =
+    { (full_period ~period_end ~total_revenue:revenue ()) with
+      net_income = Some ni; operating_cash_flow = Some cfo; total_debt = Some debt; weighted_shares = Some shares }
+  in
+  let periods = [ year "2025-09-30" ~ni:100. ~cfo:150. ~debt:200. ~revenue:1000. ~shares:100.;
+                  year "2024-09-30" ~ni:80. ~cfo:90. ~debt:300. ~revenue:900. ~shares:100. ] in
+  let line period_end ?gross_profit ?cost_of_revenue ?(current_assets = Some 300.) ~current_liabilities () : Boundary_t.quality_lines =
+    { period_end; total_assets = Some 1000.; current_assets; current_liabilities = Some current_liabilities; gross_profit; cost_of_revenue; rows = [] }
+  in
+  let lines = [ line "2025-09-30" ~gross_profit:400. ~current_liabilities:150. ();
+                line "2024-09-30" ~cost_of_revenue:650. ~current_assets:(Some 280.) ~current_liabilities:160. () ] in
+  let fin = { (financials periods) with quality_lines = lines } in
+  let q = match Quality.of_financials fin with Some q, None -> q | _, why -> Alcotest.failf "no block: %s" (Option.value why ~default:"") in
+  Alcotest.(check (list string)) "the nine, in order"
+    [ "return_on_assets_positive"; "operating_cash_flow_positive"; "return_on_assets_higher"; "cash_flow_above_net_income"; "leverage_lower";
+      "current_ratio_higher"; "no_more_shares"; "gross_margin_higher"; "asset_turnover_higher" ]
+    (List.map (fun (s : Boundary_t.quality_signal) -> s.name) q.signals);
+  Alcotest.(check (option int)) "all nine pass" (Some 9) q.f_score;
+  Alcotest.(check int) "nine available" 9 q.signals_available;
+  let named n = List.find (fun (s : Boundary_t.quality_signal) -> s.name = n) q.signals in
+  Alcotest.(check (option approx)) "this year's gross margin, from the filed gross profit" (Some 0.4) (named "gross_margin_higher").current;
+  Alcotest.(check (option approx)) "last year's, from revenue less cost of revenue" (Some (250. /. 900.)) (named "gross_margin_higher").prior;
+  Alcotest.(check (option approx)) "leverage" (Some 0.2) (named "leverage_lower").current;
+  Alcotest.(check (option approx)) "accruals: earnings behind cash" (Some (-0.05)) q.accruals_ratio;
+  Alcotest.(check (option approx)) "gross profitability" (Some 0.4) q.gross_profitability;
+  (* a failing year: lower return, cash below earnings, more debt *)
+  let weak = { fin with periods = [ year "2025-09-30" ~ni:60. ~cfo:40. ~debt:400. ~revenue:1000. ~shares:105.; List.nth periods 1 ] } in
+  (match Quality.of_financials weak with
+  | Some w, None -> Alcotest.(check (option int)) "five fail: return lower, cash below earnings, leverage up, more shares; four hold" (Some 5) w.f_score
+  | _ -> Alcotest.fail "no block on the weak year");
+  (* a line not filed is a null signal, and the score is not formed *)
+  let no_current = { fin with quality_lines = [ line "2025-09-30" ~gross_profit:400. ~current_assets:None ~current_liabilities:150. (); List.nth lines 1 ] } in
+  (match Quality.of_financials no_current with
+  | Some n, None ->
+      Alcotest.(check (option int)) "no score on eight" None n.f_score;
+      Alcotest.(check int) "eight available, all passed" 8 n.signals_passed;
+      Alcotest.(check (option bool)) "the current ratio is null" None (List.find (fun (s : Boundary_t.quality_signal) -> s.name = "current_ratio_higher") n.signals).passed
+  | _ -> Alcotest.fail "no block");
+  (* a share count up by more than a quarter is not called dilution or a split *)
+  let split = { fin with periods = [ year "2025-09-30" ~ni:100. ~cfo:150. ~debt:200. ~revenue:1000. ~shares:400.; List.nth periods 1 ] } in
+  (match Quality.of_financials split with
+  | Some n, None -> Alcotest.(check (option bool)) "null" None (List.find (fun (s : Boundary_t.quality_signal) -> s.name = "no_more_shares") n.signals).passed
+  | _ -> Alcotest.fail "no block");
+  (* the reasons *)
+  let why f = match Quality.of_financials f with None, Some r -> r | _ -> Alcotest.fail "a block where a reason was expected" in
+  Alcotest.(check string) "no lines on the record" "the record carries no quality lines: fetched before the block existed" (why (financials periods));
+  Alcotest.(check string) "the fetch's reason" "no filed facts" (why { (financials periods) with quality_lines_reason = Some "no filed facts" });
+  check_mentions "one period" (why { fin with periods = [ List.hd periods ] }) [ "fewer than two fiscal periods" ];
+  check_mentions "a gap" (why { fin with periods = [ List.hd periods; year "2023-09-30" ~ni:1. ~cfo:1. ~debt:1. ~revenue:1. ~shares:1. ] }) [ "not consecutive years" ];
+  (* on the record whatever it concludes: a refused wrapper carries the same block *)
+  let refused = run ~declared:(Some (declaration `Wrapper)) fin in
+  Alcotest.(check bool) "the block rides on a refusal" true (Option.is_some refused.quality && Option.is_none refused.quality_reason)
 
 let test_flow_chart_names_every_reason () =
   let chart =
@@ -4404,6 +4464,7 @@ let () =
           Alcotest.test_case "mid-cycle on filed operating income" `Quick test_midcycle_operating_income;
           Alcotest.test_case "the base rate beside the growth" `Quick test_base_rate;
           Alcotest.test_case "the growth shadow" `Quick test_growth_shadow;
+          Alcotest.test_case "quality: the nine signals, the ratios, the reasons" `Quick test_quality;
           Alcotest.test_case "the options-implied expected return" `Quick test_expected_return;
         ] );
       ( "runway readout",

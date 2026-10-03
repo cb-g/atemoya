@@ -308,6 +308,9 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     Runway.of_record ~entity_class:declared ~periods:original.periods ~calendar:original.earnings_calendar
       ~calendar_reason:original.earnings_calendar_reason ~valued_on:today
   in
+  (* Quality, from the original statements in their own currency, on every record: it reads
+     two fiscal years and no model, so it is the same whatever the record concludes. *)
+  let quality = Quality.of_financials original in
   (* [fin] is the record the model saw: the original, or its converted copy. *)
   let record ~(fin : financials) ?model ?class_check ?inputs ?fair_value ?margin_of_safety
       ?signal ?failed_reason ?build_out ?build_out_reason ~price ~status ~floor () =
@@ -374,6 +377,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       base_rate = None;
       base_rate_reason = None;
       growth_shadow = None;
+      quality = fst quality;
+      quality_reason = snd quality;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,

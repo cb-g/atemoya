@@ -125,3 +125,22 @@ def test_the_shadow_section_reads_blocks_from_the_dates_own_valuations(tmp_path:
     assert "the growth shadow: 10 generic-DCF rows on 10 names carry one" in text
     assert "median -1.00 over 1 dates" in text and "rows whose quintile differs between the two: 8 of 10" in text
     assert "none: the panel was built before the shadow existed" in "\n".join(base.shadow_section(rows, {}, measures))
+
+
+def test_the_quality_section_groups_the_score_and_crosses_it_with_cheapness(tmp_path: Path) -> None:
+    day = tmp_path / "2024-03-31"
+    day.mkdir()
+    rows = [record(f"N{i:02d}", "2024-03-31", excess=0.01 * i) for i in range(40)]
+    rows[0].status = "Failed"
+    blocks = [{"ticker": r.ticker, "quality": {"f_score": i % 10 if i < 30 else None, "accruals_ratio": 0.001 * i, "gross_profitability": 0.01 * i}} for i, r in enumerate(rows)]
+    (day / "valuations.jsonl").write_text("".join(json.dumps(x) + "\n" for x in blocks + [{"ticker": "NONE", "quality_reason": "no lines"}]))
+    quality = base.load_quality(rows, tmp_path)
+    assert len(quality) == 40 and quality[("N07", "2024-03-31")].f_score == 7 and quality[("N35", "2024-03-31")].f_score is None
+    measures = {(r.ticker, r.as_of): base.Measures(earnings_yield=0.001 * i) for i, r in enumerate(rows)}
+    text = "\n".join(base.quality_section(rows, quality, measures))
+    assert "quality: 40 rows on 40 names carry the block" in text
+    assert "by the nine-signal score (30 rows carry all nine)" in text
+    assert "0 to 3: 12 rows" in text and "4 to 6: 9 rows" in text and "7 to 9: 9 rows" in text
+    assert "by accruals ratio" in text and "by gross profitability" in text
+    assert "cheap, high quality" in text and "dear, low quality" in text
+    assert "none: the panel was built before the block existed" in "\n".join(base.quality_section(rows, {}, measures))

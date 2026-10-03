@@ -251,6 +251,8 @@ type financials = {
   ~market_provider : string;     (* where price, market cap and currencies came from; always the vendor feed *)
   ~provider_reason : string;     (* why this statements provider was chosen *)
   ~statements_unavailable : string;   (* why the provider had no statements for this ticker; empty when it had *)
+  ~quality_lines : quality_lines list;   (* the filed balance-sheet and margin lines the quality block reads, newest first, up to four fiscal years, in financial_currency; empty with the reason below *)
+  ?quality_lines_reason : string option; (* why quality_lines is empty *)
   ?identity_mismatch : string option; (* the ticker no longer names the filer the universe entry declared (map_cik); the record is refused before anything else *)
   ?latest_filing : string option;     (* ISO date of the newest annual filing the statements come from *)
   ?cross_check : cross_check option;  (* the vendor's statements compared with the filed ones *)
@@ -1229,6 +1231,41 @@ type growth_shadow = {
   scope_limits : string list;
 }
 
+(* One fiscal year's lines for the quality block, as filed; a line the filer does not file is absent. *)
+type quality_lines = {
+  period_end : string;
+  ?total_assets : float option;
+  ?current_assets : float option;
+  ?current_liabilities : float option;
+  ?gross_profit : float option;
+  ?cost_of_revenue : float option;
+  rows : (string * string) list <json repr="object">;   (* field -> the element it was filed under *)
+}
+
+(* One of the nine signals: true, false, or null when a line it needs is not filed. *)
+type quality_signal = {
+  name : string;
+  passed : bool nullable;
+  current : float nullable;           (* the figure for the latest year *)
+  prior : float nullable;             (* the figure it is compared with, where the signal is a change *)
+}
+
+(* Quality from filed statements, independent of any valuation: Piotroski's nine signals of
+   profitability, balance-sheet strength and operating efficiency, the accruals ratio and
+   gross profitability. Read from the latest two fiscal years. On every record whose
+   statements are filed, whatever its status; nothing reads it. *)
+type quality = {
+  period_end : string;
+  prior_period_end : string;
+  signals : quality_signal list;      (* the nine, in Piotroski's order *)
+  signals_available : int;            (* how many are not null *)
+  f_score : int nullable;             (* the count passed, 0 to 9; null unless all nine are available *)
+  signals_passed : int;               (* the count passed among those available *)
+  accruals_ratio : float nullable;    (* (net income - operating cash flow) / average total assets; high means earnings ahead of cash *)
+  gross_profitability : float nullable;   (* gross profit / total assets *)
+  scope_limits : string list;
+}
+
 type runway = {
   period_end : string;                    (* the latest fiscal period *)
   cash : float;                           (* cash and short-term investments, the cash definition *)
@@ -1303,6 +1340,8 @@ type valuation = {
   ?runway_reason : string option;               (* (76) present instead on an Unprofitable record: why there is no readout *)
   ?options_expected_return : options_expected_return option;   (* under --options: the Martin-Wagner expected return from the options store, beside cost_of_equity_capm *)
   ?options_expected_return_reason : string option;             (* present instead under --options on a name that is not a fund: why there is none *)
+  ?quality : quality option;                    (* on a record whose statements are filed: Piotroski's nine signals, the accruals ratio and gross profitability, from the statements alone *)
+  ?quality_reason : string option;              (* present instead: why there is none *)
   ?growth_shadow : growth_shadow option;        (* on a record whose generic DCF completed: the value on the higher of the two growth estimates, beside the headline and never replacing it *)
   ?base_rate : base_rate option;                (* on a dollar record valued by a DCF-shaped model: how often companies of this size grew as fast as the record assumes and as the price needs *)
   ?base_rate_reason : string option;            (* present instead on such a record: why there is none *)
