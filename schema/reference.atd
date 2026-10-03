@@ -202,6 +202,7 @@ type universe_entry = {
   entity_class : string;                (* a constructor of the boundary's entity_class; validated at load *)
   why : string;                         (* why this class *)
   ~scope_limits : string list;          (* durable: what the models cannot see for this name; carried verbatim *)
+  ~scope_limit_codes : string list;     (* one code per scope limit, in the same order, each from the file's scope_codes; a reader filters on the code and reads the text *)
   ?cik : string option;                 (* an identifier, not a number (22): the SEC filer to read instead of the ticker map's, with the reason in why *)
   ?lei : string option;                 (* (73) the Legal Entity Identifier whose ESEF annual reports on filings.xbrl.org are the statements, for a name with no SEC filer; declared, never resolved from the vendor *)
   ?adr_ratio : float option;            (* (42) ordinary shares per depositary receipt, positive, from the 20-F's deposit-agreement disclosure cited in why; absent means 1 *)
@@ -212,6 +213,7 @@ type universe_entry = {
 
 type universe = {
   ~notes : string list;
+  ~scope_codes : (string * string) list <json repr="object">;   (* the vocabulary: code -> what a limit under it says; stable once published, added to and never renamed *)
   tickers : universe_entry list;
 }
 
@@ -224,6 +226,7 @@ type class_rule = {
   never : string;                       (* what must not be used on this class *)
   floor_basis_default : string;         (* what establishes a floor for this class when no model here has *)
   ~scope_limits_default : string list;  (* carried onto every record of the class beside the entry's own (22) *)
+  ~scope_limit_codes_default : string list;   (* one code per default limit, in the same order, from the universe file's scope_codes *)
   ~floor_present_default : bool nullable;   (* false when the class has no floor by definition; null (absent) when not assessable here *)
 }
 

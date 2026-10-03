@@ -1177,6 +1177,7 @@ type valuation = {
   class_check : class_check nullable;
   floor : floor;
   scope_limits : string list;             (* what the models cannot see for this name, verbatim from the declaration *)
+  ~scope_limit_codes : string list;       (* one stable code per scope limit, in the same order; absent when the record carries no limit; "uncoded" where a declaration predates the codes *)
   statements_provider : string;           (* the provider decision, on every record *)
   ~taxonomy : string;                     (* us-gaap | ifrs-full on filed statements; empty otherwise (13) *)
   market_provider : string;

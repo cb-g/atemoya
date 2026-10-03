@@ -1,5 +1,5 @@
 let allowed_fields =
-  [ "ticker"; "entity_class"; "why"; "scope_limits"; "cik"; "lei"; "adr_ratio"; "build_out_return"; "build_out_lag_years" ]
+  [ "ticker"; "entity_class"; "why"; "scope_limits"; "scope_limit_codes"; "cik"; "lei"; "adr_ratio"; "build_out_return"; "build_out_lag_years" ]
 
 (* (60) A build-out declaration is exactly a value, the evidence for it and a date: a number
    with no why is not a declaration, and one of the two without the other says nothing. *)
@@ -37,7 +37,25 @@ let check_declaration name field = function
   | Some _ -> Error (Printf.sprintf "universe entry %s: %s is not an object" name field)
 let required_fields = [ "ticker"; "entity_class"; "why" ]
 
-let check_entry index (entry : Yojson.Safe.t) =
+(* A coded entry gives one code per scope limit, each from the file's own vocabulary; an
+   entry with no codes at all is a declaration from before the codes and reads uncoded. *)
+let check_codes name vocabulary fields =
+  let limits = match List.assoc_opt "scope_limits" fields with Some (`List l) -> List.length l | _ -> 0 in
+  match List.assoc_opt "scope_limit_codes" fields with
+  | None | Some (`List []) -> Ok ()
+  | Some (`List codes) when List.for_all (function `String _ -> true | _ -> false) codes ->
+      if List.length codes <> limits then
+        Error
+          (Printf.sprintf "universe entry %s: %d scope_limit_codes for %d scope_limits; one code per limit, in order" name
+             (List.length codes) limits)
+      else (
+        match List.find_opt (function `String c -> not (List.mem c vocabulary) | _ -> false) codes with
+        | Some (`String c) ->
+            Error (Printf.sprintf "universe entry %s: scope limit code %S is not in the file's scope_codes" name c)
+        | _ -> Ok ())
+  | Some _ -> Error (Printf.sprintf "universe entry %s: scope_limit_codes must be a list of strings" name)
+
+let check_entry vocabulary index (entry : Yojson.Safe.t) =
   match entry with
   | `Assoc fields ->
       let name =
@@ -90,10 +108,10 @@ let check_entry index (entry : Yojson.Safe.t) =
                            name k)
                   | _ -> (
                       match (List.assoc_opt "scope_limits" fields, List.assoc_opt "cik" fields) with
-                      | (None | Some (`List [])), (None | Some (`String _)) -> Ok ()
+                      | (None | Some (`List [])), (None | Some (`String _)) -> check_codes name vocabulary fields
                       | Some (`List items), (None | Some (`String _))
                         when List.for_all (function `String _ -> true | _ -> false) items ->
-                          Ok ()
+                          check_codes name vocabulary fields
                       | _, Some _ -> Error (Printf.sprintf "universe entry %s: cik must be a string" name)
                       | _ -> Error (Printf.sprintf "universe entry %s: scope_limits must be a list of strings" name)))
   | _ -> Error (Printf.sprintf "universe entry %d is not an object" index)
@@ -104,9 +122,12 @@ let load_string text =
   | `Assoc top -> (
       match List.assoc_opt "tickers" top with
       | Some (`List entries) -> (
+          let vocabulary =
+            match List.assoc_opt "scope_codes" top with Some (`Assoc codes) -> List.map fst codes | _ -> []
+          in
           let rec go i = function
             | [] -> Ok ()
-            | e :: rest -> ( match check_entry i e with Ok () -> go (i + 1) rest | Error _ as err -> err)
+            | e :: rest -> ( match check_entry vocabulary i e with Ok () -> go (i + 1) rest | Error _ as err -> err)
           in
           match go 1 entries with
           | Error msg -> Error msg

@@ -239,3 +239,42 @@ def test_the_holding_company_class_and_the_thirty_two() -> None:
     assert by["SAAB-B.ST"].lei == "549300ZHO4JCQQI13M69"
     added = "CLS TTD BX OWL PS GOGO IONQ IBM LLY MXT.AX MOT.AX PSUS RDDT NBIS SPOT BKNG EXPE ABNB HHH AEHR LITE BWXT ENB MP ZETA COIN MSTR GD NOC RTX HO.PA SAAB-B.ST".split()
     assert set(added) <= set(by) and len(added) == 32
+
+
+def test_every_scope_limit_carries_a_declared_code_and_the_guide_names_each() -> None:
+    """The codes are what a downstream reader filters on: every limit in the tracked files
+    has one, each from the universe's own vocabulary, and docs/run.md lists the vocabulary."""
+    root = Path(__file__).resolve().parent.parent
+    raw = json.loads((root / "reference" / "universe.json").read_text())
+    vocabulary = set(raw["scope_codes"])
+    assert "uncoded" not in vocabulary and all(m.strip() for m in raw["scope_codes"].values())
+    used: set[str] = set()
+    for e in raw["tickers"]:
+        limits, codes = e.get("scope_limits", []), e.get("scope_limit_codes", [])
+        assert len(limits) == len(codes), e["ticker"]
+        used |= set(codes)
+    classes = json.loads((root / "reference" / "admissibility.json").read_text())["classes"]
+    for name, rule in classes.items():
+        limits, codes = rule.get("scope_limits_default", []), rule.get("scope_limit_codes_default", [])
+        assert len(limits) == len(codes), name
+        used |= set(codes)
+    assert used <= vocabulary and vocabulary <= used, (used ^ vocabulary)
+    guide = (root / "docs" / "run.md").read_text()
+    for code in vocabulary:
+        assert f"`{code}`" in guide, code
+    by = {e["ticker"]: e for e in raw["tickers"]}
+    assert by["ENB"]["entity_class"] == "RegulatedUtility"
+    assert by["OKTA"]["scope_limit_codes"] == ["goodwill_heavy"]
+    assert by["BKNG"]["scope_limit_codes"] == ["rebound_window"] and by["SAAB-B.ST"]["scope_limit_codes"] == ["build_out"]
+
+
+def test_the_loader_holds_codes_to_the_limits_and_the_vocabulary() -> None:
+    def text(codes: object, vocabulary: dict[str, str] | None = None) -> str:
+        entry = {"ticker": "X", "entity_class": "Bank", "why": "a bank", "scope_limits": ["l"], "scope_limit_codes": codes}
+        return json.dumps({"scope_codes": vocabulary or {"build_out": "m"}, "tickers": [entry]})
+
+    assert universe.load_text(text(["build_out"])).tickers[0].scope_limit_codes == ["build_out"]
+    for codes, needle in ((["build_out", "build_out"], "2 scope_limit_codes for 1 scope_limits"),
+                          (["rebound"], "is not in the file's scope_codes"), ("build_out", "must be a list of strings")):
+        with pytest.raises(universe.UniverseError, match=needle):
+            universe.load_text(text(codes))

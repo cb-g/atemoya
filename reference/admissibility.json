@@ -64,6 +64,9 @@
       "floor_basis_default": "a completed mid-cycle DCF",
       "scope_limits_default": [
         "the through-cycle average is backward-looking; reserve replacement, the energy transition, or a declared structural break are not assessed"
+      ],
+      "scope_limit_codes_default": [
+        "backward_looking"
       ]
     },
     "Miner": {
@@ -109,6 +112,10 @@
       "scope_limits_default": [
         "the net asset value is the filer's own mark on private loans and equity stakes with no quoted price; the tool records it and does not verify it",
         "realised credit losses show up in the mark only when the filer takes them, so a deteriorating portfolio is visible late"
+      ],
+      "scope_limit_codes_default": [
+        "filer_marks",
+        "filer_marks"
       ]
     },
     "ConstructionStage": {

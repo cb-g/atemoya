@@ -149,6 +149,7 @@ let declarations (universe : Reference_t.universe option) cli_class =
               {
                 Valuation.entity_class = class_or_exit e.entity_class;
                 scope_limits = e.scope_limits;
+                scope_limit_codes = e.scope_limit_codes;
                 adr_ratio = e.adr_ratio;
                 build_out_return = e.build_out_return;
                 build_out_lag_years = e.build_out_lag_years;
@@ -161,6 +162,7 @@ let declarations (universe : Reference_t.universe option) cli_class =
         {
           Valuation.entity_class = class_or_exit s;
           scope_limits = [];
+          scope_limit_codes = [];
           adr_ratio = None;
           build_out_return = None;
           build_out_lag_years = None;

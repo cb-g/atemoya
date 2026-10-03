@@ -1,5 +1,6 @@
 """The universe file, loaded strictly: each entry is exactly ticker, entity_class, why and
-optionally scope_limits, cik, lei (73, the Legal Entity Identifier whose ESEF reports are
+optionally scope_limits with scope_limit_codes (one code per limit, in order, each from the
+file's own scope_codes vocabulary), cik, lei (73, the Legal Entity Identifier whose ESEF reports are
 the statements, twenty characters), adr_ratio (42, ordinary shares per depositary
 receipt, a positive number) and the two build-out declarations (60); anything else is an
 error, so nothing that remembers an outcome or a finding can creep back into a declaration."""
@@ -14,7 +15,7 @@ from typing import Any, cast
 
 import reference
 
-ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "cik", "lei", "adr_ratio",
+ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "scope_limit_codes", "cik", "lei", "adr_ratio",
            "build_out_return", "build_out_lag_years")
 REQUIRED = ("ticker", "entity_class", "why")
 # (60) A build-out declaration is exactly a value, the evidence for it and a date. A number
@@ -27,7 +28,7 @@ class UniverseError(ValueError):
     """A universe entry that is more, or less, than a declaration."""
 
 
-def _check_entry(index: int, entry: object) -> None:
+def _check_entry(index: int, entry: object, vocabulary: frozenset[str] = frozenset()) -> None:
     if not isinstance(entry, dict):
         raise UniverseError(f"universe entry {index} is not an object")
     fields: dict[str, object] = {str(k): v for k, v in cast(dict[Any, Any], entry).items()}
@@ -48,6 +49,18 @@ def _check_entry(index: int, entry: object) -> None:
     ratio = fields.get("adr_ratio")
     if ratio is not None and (isinstance(ratio, bool) or not isinstance(ratio, (int, float)) or ratio <= 0):
         raise UniverseError(f"universe entry {name}: adr_ratio must be a positive number (ordinary shares per receipt)")
+    codes = fields.get("scope_limit_codes")
+    if codes:
+        limits = fields.get("scope_limits")
+        n = len(cast(list[object], limits)) if isinstance(limits, list) else 0
+        if not isinstance(codes, list) or not all(isinstance(c, str) for c in cast(list[object], codes)):
+            raise UniverseError(f"universe entry {name}: scope_limit_codes must be a list of strings")
+        given = cast(list[str], codes)
+        if len(given) != n:
+            raise UniverseError(f"universe entry {name}: {len(given)} scope_limit_codes for {n} scope_limits; one code per limit, in order")
+        unknown_codes = [c for c in given if c not in vocabulary]
+        if unknown_codes:
+            raise UniverseError(f"universe entry {name}: scope limit code {unknown_codes[0]!r} is not in the file's scope_codes")
     for field in ("build_out_return", "build_out_lag_years"):
         _check_declaration(name, field, fields.get(field))
     declared = [k for k in ("build_out_return", "build_out_lag_years") if fields.get(k) is not None]
@@ -87,8 +100,10 @@ def load_text(text: str) -> reference.Universe:
     entries = cast(dict[Any, Any], raw).get("tickers") if isinstance(raw, dict) else None
     if not isinstance(entries, list):
         raise UniverseError("universe: no tickers list")
+    declared = cast(dict[Any, Any], raw).get("scope_codes")
+    vocabulary = frozenset(str(k) for k in cast(dict[Any, Any], declared)) if isinstance(declared, dict) else frozenset[str]()
     for i, entry in enumerate(cast(list[object], entries), 1):
-        _check_entry(i, entry)
+        _check_entry(i, entry, vocabulary)
     return reference.Universe.from_json_string(text)
 
 

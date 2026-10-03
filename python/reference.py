@@ -439,6 +439,7 @@ class UniverseEntry:
     entity_class: str
     why: str
     scope_limits: List[str] = field(default_factory=lambda: [])
+    scope_limit_codes: List[str] = field(default_factory=lambda: [])
     cik: Optional[str] = None
     lei: Optional[str] = None
     adr_ratio: Optional[float] = None
@@ -453,6 +454,7 @@ class UniverseEntry:
                 entity_class=_atd_read_string(x['entity_class']) if 'entity_class' in x else _atd_missing_json_field('UniverseEntry', 'entity_class'),
                 why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('UniverseEntry', 'why'),
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
+                scope_limit_codes=_atd_read_list(_atd_read_string)(x['scope_limit_codes']) if 'scope_limit_codes' in x else [],
                 cik=_atd_read_string(x['cik']) if 'cik' in x else None,
                 lei=_atd_read_string(x['lei']) if 'lei' in x else None,
                 adr_ratio=_atd_read_float(x['adr_ratio']) if 'adr_ratio' in x else None,
@@ -468,6 +470,7 @@ class UniverseEntry:
         res['entity_class'] = _atd_write_string(self.entity_class)
         res['why'] = _atd_write_string(self.why)
         res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        res['scope_limit_codes'] = _atd_write_list(_atd_write_string)(self.scope_limit_codes)
         if self.cik is not None:
             res['cik'] = _atd_write_string(self.cik)
         if self.lei is not None:
@@ -495,6 +498,7 @@ class Universe:
 
     tickers: List[UniverseEntry]
     notes: List[str] = field(default_factory=lambda: [])
+    scope_codes: List[Tuple[str, str]] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'Universe':
@@ -502,6 +506,7 @@ class Universe:
             return cls(
                 tickers=_atd_read_list(UniverseEntry.from_json)(x['tickers']) if 'tickers' in x else _atd_missing_json_field('Universe', 'tickers'),
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                scope_codes=_atd_read_assoc_object_into_list(_atd_read_string)(x['scope_codes']) if 'scope_codes' in x else [],
             )
         else:
             _atd_bad_json('Universe', x)
@@ -510,6 +515,7 @@ class Universe:
         res: Dict[str, Any] = {}
         res['tickers'] = _atd_write_list((lambda x: x.to_json()))(self.tickers)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        res['scope_codes'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.scope_codes)
         return res
 
     @classmethod
@@ -3021,6 +3027,7 @@ class ClassRule:
     never: str
     floor_basis_default: str
     scope_limits_default: List[str] = field(default_factory=lambda: [])
+    scope_limit_codes_default: List[str] = field(default_factory=lambda: [])
     floor_present_default: Optional[bool] = field(default_factory=lambda: None)
 
     @classmethod
@@ -3032,6 +3039,7 @@ class ClassRule:
                 never=_atd_read_string(x['never']) if 'never' in x else _atd_missing_json_field('ClassRule', 'never'),
                 floor_basis_default=_atd_read_string(x['floor_basis_default']) if 'floor_basis_default' in x else _atd_missing_json_field('ClassRule', 'floor_basis_default'),
                 scope_limits_default=_atd_read_list(_atd_read_string)(x['scope_limits_default']) if 'scope_limits_default' in x else [],
+                scope_limit_codes_default=_atd_read_list(_atd_read_string)(x['scope_limit_codes_default']) if 'scope_limit_codes_default' in x else [],
                 floor_present_default=_atd_read_nullable(_atd_read_bool)(x['floor_present_default']) if 'floor_present_default' in x else None,
             )
         else:
@@ -3044,6 +3052,7 @@ class ClassRule:
         res['never'] = _atd_write_string(self.never)
         res['floor_basis_default'] = _atd_write_string(self.floor_basis_default)
         res['scope_limits_default'] = _atd_write_list(_atd_write_string)(self.scope_limits_default)
+        res['scope_limit_codes_default'] = _atd_write_list(_atd_write_string)(self.scope_limit_codes_default)
         res['floor_present_default'] = _atd_write_nullable(_atd_write_bool)(self.floor_present_default)
         return res
 

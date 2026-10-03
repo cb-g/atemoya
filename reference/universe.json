@@ -6,8 +6,38 @@
     "Twenty-five names added 2026-09-29 (71) at the request of a downstream project that runs a clone: the class judgments were delegated to the tool by that project and drafted here from the vendor's statements and the filers' own forms, so each why says what was read; the user confirmed the two judgment calls, Circle as an operating company and GE Vernova as a cyclical, and may reclassify any of the others by editing this file. Two of the project's twenty-six were not added as asked: SK hynix was already here as 000660.KS, and Bending Spoons, which the project could not name a symbol for, is listed on Nasdaq as BSP, confirmed from the listing's own announcement, and is added under that symbol. Mexico joins the four country tables in the same commit because two of the names, the Mexico City line of Walmart's retailer and the Tiendas 3B receipt, report in pesos and Mexico was in none of them.",
     "lei (73): a Legal Entity Identifier declared on an entry names the filer whose ESEF annual reports on filings.xbrl.org are its statements, for a name with no SEC filer; read from the filer's own report cover and never resolved from the vendor, whose ISIN lookup returned nothing for three of the four names and a wrong code for one. Declared 2026-09-29 on Sanofi, Air Liquide, ASML and Novo Nordisk; Allianz is not on the aggregator and stays on the vendor.",
     "Filers declared by CIK 2026-09-30 (79): Toyota's Tokyo line and AstraZeneca's London line read their own 20-F statements, which are the same IFRS accounts each home line trades on. MUFG's is not declared, its 20-F being US GAAP against the J-GAAP the Tokyo line trades on; the difference is written on its entry.",
-    "Thirty-two names added 2026-10-02 (81) at the request of the downstream project that runs a clone, twenty asked on the first and twelve on the second, the class judgments delegated to the tool as in brief 71 and drafted from the vendor's statements, the filers' own forms and their announcements, so each why says what was read; the user may reclassify any by editing this file. Howard Hughes needed a class this file did not have: since buying an insurer it consolidates a land developer and an insurer, and per the admissibility rule a name that fits no class gets a class added, HoldingCompany, refused with the sum of the parts named, rather than a place in OperatingCompany. Strategy is a Wrapper and not a new class, because the premium or discount to the bitcoin it holds is the wrapper lens exactly. Thales and Saab declare the LEI read from their own ESEF reports' facts."
+    "Thirty-two names added 2026-10-02 (81) at the request of the downstream project that runs a clone, twenty asked on the first and twelve on the second, the class judgments delegated to the tool as in brief 71 and drafted from the vendor's statements, the filers' own forms and their announcements, so each why says what was read; the user may reclassify any by editing this file. Howard Hughes needed a class this file did not have: since buying an insurer it consolidates a land developer and an insurer, and per the admissibility rule a name that fits no class gets a class added, HoldingCompany, refused with the sum of the parts named, rather than a place in OperatingCompany. Strategy is a Wrapper and not a new class, because the premium or discount to the bitcoin it holds is the wrapper lens exactly. Thales and Saab declare the LEI read from their own ESEF reports' facts.",
+    "Scope limit codes, 2026-10-03, at the request of the downstream project that runs a clone: every scope limit carries one code from scope_codes below, in scope_limit_codes beside it and in the same order, so a reader can filter by rule and still read the text. A code is stable once here: the vocabulary is added to and never renamed. On the same day Enbridge moves from OperatingCompany to RegulatedUtility, the downstream reader not confirming the class and the user agreeing, since most of its earnings are regulated or contracted and its own scope limit already said a DCF misreads the rate base; and Okta gains the goodwill limit that its capped growth rests on."
   ],
+  "scope_codes": {
+    "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
+    "rebound_window": "the growth window opens on a recovery from a collapse, so the derived starting growth reads the rebound as growth",
+    "trough_window": "a reset or trough year sits inside the growth window, so the derived starting growth reads the trough",
+    "product_transition": "a product transition inside the growth window: a franchise in decline or a launch not yet in the statements",
+    "goodwill_heavy": "acquired goodwill is a large part of invested capital or sits inside the latest earnings, so the return on capital reads the price paid for a business rather than what it earns",
+    "acquired_history": "acquisitions or a change of ownership inside the window, or one after the latest statements: the filed history is not the business ahead",
+    "carve_out_history": "a spin-off, carve-out, divestiture or fresh-start accounting inside the window: part of the filed history is another entity's",
+    "short_history": "the filed history is short or young, so what the model reads as a through-cycle figure is a few years",
+    "structural_break": "a declared break in the business, so a through-cycle figure may not recur",
+    "backward_looking": "the through-cycle average looks backward by construction",
+    "captive_finance": "a captive finance arm: its interest is an operating cost and its debt funds a lending book, and the model reads both as the company's financing",
+    "pass_through_balances": "balances held for customers, members or managed funds pass through the statements and are not the company's own cash, debt or working capital",
+    "one_off_in_window": "a one-time charge, write-down or non-operating loss sits inside the window and is read as an operating year",
+    "leases_excluded": "operating leases are outside the debt definition, so a lease-heavy estate carries less debt here than its obligations imply",
+    "vendor_statements": "no filed statements are read: they come from the vendor, with fewer years and no tag behind a number",
+    "mixed_business": "a material part of the business is of another kind than the class's lens reads",
+    "market_marks": "earnings carry unrealised marks or performance fees that move with markets, which the model reads as a level",
+    "investment_book": "a large book of investments sits on the balance sheet at values the model does not read",
+    "filer_marks": "the value rests on the filer's own marks of unquoted assets, recorded and not verified, with losses visible late",
+    "policy_dependent": "earnings rest on a policy rate, a tax credit or a government agreement that the company does not control",
+    "commodity_exposure": "part of revenue or cost moves with a commodity price",
+    "concentration": "a few customers or products carry a large share of revenue",
+    "contract_terms": "a large cost or revenue share is set by contracts the statements do not separate",
+    "balance_sheet": "the balance sheet's own shape, heavy debt or negative book equity, limits what the model can read",
+    "ownership_structure": "the listed line owns only part of the business, counts only part of the shares, or ranks behind other claims",
+    "country_basis": "the country that chooses the risk premium is not the legal domicile",
+    "loss_making": "loss-making on the latest filed years"
+  },
   "tickers": [
     {
       "ticker": "AAPL",
@@ -174,6 +204,9 @@
       "why": "a regulated electric utility mid capex cycle; a DCF reads rate-base construction as value destruction",
       "scope_limits": [
         "fuel cost passes through revenue"
+      ],
+      "scope_limit_codes": [
+        "commodity_exposure"
       ]
     },
     {
@@ -237,6 +270,9 @@
       "why": "a semiconductor manufacturer whose earnings follow the industry cycle and its own capex cycle: profitable for decades, loss-making through the build-out",
       "scope_limits": [
         "structural break: foundry build-out and the loss of process leadership; the through-cycle return may not recur"
+      ],
+      "scope_limit_codes": [
+        "structural_break"
       ]
     },
     {
@@ -275,6 +311,9 @@
       "why": "software and cloud infrastructure; a build-out inside the growth window makes the latest year's free cash flow negative; through-cycle return on today's capital is the question",
       "scope_limits": [
         "structural: a capacity build-out whose returns are not yet in the window"
+      ],
+      "scope_limit_codes": [
+        "build_out"
       ]
     },
     {
@@ -293,6 +332,9 @@
       "why": "pharma with a patent cliff inside the growth window",
       "scope_limits": [
         "growth window spans a product transition"
+      ],
+      "scope_limit_codes": [
+        "product_transition"
       ]
     },
     {
@@ -326,6 +368,9 @@
       "why": "heavy equipment: the industrial cycle rather than a commodity price",
       "scope_limits": [
         "captive finance arm: its interest is an operating cost that the bottom-up NOPAT adds back as financing; the through-cycle return is overstated by the arm's funding cost"
+      ],
+      "scope_limit_codes": [
+        "captive_finance"
       ]
     },
     {
@@ -334,6 +379,9 @@
       "why": "autos: cyclical with a captive finance arm, so finance debt sits beside industrial debt",
       "scope_limits": [
         "captive finance arm: its interest is an operating cost that the bottom-up NOPAT adds back as financing; the through-cycle return is overstated by the arm's funding cost"
+      ],
+      "scope_limit_codes": [
+        "captive_finance"
       ]
     },
     {
@@ -461,6 +509,9 @@
       "scope_limits": [
         "structural: a capacity build-out whose returns are not yet in the window"
       ],
+      "scope_limit_codes": [
+        "build_out"
+      ],
       "build_out_return": {
         "value": 0.22,
         "why": "the after-tax return on capital the new capacity earns once earning, after depreciation, as a filing states it; the record's own return on opening capital is 0.2650 for FY2025, 0.3262 for FY2024 and 0.2043 for FY2023, and this sits a little under the latest because the capital being spent now is data-centre shell, power and accelerators bought into a shortage and written off over six years or less, while that return is earned on a base built over twenty years",
@@ -483,6 +534,9 @@
       "why": "Hospital operator; an operating company with debt, valued on free cash flow to the firm.",
       "scope_limits": [
         "The lease-heavy hospital estate is read at the debt definition's exclusion of operating leases; the estate's replacement cost is not assessed."
+      ],
+      "scope_limit_codes": [
+        "leases_excluded"
       ]
     },
     {
@@ -507,6 +561,9 @@
       "scope_limits": [
         "A debt-heavy balance sheet under a generic-pricing cycle: the DCF holds the latest year's cash flow and does not model the cycle or the deleveraging path."
       ],
+      "scope_limit_codes": [
+        "balance_sheet"
+      ],
       "adr_ratio": 1
     },
     {
@@ -515,6 +572,9 @@
       "why": "Biotechnology with marketed products; an operating company.",
       "scope_limits": [
         "A product transition inside the growth window: the starting growth read from filings carries a franchise in decline and a launch not yet in the statements."
+      ],
+      "scope_limit_codes": [
+        "product_transition"
       ]
     },
     {
@@ -528,6 +588,9 @@
       "why": "Exchanges, clearing and mortgage technology; a fee business with no net-interest signature, an operating company.",
       "scope_limits": [
         "Clearing member balances pass through the balance sheet and are not the company's own cash or debt; the cash and debt definitions read the reported totals."
+      ],
+      "scope_limit_codes": [
+        "pass_through_balances"
       ]
     },
     {
@@ -536,6 +599,9 @@
       "why": "Derivatives exchanges and clearing; a fee business, an operating company.",
       "scope_limits": [
         "Clearing member performance bonds pass through the balance sheet and are not the company's own cash; the cash definition reads the reported totals."
+      ],
+      "scope_limit_codes": [
+        "pass_through_balances"
       ]
     },
     {
@@ -566,7 +632,13 @@
     {
       "ticker": "OKTA",
       "entity_class": "HighGrowthSoftware",
-      "why": "Identity software with subscription revenue; the software lens, its GAAP profit recent and thin."
+      "why": "Identity software with subscription revenue; the software lens, its GAAP profit recent and thin.",
+      "scope_limits": [
+        "goodwill from an acquisition paid for in shares is most of invested capital, so the return on capital, which caps the starting growth, reads the price paid for the acquired business rather than what the business earns, and the capped growth sits far below the filed revenue growth"
+      ],
+      "scope_limit_codes": [
+        "goodwill_heavy"
+      ]
     },
     {
       "ticker": "GWRE",
@@ -585,6 +657,9 @@
       "why": "Marketplace, payments and credit in Latin America, a 10-K filer under us-gaap despite the listing; profitable platform revenue; the software lens.",
       "scope_limits": [
         "The credit book inside the payments business carries interest income and provisions the software lens does not read."
+      ],
+      "scope_limit_codes": [
+        "mixed_business"
       ]
     },
     {
@@ -594,6 +669,10 @@
       "scope_limits": [
         "interest-driven revenue (net interest on customer cash, margin and securities lending) is about a third of the total and moves with rates and balances, which the DCF cannot see; the bank signature fires by design and is not a misclassification",
         "the filed change in working capital is the growth of the margin and customer-payable book, which the filer tags under trade receivables and payables; the DCF reads it as working capital because that is what the filing says"
+      ],
+      "scope_limit_codes": [
+        "mixed_business",
+        "pass_through_balances"
       ]
     },
     {
@@ -613,6 +692,9 @@
       "why": "Solar module manufacturing; earnings swing with module pricing and policy, so the through-cycle model applies.",
       "scope_limits": [
         "Manufacturing tax credits inside the earnings window are policy-set and not assessed as durable."
+      ],
+      "scope_limit_codes": [
+        "policy_dependent"
       ]
     },
     {
@@ -676,6 +758,9 @@
       "why": "LNG export; producing and earning at scale, with a build-out inside the window larger than its earnings",
       "scope_limits": [
         "structural: a capacity build-out whose returns are not yet in the window"
+      ],
+      "scope_limit_codes": [
+        "build_out"
       ],
       "build_out_return": {
         "value": 0.14,
@@ -764,6 +849,9 @@
       "why": "a consumer lender holding a national bank charter and funding its book with deposits; net interest income is far the larger part of revenue, so the bank signature fires and the residual-income lens applies, unlike the retail broker already in this file, which holds no charter and takes no deposits; confirmed by the user.",
       "scope_limits": [
         "the lending book is young and still growing fast, so the return on equity the reversion path starts from is a short history rather than a through-cycle one"
+      ],
+      "scope_limit_codes": [
+        "short_history"
       ]
     },
     {
@@ -785,6 +873,9 @@
       "scope_limits": [
         "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost"
       ],
+      "scope_limit_codes": [
+        "captive_finance"
+      ],
       "cik": "0001094517"
     },
     {
@@ -799,6 +890,10 @@
       "scope_limits": [
         "structural: telecom and retail are now the larger part of profit and are not cyclical, so a through-cycle return blends businesses of two kinds",
         "no filings at the Securities and Exchange Commission, so the statements come from the vendor, which carries fewer annual columns than the through-cycle window asks for"
+      ],
+      "scope_limit_codes": [
+        "mixed_business",
+        "vendor_statements"
       ]
     },
     {
@@ -818,6 +913,9 @@
       "adr_ratio": 1,
       "scope_limits": [
         "the cover page counts the London company's shares alone while the statements and the market capitalisation cover both lines of the dual-listed structure, so the receipt check disagrees by the Australian company's share count"
+      ],
+      "scope_limit_codes": [
+        "ownership_structure"
       ]
     },
     {
@@ -843,6 +941,9 @@
       "why": "conducted-energy weapons, body cameras and the evidence software sold with them; revenue compounds while the filed operating line stays thin and changes sign from year to year, so the value is the growth path and not a single year's earnings; confirmed by the user against the operating company reading.",
       "scope_limits": [
         "hardware is still the larger part of revenue, so the software lens reads a business whose unit economics are partly a manufacturer's"
+      ],
+      "scope_limit_codes": [
+        "mixed_business"
       ]
     },
     {
@@ -856,6 +957,9 @@
       "why": "a home furnishings retailer whose fiscal year ends at the turn of January and February; the discounted cash flow on stable free cash flow.",
       "scope_limits": [
         "operating leases are excluded from debt by definition, so a retailer whose stores are all leased carries less debt here than its obligations imply"
+      ],
+      "scope_limit_codes": [
+        "leases_excluded"
       ]
     },
     {
@@ -865,6 +969,10 @@
       "scope_limits": [
         "structural: a large acquisition inside the growth window, so the history the growth estimate reads is two businesses",
         "a write-down of the acquired brand in the latest filed year, which the model reads as a fall in earnings rather than as a one-off"
+      ],
+      "scope_limit_codes": [
+        "acquired_history",
+        "one_off_in_window"
       ]
     },
     {
@@ -873,6 +981,9 @@
       "why": "industrial gases sold under long take-or-pay contracts; the discounted cash flow on stable free cash flow.",
       "scope_limits": [
         "structural: capital spending runs at several times depreciation on projects that are not yet earning, so the latest year's free cash flow is not the business's"
+      ],
+      "scope_limit_codes": [
+        "build_out"
       ]
     },
     {
@@ -886,6 +997,9 @@
       "why": "natural gas pipelines, terminals and storage earning fee-based contracted revenue rather than a commodity margin, which is what the operating company lens asks of a midstream name; the first midstream name in this file.",
       "scope_limits": [
         "a minority of revenue moves with commodity prices rather than with contracted fees"
+      ],
+      "scope_limit_codes": [
+        "commodity_exposure"
       ]
     },
     {
@@ -899,6 +1013,9 @@
       "why": "Nike, footwear and apparel; a plain operating company with positive free cash flow through a demand reset that cut revenue and margins inside the window.",
       "scope_limits": [
         "a reset year sits inside the growth window, so the derived starting growth reads the trough rather than the franchise"
+      ],
+      "scope_limit_codes": [
+        "trough_window"
       ]
     },
     {
@@ -913,6 +1030,10 @@
       "scope_limits": [
         "reserve income is the policy rate times the coin in circulation, neither of which the company controls, so a rate cut moves revenue one for one and the DCF reads a level",
         "about half of reserve income is paid away to the distribution partner under a contract the filing describes but the statements do not separate"
+      ],
+      "scope_limit_codes": [
+        "policy_dependent",
+        "contract_terms"
       ]
     },
     {
@@ -926,6 +1047,9 @@
       "why": "GE Vernova, gas turbines, wind and grid equipment spun out of General Electric; two loss years and two profitable years inside the window as the power-equipment order cycle turned, so through-cycle return on today's capital is the question and never the latest year's free cash flow; confirmed by the user against the operating-company reading.",
       "scope_limits": [
         "structural: the loss years are the carve-out's, filed before the company stood alone, and the wind losses inside them are a business being run down rather than a cycle"
+      ],
+      "scope_limit_codes": [
+        "carve_out_history"
       ]
     },
     {
@@ -934,6 +1058,9 @@
       "why": "Sandisk, NAND flash memory spun out of Western Digital; the textbook memory cycle, with a loss trough and an impairment inside the window and the up-cycle in the latest year.",
       "scope_limits": [
         "the filed history before the separation is a carve-out, so the through-cycle window reads years the company did not manage as a whole"
+      ],
+      "scope_limit_codes": [
+        "carve_out_history"
       ]
     },
     {
@@ -947,6 +1074,9 @@
       "why": "Coastal Financial, a bank holding company whose subsidiary bank takes deposits and lends, with a banking-as-a-service arm; net interest income is the larger part of revenue, so the bank signature fires and the residual-income lens applies.",
       "scope_limits": [
         "the banking-as-a-service arm's fee and credit-enhancement income is a growing share of revenue that the residual-income lens reads inside the return on equity without separating it"
+      ],
+      "scope_limit_codes": [
+        "mixed_business"
       ]
     },
     {
@@ -960,6 +1090,9 @@
       "why": "the Taipei line of a Taiwanese electronics manufacturer, reporting in Taiwan dollars on the vendor path; volumes and working capital swing with its customers' product cycles, and the latest year's free cash flow is negative on the working capital an artificial-intelligence server ramp absorbs, so through-cycle return on today's capital is the question.",
       "scope_limits": [
         "no filings at the Securities and Exchange Commission, so the statements come from the vendor, which carries fewer annual columns than the through-cycle window asks for"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
       ]
     },
     {
@@ -973,6 +1106,9 @@
       "why": "the Mexico City line of Walmart's Mexican and Central American retailer, reporting in pesos on the vendor path; positive, stable free cash flow and no structural break; the first name in this file whose trading currency is the peso, so Mexico joins the country tables with it.",
       "scope_limits": [
         "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
       ]
     },
     {
@@ -981,6 +1117,9 @@
       "why": "Bending Spoons, an Italian software company listed on Nasdaq in dollars since the first of July of its listing year and reporting in dollars, so Italy's country risk premium on the dollar curve; consumer and business applications, most of them acquired, profitable with positive free cash flow; the software lens; its first annual report to the Securities and Exchange Commission is not yet filed, so the statements come from the vendor until it is.",
       "scope_limits": [
         "growth is bought: nearly every product in the revenue line was acquired inside the window, so the derived starting growth reads acquisitions as organic and the revert-to-anchor path is a judgment about the next purchase rather than the last product"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
       ]
     },
     {
@@ -990,6 +1129,10 @@
       "scope_limits": [
         "structural: the operating business was acquired inside the window and the years before it are a shell's, so the through-cycle window holds one year of the business it values",
         "the acquisition's goodwill and the interest on the debt that bought it sit inside the latest year's loss"
+      ],
+      "scope_limit_codes": [
+        "acquired_history",
+        "goodwill_heavy"
       ]
     },
     {
@@ -998,6 +1141,9 @@
       "why": "Planet Fitness, a gym franchisor; positive, stable free cash flow from franchise royalties and no structural break.",
       "scope_limits": [
         "the recapitalised balance sheet carries negative book equity, so any book-based reading is meaningless and only the cash flows speak"
+      ],
+      "scope_limit_codes": [
+        "balance_sheet"
       ]
     },
     {
@@ -1007,6 +1153,10 @@
       "scope_limits": [
         "capital spending on new shops runs well above depreciation, so the latest year's free cash flow understates the earning power of the shops already open",
         "an Up-C structure: the listed company owns a share of the operating partnership, so the filed net income to the listed holder is a fraction of the whole"
+      ],
+      "scope_limit_codes": [
+        "build_out",
+        "ownership_structure"
       ]
     },
     {
@@ -1016,6 +1166,10 @@
       "scope_limits": [
         "structural: the listed company's ownership of the asset-management business changed inside the window, so the consolidated history is not one entity's throughout",
         "carried interest is recognised on realisation and the DCF cannot see the unrealised balance"
+      ],
+      "scope_limit_codes": [
+        "acquired_history",
+        "market_marks"
       ]
     },
     {
@@ -1040,6 +1194,10 @@
       "scope_limits": [
         "a large book of listed and unlisted investments sits on the balance sheet at values the DCF does not read",
         "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "investment_book",
+        "vendor_statements"
       ]
     },
     {
@@ -1060,6 +1218,9 @@
       "why": "Gladstone Investment, a business development company lending to and taking equity in lower-middle-market buyouts, externally managed; the net asset value lens, with the coverage of its monthly distribution and the supplemental ones the check.",
       "scope_limits": [
         "a large equity share of the portfolio: realised gains fund the supplemental distributions, so net investment income alone understates what is paid out"
+      ],
+      "scope_limit_codes": [
+        "mixed_business"
       ]
     },
     {
@@ -1068,6 +1229,9 @@
       "why": "Talen Energy, merchant nuclear and gas generation selling into the PJM market; the merchant-power class by its text, refused by design and judged on its capacity and price lens instead.",
       "scope_limits": [
         "fresh-start accounting on emergence from bankruptcy sits inside the window, so the filed history before it is another entity's"
+      ],
+      "scope_limit_codes": [
+        "carve_out_history"
       ]
     },
     {
@@ -1076,6 +1240,9 @@
       "why": "Celestica, electronics manufacturing services and the networking and server platforms it builds for data-centre customers, domiciled in Canada and reporting in dollars under a dollar listing, so Canada's country risk premium on the dollar curve; profitable with positive free cash flow on every filed year and no structural break; an operating company on thin margins, as the server-hardware maker here is.",
       "scope_limits": [
         "a few hyperscale customers carry a large share of revenue, a concentration the filing discloses and the DCF cannot see"
+      ],
+      "scope_limit_codes": [
+        "concentration"
       ]
     },
     {
@@ -1090,6 +1257,10 @@
       "scope_limits": [
         "performance revenue is carried interest accrued on the funds' unrealised marks, so it moves with markets and reverses when the marks fall, and a single year mixes a fee business with a market position",
         "some of the funds it manages are consolidated, and their own borrowings are not the manager's"
+      ],
+      "scope_limit_codes": [
+        "market_marks",
+        "pass_through_balances"
       ]
     },
     {
@@ -1098,6 +1269,9 @@
       "why": "Blue Owl Capital, an alternative asset manager earning fees on permanent and long-dated capital in private credit, stakes in other managers and real estate; positive free cash flow while GAAP net income stays thin under the amortisation of the intangibles its acquisitions brought; an operating company, as the other alternative asset managers here are.",
       "scope_limits": [
         "structural: the business was formed by a combination at the start of the window and grown by acquisitions inside it, so the filed history is not one entity's throughout"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
       ]
     },
     {
@@ -1107,6 +1281,10 @@
       "scope_limits": [
         "performance fees on a few concentrated funds are a large part of revenue and move with those funds' annual returns, which the DCF reads as a level",
         "the filed history is short and mostly predates the listing"
+      ],
+      "scope_limit_codes": [
+        "market_marks",
+        "short_history"
       ]
     },
     {
@@ -1115,6 +1293,9 @@
       "why": "Gogo, inflight connectivity for business aviation, selling airborne equipment and recurring service plans; profitable with positive free cash flow on every filed year; an operating company.",
       "scope_limits": [
         "structural: an acquisition inside the window about doubled revenue and added international and government customers, so the filed history before it is a smaller business"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
       ]
     },
     {
@@ -1123,6 +1304,9 @@
       "why": "IonQ, quantum computing systems and quantum networking; GAAP loss-making on every filed year with negative free cash flow funded by share issuance; the runway lens, no model.",
       "scope_limits": [
         "growth is bought: several acquisitions inside the window add revenue the earlier years do not carry"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
       ]
     },
     {
@@ -1132,6 +1316,10 @@
       "scope_limits": [
         "a captive financing arm lends to clients for hardware, software and services, so finance debt sits inside total debt beside the corporate debt, as on the car maker here",
         "structural: the managed-infrastructure business was spun off at the start of the window and the earliest year is restated without it"
+      ],
+      "scope_limit_codes": [
+        "captive_finance",
+        "carve_out_history"
       ]
     },
     {
@@ -1141,6 +1329,10 @@
       "scope_limits": [
         "capital spending on new manufacturing runs far above depreciation inside the window, so the free cash flow the DCF starts from is held down by construction",
         "growth rests on a few products whose pricing and patents the model does not see"
+      ],
+      "scope_limit_codes": [
+        "build_out",
+        "concentration"
       ]
     },
     {
@@ -1169,6 +1361,9 @@
       "why": "Nebius Group, GPU cloud capacity, domiciled in the Netherlands and reporting in dollars; operating losses on every filed year of the continuing business and free cash flow deeply negative under a build-out, the positive net income of some years being gains on businesses and stakes it sold, deconsolidated or revalued; the runway lens, no model, as for the other GPU cloud here.",
       "scope_limits": [
         "structural: the filed history before the divestiture is a larger company's, the continuing business being what remained"
+      ],
+      "scope_limit_codes": [
+        "carve_out_history"
       ]
     },
     {
@@ -1178,6 +1373,10 @@
       "scope_limits": [
         "royalties to rights holders are most of the cost of revenue and are set by licence agreements the statements do not separate",
         "the legal domicile is Luxembourg while the vendor's profile, which chooses the country risk premium, names Sweden, where the headquarters is; both carry no country premium"
+      ],
+      "scope_limit_codes": [
+        "contract_terms",
+        "country_basis"
       ]
     },
     {
@@ -1186,6 +1385,9 @@
       "why": "Booking Holdings, online travel agencies earning commissions and payment revenue on accommodation and travel bookings; positive, stable free cash flow and no structural break.",
       "scope_limits": [
         "travel demand follows the economy, and the window opens on the recovery from the pandemic collapse, so the earliest year understates the run rate"
+      ],
+      "scope_limit_codes": [
+        "rebound_window"
       ]
     },
     {
@@ -1194,6 +1396,9 @@
       "why": "Expedia Group, online travel agencies and a business-to-business travel platform; positive, stable free cash flow and no structural break.",
       "scope_limits": [
         "travel demand follows the economy, and the window opens on the recovery from the pandemic collapse, so the earliest year understates the run rate"
+      ],
+      "scope_limit_codes": [
+        "rebound_window"
       ]
     },
     {
@@ -1202,6 +1407,9 @@
       "why": "Airbnb, a marketplace for short-term stays earning service fees from guests and hosts; positive, stable free cash flow, its large stock compensation kept inside EBIT as filed; an operating company.",
       "scope_limits": [
         "guest payments held for future stays sit on their own balance-sheet line against a matching liability, outside the cash the record reads, and are not the company's"
+      ],
+      "scope_limit_codes": [
+        "pass_through_balances"
       ]
     },
     {
@@ -1211,6 +1419,10 @@
       "scope_limits": [
         "the latest annual statements hold the developer alone; the insurer enters from the first annual report after the purchase",
         "structural: a seaport entertainment district was spun off inside the window"
+      ],
+      "scope_limit_codes": [
+        "acquired_history",
+        "carve_out_history"
       ]
     },
     {
@@ -1219,6 +1431,9 @@
       "why": "Aehr Test Systems, wafer-level test and burn-in equipment sold to semiconductor makers in a few large orders, whose fiscal year ends in May; profitable years and loss years follow its customers' capacity cycles, so through-cycle return on today's capital is the question and never the latest year; the class text puts a company that was profitable and went through a break here rather than among the unprofitable.",
       "scope_limits": [
         "a few customers carry most of revenue in any year, so the swing is partly the cycle and partly the timing of their orders"
+      ],
+      "scope_limit_codes": [
+        "concentration"
       ]
     },
     {
@@ -1228,6 +1443,10 @@
       "scope_limits": [
         "the latest year's GAAP net loss is a one-time non-cash loss on extinguishing convertible notes settled in shares; the mid-cycle model builds its after-tax operating profit from net income plus interest, so that loss enters the window as an operating year and alone turns the mean return on capital negative, though the filer reported positive operating income that year; without it the window holds one observation fewer than the floor, so the name refuses either way, but the reason the record gives is the loss and not the business",
         "acquisitions inside the window add businesses the earlier years do not carry"
+      ],
+      "scope_limit_codes": [
+        "one_off_in_window",
+        "acquired_history"
       ]
     },
     {
@@ -1236,15 +1455,22 @@
       "why": "BWX Technologies, naval nuclear reactors and fuel for the U.S. government under long-running contracts, and commercial nuclear components and services; positive, stable free cash flow; an operating company, as the defence contractor here is.",
       "scope_limits": [
         "acquisitions inside the window and an agreed sale of the medical isotopes business change the segment mix, so the filed history is a different mix from the one ahead"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
       ]
     },
     {
       "ticker": "ENB",
-      "entity_class": "OperatingCompany",
-      "why": "Enbridge, crude oil and natural gas pipelines, gas distribution utilities and renewable power, a Canadian filer of annual reports under U.S. GAAP in Canadian dollars under a dollar listing, so the record is cross-currency; tolls and contracted capacity rather than a commodity margin, which is what the operating company lens asks of a midstream name, as for the pipeline company here.",
+      "entity_class": "RegulatedUtility",
+      "why": "Enbridge, crude oil and natural gas pipelines, gas distribution utilities and renewable power, a Canadian filer of annual reports under U.S. GAAP in Canadian dollars under a dollar listing, so the record is cross-currency; most of its earnings come from regulated or long-term contracted assets, the gas utilities on a rate base and the pipelines on cost-of-service and contracted tolls, mid capital programme, which a DCF reads as value destruction, as for the utilities here; the pipeline company here stays an operating company because it owns no rate-base utility.",
       "scope_limits": [
-        "structural: gas distribution utilities bought inside the window are a rate-base business, whose construction a discounted cash flow reads as value destruction",
-        "the capital programme runs above depreciation, so the free cash flow the DCF starts from is held down by construction"
+        "the liquids pipelines earn tolls on contracted and common-carrier volume rather than a regulated return on a rate base, a part the utility lens does not separate",
+        "the capital programme runs above depreciation"
+      ],
+      "scope_limit_codes": [
+        "mixed_business",
+        "build_out"
       ]
     },
     {
@@ -1254,6 +1480,10 @@
       "scope_limits": [
         "a government agreement guarantees a floor price on its oxide and buys the output of a magnet plant under construction, which a net asset value at a long-run price deck would have to read",
         "loss-making on the latest filed years while magnet manufacturing is built"
+      ],
+      "scope_limit_codes": [
+        "policy_dependent",
+        "loss_making"
       ]
     },
     {
@@ -1269,6 +1499,11 @@
         "crypto assets held for investment are marked to fair value through the income statement, so earnings carry a market position as well as a business, and the mid-cycle model, which builds its after-tax operating profit from net income plus interest, reads that position as operating return",
         "customer cash and crypto held in custody sit on their own balance-sheet lines against matching liabilities, outside the cash the record reads, and are not the company's",
         "structural: a derivatives exchange bought inside the window adds a business the earlier years do not carry"
+      ],
+      "scope_limit_codes": [
+        "market_marks",
+        "pass_through_balances",
+        "acquired_history"
       ]
     },
     {
@@ -1277,6 +1512,9 @@
       "why": "Strategy, a holder of bitcoin funded by common, preferred and convertible issuance, with a small enterprise software business beside it that is not what the price reads; the wrapper class, refused by design and judged on the premium or discount to the bitcoin it holds and on its preferred dividends decomposed by source, never on the consolidated statements, whose operating line carries the change in the bitcoin's fair value.",
       "scope_limits": [
         "the holding is one commodity rather than securities, and the preferred and convertible claims on it rank ahead of the common"
+      ],
+      "scope_limit_codes": [
+        "ownership_structure"
       ]
     },
     {
@@ -1295,6 +1533,9 @@
       "why": "RTX, aircraft engines, aerospace systems and missiles and defence systems; positive free cash flow; an operating company, as the defence contractor here is.",
       "scope_limits": [
         "a charge for inspecting and compensating customers over a powder-metal defect in one engine family depressed one year's operating income inside the window"
+      ],
+      "scope_limit_codes": [
+        "one_off_in_window"
       ]
     },
     {
@@ -1309,6 +1550,9 @@
       "why": "the Stockholm B line of Saab, combat aircraft, missiles, naval systems and surveillance, reporting in kronor with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own facts, with the vendor's statements cross-checked beside them; profitable with positive free cash flow while it builds capacity for its order book; an operating company.",
       "scope_limits": [
         "capital spending on new capacity runs above depreciation inside the window, so the free cash flow the DCF starts from is held down by construction"
+      ],
+      "scope_limit_codes": [
+        "build_out"
       ],
       "lei": "549300ZHO4JCQQI13M69"
     }

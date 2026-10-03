@@ -118,6 +118,49 @@ every moved input of every record is classified (price, new filing, restatement,
 row, rate or FX, unexplained) in a stability report, so two fetches with nothing having
 happened can be shown to agree.
 
+## Scope limit codes
+
+A record's `scope_limits` say in prose what the model cannot see for the name. Beside them,
+`scope_limit_codes` carries one stable code per limit, in the same order, so a reader can
+act on a limit by rule (skip the valuation layer for every `build_out` name, say) and still
+read the text. The field is absent when the record carries no limit. The codes are declared
+with their meanings in `reference/universe.json` under `scope_codes`; each universe entry
+gives `scope_limit_codes` beside its `scope_limits`, each class its
+`scope_limit_codes_default` in `reference/admissibility.json`, and both loaders refuse a
+code outside the vocabulary or a count that does not match the limits. A code is added to
+the vocabulary and never renamed. `uncoded` is reserved for a declaration that gives no
+codes, as a `--universe` file from before them does; no tracked limit reads it.
+
+| code | a limit under it says |
+|---|---|
+| `build_out` | capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business |
+| `rebound_window` | the growth window opens on a recovery from a collapse, so the derived starting growth reads the rebound as growth |
+| `trough_window` | a reset or trough year sits inside the growth window, so the derived starting growth reads the trough |
+| `product_transition` | a product transition inside the growth window: a franchise in decline or a launch not yet in the statements |
+| `goodwill_heavy` | acquired goodwill is a large part of invested capital or sits inside the latest earnings, so the return on capital reads the price paid for a business rather than what it earns |
+| `acquired_history` | acquisitions or a change of ownership inside the window, or one after the latest statements: the filed history is not the business ahead |
+| `carve_out_history` | a spin-off, carve-out, divestiture or fresh-start accounting inside the window: part of the filed history is another entity's |
+| `short_history` | the filed history is short or young, so what the model reads as a through-cycle figure is a few years |
+| `structural_break` | a declared break in the business, so a through-cycle figure may not recur |
+| `backward_looking` | the through-cycle average looks backward by construction |
+| `captive_finance` | a captive finance arm: its interest is an operating cost and its debt funds a lending book, and the model reads both as the company's financing |
+| `pass_through_balances` | balances held for customers, members or managed funds pass through the statements and are not the company's own cash, debt or working capital |
+| `one_off_in_window` | a one-time charge, write-down or non-operating loss sits inside the window and is read as an operating year |
+| `leases_excluded` | operating leases are outside the debt definition, so a lease-heavy estate carries less debt here than its obligations imply |
+| `vendor_statements` | no filed statements are read: they come from the vendor, with fewer years and no tag behind a number |
+| `mixed_business` | a material part of the business is of another kind than the class's lens reads |
+| `market_marks` | earnings carry unrealised marks or performance fees that move with markets, which the model reads as a level |
+| `investment_book` | a large book of investments sits on the balance sheet at values the model does not read |
+| `filer_marks` | the value rests on the filer's own marks of unquoted assets, recorded and not verified, with losses visible late |
+| `policy_dependent` | earnings rest on a policy rate, a tax credit or a government agreement that the company does not control |
+| `commodity_exposure` | part of revenue or cost moves with a commodity price |
+| `concentration` | a few customers or products carry a large share of revenue |
+| `contract_terms` | a large cost or revenue share is set by contracts the statements do not separate |
+| `balance_sheet` | the balance sheet's own shape, heavy debt or negative book equity, limits what the model can read |
+| `ownership_structure` | the listed line owns only part of the business, counts only part of the shares, or ranks behind other claims |
+| `country_basis` | the country that chooses the risk premium is not the legal domicile |
+| `loss_making` | loss-making on the latest filed years |
+
 ## The anchor study
 
 `uv run python/anchor_study.py` (80) asks what the records' own judgments preceded. For every

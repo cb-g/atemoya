@@ -12,9 +12,12 @@ let signal t margin_of_safety : signal =
   else if margin_of_safety <= t.sell_below then `Sell
   else `Hold
 
+let uncoded = "uncoded"
+
 type declaration = {
   entity_class : entity_class;
   scope_limits : string list;
+  scope_limit_codes : string list;
   adr_ratio : float option;
   build_out_return : Reference_t.declared_build_out option;
   build_out_lag_years : Reference_t.declared_build_out option;
@@ -233,14 +236,22 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   in
   (* The entry's own scope limits, then the class's defaults from the admissibility row
      (22), each once. *)
-  let scope_limits =
-    let own = match declaration with Some d -> d.scope_limits | None -> [] in
+  let scope_limits, scope_limit_codes =
+    (* A limit and its code travel as a pair; a list of codes that does not match its
+       limits one for one is no coding at all, and each limit then reads uncoded. *)
+    let coded limits codes =
+      if List.length codes = List.length limits then List.combine limits codes
+      else List.map (fun l -> (l, uncoded)) limits
+    in
+    let own =
+      match declaration with Some d -> coded d.scope_limits d.scope_limit_codes | None -> []
+    in
     let defaults =
       match Option.map (Admissibility.rule params.admissibility) declared with
-      | Some (Ok r) -> r.scope_limits_default
+      | Some (Ok r) -> coded r.scope_limits_default r.scope_limit_codes_default
       | _ -> []
     in
-    own @ List.filter (fun l -> not (List.mem l own)) defaults
+    List.split (own @ List.filter (fun (l, _) -> not (List.mem_assoc l own)) defaults)
   in
   let rf_of (inputs : model_inputs) =
     match inputs with
@@ -315,6 +326,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       class_check;
       floor;
       scope_limits;
+      scope_limit_codes;
       statements_provider = original.provider;
       taxonomy = original.taxonomy;
       market_provider = original.market_provider;

@@ -785,6 +785,12 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- scope limit codes, Enbridge and Okta: every scope limit carries a stable code beside its
+  text, declared in `reference/universe.json` under `scope_codes` and emitted on the record
+  as `scope_limit_codes`, which the downstream project asked for so a reader can filter by
+  rule; Enbridge moves from `OperatingCompany` to `RegulatedUtility` and is refused by class,
+  and Okta gains the `goodwill_heavy` limit. No new `Failed` string; every other record is
+  byte-identical with the new field stripped.
 - the naive baseline and the holdout: `python/baseline_study.py` sorts the anchor study's
   rows by earnings yield, book-to-price and EBIT over enterprise value beside the margin of
   safety, and `reference/holdout.json` puts thirty-two names and every date after 2026-06-30

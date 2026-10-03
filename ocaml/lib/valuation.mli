@@ -46,9 +46,13 @@ val signal : thresholds -> float -> Boundary_t.signal
 
 (** A human's declaration of what the company is, from the universe file or the
     command line. *)
+val uncoded : string
+(** The code a scope limit carries when its declaration gives none. *)
+
 type declaration = {
   entity_class : Boundary_t.entity_class;
   scope_limits : string list;
+  scope_limit_codes : string list;  (** one per scope limit, in order; empty means none was declared and each reads [uncoded] *)
   adr_ratio : float option;  (** (42) ordinary shares per depositary receipt, declared on the universe entry *)
   build_out_return : Reference_t.declared_build_out option;     (** (60) what the new capital earns once earning *)
   build_out_lag_years : Reference_t.declared_build_out option;  (** (60) whole years from spend to first earning *)

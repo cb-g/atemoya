@@ -318,8 +318,8 @@ let params : Params.t =
     required_returns = Reference_j.required_returns_of_string {|{"classes": {}, "names": {}}|};
   }
 
-let declaration ?(scope_limits = []) ?adr_ratio ?build_out_return ?build_out_lag_years entity_class =
-  { Valuation.entity_class; scope_limits; adr_ratio; build_out_return; build_out_lag_years }
+let declaration ?(scope_limits = []) ?(scope_limit_codes = []) ?adr_ratio ?build_out_return ?build_out_lag_years entity_class =
+  { Valuation.entity_class; scope_limits; scope_limit_codes; adr_ratio; build_out_return; build_out_lag_years }
 
 (* Most valuation tests declare an operating company; the class tests declare otherwise. *)
 let run ?(declared = Some (declaration `OperatingCompany)) fin =
@@ -884,6 +884,12 @@ let test_inadmissible_refuses_with_lens () =
   check_floor "wrapper" v None;
   check_mentions "floor basis" v.floor.basis [ "NAV per unit" ];
   Alcotest.(check (list string)) "scope_limits carried" [ "a"; "b" ] v.scope_limits;
+  Alcotest.(check (list string)) "a declaration from before the codes reads uncoded" [ "uncoded"; "uncoded" ] v.scope_limit_codes;
+  let coded = run ~declared:(Some (declaration ~scope_limits:[ "a"; "b" ] ~scope_limit_codes:[ "build_out"; "one_off_in_window" ] `Wrapper)) (financials (history ())) in
+  Alcotest.(check (list string)) "one code per limit, in order" [ "build_out"; "one_off_in_window" ] coded.scope_limit_codes;
+  let ragged = run ~declared:(Some (declaration ~scope_limits:[ "a"; "b" ] ~scope_limit_codes:[ "build_out" ] `Wrapper)) (financials (history ())) in
+  Alcotest.(check (list string)) "codes that do not match the limits are no coding" [ "uncoded"; "uncoded" ] ragged.scope_limit_codes;
+  Alcotest.(check (list string)) "no limit, no code" [] (run (financials (history ()))).scope_limit_codes;
   match v.class_check with
   | None -> Alcotest.fail "no class_check evidence"
   | Some e -> Alcotest.check class_check_outcome "consistent" `Consistent e.outcome
@@ -1519,6 +1525,8 @@ let test_midcycle_guards () =
   Alcotest.check status "cyclical Ok" `Ok ok.status;
   Alcotest.(check (list string)) "scope limits: own, then the class default"
     [ "own limit"; "the through-cycle average is backward-looking" ] ok.scope_limits;
+  Alcotest.(check (list string)) "codes: the entry's, then the class default's from the fixture, which declares none"
+    [ "uncoded"; "uncoded" ] ok.scope_limit_codes;
   check_mentions "floor names the mid-cycle basis" ok.floor.basis [ "mid-cycle dcf: fcff_mid"; "spot fcff 798" ];
   (match ok.inputs with
   | Some (`Dcf_midcycle _) -> ()
@@ -3291,6 +3299,12 @@ let test_batch_summary () =
   reject {|{"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "  "}]}|} [ "lacks why" ];
   reject {|{"tickers": [{"ticker": "X", "entity_class": "Hedge", "why": "a fund"}]}|} [ "declares unknown class \"Hedge\"" ];
   reject {|{"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "scope_limits": "x"}]}|} [ "scope_limits must be a list of strings" ];
+  reject {|{"scope_codes": {"build_out": "m"}, "tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "scope_limits": ["l"], "scope_limit_codes": ["build_out", "build_out"]}]}|} [ "2 scope_limit_codes for 1 scope_limits" ];
+  reject {|{"scope_codes": {"build_out": "m"}, "tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "scope_limits": ["l"], "scope_limit_codes": ["rebound"]}]}|} [ "scope limit code \"rebound\" is not in the file's scope_codes" ];
+  reject {|{"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "scope_limits": ["l"], "scope_limit_codes": "build_out"}]}|} [ "scope_limit_codes must be a list of strings" ];
+  (match Universe.load_string {|{"scope_codes": {"build_out": "m"}, "tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "scope_limits": ["l"], "scope_limit_codes": ["build_out"]}]}|} with
+  | Ok u -> Alcotest.(check (list string)) "a coded entry loads" [ "build_out" ] (List.hd u.tickers).scope_limit_codes
+  | Error e -> Alcotest.fail e);
   reject {|{"names": []}|} [ "no tickers list" ];
   Alcotest.(check bool) "the tracked file loads strictly" true (Result.is_ok (Universe.load "../../reference/universe.json"));
   (* model_version (21): the stamp, the summary's first line, the run diff's header *)
