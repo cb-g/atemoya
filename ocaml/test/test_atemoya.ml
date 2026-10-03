@@ -2876,6 +2876,40 @@ let growing () =
     (fun period_end revenue -> full_period ~period_end ~total_revenue:revenue ~capex:400. ~delta_nwc:100. ())
     [ "2025-09-30"; "2024-09-30"; "2023-09-30" ] [ 12000.; 10500.; 9000. ]
 
+(* The growth shadow. The growing fixture reinvests 400 + 100 - 200 = 300 of a 600 after-tax
+   profit on 10000 of capital: return on capital 0.06, reinvestment rate 0.5, fundamental
+   growth 0.03, so the headline takes 0.03. Its revenue grew about 15% a year, held to the
+   0.06 return on capital, which is the higher estimate and the shadow's. *)
+let test_growth_shadow () =
+  let v = run (financials (growing ())) in
+  let i = match v.inputs with Some (`Dcf i) -> i | _ -> Alcotest.fail "not a dcf" in
+  let b = match v.growth_shadow with Some b -> b | None -> Alcotest.fail "no growth shadow on a completed DCF" in
+  check_float "the headline's growth is the fundamental estimate" 0.03 b.g0;
+  Alcotest.(check string) "and says so" "fundamental" (Boundary_j.string_of_growth_source b.growth_source |> fun s -> String.sub s 1 (String.length s - 2));
+  Alcotest.(check (option approx)) "the fundamental estimate" (Some 0.03) b.g_fundamental;
+  Alcotest.(check (option approx)) "history held to the return on capital" (Some 0.06) b.g_historical_capped;
+  check_float "the shadow takes the higher" 0.06 b.g0_shadow;
+  Alcotest.(check bool) "from the capped history" true (b.growth_source_shadow = `Historical_capped_at_roic);
+  check_float "valued by the headline's own engine at that growth" (Implied.dcf_fair_value i ~g0:0.06 ~lambda:i.mean_reversion_lambda.value) b.fair_value;
+  Alcotest.(check bool) "more growth, more value" true (b.fair_value > b.headline_fair_value);
+  Alcotest.(check (option (float 1e-9))) "the headline is the record's own" v.fair_value (Some b.headline_fair_value);
+  check_float "the shadow's margin on the record's price" ((b.fair_value -. i.price) /. i.price) b.margin_of_safety;
+  (* where the rule picks the same estimate the shadow is the headline *)
+  let flat = run (financials (history ())) in
+  (match (flat.growth_shadow, flat.fair_value) with
+  | Some f, Some fv -> check_float "same estimate, same value" fv f.fair_value; check_float "same growth" f.g0 f.g0_shadow
+  | _ -> Alcotest.fail "no shadow on the flat fixture");
+  (* the rule itself, on edited inputs *)
+  let pick i = Option.map fst (Growth_shadow.higher i) in
+  Alcotest.(check (option approx)) "fundamental above capped history stands" (Some 0.09) (pick { i with g_fundamental = Some 0.09 });
+  Alcotest.(check (option approx)) "no positive reinvestment: history alone" (Some 0.06) (pick { i with reinvestment_rate = Some (-0.1) });
+  Alcotest.(check (option approx)) "no history: the fundamental alone" (Some 0.03) (pick { i with g_historical = None });
+  Alcotest.(check (option approx)) "history below the return on capital is not raised to it" (Some 0.04) (pick { i with g_historical = Some 0.04 });
+  Alcotest.(check (option approx)) "neither" None (pick { i with g_historical = None; reinvestment_rate = None });
+  (* a record that is not a completed generic DCF carries none *)
+  let wrapper = run ~declared:(Some (declaration `Wrapper)) (financials (growing ())) in
+  Alcotest.(check bool) "none off the generic DCF" true (Option.is_none wrapper.growth_shadow)
+
 (* The block for the same inputs at another price: what the solver sees on a record is
    exactly this (price enters the record's wacc through market cap, so a repriced record
    would be a different function; the solver holds the recorded one). *)
@@ -4369,6 +4403,7 @@ let () =
           Alcotest.test_case "the mark and the block" `Quick test_earnings_spans_and_block;
           Alcotest.test_case "mid-cycle on filed operating income" `Quick test_midcycle_operating_income;
           Alcotest.test_case "the base rate beside the growth" `Quick test_base_rate;
+          Alcotest.test_case "the growth shadow" `Quick test_growth_shadow;
           Alcotest.test_case "the options-implied expected return" `Quick test_expected_return;
         ] );
       ( "runway readout",

@@ -373,6 +373,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       options_expected_return_reason = None;
       base_rate = None;
       base_rate_reason = None;
+      growth_shadow = None;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,
@@ -649,7 +650,11 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
             let class_name = match declared with Some c -> Admissibility.class_name c | None -> "" in
             match Dcf.value ~declared:class_name assumptions ~country fin with
             | Error reason -> failed_with_build_out reason
-            | Ok (inputs, fair_value) -> finish ~price:inputs.price (`Dcf inputs) fair_value))
+            | Ok (inputs, fair_value) ->
+                (* The growth shadow rides beside whatever the headline concludes, a gate's
+                   refusal included: it reads the same inputs and moves nothing. *)
+                { (finish ~price:inputs.price (`Dcf inputs) fair_value) with
+                  growth_shadow = Some (Growth_shadow.of_inputs inputs ~fair_value) }))
     | `Residual_income -> (
         match Residual_income.value assumptions ~country fin with
         | Error reason -> failed reason

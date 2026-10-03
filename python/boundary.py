@@ -3379,6 +3379,71 @@ class Implied:
 
 
 @dataclass
+class GrowthShadow:
+    """Original type: growth_shadow = { ... }
+    """
+
+    rule: str
+    g_fundamental: Optional[float]
+    g_historical: Optional[float]
+    g_historical_capped: Optional[float]
+    g0: float
+    growth_source: GrowthSource
+    g0_shadow: float
+    growth_source_shadow: GrowthSource
+    growth_clamped_shadow: bool
+    headline_fair_value: float
+    fair_value: float
+    margin_of_safety: float
+    scope_limits: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'GrowthShadow':
+        if isinstance(x, dict):
+            return cls(
+                rule=_atd_read_string(x['rule']) if 'rule' in x else _atd_missing_json_field('GrowthShadow', 'rule'),
+                g_fundamental=_atd_read_nullable(_atd_read_float)(x['g_fundamental']) if 'g_fundamental' in x else _atd_missing_json_field('GrowthShadow', 'g_fundamental'),
+                g_historical=_atd_read_nullable(_atd_read_float)(x['g_historical']) if 'g_historical' in x else _atd_missing_json_field('GrowthShadow', 'g_historical'),
+                g_historical_capped=_atd_read_nullable(_atd_read_float)(x['g_historical_capped']) if 'g_historical_capped' in x else _atd_missing_json_field('GrowthShadow', 'g_historical_capped'),
+                g0=_atd_read_float(x['g0']) if 'g0' in x else _atd_missing_json_field('GrowthShadow', 'g0'),
+                growth_source=GrowthSource.from_json(x['growth_source']) if 'growth_source' in x else _atd_missing_json_field('GrowthShadow', 'growth_source'),
+                g0_shadow=_atd_read_float(x['g0_shadow']) if 'g0_shadow' in x else _atd_missing_json_field('GrowthShadow', 'g0_shadow'),
+                growth_source_shadow=GrowthSource.from_json(x['growth_source_shadow']) if 'growth_source_shadow' in x else _atd_missing_json_field('GrowthShadow', 'growth_source_shadow'),
+                growth_clamped_shadow=_atd_read_bool(x['growth_clamped_shadow']) if 'growth_clamped_shadow' in x else _atd_missing_json_field('GrowthShadow', 'growth_clamped_shadow'),
+                headline_fair_value=_atd_read_float(x['headline_fair_value']) if 'headline_fair_value' in x else _atd_missing_json_field('GrowthShadow', 'headline_fair_value'),
+                fair_value=_atd_read_float(x['fair_value']) if 'fair_value' in x else _atd_missing_json_field('GrowthShadow', 'fair_value'),
+                margin_of_safety=_atd_read_float(x['margin_of_safety']) if 'margin_of_safety' in x else _atd_missing_json_field('GrowthShadow', 'margin_of_safety'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('GrowthShadow', 'scope_limits'),
+            )
+        else:
+            _atd_bad_json('GrowthShadow', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['rule'] = _atd_write_string(self.rule)
+        res['g_fundamental'] = _atd_write_nullable(_atd_write_float)(self.g_fundamental)
+        res['g_historical'] = _atd_write_nullable(_atd_write_float)(self.g_historical)
+        res['g_historical_capped'] = _atd_write_nullable(_atd_write_float)(self.g_historical_capped)
+        res['g0'] = _atd_write_float(self.g0)
+        res['growth_source'] = (lambda x: x.to_json())(self.growth_source)
+        res['g0_shadow'] = _atd_write_float(self.g0_shadow)
+        res['growth_source_shadow'] = (lambda x: x.to_json())(self.growth_source_shadow)
+        res['growth_clamped_shadow'] = _atd_write_bool(self.growth_clamped_shadow)
+        res['headline_fair_value'] = _atd_write_float(self.headline_fair_value)
+        res['fair_value'] = _atd_write_float(self.fair_value)
+        res['margin_of_safety'] = _atd_write_float(self.margin_of_safety)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'GrowthShadow':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Floor:
     """Original type: floor = { ... }
     """
@@ -4817,6 +4882,7 @@ class Valuation:
     runway_reason: Optional[str] = None
     options_expected_return: Optional[OptionsExpectedReturn] = None
     options_expected_return_reason: Optional[str] = None
+    growth_shadow: Optional[GrowthShadow] = None
     base_rate: Optional[BaseRate] = None
     base_rate_reason: Optional[str] = None
 
@@ -4880,6 +4946,7 @@ class Valuation:
                 runway_reason=_atd_read_string(x['runway_reason']) if 'runway_reason' in x else None,
                 options_expected_return=OptionsExpectedReturn.from_json(x['options_expected_return']) if 'options_expected_return' in x else None,
                 options_expected_return_reason=_atd_read_string(x['options_expected_return_reason']) if 'options_expected_return_reason' in x else None,
+                growth_shadow=GrowthShadow.from_json(x['growth_shadow']) if 'growth_shadow' in x else None,
                 base_rate=BaseRate.from_json(x['base_rate']) if 'base_rate' in x else None,
                 base_rate_reason=_atd_read_string(x['base_rate_reason']) if 'base_rate_reason' in x else None,
             )
@@ -4978,6 +5045,8 @@ class Valuation:
             res['options_expected_return'] = (lambda x: x.to_json())(self.options_expected_return)
         if self.options_expected_return_reason is not None:
             res['options_expected_return_reason'] = _atd_write_string(self.options_expected_return_reason)
+        if self.growth_shadow is not None:
+            res['growth_shadow'] = (lambda x: x.to_json())(self.growth_shadow)
         if self.base_rate is not None:
             res['base_rate'] = (lambda x: x.to_json())(self.base_rate)
         if self.base_rate_reason is not None:

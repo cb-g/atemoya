@@ -84,6 +84,7 @@ has the rules.
 | view | every vertical on a declared view's side, ranked by EV per dollar at risk | `uv run python/express.py data/views/mine.json` |
 | fills | empirical fill positions from the trade tape, read back into the view tool | `uv run python/fill_model.py AAPL` |
 | stretch | six price measures with own-history percentiles and two counts on every record; the summary lists every name at or above 3 on either side | the same run, `output/summary.txt` |
+| growth shadow | what the generic DCF would say on the higher of its two growth estimates, without the switch at zero reinvestment; beside the headline, never replacing it | the same run, `growth_shadow` on the record |
 | base rate | how often companies of the same size grew as fast as the record assumes and as the price needs, from filed history | the same run, `base_rate` on the record; `uv run python/base_rates.py` builds the table |
 | options-implied expected return | a required return read from option prices alone (Martin and Wagner), beside CAPM and the declared one | `... --options data/options`, `options_expected_return` on the record |
 | studies | what the records' own judgments preceded against SPY, and the same rows sorted by plain cheapness; descriptive, a declared holdout unread | `uv run python/anchor_study.py`, `baseline_study.py` |

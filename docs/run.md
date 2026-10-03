@@ -122,6 +122,29 @@ every moved input of every record is classified (price, new filing, restatement,
 row, rate or FX, unexplained) in a stability report, so two fetches with nothing having
 happened can be shown to agree.
 
+## The growth shadow
+
+The generic DCF picks its starting growth by a switch. With positive after-tax operating
+profit and positive net reinvestment it takes the fundamental estimate, the return on
+capital times the reinvestment rate; otherwise it takes the historical revenue growth, held
+to the return on capital. The switch sits at zero net reinvestment, so a company reinvesting
+slightly more than nothing takes a growth near zero and one reinvesting slightly less takes
+its whole revenue history: two nearly identical companies, two very different values.
+
+`growth_shadow` on every record whose generic DCF completed says what the value would be
+without the switch: the starting growth is the higher of the two estimates where both exist,
+the historical one still held to the return on capital, and everything else, the clamp, the
+decay, the cash flow and the discount rate, is the headline's own. The block carries both
+estimates, the headline's growth and source beside the shadow's, and the shadow's
+`fair_value` and `margin_of_safety`, which are what the headline would be. Where the rule
+picks the same estimate the shadow equals the headline. The record's `fair_value`,
+`margin_of_safety` and `signal` are never moved by it.
+
+It is a shadow so that it can be measured before anything changes: `baseline_study.py` puts
+the shadow's margin of safety beside the headline's on the panel's rows. Its limits ride on
+the block: the higher of two estimates is a rule and not a forecast, and revenue history
+still reads a rebound or an acquisition as growth.
+
 ## Scope limit codes
 
 A record's `scope_limits` say in prose what the model cannot see for the name. Beside them,
@@ -198,7 +221,8 @@ safety's, both cut on that same set; the within-date rank correlation of the two
 cheapest quintile's median less the dearest's, pooled and then within each model's own rows,
 since a margin of safety from one model does not rank against another's. It answers one
 question the anchor study cannot: whether the anchor did anything a plain cheapness sort did
-not. A further section reads a block from each date's own valuations file: the
+not. Two further sections read blocks from each date's own valuations file: the growth
+shadow's margin of safety beside the headline's on the generic DCF's rows, and the
 options-implied expected return in quintiles within the date on every row that carries one,
 with the earnings yield and the margin of safety on the same rows and its rank correlation
 with each. The options store begins in April 2025, so the second is a handful of

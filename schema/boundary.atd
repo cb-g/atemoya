@@ -1209,6 +1209,26 @@ type base_rate = {
   scope_limits : string list;
 }
 
+(* The growth shadow: what the generic DCF would say if its starting growth were the higher
+   of its two estimates instead of switching between them at zero net reinvestment. Beside
+   the headline, never the headline: fair_value, margin_of_safety and signal on the record
+   are untouched by it. Everything but the starting growth is the headline's own. *)
+type growth_shadow = {
+  rule : string;
+  g_fundamental : float nullable;     (* return on capital times the reinvestment rate, where after-tax operating profit and net reinvestment are both positive *)
+  g_historical : float nullable;      (* the revenue growth read from the filed periods *)
+  g_historical_capped : float nullable;   (* the same held to the return on capital *)
+  g0 : float;                         (* the headline's starting growth *)
+  growth_source : growth_source;      (* the headline's *)
+  g0_shadow : float;                  (* the higher estimate, after the headline's clamp *)
+  growth_source_shadow : growth_source;
+  growth_clamped_shadow : bool;
+  headline_fair_value : float;        (* the DCF's own value, before any gate *)
+  fair_value : float;                 (* what the headline would be on the shadow's starting growth *)
+  margin_of_safety : float;           (* (fair_value - price) / price, the shadow's *)
+  scope_limits : string list;
+}
+
 type runway = {
   period_end : string;                    (* the latest fiscal period *)
   cash : float;                           (* cash and short-term investments, the cash definition *)
@@ -1283,6 +1303,7 @@ type valuation = {
   ?runway_reason : string option;               (* (76) present instead on an Unprofitable record: why there is no readout *)
   ?options_expected_return : options_expected_return option;   (* under --options: the Martin-Wagner expected return from the options store, beside cost_of_equity_capm *)
   ?options_expected_return_reason : string option;             (* present instead under --options on a name that is not a fund: why there is none *)
+  ?growth_shadow : growth_shadow option;        (* on a record whose generic DCF completed: the value on the higher of the two growth estimates, beside the headline and never replacing it *)
   ?base_rate : base_rate option;                (* on a dollar record valued by a DCF-shaped model: how often companies of this size grew as fast as the record assumes and as the price needs *)
   ?base_rate_reason : string option;            (* present instead on such a record: why there is none *)
 }

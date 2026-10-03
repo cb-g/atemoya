@@ -109,3 +109,19 @@ def test_the_expected_return_section_reads_every_status_and_says_when_there_is_n
     assert "rank correlation with the earnings yield, within the date: median +1.00 over 1 dates" in text
     assert "rank correlation with the margin of safety" in text
     assert "none: the panel's dates precede the options store" in "\n".join(base.expected_return_section(rows, {}, measures))
+
+
+def test_the_shadow_section_reads_blocks_from_the_dates_own_valuations(tmp_path: Path) -> None:
+    day = tmp_path / "2024-03-31"
+    day.mkdir()
+    rows = [record(f"N{i}", "2024-03-31", mos=float(i), excess=0.01 * i) for i in range(10)]
+    lines = [{"ticker": r.ticker, "growth_shadow": {"margin_of_safety": float(9 - i)}} for i, r in enumerate(rows)]
+    lines.append({"ticker": "NONE"})
+    (day / "valuations.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines))
+    shadow = base.load_shadow_margins(rows, tmp_path)
+    assert len(shadow) == 10 and shadow[("N0", "2024-03-31")] == 9.0
+    measures = {(r.ticker, r.as_of): base.Measures(earnings_yield=0.05) for r in rows}
+    text = "\n".join(base.shadow_section(rows, shadow, measures))
+    assert "the growth shadow: 10 generic-DCF rows on 10 names carry one" in text
+    assert "median -1.00 over 1 dates" in text and "rows whose quintile differs between the two: 8 of 10" in text
+    assert "none: the panel was built before the shadow existed" in "\n".join(base.shadow_section(rows, {}, measures))

@@ -790,6 +790,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the growth shadow: `growth_shadow` on every record whose generic DCF completed, the value
+  on the higher of the two growth estimates instead of the switch at zero net reinvestment,
+  beside the headline and never replacing it. A readout; no new `Failed` string; every
+  record is byte-identical with the field stripped.
 - the R&D shadow is removed: measured on the panel it ranked names as the headline did, and
   the reason is structural, so the block, its fetch field, its parameter and its study
   section are gone; `docs/tried.md` records what was learned. Every record is byte-identical
