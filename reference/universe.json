@@ -12,7 +12,8 @@
     "map_cik, 2026-10-03: a ticker is a label an exchange reissues, and SPCX passed from a fund to a company without the entry noticing. Every entry whose ticker is in the ticker map of the Securities and Exchange Commission now declares map_cik, the CIK the map gave on the day a person last confirmed the entry. The fetch compares it with the map on every run and the record is refused, before anything else, when they differ; the entry is then read again by a person and redeclared. It is a guard and is never read for statements, which is what cik is for. The names outside the map, the foreign lines and a few funds, carry none and are not guarded.",
     "Mid-cycle recipe, 2026-10-03: the mid-cycle model reads the filed operating income after tax where every year in the window carries one, and stays on net income plus interest where a filer reports none. The limits that described the old reading were rewritten on the same day: Caterpillar's captive-finance limit now says what the operating-income reading does with the arm, Lumentum's limit about its note-extinguishment loss is gone because that loss no longer enters the window, and Coinbase's says where its crypto marks can still enter.",
     "Classes confirmed, 2026-10-04: the user confirmed the class judgments drafted for the twenty-five names of brief 71 and the thirty-two of brief 81, with two changed on review: Celestica moves from OperatingCompany to Cyclical, being the same business as the Taiwanese electronics manufacturer already declared so, and Dutch Bros moves from OperatingCompany to Cyclical, a build-out the latest year's free cash flow cannot speak for, as the cloud and database builders were reclassified. The loss-making grocer stays Unprofitable by the class text until a second profitable year is filed, and the four alternative asset managers stay operating companies with their limits stated. Kaspi, declared earlier, gains the reason in full and a scope limit on the payments and marketplace income inside its return on equity.",
-    "Ten names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Wipro, Accenture, EPAM, Datadog, Global-e, Amgen, Krystal Biotech, Evolution, the Hong Kong line of China Merchants Bank and Recruit. The classes were drafted by the tool's author and confirmed by the user the same day. Datadog and Global-e are Unprofitable by the class text, the first for want of an operating profit and the second until a second profitable year is filed; Evolution and Recruit are refused on the vendor's statements, which lack a debt line for the first and the latest year's depreciation and capital spending for the second."
+    "Ten names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Wipro, Accenture, EPAM, Datadog, Global-e, Amgen, Krystal Biotech, Evolution, the Hong Kong line of China Merchants Bank and Recruit. The classes were drafted by the tool's author and confirmed by the user the same day. Datadog and Global-e are Unprofitable by the class text, the first for want of an operating profit and the second until a second profitable year is filed; Evolution and Recruit are refused on the vendor's statements, which lack a debt line for the first and the latest year's depreciation and capital spending for the second.",
+    "Nine Swiss lines added 2026-10-04 at a downstream reader's request: Novartis, UBS, ABB, Sandoz, Alcon, Swiss Re, Logitech, Galderma and Richemont, all trading in francs while reporting in dollars or euros, so cross-currency names converted at one recorded rate and valued on the Swiss curve. The classes were drafted by the tool's author and confirmed by the user the same day. Novartis and Alcon are refused because neither tags the amortisation of its intangible assets, Swiss Re because the insurer model needs filed statements and none are reachable; ABB declares no filer, its filings at the Securities and Exchange Commission having ended with fiscal 2023."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -1873,6 +1874,125 @@
       "scope_limit_codes": [
         "vendor_statements",
         "backward_looking"
+      ]
+    },
+    {
+      "ticker": "NOVN.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Novartis, innovative medicines, trading in francs while reporting in dollars, so cross-currency; the filer is declared by CIK: Novartis files a 20-F in IFRS in dollars, the same consolidated statements the Swiss line trades on, and the ticker map knows only the depositary receipt; profitable with positive, stable free cash flow; an operating company, as the other large drug makers here are, confirmed by the user.",
+      "scope_limits": [
+        "the filer tags depreciation of its plant and of its leased assets and no amortisation of its intangible assets, which runs to billions a year, so depreciation and amortisation cannot be read from the filing and the record is refused for it, never filled in from a part",
+        "the generics business was spun off inside the window, so the earlier filed years are a larger group's",
+        "growth depends on a pipeline and on patents expiring inside the window, which the model does not see"
+      ],
+      "scope_limit_codes": [
+        "filer_tagging",
+        "carve_out_history",
+        "product_transition"
+      ],
+      "cik": "0001114448"
+    },
+    {
+      "ticker": "UBSG.SW",
+      "entity_class": "Bank",
+      "why": "the Swiss line of UBS Group, wealth management, a Swiss universal bank, asset management and an investment bank, trading in francs while reporting in dollars, so cross-currency; the filer is declared by CIK: UBS Group files a 20-F in IFRS in dollars, the same consolidated statements the Swiss line trades on; a bank, confirmed by the user.",
+      "scope_limits": [
+        "the takeover of Credit Suisse sits inside the window: one year's profit is the accounting gain on the purchase, and the filed years before it are a smaller bank's",
+        "fees on managed wealth, which move with markets, are a large part of income beside lending"
+      ],
+      "scope_limit_codes": [
+        "acquired_history",
+        "mixed_business"
+      ],
+      "cik": "0001610520"
+    },
+    {
+      "ticker": "ABBN.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of ABB, electrification, motion and automation equipment, trading in francs while reporting in dollars, so cross-currency; ABB left the New York listing and its filings at the Securities and Exchange Commission ended with the listing, too old to value on, so the entry declares no filer and the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no current filed statements are read: they come from the vendor",
+        "orders for industrial equipment follow the investment cycle, so the latest years are a point in a cycle"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "backward_looking"
+      ]
+    },
+    {
+      "ticker": "SDZ.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Sandoz, generic and biosimilar medicines, trading in francs while reporting in dollars, so cross-currency; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; profitable with positive free cash flow on the latest year; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "spun off from its parent inside the window: the earlier years are carve-out statements of a division, and the debt arrived with the separation",
+        "the years after the separation carry its costs and a legal settlement, so the profit the growth is read from rises off a trough"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "carve_out_history",
+        "trough_window"
+      ]
+    },
+    {
+      "ticker": "ALC.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Alcon, eye-care devices and contact lenses, trading in francs while reporting in dollars, so cross-currency; the filer is declared by CIK: Alcon files its annual report at the Securities and Exchange Commission in IFRS in dollars, the same consolidated statements the Swiss line trades on; profitable with positive free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "the filer tags depreciation and, on its latest annual reports, no amortisation of its intangible assets, a large figure for a company carved out with its acquired brands, so depreciation and amortisation cannot be read from the filing and the record is refused for it, never filled in from a part",
+        "goodwill and acquired intangibles from its years inside a parent are most of invested capital"
+      ],
+      "scope_limit_codes": [
+        "filer_tagging",
+        "goodwill_heavy"
+      ],
+      "cik": "0001167379"
+    },
+    {
+      "ticker": "SREN.SW",
+      "entity_class": "Insurer",
+      "why": "the Swiss line of Swiss Re, reinsurance of property, casualty, life and health risks, trading in francs while reporting in dollars; an insurer, and the insurer model needs filed statements: Swiss Re files nothing at the Securities and Exchange Commission and Swiss issuers are not in the ESEF repository, so no filed statements are reachable keyless and the record is refused, as the German insurer here is; confirmed by the user."
+    },
+    {
+      "ticker": "LOGN.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Logitech, computer peripherals, trading in francs while reporting in dollars with a fiscal year ending in March, so cross-currency; the filer is declared by CIK: Logitech files a 10-K under US GAAP in dollars, the same consolidated statements the Swiss line trades on; profitable with positive free cash flow and no debt; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "the window opens on the pandemic's demand for home-office equipment and its unwinding, so the derived starting growth reads a boom and a reset"
+      ],
+      "scope_limit_codes": [
+        "trough_window"
+      ],
+      "cik": "0001032975"
+    },
+    {
+      "ticker": "GALD.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Galderma, dermatology: injectable aesthetics, skincare and prescription medicines, trading in francs while reporting in dollars, so cross-currency; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; profitable on the last two filed years with positive free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "listed recently out of private-equity ownership: the earlier years are losses under a heavier debt load that the listing repaid in part, so the filed history is not the business ahead and is short",
+        "goodwill and acquired brands from the buyout are most of invested capital"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "acquired_history",
+        "goodwill_heavy"
+      ]
+    },
+    {
+      "ticker": "CFR.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Richemont, jewellery and watch houses, trading in francs while reporting in euros with a fiscal year ending in March, so cross-currency; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; profitable with positive, stable free cash flow and net cash; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "a loss on the online retail business it sold sits inside the window as discontinued operations",
+        "the listed A shares are not the whole capital: unlisted B shares held by the controlling family carry a tenth of the equity and half the votes"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "one_off_in_window",
+        "ownership_structure"
       ]
     }
   ]

@@ -793,6 +793,12 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- nine Swiss lines: Novartis, UBS, ABB, Sandoz, Alcon, Swiss Re, Logitech, Galderma and
+  Richemont join the universe at a downstream reader's request, all trading in francs while
+  reporting in dollars or euros, classes drafted and confirmed by the user the same day;
+  six are valued and three refused, two for an amortisation figure the filer does not tag
+  and one for the insurer model's need of filed statements. No new `Failed` string; no
+  existing record moves.
 - ten names: Wipro, Accenture, EPAM, Datadog, Global-e, Amgen, Krystal Biotech, Evolution,
   the Hong Kong line of China Merchants Bank and Recruit join the universe at a downstream
   reader's request, classes drafted and confirmed by the user the same day; six are valued,
