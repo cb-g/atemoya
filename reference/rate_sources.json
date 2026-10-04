@@ -466,7 +466,8 @@
         "10y"
       ],
       "notes": [
-        "No programmatic source verified on 2026-09-18. Refresh by hand from the Central Bank of the Republic of China (Taiwan) government bond statistics: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors."
+        "No programmatic source verified on 2026-09-18. Refresh by hand from the Central Bank of the Republic of China (Taiwan) government bond statistics: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors.",
+        "Probed again on 2026-10-04: the Taipei Exchange's open API (tpex.org.tw/openapi) serves bond issuance tables and quotes for international bonds and carries no government yield curve; the central bank's statistics pages still refuse a scripted request. The curve stays manual. One name in the universe reads it, and that name is refused for too short a statement history whatever the curve's age."
       ]
     },
     "Kazakhstan": {
@@ -481,7 +482,8 @@
         "10y"
       ],
       "notes": [
-        "No programmatic source verified on 2026-09-18. Refresh by hand from the National Bank of Kazakhstan government securities statistics: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors."
+        "No programmatic source verified on 2026-09-18. Refresh by hand from the National Bank of Kazakhstan government securities statistics: edit the country's entry in risk_free_rates.json, set as_of to the quote date, keep estimated on interpolated tenors.",
+        "Not probed further on 2026-10-04: no record reads this curve, the one Kazakh name being listed in dollars and valued on the dollar curve. It stays manual until a name that needs it is added."
       ]
     },
     "Denmark": {

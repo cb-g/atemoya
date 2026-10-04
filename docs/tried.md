@@ -54,6 +54,38 @@ element's name is not proof of what a filer put under it.
 The code is in the history: the shadow was added in `12cedbe` and removed in the commit
 that added this page.
 
+## Peer-implied value (measured twice, kept as a study measure, 2026-10-04)
+
+**The idea.** After Bartram and Grinblatt: each June, regress market value across all
+companies on their accounting items, read the fitted value as what the market pays that
+year for those accounts elsewhere, and sort on the gap between it and a company's own
+price. No return enters the fit, so there is little room to snoop.
+
+**What was measured.** On the broad panel, about thirty thousand rows on three thousand
+filers, per dollar of assets with every column winsorised. With four items (equity,
+revenue, net income, operating cash flow) the widest gap less the narrowest ran three
+points the wrong way before 2022 and one since, ahead in four years of twelve and one of
+four. With eight, adding operating income, current assets, current liabilities and
+long-term debt on the two thirds of rows that carry them all, three points the wrong way
+before and two since, ahead in six of twelve and two of four. The yearly figures swing
+from minus forty-five points to plus fifty-seven and move with book-to-price.
+
+**Why.** With items this few the fit is close to a book and earnings multiple, so the gap
+is the value factor by another road, and the value factor did nothing in this sample.
+
+**What would justify more.** The paper uses twenty-one items and a robust fit, on a sample
+with the delisted names in it. The frames data could supply more items; it cannot supply
+the delisted names' returns, and without them a wider fit is still a survivors' value sort.
+The measure stays in `broad_study.py` so the next reader sees the figures and not the idea.
+
+## A cache on reading option chains (tried and reverted, 2026-10-04)
+
+A run with the options store took two and a half minutes, and the first guess was that a
+chain, megabytes of JSON, was being read several times over. Caching the read changed the
+time by two seconds. The cost was the smile fit, run several times for the same chain and
+expiry; caching the fit's result took the run from 152 seconds to 42 with byte-identical
+output. Measure before optimising: the read cache was removed.
+
 ## Taking the largest revenue element (measured and not built, 2026-10-03)
 
 **The idea.** Blue Owl tags a fee line under the element for total revenues and its total

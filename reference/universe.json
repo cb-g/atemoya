@@ -1492,11 +1492,13 @@
       "why": "IBM, software, consulting and infrastructure; positive, stable free cash flow; an operating company.",
       "scope_limits": [
         "a captive financing arm lends to clients for hardware, software and services, so finance debt sits inside total debt beside the corporate debt, as on the car maker here",
-        "structural: the managed-infrastructure business was spun off at the start of the window and the earliest year is restated without it"
+        "structural: the managed-infrastructure business was spun off at the start of the window and the earliest year is restated without it",
+        "the filer reports no operating-income line, and the line it files as other non-operating income and expense carries operating items, intellectual-property income among them, beside pension settlements and currency effects, so an operating profit rebuilt from the filed lines sits between three and seventy-six per cent from the vendor's across four years and cannot be checked against it"
       ],
       "scope_limit_codes": [
         "captive_finance",
-        "carve_out_history"
+        "carve_out_history",
+        "filer_tagging"
       ],
       "map_cik": "0000051143"
     },

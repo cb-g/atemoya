@@ -790,6 +790,12 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- loose ends: the smile fit is computed once per chain and expiry in a run, which takes a run
+  with the options store from about two and a half minutes to under one with the same
+  bytes out; the peer-implied gap gains a wider item set in the broad study and
+  `docs/tried.md` the result; IBM's operating-profit gap is explained on its entry; Taiwan's
+  and Kazakhstan's curves stay manual with the probe recorded. No record moves; no new
+  `Failed` string.
 - three side tools on the run's outputs: `python/implied_cost.py` (the consensus-implied cost
   of capital, Easton's PEG, beside CAPM and the options-implied return),
   `python/earnings_reactions.py` (the move across each release against its consensus

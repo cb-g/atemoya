@@ -25,7 +25,9 @@ Measures, each from filed items and the market value on the day, no model of our
   operating cash flow per dollar of assets and on the reciprocal of assets, every column
   winsorised at its 1st and 99th percentile; the fitted value is what the market pays that
   year for those accounts on other companies. No return enters the fit. A non-positive
-  fitted value gives no gap.
+  fitted value gives no gap. `peer_gap_wide` is the same fit on eight items, adding
+  operating income, current assets, current liabilities and long-term debt, on the rows
+  that carry all of them: nearer the paper's twenty-one, on fewer companies.
 
 Tables. For each measure and stretch: quintiles cut within the formation year (5 the
 highest value of the measure), the median excess over SPY at twelve months and the share
@@ -62,8 +64,10 @@ SPLIT_YEAR = 2022            # formations from this June on are the anchor study
 MIN_CELL = study.MIN_CELL
 MIN_YEAR = 50                # a formation year with fewer rows carrying a measure cuts no quintiles
 HIGH_QUALITY = 6
-MEASURES = ("earnings_yield", "book_to_price", "gross_profitability", "accruals_ratio", "f_score", "peer_gap")
+MEASURES = ("earnings_yield", "book_to_price", "gross_profitability", "accruals_ratio", "f_score", "peer_gap", "peer_gap_wide")
 REGRESSORS = ("book_equity", "revenue", "net_income", "operating_cash_flow")
+# the wider set: every further item the panel carries for most filers; a row lacking one is out of that fit
+WIDE_REGRESSORS = (*REGRESSORS, "operating_income", "current_assets", "current_liabilities", "long_term_debt")
 Json = dict[str, object]
 
 
@@ -169,20 +173,20 @@ def winsorise(column: np.ndarray, lower: float = 1.0, upper: float = 99.0) -> np
     return np.clip(column, lo, hi)
 
 
-def peer_gaps(raws: list[Json]) -> dict[int, float]:
+def peer_gaps(raws: list[Json], regressors: tuple[str, ...] = REGRESSORS) -> dict[int, float]:
     """index in [raws] -> fitted market value over the market value, less one, from one
     year's cross-section; rows lacking an item are left out of the fit and get no gap."""
     usable: list[tuple[int, float, float, list[float]]] = []
     for i, raw in enumerate(raws):
         cap, assets = num(raw, "market_cap"), num(raw, "total_assets")
-        items = [num(raw, k) for k in REGRESSORS]
+        items = [num(raw, k) for k in regressors]
         if cap is None or cap <= 0 or assets is None or assets <= 0 or any(x is None for x in items):
             continue
         usable.append((i, cap, assets, [cast(float, x) / assets for x in items] + [1.0 / assets]))
     if len(usable) < MIN_YEAR:
         return {}
     y = winsorise(np.array([cap / assets for _, cap, assets, _ in usable]))
-    x = np.column_stack([np.ones(len(usable))] + [winsorise(np.array([row[3][j] for row in usable])) for j in range(len(REGRESSORS) + 1)])
+    x = np.column_stack([np.ones(len(usable))] + [winsorise(np.array([row[3][j] for row in usable])) for j in range(len(regressors) + 1)])
     beta, *_ = np.linalg.lstsq(x, y, rcond=None)
     fitted = x @ beta
     out: dict[int, float] = {}
@@ -202,11 +206,13 @@ def load(path: Path, held_out: frozenset[str]) -> list[Row]:
     rows: list[Row] = []
     for year in sorted(by_year):
         raws = by_year[year]
-        gaps = peer_gaps(raws)
+        gaps, wide = peer_gaps(raws), peer_gaps(raws, WIDE_REGRESSORS)
         for i, raw in enumerate(raws):
             values = measures_of(raw)
             if i in gaps:
                 values["peer_gap"] = gaps[i]
+            if i in wide:
+                values["peer_gap_wide"] = wide[i]
             forward, spy = num(raw, "forward_12m"), num(raw, "spy_12m")
             prior = raw.get("prior")
             rows.append(Row(ticker=str(raw["ticker"]), year=year, excess=None if forward is None or spy is None else forward - spy,

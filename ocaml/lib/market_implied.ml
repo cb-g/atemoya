@@ -245,7 +245,7 @@ type expiry_fit = {
   params : svi;
 }
 
-let fit_expiry (chain : option_chain) ~rf ~expiry ~days =
+let fit_expiry_uncached (chain : option_chain) ~rf ~expiry ~days =
   let spot = chain.underlying_close in
   let t = float_of_int days /. 365. in
   let growth_factor = exp (rf *. t) in
@@ -298,6 +298,31 @@ let svi_smile_of (f : expiry_fit) : svi_smile =
   let p = f.params in
   { a = p.a; b = p.b; rho = p.rho; m = p.m; sigma = p.sigma; rmse = fit_rmse p f.points; quotes_fitted = List.length f.points;
     quotes_excluded_wide = f.wide; spread_rule = "ask <= 3 bid"; put_call_iv_gap_at_forward = f.put_call_iv_gap_at_forward }
+
+(* The fit is a pure function of the chain, the expiry and the rate, and one run asks for the
+   same one several times over: the distribution and its reason, the event move's two
+   expiries, the expected-return pass. It is the slow step of a run with options, so each is
+   computed once. The key carries the expiry's own quotes folded into one number beside the
+   ticker and the snapshot, so two chains that differ in any bid, ask or strike of that
+   expiry are two keys: a name alone would not tell two chains apart. *)
+let fitted : (string * string * string * int * float * float * float, (expiry_fit, string) result) Hashtbl.t =
+  Hashtbl.create 512
+
+let fit_expiry (chain : option_chain) ~rf ~expiry ~days =
+  let fingerprint =
+    List.fold_left
+      (fun acc (q : option_quote) ->
+        if q.expiration = expiry then acc +. (q.strike *. (q.bid +. (2. *. q.ask))) +. (if q.right = "call" then q.bid else q.ask)
+        else acc)
+      0. chain.quotes
+  in
+  let key = (chain.ticker, chain.snapshot_date, expiry, days, rf, chain.underlying_close, fingerprint) in
+  match Hashtbl.find_opt fitted key with
+  | Some result -> result
+  | None ->
+      let result = fit_expiry_uncached chain ~rf ~expiry ~days in
+      Hashtbl.add fitted key result;
+      result
 
 let smiles (chain : option_chain) ~rf : chain_smiles =
   let expiries = List.sort_uniq compare (List.map (fun (q : option_quote) -> q.expiration) chain.quotes) in
