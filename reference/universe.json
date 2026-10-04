@@ -10,7 +10,8 @@
     "Scope limit codes, 2026-10-03, at the request of the downstream project that runs a clone: every scope limit carries one code from scope_codes below, in scope_limit_codes beside it and in the same order, so a reader can filter by rule and still read the text. A code is stable once here: the vocabulary is added to and never renamed. On the same day Enbridge moves from OperatingCompany to RegulatedUtility, the downstream reader not confirming the class and the user agreeing, since most of its earnings are regulated or contracted and its own scope limit already said a DCF misreads the rate base; and Okta gains the goodwill limit that its capped growth rests on.",
     "SPCX, 2026-10-03: the downstream project that runs a clone pointed out that the entry still described the SPAC-strategy fund that used the ticker; the ticker has named Space Exploration Technologies since its listing in June 2026, which the ticker map and the fetched statements confirm, so the entry is rewritten and the class is Unprofitable. A ticker can change hands; the class check did not flag it, since a wrapper's refusal reads no statements.",
     "map_cik, 2026-10-03: a ticker is a label an exchange reissues, and SPCX passed from a fund to a company without the entry noticing. Every entry whose ticker is in the ticker map of the Securities and Exchange Commission now declares map_cik, the CIK the map gave on the day a person last confirmed the entry. The fetch compares it with the map on every run and the record is refused, before anything else, when they differ; the entry is then read again by a person and redeclared. It is a guard and is never read for statements, which is what cik is for. The names outside the map, the foreign lines and a few funds, carry none and are not guarded.",
-    "Mid-cycle recipe, 2026-10-03: the mid-cycle model reads the filed operating income after tax where every year in the window carries one, and stays on net income plus interest where a filer reports none. The limits that described the old reading were rewritten on the same day: Caterpillar's captive-finance limit now says what the operating-income reading does with the arm, Lumentum's limit about its note-extinguishment loss is gone because that loss no longer enters the window, and Coinbase's says where its crypto marks can still enter."
+    "Mid-cycle recipe, 2026-10-03: the mid-cycle model reads the filed operating income after tax where every year in the window carries one, and stays on net income plus interest where a filer reports none. The limits that described the old reading were rewritten on the same day: Caterpillar's captive-finance limit now says what the operating-income reading does with the arm, Lumentum's limit about its note-extinguishment loss is gone because that loss no longer enters the window, and Coinbase's says where its crypto marks can still enter.",
+    "Classes confirmed, 2026-10-04: the user confirmed the class judgments drafted for the twenty-five names of brief 71 and the thirty-two of brief 81, with two changed on review: Celestica moves from OperatingCompany to Cyclical, being the same business as the Taiwanese electronics manufacturer already declared so, and Dutch Bros moves from OperatingCompany to Cyclical, a build-out the latest year's free cash flow cannot speak for, as the cloud and database builders were reclassified. The loss-making grocer stays Unprofitable by the class text until a second profitable year is filed, and the four alternative asset managers stay operating companies with their limits stated. Kaspi, declared earlier, gains the reason in full and a scope limit on the payments and marketplace income inside its return on equity."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -182,8 +183,14 @@
     {
       "ticker": "KSPI",
       "entity_class": "Bank",
-      "why": "a Kazakh fintech that is a bank by its statements, reporting in tenge under a dollar listing",
-      "map_cik": "0001985487"
+      "why": "Kaspi, a Kazakh payments, marketplace and consumer-lending group that is a bank by its statements, taking deposits and lending under a banking licence, reporting in tenge under a dollar listing; the residual-income lens reads its book and its return on equity.",
+      "map_cik": "0001985487",
+      "scope_limits": [
+        "payments and marketplace fees are a large part of income and sit inside the return on equity the residual-income lens reads, so the return is far above what a lending book alone earns and the path it fades along is a judgment about a platform as much as a bank"
+      ],
+      "scope_limit_codes": [
+        "mixed_business"
+      ]
     },
     {
       "ticker": "TSM",
@@ -1310,8 +1317,8 @@
     },
     {
       "ticker": "BROS",
-      "entity_class": "OperatingCompany",
-      "why": "Dutch Bros, drive-through coffee shops; profitable, with free cash flow positive on the latest two filed years while shops are still being added at pace, so the operating-company class rather than unprofitable.",
+      "entity_class": "Cyclical",
+      "why": "Dutch Bros, drive-through coffee shops; profitable, with shops still being added at pace, so capital spending runs well above depreciation and the latest year's free cash flow cannot speak for the shops already open: a build-out inside the growth window, the reason the cloud and database builders here carry this class, and through-cycle return on today's capital is the question.",
       "scope_limits": [
         "capital spending on new shops runs well above depreciation, so the latest year's free cash flow understates the earning power of the shops already open",
         "an Up-C structure: the listed company owns a share of the operating partnership, so the filed net income to the listed holder is a fraction of the whole"
@@ -1404,8 +1411,8 @@
     },
     {
       "ticker": "CLS",
-      "entity_class": "OperatingCompany",
-      "why": "Celestica, electronics manufacturing services and the networking and server platforms it builds for data-centre customers, domiciled in Canada and reporting in dollars under a dollar listing, so Canada's country risk premium on the dollar curve; profitable with positive free cash flow on every filed year and no structural break; an operating company on thin margins, as the server-hardware maker here is.",
+      "entity_class": "Cyclical",
+      "why": "Celestica, electronics manufacturing services and the networking and server platforms it builds for data-centre customers, domiciled in Canada and reporting in dollars under a dollar listing, so Canada's country risk premium on the dollar curve; volumes and working capital swing with its customers' product cycles on thin margins, as they do for the Taiwanese electronics manufacturer here, which is the same business, so through-cycle return on today's capital is the question and the two carry one class.",
       "scope_limits": [
         "a few hyperscale customers carry a large share of revenue, a concentration the filing discloses and the DCF cannot see"
       ],

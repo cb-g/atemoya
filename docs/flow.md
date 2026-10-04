@@ -790,6 +790,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- classes confirmed: the user confirmed the classes drafted for the fifty-seven names of
+  briefs 71 and 81; Celestica and Dutch Bros move from `OperatingCompany` to `Cyclical` and
+  are refused for too few through-cycle observations, and Kaspi gains its reason in full and
+  a scope limit. No new `Failed` string; no other record moves.
 - the tenge: `KZT` joins `reference/fx_sources.json` with the National Bank of Kazakhstan's
   official daily rate as its source (provider `nbk`, keyless, any calendar day, so the
   point-in-time path reads it too); the one tenge filer is valued where it was refused for
