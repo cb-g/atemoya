@@ -267,6 +267,8 @@ def curve_on(rule: reference.RateSource, d: date, key: str) -> reference.Curve |
 
 
 def fx_on(code: str, rule: reference.FxSource, d: date, key: str) -> reference.FxRate:
+    if rule.provider == "nbk":
+        return refresh_fx.nbk_on(rule, d)   # the official rate in force on the date, from the bank's own archive
     observed, quoted = observation_on_or_before(fred_history(rule.series, key), rule.series, d)
     return reference.FxRate(series=rule.series, direction=rule.direction, as_of=observed.isoformat(), quoted=quoted,
                             usd_per_unit=round(refresh_fx.normalise(quoted, rule.direction), 8))

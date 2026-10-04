@@ -195,3 +195,42 @@ def test_hkgb_benchmark_rows_read_the_newest_date_by_tenor() -> None:
         rr.parse_hkgb_rows(rows, ["15y"])
     with pytest.raises(rr.RefreshError, match="no Tenor row"):
         rr.parse_hkgb_rows([["nothing"]], ["10y"])
+
+
+def test_the_tenge_rate_is_read_from_the_national_banks_feed() -> None:
+    """Invented figures in the feed's own shape: an item per currency, the rate for `quant` units."""
+    from datetime import date as day
+
+    import reference
+    import refresh_fx
+
+    feed = b"""<?xml version="1.0" encoding="utf-8"?><rates><date>02.10.2026</date>
+      <item><fullname>x</fullname><title>EUR</title><description>500.5</description><quant>1</quant></item>
+      <item><fullname>y</fullname><title>USD</title><description>400.0</description><quant>1</quant></item>
+      <item><fullname>z</fullname><title>JPY</title><description>270.0</description><quant>100</quant></item></rates>"""
+    assert refresh_fx.parse_nbk(feed, "USD") == 400.0 and refresh_fx.parse_nbk(feed, "JPY") == 2.7
+    for body, needle in ((feed, "carries no CHF rate"), (b"not xml", "is not XML"),
+                         (feed.replace(b"400.0", b"n/a"), "is not a number"), (feed.replace(b"400.0", b"-1"), "is not positive")):
+        try:
+            refresh_fx.parse_nbk(body, "CHF" if "CHF" in needle else "USD")
+        except rr.RefreshError as e:
+            assert needle in str(e)
+        else:
+            raise AssertionError(needle)
+    rule = reference.FxSource(series="USD", provider="nbk", direction="units_per_usd")
+    original = rr._get  # pyright: ignore[reportPrivateUsage]
+    asked: list[str] = []
+
+    def fake(url: str, timeout: int = 60) -> bytes:
+        asked.append(url)
+        return feed
+
+    rr._get = fake  # pyright: ignore[reportPrivateUsage]
+    try:
+        rate = refresh_fx.fetch_currency("KZT", rule, "no-key-needed", day(2026, 10, 4))
+    finally:
+        rr._get = original  # pyright: ignore[reportPrivateUsage]
+    assert asked == ["https://nationalbank.kz/rss/get_rates.cfm?fdate=04.10.2026"]
+    assert (rate.series, rate.as_of, rate.quoted, rate.usd_per_unit) == ("nbk:USD", "2026-10-04", 400.0, 0.0025)
+    tracked = reference.FxSources.from_json_string((rr.REPO_ROOT / "reference" / "fx_sources.json").read_text())
+    assert dict(tracked.currencies)["KZT"].provider == "nbk" and dict(tracked.currencies)["INR"].provider == ""

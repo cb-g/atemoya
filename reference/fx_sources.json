@@ -5,7 +5,7 @@
   "notes": [
     "H.10 is released weekly on Monday for the week through the previous Friday, so the newest observation can be nine days old on a Sunday; 10 days is the tightest gate that does not fail every weekend.",
     "Cross rates go through USD: trading per financial = usd_per_unit(financial) / usd_per_unit(trading), both legs recorded. USD itself is 1 by definition.",
-    "A currency with no FRED series (KZT, ILS) is never scraped: the valuation fails naming the pair until a human wires a source.",
+    "A currency with no FRED series is never scraped from a page: the valuation fails naming the pair until a human wires an official source, as was done for the tenge (the National Bank of Kazakhstan's feed, provider nbk); the shekel has none yet.",
     "currency_countries names the country whose curve and terminal growth a trading currency uses; EUR uses Germany, the euro benchmark curve.",
     "MXN maps to Mexico (71): the peso's H.10 series was already here; the country it names for the curve and the terminal growth was not, until Mexico joined the country tables."
   ],
@@ -154,6 +154,14 @@
       "direction": "units_per_usd",
       "notes": [
         "Danish kroner per U.S. dollar"
+      ]
+    },
+    "KZT": {
+      "series": "USD",
+      "provider": "nbk",
+      "direction": "units_per_usd",
+      "notes": [
+        "Kazakhstani tenge per U.S. dollar: the National Bank of Kazakhstan's official daily rate, from its own keyless rates feed (nationalbank.kz/rss/get_rates.cfm), which answers for any calendar day, a weekend or holiday carrying the last set rate; H.10 carries no tenge series. Verified live on 2026-10-04, a dated rate coming back for the day and for a past date before this entry was written."
       ]
     }
   }

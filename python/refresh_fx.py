@@ -48,7 +48,42 @@ def normalise(quoted: float, direction: str) -> float:
     raise rr.RefreshError(f"unknown quote direction {direction!r}")
 
 
+NBK_RATES = "https://nationalbank.kz/rss/get_rates.cfm?fdate={day}"
+
+
+def parse_nbk(body: bytes, against: str) -> float:
+    """Tenge per one unit of [against] from the National Bank of Kazakhstan's official rates
+    feed: an item per currency with its code in `title`, the rate in `description` and the
+    number of units the rate is for in `quant`."""
+    import xml.etree.ElementTree as ET  # noqa: PLC0415
+
+    try:
+        root = ET.fromstring(body)
+    except ET.ParseError as e:
+        raise rr.RefreshError(f"National Bank of Kazakhstan: the feed is not XML ({e})") from e
+    for item in root.iter("item"):
+        if (item.findtext("title") or "").strip() == against:
+            try:
+                rate, quant = float((item.findtext("description") or "").strip()), float((item.findtext("quant") or "1").strip())
+            except ValueError as e:
+                raise rr.RefreshError(f"National Bank of Kazakhstan: the {against} rate is not a number") from e
+            if not (rate > 0 and quant > 0):
+                raise rr.RefreshError(f"National Bank of Kazakhstan: the {against} rate {rate} per {quant} is not positive")
+            return rate / quant
+    raise rr.RefreshError(f"National Bank of Kazakhstan: the feed carries no {against} rate")
+
+
+def nbk_on(rule: reference.FxSource, d: date) -> reference.FxRate:
+    """The official rate in force on [d]: the feed answers for any calendar day, a weekend or
+    a holiday carrying the last set rate, so the date asked is the date recorded."""
+    quoted = parse_nbk(rr._get(NBK_RATES.format(day=d.strftime("%d.%m.%Y"))), rule.series)  # pyright: ignore[reportPrivateUsage]
+    return reference.FxRate(series=f"nbk:{rule.series}", direction=rule.direction, as_of=d.isoformat(), quoted=quoted,
+                            usd_per_unit=round(normalise(quoted, rule.direction), 8))
+
+
 def fetch_currency(code: str, rule: reference.FxSource, key: str, today: date) -> reference.FxRate:
+    if rule.provider == "nbk":
+        return nbk_on(rule, today)
     query = urllib.parse.urlencode(
         {"series_id": rule.series, "api_key": key, "file_type": "json", "sort_order": "desc", "limit": 5}
     )

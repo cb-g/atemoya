@@ -57,7 +57,15 @@ let rate sources (rates : Reference_t.fx_rates option) ~today ~financial ~tradin
     | [] -> "USD to USD"
     | legs ->
         String.concat "; "
-          (List.map (fun (code, _, _, series) -> Printf.sprintf "%s via FRED %s" code series) legs)
+          (List.map
+             (fun (code, _, _, series) ->
+               (* a series the fetch wrote with a provider's prefix names its own source *)
+               match String.index_opt series ':' with
+               | Some i when String.sub series 0 i = "nbk" ->
+                   Printf.sprintf "%s via the National Bank of Kazakhstan's official rate against %s" code
+                     (String.sub series (i + 1) (String.length series - i - 1))
+               | _ -> Printf.sprintf "%s via FRED %s" code series)
+             legs)
         ^ (if List.length legs = 2 then ", cross rate through USD" else "")
   in
   Ok { fx_rate = usd_per_financial /. usd_per_trading; usd_per_financial; usd_per_trading; source; as_of; age_days }

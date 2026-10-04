@@ -263,7 +263,8 @@ type admissibility = {
 (* FX: where each currency's USD rate comes from, and which country's curve and terminal
    growth a trading currency uses. *)
 type fx_source = {
-  series : string;                      (* FRED series id *)
+  series : string;                      (* FRED series id; under provider nbk, the code of the currency the tenge is quoted against in the feed *)
+  ~provider : string;                   (* empty or fred: FRED H.10; nbk: the National Bank of Kazakhstan's official daily rates *)
   direction : string;                   (* usd_per_unit | units_per_usd, the series' own quote *)
   ~notes : string list;
 }

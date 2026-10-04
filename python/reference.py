@@ -1773,6 +1773,7 @@ class FxSource:
 
     series: str
     direction: str
+    provider: str = field(default_factory=lambda: "")
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -1781,6 +1782,7 @@ class FxSource:
             return cls(
                 series=_atd_read_string(x['series']) if 'series' in x else _atd_missing_json_field('FxSource', 'series'),
                 direction=_atd_read_string(x['direction']) if 'direction' in x else _atd_missing_json_field('FxSource', 'direction'),
+                provider=_atd_read_string(x['provider']) if 'provider' in x else "",
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -1790,6 +1792,7 @@ class FxSource:
         res: Dict[str, Any] = {}
         res['series'] = _atd_write_string(self.series)
         res['direction'] = _atd_write_string(self.direction)
+        res['provider'] = _atd_write_string(self.provider)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 

@@ -790,6 +790,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the tenge: `KZT` joins `reference/fx_sources.json` with the National Bank of Kazakhstan's
+  official daily rate as its source (provider `nbk`, keyless, any calendar day, so the
+  point-in-time path reads it too); the one tenge filer is valued where it was refused for
+  no rate. No new `Failed` string; no other record moves.
 - loose ends: the smile fit is computed once per chain and expiry in a run, which takes a run
   with the options store from about two and a half minutes to under one with the same
   bytes out; the peer-implied gap gains a wider item set in the broad study and
