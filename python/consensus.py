@@ -21,7 +21,9 @@ Fetched, under `data/consensus/` (never tracked):
   `eps_currency`), the revenue bar (the same keys, absolute, in `revenue_currency`) and the EPS
   trend (`current`, `7d`, `30d`, `60d`, `90d` before the fetch day). A figure the vendor does
   not carry is null, never zero. The day is the fetch day, which is the as-of date of every
-  figure in the file.
+  figure in the file. A period the vendor dates more than STALE_END_DAYS before the fetch
+  day cannot be one still being forecast: its `end_date` is null and `end_date_reason` says
+  what the vendor sent, the figures kept as they came; otherwise `end_date_reason` is null.
 - `days/<YYYY-MM-DD>/manifest.json`: `status` "complete", "partial" (some fetches failed) or
   "gap" (no run that day), with the names that have no consensus listed apart from the
   failures. Run it at each sitting or daily; every day without a run is a gap on the record. A run is idempotent per day: an ok record is never fetched again
@@ -76,6 +78,9 @@ OUT = REPO_ROOT / "output" / "consensus"
 UNIVERSE = REPO_ROOT / "reference" / "universe.json"
 
 PERIODS = ("0q", "+1q", "0y", "+1y")
+# a quarter or a year still carrying a forecast has not been reported; a filer reports within
+# about three months of the period's end, so an end further back than this is the vendor's error
+STALE_END_DAYS = 120
 WINDOWS = (8, 12)
 TREND_KEYS = (("current", "current"), ("7daysAgo", "7d"), ("30daysAgo", "30d"), ("60daysAgo", "60d"), ("90daysAgo", "90d"))
 MAX_REPORT_LAG_DAYS = 120          # a release reports the latest period that ended at most this long before it
@@ -170,6 +175,20 @@ def snapshot_record(ticker: str, day: date, fetched_at: str, trend: object) -> J
         return {**base, "status": "none", "reason": "the vendor carries no consensus for this name", "periods": []}
     if all(p["eps"]["mean"] is None and p["revenue"]["mean"] is None for p in periods):
         return {**base, "status": "none", "reason": "the vendor lists the periods but no EPS or revenue estimate in any", "periods": []}
+    for p in periods:
+        end = cast(str | None, p["end_date"])
+        p["end_date_reason"] = None
+        if end is None:
+            continue
+        try:
+            behind = (day - date.fromisoformat(end)).days
+        except ValueError:
+            p["end_date"], p["end_date_reason"] = None, f"the vendor's period end {end!r} is not a date"
+            continue
+        if behind > STALE_END_DAYS:
+            p["end_date"] = None
+            p["end_date_reason"] = (f"the vendor dates this period {end}, {behind} days before the snapshot; "
+                                    f"a period still being forecast cannot have ended more than {STALE_END_DAYS} days ago")
     return {**base, "status": "ok", "reason": None, "eps_currency": eps_currency,
             "revenue_currency": revenue_currency, "periods": periods}
 

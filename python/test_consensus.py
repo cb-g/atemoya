@@ -40,6 +40,20 @@ def test_the_trend_parses_with_absent_figures_null_never_zero() -> None:
     assert (eps_cur, rev_cur) == ("USD", "USD")
 
 
+def test_a_period_dated_long_before_the_snapshot_loses_its_date_and_says_why() -> None:
+    day = date(2026, 10, 2)
+    r = c.snapshot_record("X", day, "t", [_trend("0q", "2021-12-31"), _trend("+1q", "2026-12-31"), _trend("0y", "2026-06-30"), _trend("+1y", "junk")])
+    stale, nxt, year, bad = r["periods"]
+    assert r["status"] == "ok"
+    assert stale["end_date"] is None and "2021-12-31" in stale["end_date_reason"] and "1736 days" in stale["end_date_reason"]
+    assert stale["eps"]["mean"] == 1.0                      # the figures are kept as they came
+    assert nxt["end_date"] == "2026-12-31" and nxt["end_date_reason"] is None
+    assert year["end_date"] == "2026-06-30" and year["end_date_reason"] is None   # ended, not yet reported
+    assert bad["end_date"] is None and "not a date" in bad["end_date_reason"]
+    # a dateless period matches no filed quarter, so no pair is made from it
+    assert c._near(stale["end_date"], "2021-12-31") is False  # pyright: ignore[reportPrivateUsage]
+
+
 def test_a_record_is_ok_or_failed_with_why() -> None:
     day = date(2026, 10, 2)
     ok = c.snapshot_record("X", day, "t", [_trend("0q", "2026-09-30")])

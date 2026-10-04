@@ -793,6 +793,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- a consensus period the vendor misdates: a period dated more than 120 days before the
+  snapshot day cannot be one still being forecast, so its `end_date` is null and
+  `end_date_reason` says what the vendor sent, the figures kept. A side output; no record
+  moves and no `Failed` string.
 - the curve follows the currency: a record whose statements and price are both in a
   currency that is not its domicile's own (a dollar reporter domiciled in Israel, Singapore
   or the United Kingdom) discounted on the domicile's curve, a rate in another currency
