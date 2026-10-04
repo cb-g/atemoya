@@ -14,7 +14,8 @@
     "Classes confirmed, 2026-10-04: the user confirmed the class judgments drafted for the twenty-five names of brief 71 and the thirty-two of brief 81, with two changed on review: Celestica moves from OperatingCompany to Cyclical, being the same business as the Taiwanese electronics manufacturer already declared so, and Dutch Bros moves from OperatingCompany to Cyclical, a build-out the latest year's free cash flow cannot speak for, as the cloud and database builders were reclassified. The loss-making grocer stays Unprofitable by the class text until a second profitable year is filed, and the four alternative asset managers stay operating companies with their limits stated. Kaspi, declared earlier, gains the reason in full and a scope limit on the payments and marketplace income inside its return on equity.",
     "Ten names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Wipro, Accenture, EPAM, Datadog, Global-e, Amgen, Krystal Biotech, Evolution, the Hong Kong line of China Merchants Bank and Recruit. The classes were drafted by the tool's author and confirmed by the user the same day. Datadog and Global-e are Unprofitable by the class text, the first for want of an operating profit and the second until a second profitable year is filed; Evolution and Recruit are refused on the vendor's statements, which lack a debt line for the first and the latest year's depreciation and capital spending for the second.",
     "Nine Swiss lines added 2026-10-04 at a downstream reader's request: Novartis, UBS, ABB, Sandoz, Alcon, Swiss Re, Logitech, Galderma and Richemont, all trading in francs while reporting in dollars or euros, so cross-currency names converted at one recorded rate and valued on the Swiss curve. The classes were drafted by the tool's author and confirmed by the user the same day. Novartis and Alcon are refused because neither tags the amortisation of its intangible assets, Swiss Re because the insurer model needs filed statements and none are reachable; ABB declares no filer, its filings at the Securities and Exchange Commission having ended with fiscal 2023.",
-    "Six Swiss franc reporters added 2026-10-04 at a downstream reader's request: Holcim, Sika, Schindler, VAT Group, Givaudan and Swisscom, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day. Holcim and VAT Group are Cyclical and refused for a history shorter than the through-cycle window; Swisscom is refused because the vendor's balance sheet carries none of its borrowings."
+    "Six Swiss franc reporters added 2026-10-04 at a downstream reader's request: Holcim, Sika, Schindler, VAT Group, Givaudan and Swisscom, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day. Holcim and VAT Group are Cyclical and refused for a history shorter than the through-cycle window; Swisscom is refused because the vendor's balance sheet carries none of its borrowings.",
+    "Eleven Swiss names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Zurich Insurance, Swiss Life, Julius Baer, Lonza, Straumann, Geberit, SGS, Kuehne+Nagel, Sonova, Partners Group and Swatch, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day, on the author's recommendation. The two insurers are refused for want of filed statements; Lonza, Kuehne+Nagel and Swatch are Cyclical and refused for a history shorter than the through-cycle window. A twelfth name asked for, Lindt & Sprüngli, is left out: its equity is in two listed lines, one worth a tenth of the other, and the vendor counts every unit of both at one line's price, so the per-share value would divide by the wrong number of shares, and the tool has no declared ratio between share lines to correct it."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -2087,6 +2088,157 @@
         "vendor_statements",
         "acquired_history",
         "ownership_structure"
+      ]
+    },
+    {
+      "ticker": "ZURN.SW",
+      "entity_class": "Insurer",
+      "why": "the Swiss line of Zurich Insurance Group, property and casualty and life insurance and the management of a United States farmers' exchange, trading in francs while reporting in dollars; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; an insurer, and the insurer model needs filed statements: none are reachable keyless, so the record is refused, as the other European insurers here are; confirmed by the user.",
+      "scope_limits": [
+        "an agreed purchase of a London specialty insurer is pending after the latest statements, so the filed history is not the group ahead"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
+      ]
+    },
+    {
+      "ticker": "SLHN.SW",
+      "entity_class": "Insurer",
+      "why": "the Swiss line of Swiss Life, life insurance and pensions with an asset manager and advisory networks beside them, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; an insurer, and the insurer model needs filed statements: none are reachable keyless, so the record is refused, as the other European insurers here are; confirmed by the user."
+    },
+    {
+      "ticker": "BAER.SW",
+      "entity_class": "Bank",
+      "why": "the Swiss line of Julius Baer, a private bank managing wealth for individuals, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; a licensed bank funded by client deposits, read on book value against return on equity; a bank, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "fees and commissions on client assets, which move with markets, are most of income and lending is the smaller part, so the bank signature is absent from its statements and the return on equity the lens reads is a wealth manager's",
+        "a large credit loss on one borrower group sits inside the window and is read as an operating year"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "mixed_business",
+        "one_off_in_window"
+      ]
+    },
+    {
+      "ticker": "LONN.SW",
+      "entity_class": "Cyclical",
+      "why": "the Swiss line of Lonza, contract development and manufacturing of medicines for drug companies, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; capital spending on new plants runs at or above its operating cash flow on every filed year, so the latest year's free cash flow cannot speak for capacity not yet earning, the reason the other capacity builders here are read through the cycle and never on one year; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "capital spending on plants not yet at volume runs far above depreciation inside the window",
+        "a business being sold sits inside the window as a discontinued operation with a write-down, so the latest year's result is not the continuing company's",
+        "a large plant was bought inside the window"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "build_out",
+        "carve_out_history",
+        "acquired_history"
+      ]
+    },
+    {
+      "ticker": "STMN.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Straumann, dental implants, clear aligners and digital dentistry, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; profitable with positive free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "a business was sold inside the window and the statements show continuing operations beside its loss, so the years are not one perimeter",
+        "elective dental treatment follows consumer spending, so the latest years are a point in a cycle"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "carve_out_history",
+        "backward_looking"
+      ]
+    },
+    {
+      "ticker": "GEBN.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Geberit, sanitary installation and bathroom products sold through wholesalers to installers, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; high margins and positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "demand follows European building and renovation, so the latest years are a point in a cycle"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "backward_looking"
+      ]
+    },
+    {
+      "ticker": "SGSN.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of SGS, testing, inspection and certification, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "a large acquisition was made after the latest statements, so the filed history is not the group ahead and its debt is not yet on the balance sheet read",
+        "book equity is small beside the debt, the company having paid out most of what it earns"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "acquired_history",
+        "balance_sheet"
+      ]
+    },
+    {
+      "ticker": "KNIN.SW",
+      "entity_class": "Cyclical",
+      "why": "the Swiss line of Kuehne+Nagel, sea and air freight forwarding, road and contract logistics, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; its profit follows freight rates and trade volumes and has swung severalfold inside the window, so through-cycle return on today's capital is the question and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "the window opens on the freight boom of the pandemic and its unwinding",
+        "a founder's holding company controls the majority of the shares"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "rebound_window",
+        "ownership_structure"
+      ]
+    },
+    {
+      "ticker": "SOON.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Sonova, hearing aids, cochlear implants and audiological care clinics, reporting in francs with a fiscal year ending in March; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "growth was in part bought: goodwill from acquired clinics and a consumer audio business is a large part of invested capital"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "goodwill_heavy"
+      ]
+    },
+    {
+      "ticker": "PGHN.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the Swiss line of Partners Group, a manager of private equity, private credit, infrastructure and real estate for institutional clients, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; an operating company with its limits stated, as the other alternative asset managers here are, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "performance fees, which arrive when investments are sold and move with markets, are a large and uneven part of revenue that the model reads as a level",
+        "the firm invests its own balance sheet beside its clients, in holdings the model does not read"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "market_marks",
+        "investment_book"
+      ]
+    },
+    {
+      "ticker": "UHR.SW",
+      "entity_class": "Cyclical",
+      "why": "the bearer share of Swatch Group, watches, jewellery and watch movements, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; demand for watches swings with luxury spending, in China above all, and its profit has fallen from a normal level to about nil inside the window while it kept its workforce and capacity, so through-cycle return on today's capital is the question; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "the latest years are a trough in demand",
+        "the equity is in two listed lines, the bearer share here and a registered share with a fifth of its claim, and the founding family holds the votes",
+        "inventories are a large part of the capital and are carried at cost"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "trough_window",
+        "ownership_structure",
+        "balance_sheet"
       ]
     }
   ]

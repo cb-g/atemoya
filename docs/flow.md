@@ -793,6 +793,13 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- eleven Swiss names: Zurich Insurance, Swiss Life, Julius Baer, Lonza, Straumann, Geberit,
+  SGS, Kuehne+Nagel, Sonova, Partners Group and Swatch join the universe at a downstream
+  reader's request, classes drafted and confirmed by the user the same day; six are valued,
+  two insurers are refused for want of filed statements and three cyclicals for a short
+  vendor history. Lindt & Sprüngli, also asked for, is left out: the vendor counts both of
+  its share lines at one line's price, and the tool has no ratio between share lines. No
+  new `Failed` string; no existing record moves.
 - six Swiss franc reporters: Holcim, Sika, Schindler, VAT Group, Givaudan and Swisscom join
   the universe at a downstream reader's request, classes drafted and confirmed by the user
   the same day; three are valued, two cyclicals are refused for a short vendor history and
