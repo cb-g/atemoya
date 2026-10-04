@@ -793,6 +793,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- six Swiss franc reporters: Holcim, Sika, Schindler, VAT Group, Givaudan and Swisscom join
+  the universe at a downstream reader's request, classes drafted and confirmed by the user
+  the same day; three are valued, two cyclicals are refused for a short vendor history and
+  one for a debt figure the vendor does not carry. No new `Failed` string; no existing
+  record moves.
 - vendor debt from the combined rows: where the vendor shows no Long Term Debt row, debt is
   read from its combined debt-and-lease rows, less the lease rows where it shows them and
   whole, with the source saying so, where it shows none; a nil from the subtraction is taken
