@@ -380,6 +380,50 @@ companies read as worth double their price, and 264 records met the sanity bound
 is always within the date, so the tables above do not depend on it, but a level that moves
 that far with rates is a property of the model to look at on its own.
 
+### Why the anchor's level moves with rates
+
+    uv run python/rule_variants.py               # -> output/rule_variants/tables.txt
+
+The rule study's median margin of safety ran above one in the low-rate years. Two things
+could do it, and `rule_variants.py` separates them by rerunning the binary on the rule
+panel's own records, statements and prices untouched, under four parameter sets: as run;
+the terminal growth held to the date's risk-free rate where that is lower; the equity risk
+premium of the date's own vintage (`reference/erp_history.json`, Damodaran's implied
+premium at the end of the year before) in place of the 2026 figure; and both.
+
+Measured 2026-10-04. In the nine Junes from 2013 to 2021 the median margin of safety was
+between +0.33 and +1.65 as run; between −0.24 and +0.32 with the terminal growth held to
+the risk-free rate; between +0.14 and +1.29 with the vintage premium alone; and between
+−0.28 and +0.02 with both. In June 2020, the lowest rate of the sample, 97
+records met the sanity bound as run and 5 with both. From 2023 the rate is above the
+terminal growth, the cap binds nothing, and the variants agree. So most of the drift is the
+model's: a terminal growth that does not come down with rates leaves almost no gap under a
+low discount rate. The rest is the study's: a 2026 premium on a 2016 date. Neither changes
+the sort: under every variant the cheapest fifth less the dearest is within two points of
+the baseline's in both stretches. On the live run of the day, five of eighty-nine valued
+records have a terminal growth above their risk-free rate (Tencent's Hong Kong line, Roche,
+Saab, Sea and Teva), Roche with a discount rate of 3.4 per cent against a terminal growth
+of 2.0. Whether the model should hold terminal growth to the risk-free rate is a decision
+about the headline and is not made here.
+
+### What the quality score is made of
+
+`broad_study.py` also takes the nine-signal score apart, by its value, each signal alone,
+and within thirds of market value. Measured 2026-10-04 on the broad panel. Before 2022 the
+score as a whole sorted nothing: seven or more less three or fewer was ahead in five years
+of ten with a median of zero. What did sort, one signal at a time, were the levels and the
+share count: a filer with no more shares than the year before ran about five points ahead
+of one with more and was ahead in ten years of eleven; a profitable one and a
+cash-generating one ran five and nine points ahead of their opposites, in seven and six
+years of eleven. The five signals that compare this year with last, return on assets,
+leverage, current ratio, gross margin and asset turnover, each ran level or slightly the
+wrong way. From 2022 the levels are stronger, ten and fifteen points in all four years, the
+score is close to monotone, and by size it sorts in the smaller two thirds, sixteen and
+nine points, and not in the largest third. Survivorship works against these figures, since
+the loss-making filers that later failed are the ones missing. So the composite score has
+no claim on more room on a record than it has; what the evidence supports is plainer:
+whether a company earns and generates cash, and whether its share count is rising.
+
 **What it is not.** Survivors only: a filer is in the panel only if it has a ticker today,
 about a third of 2011's filers, so the failed and the acquired are missing and a sort that
 would have held them looks better than it was. A frame carries the latest figure reported

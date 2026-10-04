@@ -1,0 +1,21 @@
+{
+  "source": "Damodaran, historical implied equity risk premiums for the United States (the FCFE-based implied premium), histimpl on his data page, transcribed 2026-10-04; each figure is the premium implied at the end of the year named",
+  "why": "The point-in-time studies value past dates with the current equity risk premium table, which is a 2026 vintage. This is the premium a reader would have had at the time, so a study can say how much of what it sees is the model and how much is the vintage. Read by python/rule_variants.py only; no valuation record reads it.",
+  "as_of": "2026-10-04",
+  "implied_premium_at_year_end": {
+    "2012": 0.0578,
+    "2013": 0.0496,
+    "2014": 0.0578,
+    "2015": 0.0612,
+    "2016": 0.0569,
+    "2017": 0.0508,
+    "2018": 0.0596,
+    "2019": 0.0520,
+    "2020": 0.0472,
+    "2021": 0.0424,
+    "2022": 0.0594,
+    "2023": 0.0460,
+    "2024": 0.0433,
+    "2025": 0.0423
+  }
+}

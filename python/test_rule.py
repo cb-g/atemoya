@@ -47,3 +47,29 @@ def test_the_study_reads_valued_rows_within_the_date_and_keeps_the_refused_apart
     assert "highest less lowest, pooled: +0.160" in text                                   # the cheapest fifth ahead by construction
     assert "rank correlation of the margin of safety with the earnings yield, within the date: median -1.00" in text
     assert "refused: n=1" in text and "survivors only" in text
+
+
+def test_a_variant_reference_changes_only_the_two_figures_it_is_given(tmp_path: Path) -> None:
+    import rule_variants as rv
+
+    source = tmp_path / "reference"
+    source.mkdir()
+    (source / "params.json").write_text(json.dumps({"projection_years": {"value": 7}, "terminal_growth_rate": {"values": {"United States": 0.036, "Japan": 0.027}}}))
+    (source / "equity_risk_premiums.json").write_text(json.dumps({"values": {"United States": 0.045, "Japan": 0.051}}))
+    (source / "risk_free_rates.json").write_text(json.dumps({"countries": {"United States": {"rates": {"7y": 0.02}}}}))
+    assert rv.rates_on(source) == (0.02, 0.036, 0.045, "7y")
+    rv.variant_reference(source, tmp_path / "both", growth=0.02, premium=0.061)
+    assert rv.rates_on(tmp_path / "both") == (0.02, 0.02, 0.061, "7y")
+    other = json.loads((tmp_path / "both" / "params.json").read_text())["terminal_growth_rate"]["values"]["Japan"]
+    assert other == 0.027                                                      # another country is untouched
+    rv.variant_reference(source, tmp_path / "none", growth=None, premium=None)
+    assert rv.rates_on(tmp_path / "none") == rv.rates_on(source)
+    assert rv.premium_for(2016, {"2015": 0.0612}) == 0.0612 and rv.premium_for(2014, {"2015": 0.0612}) is None
+
+
+def test_the_tracked_premium_history_covers_every_june_the_rule_panel_forms() -> None:
+    import rule_variants as rv
+
+    history = json.loads(rv.ERP_HISTORY.read_text())["implied_premium_at_year_end"]
+    assert all(rv.premium_for(year, history) is not None for year in range(2013, 2027))
+    assert all(0.03 < v < 0.08 for v in history.values())

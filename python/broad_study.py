@@ -30,7 +30,9 @@ Measures, each from filed items and the market value on the day, no model of our
 Tables. For each measure and stretch: quintiles cut within the formation year (5 the
 highest value of the measure), the median excess over SPY at twelve months and the share
 positive; the top quintile's median less the bottom's, pooled and year by year, with the
-count of years it was positive. Then cheapness against the score in four cells. The main
+count of years it was positive. Then cheapness against the score in four cells, and the
+score taken apart: by its value, each of the nine signals alone, and within thirds of
+market value. The main
 tables are on filers that report current assets, which leaves out banks and insurers, as
 the literature does; the count left out is stated.
 
@@ -46,7 +48,7 @@ import argparse
 import json
 import statistics
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
@@ -65,6 +67,10 @@ REGRESSORS = ("book_equity", "revenue", "net_income", "operating_cash_flow")
 Json = dict[str, object]
 
 
+SIGNALS = ("return_on_assets_positive", "operating_cash_flow_positive", "return_on_assets_higher", "cash_flow_above_net_income", "leverage_lower",
+           "current_ratio_higher", "no_more_shares", "gross_margin_higher", "asset_turnover_higher")
+
+
 @dataclass
 class Row:
     ticker: str
@@ -72,6 +78,8 @@ class Row:
     excess: float | None
     non_financial: bool
     values: dict[str, float]
+    signals: dict[str, bool] = field(default_factory=lambda: {})   # each of the nine that could be formed
+    cap: float | None = None
 
 
 def num(d: Json, key: str) -> float | None:
@@ -90,8 +98,8 @@ def gross_profit(d: Json) -> float | None:
     return None if revenue is None or cost is None else revenue - cost
 
 
-def f_score(now: Json, prior: Json) -> int | None:
-    """Piotroski's nine on the two years; None unless every signal can be formed."""
+def signals_of(now: Json, prior: Json) -> dict[str, bool]:
+    """Piotroski's nine on the two years, each one that can be formed, by name."""
     def roa(d: Json) -> float | None:
         return ratio(num(d, "net_income"), num(d, "total_assets"))
 
@@ -124,7 +132,13 @@ def f_score(now: Json, prior: Json) -> int | None:
         higher(margin(now), margin(prior)),
         higher(turnover(now), turnover(prior)),
     ]
-    return None if any(s is None for s in signals) else sum(1 for s in signals if s)
+    return {name: s for name, s in zip(SIGNALS, signals) if s is not None}
+
+
+def f_score(now: Json, prior: Json) -> int | None:
+    """The count passed; None unless every one of the nine can be formed."""
+    signals = signals_of(now, prior)
+    return sum(1 for v in signals.values() if v) if len(signals) == len(SIGNALS) else None
 
 
 def measures_of(raw: Json) -> dict[str, float]:
@@ -194,8 +208,10 @@ def load(path: Path, held_out: frozenset[str]) -> list[Row]:
             if i in gaps:
                 values["peer_gap"] = gaps[i]
             forward, spy = num(raw, "forward_12m"), num(raw, "spy_12m")
+            prior = raw.get("prior")
             rows.append(Row(ticker=str(raw["ticker"]), year=year, excess=None if forward is None or spy is None else forward - spy,
-                            non_financial=num(raw, "current_assets") is not None, values=values))
+                            non_financial=num(raw, "current_assets") is not None, values=values,
+                            signals=signals_of(raw, cast(Json, prior)) if isinstance(prior, dict) else {}, cap=num(raw, "market_cap")))
     return rows
 
 
@@ -254,6 +270,54 @@ def interaction(rows: list[Row], label: str) -> list[str]:
     return lines
 
 
+def line_of(name: str, rows: list[Row]) -> str:
+    n, med, positive = cell(rows)
+    return f"  {name}: n={n}" + ("" if med is None else f" median excess {med:+.3f}, positive {positive}/{n}")
+
+
+def yearly_difference(high: list[Row], low: list[Row]) -> str:
+    """The median of one group less the other's, year by year, and how often it was positive."""
+    figures: list[tuple[int, float]] = []
+    for year in sorted({r.year for r in high} | {r.year for r in low}):
+        a, b = cell([r for r in high if r.year == year])[1], cell([r for r in low if r.year == year])[1]
+        if a is not None and b is not None:
+            figures.append((year, a - b))
+    if not figures:
+        return "no year carries both groups"
+    return f"positive in {sum(1 for _, x in figures if x > 0)} of {len(figures)} years, median of the yearly figures {statistics.median(x for _, x in figures):+.3f}"
+
+
+def quality_detail(rows: list[Row], label: str) -> list[str]:
+    """The score taken apart: by its value, each signal alone, and within thirds of market
+    value cut within the year, so a reader sees what carries it and where."""
+    scored = [r for r in rows if "f_score" in r.values]
+    title = f"the score in detail, {label}: {len(scored)} rows carry all nine"
+    lines = [title, "-" * len(title), "by score:"]
+    for value in range(10):
+        lines.append(line_of(f"  {value}", [r for r in scored if r.values["f_score"] == value]))
+    high, low = [r for r in scored if r.values["f_score"] >= 7], [r for r in scored if r.values["f_score"] <= 3]
+    lines.append(f"  seven or more less three or fewer: {yearly_difference(high, low)}")
+    lines.append("each signal alone, on every row where it can be formed: passed, failed, and passed less failed year by year")
+    for name in SIGNALS:
+        passed, failed = [r for r in rows if r.signals.get(name) is True], [r for r in rows if r.signals.get(name) is False]
+        (n1, m1, _), (n0, m0, _) = cell(passed), cell(failed)
+        figures = "" if m1 is None or m0 is None else f" passed {m1:+.3f} (n={n1}), failed {m0:+.3f} (n={n0});"
+        lines.append(f"  {name}:{figures} {yearly_difference(passed, failed)}")
+    lines.append("within thirds of market value, cut within the year (1 the smallest): seven or more less three or fewer")
+    thirds: dict[tuple[str, int], int] = {}
+    for year in {r.year for r in scored}:
+        sized = sorted((r for r in scored if r.year == year and r.cap is not None), key=lambda r: (cast(float, r.cap), r.ticker))
+        for k, r in enumerate(sized):
+            thirds[(r.ticker, r.year)] = min(3, 1 + (k * 3) // len(sized))
+    for third in (1, 2, 3):
+        inside = [r for r in scored if thirds.get((r.ticker, r.year)) == third]
+        a, b = cell([r for r in inside if r.values["f_score"] >= 7]), cell([r for r in inside if r.values["f_score"] <= 3])
+        spread = "n under the small-cell floor" if a[1] is None or b[1] is None else f"{a[1] - b[1]:+.3f}"
+        lines.append(f"  third {third}: {spread} (n={a[0]} and {b[0]}); "
+                     + yearly_difference([r for r in inside if r.values["f_score"] >= 7], [r for r in inside if r.values["f_score"] <= 3]))
+    return lines
+
+
 def report(rows: list[Row], held_out: int) -> str:
     years = sorted({r.year for r in rows})
     with_return = [r for r in rows if r.excess is not None]
@@ -271,6 +335,8 @@ def report(rows: list[Row], held_out: int) -> str:
             lines += measure_block(subset, measure, label) + [""]
     for label, subset in stretches:
         lines += interaction(subset, label) + [""]
+    for label, subset in stretches:
+        lines += quality_detail(subset, label) + [""]
     return "\n".join(lines)
 
 

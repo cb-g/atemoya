@@ -101,3 +101,16 @@ def test_the_tables_cut_within_the_year_and_count_the_years() -> None:
     assert "no formation year carries enough rows" in "\n".join(bs.measure_block(rows[:10], "earnings_yield", "thin"))
     text = bs.report(rows, 32)
     assert "survivors only" in text and "cheap, high score" in text and "peer_gap" in text
+
+
+def test_the_score_is_taken_apart_by_value_by_signal_and_by_size() -> None:
+    prior = year(net_income=80.0, long_term_debt=300.0, current_assets=280.0, current_liabilities=160.0, gross_profit=250.0, revenue=900.0)
+    signals = bs.signals_of(year(weighted_shares=105.0), prior)
+    assert len(signals) == 9 and signals["no_more_shares"] is False and signals["return_on_assets_positive"] is True
+    assert "no_more_shares" not in bs.signals_of(year(weighted_shares=400.0), prior)     # not formed, so not in the map
+    rows = [bs.Row(ticker=f"N{i:03d}", year=y, excess=0.01 * (i % 10) - 0.05, non_financial=True, values={"f_score": float(i % 10)},
+                   signals={"no_more_shares": i % 2 == 0}, cap=float(i)) for y in (2019, 2020) for i in range(300)]
+    text = "\n".join(bs.quality_detail(rows, "test"))
+    assert "600 rows carry all nine" in text and "    9: n=60 median excess +0.040" in text
+    assert "seven or more less three or fewer: positive in 2 of 2 years" in text
+    assert "no_more_shares: passed" in text and "third 3:" in text

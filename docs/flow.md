@@ -790,6 +790,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- rate variants and the score in detail: `python/rule_variants.py` reruns the rule panel's
+  records under a terminal growth held to the risk-free rate and under the equity risk
+  premium of the date's vintage (`reference/erp_history.json`), and `broad_study.py` takes
+  the quality score apart by value, signal and size. Studies: no record on the valuation
+  path moves and there is no new `Failed` string.
 - the rule panel and its study: `python/rule_panel.py` runs the point-in-time fetch and the
   binary on the five hundred largest filers each June since 2013, admitted by an
   industry-code rule checked against the declared classes, and `python/rule_study.py` reads
