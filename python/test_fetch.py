@@ -26,7 +26,36 @@ def test_total_debt_with_leases_in_the_vendor_total_is_not_used_as_is() -> None:
     assert value is not None and math.isclose(value, 40.294)
     assert source == "Long Term Debt + Current Debt"
     assert parts == [("long_term_debt", 31.067, "Long Term Debt"), ("current_debt", 9.227, "Current Debt")]
-    assert "Total Debt" in DEFS.total_debt.vendor.not_used and "Long Term Capital Lease Obligation" in DEFS.total_debt.vendor.not_used
+    assert "Total Debt" in DEFS.total_debt.vendor.not_used and "Long Term Capital Lease Obligation" in DEFS.total_debt.vendor.lease_long_term
+
+
+def test_total_debt_from_the_combined_rows_when_the_vendor_shows_no_long_term_debt_row() -> None:
+    lt, cur = "Long Term Debt And Capital Lease Obligation", "Current Debt And Capital Lease Obligation"
+    lt_lease, cur_lease = "Long Term Capital Lease Obligation", "Current Capital Lease Obligation"
+    debt = fetch._total_debt  # pyright: ignore[reportPrivateUsage]
+    # combined less the lease row beside it, each side
+    value, source, parts = debt({lt: 50.0, lt_lease: 8.0, cur: 6.0, cur_lease: 1.5, "Total Debt": 56.0}, DEFS)
+    assert value is not None and math.isclose(value, 46.5)
+    assert source == f"{lt} - {lt_lease} + {cur} - {cur_lease}"
+    assert parts is not None and [n for n, _, _ in parts] == ["long_term_debt_and_leases", "long_term_leases", "current_debt_and_leases", "current_leases"]
+    # a filer with leases and nothing else owes no debt: nil, read and not assumed
+    value, _, _ = debt({lt: 7.0, lt_lease: 7.0, cur: 2.0, cur_lease: 2.0}, DEFS)
+    assert value == 0.0
+    # a plain current row is preferred to the combined one, and an absent current side adds nothing
+    value, source, _ = debt({lt: 50.0, lt_lease: 8.0, "Current Debt": 3.0, cur: 4.5, cur_lease: 1.5}, DEFS)
+    assert value is not None and math.isclose(value, 45.0) and source == f"{lt} - {lt_lease} + Current Debt"
+    assert debt({lt: 50.0, lt_lease: 8.0}, DEFS)[0] == 42.0
+    # no lease row anywhere: the combined rows whole, and the source says what they hold
+    value, source, parts = debt({lt: 40.0, cur: 10.0}, DEFS)
+    assert value == 50.0 and source is not None and source.count("includes lease liabilities; the vendor shows no lease row") == 2
+    assert parts == [("long_term_debt_and_leases", 40.0, lt), ("current_debt_and_leases", 10.0, cur)]
+    # what cannot be separated stays missing: a lease row on one side only, a combined row under its leases, no long-term side
+    assert debt({lt: 40.0, cur: 10.0, cur_lease: 1.0}, DEFS) == (None, None, None)
+    assert debt({lt: 40.0, lt_lease: 5.0, cur: 10.0}, DEFS) == (None, None, None)
+    assert debt({lt: 4.0, lt_lease: 5.0}, DEFS) == (None, None, None)
+    assert debt({cur: 10.0, cur_lease: 1.0, lt_lease: 3.0}, DEFS) == (None, None, None)
+    # the plain row, where the vendor shows it, is read as before and the combined rows are not
+    assert debt({"Long Term Debt": 30.0, lt: 38.0, lt_lease: 8.0}, DEFS)[:2] == (30.0, "Long Term Debt")
 
 
 def test_total_debt_current_row_or_its_components_never_a_zero() -> None:
@@ -185,3 +214,34 @@ def test_the_identity_guard_names_what_the_map_gives_now() -> None:
     assert moved is not None and "gives CIK 0000000002 (OTHER CO) for TKR, the universe entry declared CIK 0000000001" in moved
     gone = fetch.identity_mismatch("GONE", table, "0000000001")
     assert gone is not None and "no longer lists GONE" in gone
+
+
+def test_a_nil_debt_from_the_subtraction_needs_the_cash_flows_and_the_interest_to_agree() -> None:
+    end = date(2025, 12, 31)
+    lt, cur = "Long Term Debt And Capital Lease Obligation", "Current Debt And Capital Lease Obligation"
+    leases_only = {lt: 80.0, "Long Term Capital Lease Obligation": 80.0, cur: 20.0, "Current Capital Lease Obligation": 20.0}
+
+    def debt(balance_rows: dict[str, float], cashflow_rows: dict[str, float] | None, interest: float | None) -> float | None:
+        balance = fetch.BalanceSheet.model_validate({"period_end": end, **fetch._balance_values(balance_rows)})  # pyright: ignore[reportPrivateUsage]
+        income_rows = {"Pretax Income": 50.0} | ({} if interest is None else {"Interest Expense": interest})
+        income = fetch.IncomeStatement.model_validate({"period_end": end, **fetch._income_values(income_rows)})  # pyright: ignore[reportPrivateUsage]
+        cashflow = None if cashflow_rows is None else fetch.CashFlowStatement.model_validate({"period_end": end, **fetch._cashflow_values(cashflow_rows)})  # pyright: ignore[reportPrivateUsage]
+        return fetch._period(end, income, cashflow, balance).total_debt  # pyright: ignore[reportPrivateUsage]
+
+    quiet = {"Operating Cash Flow": 30.0, "Repayment Of Debt": 0.0}
+    # nothing borrowed, nothing repaid, and the interest is what a hundred of leases explains: debt-free
+    assert debt(leases_only, quiet, 6.0) == 0.0
+    assert debt(leases_only, quiet, None) == 0.0
+    # a borrowing or a repayment in the period says the vendor's rows miss the debt
+    assert debt(leases_only, quiet | {"Issuance Of Debt": 12.0}, 6.0) is None
+    assert debt(leases_only, quiet | {"Long Term Debt Payments": -3.0}, None) is None
+    # more interest than the leases explain says the same
+    assert debt(leases_only, quiet, 16.0) is None
+    # no cash-flow statement for the period: nothing to check the nil against
+    assert debt(leases_only, None, 6.0) is None
+    # the guard is for the nil alone: a positive remainder is read whatever the flows say
+    owing = leases_only | {lt: 130.0}
+    assert debt(owing, quiet | {"Issuance Of Debt": 12.0}, 16.0) == 50.0
+    # and it does not touch the plain rows or the rows taken whole
+    assert debt({"Long Term Debt": 0.0}, quiet | {"Issuance Of Debt": 12.0}, 16.0) == 0.0
+    assert debt({lt: 40.0, cur: 10.0}, quiet | {"Issuance Of Debt": 12.0}, 16.0) == 50.0

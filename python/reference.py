@@ -2432,6 +2432,12 @@ class DebtVendor:
     long_term_debt: List[str]
     current_debt: List[str]
     current_debt_components: List[str]
+    combined_long_term: List[str] = field(default_factory=lambda: [])
+    combined_current: List[str] = field(default_factory=lambda: [])
+    lease_long_term: List[str] = field(default_factory=lambda: [])
+    lease_current: List[str] = field(default_factory=lambda: [])
+    debt_activity: List[str] = field(default_factory=lambda: [])
+    lease_interest_ceiling: float = field(default_factory=lambda: 0.0)
     not_used: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
@@ -2442,6 +2448,12 @@ class DebtVendor:
                 long_term_debt=_atd_read_list(_atd_read_string)(x['long_term_debt']) if 'long_term_debt' in x else _atd_missing_json_field('DebtVendor', 'long_term_debt'),
                 current_debt=_atd_read_list(_atd_read_string)(x['current_debt']) if 'current_debt' in x else _atd_missing_json_field('DebtVendor', 'current_debt'),
                 current_debt_components=_atd_read_list(_atd_read_string)(x['current_debt_components']) if 'current_debt_components' in x else _atd_missing_json_field('DebtVendor', 'current_debt_components'),
+                combined_long_term=_atd_read_list(_atd_read_string)(x['combined_long_term']) if 'combined_long_term' in x else [],
+                combined_current=_atd_read_list(_atd_read_string)(x['combined_current']) if 'combined_current' in x else [],
+                lease_long_term=_atd_read_list(_atd_read_string)(x['lease_long_term']) if 'lease_long_term' in x else [],
+                lease_current=_atd_read_list(_atd_read_string)(x['lease_current']) if 'lease_current' in x else [],
+                debt_activity=_atd_read_list(_atd_read_string)(x['debt_activity']) if 'debt_activity' in x else [],
+                lease_interest_ceiling=_atd_read_float(x['lease_interest_ceiling']) if 'lease_interest_ceiling' in x else 0.0,
                 not_used=_atd_read_list(_atd_read_string)(x['not_used']) if 'not_used' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
@@ -2453,6 +2465,12 @@ class DebtVendor:
         res['long_term_debt'] = _atd_write_list(_atd_write_string)(self.long_term_debt)
         res['current_debt'] = _atd_write_list(_atd_write_string)(self.current_debt)
         res['current_debt_components'] = _atd_write_list(_atd_write_string)(self.current_debt_components)
+        res['combined_long_term'] = _atd_write_list(_atd_write_string)(self.combined_long_term)
+        res['combined_current'] = _atd_write_list(_atd_write_string)(self.combined_current)
+        res['lease_long_term'] = _atd_write_list(_atd_write_string)(self.lease_long_term)
+        res['lease_current'] = _atd_write_list(_atd_write_string)(self.lease_current)
+        res['debt_activity'] = _atd_write_list(_atd_write_string)(self.debt_activity)
+        res['lease_interest_ceiling'] = _atd_write_float(self.lease_interest_ceiling)
         res['not_used'] = _atd_write_list(_atd_write_string)(self.not_used)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res

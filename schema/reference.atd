@@ -382,6 +382,12 @@ type debt_vendor = {
   long_term_debt : string list;             (* required *)
   current_debt : string list;               (* optional; already contains commercial paper *)
   current_debt_components : string list;    (* summed when no current_debt row and either is present *)
+  ~combined_long_term : string list;        (* debt and lease obligations in one row; read only when long_term_debt is absent *)
+  ~combined_current : string list;
+  ~lease_long_term : string list;           (* the lease rows subtracted from the combined ones *)
+  ~lease_current : string list;
+  ~debt_activity : string list;             (* cash-flow rows of borrowing and repayment: a nil from the subtraction is refused when any carries a value *)
+  ~lease_interest_ceiling : float;          (* and when interest expense is above this share of the lease liabilities, more than leases alone explain *)
   ~not_used : string list;
   ~notes : string list;
 }

@@ -154,13 +154,34 @@
         "Commercial Paper",
         "Other Current Borrowings"
       ],
-      "not_used": [
-        "Total Debt",
-        "Long Term Capital Lease Obligation",
+      "combined_long_term": [
+        "Long Term Debt And Capital Lease Obligation"
+      ],
+      "combined_current": [
+        "Current Debt And Capital Lease Obligation"
+      ],
+      "lease_long_term": [
+        "Long Term Capital Lease Obligation"
+      ],
+      "lease_current": [
         "Current Capital Lease Obligation"
       ],
+      "debt_activity": [
+        "Issuance Of Debt",
+        "Repayment Of Debt",
+        "Long Term Debt Issuance",
+        "Long Term Debt Payments",
+        "Short Term Debt Issuance",
+        "Short Term Debt Payments"
+      ],
+      "lease_interest_ceiling": 0.15,
+      "not_used": [
+        "Total Debt"
+      ],
       "notes": [
-        "Long Term Debt is required; Current Debt is added when the row exists, else the sum of its components when either exists; a name whose vendor statements show no current debt row at all (Alphabet, Costco at FY2025) carries the long-term row alone and the composition says so. The vendor's Long Term Debt excludes finance leases where it shows them separately (Chevron's filed 39.781bn folds in 0.659bn of finance leases the vendor's row leaves out), a residual the cross-check reports."
+        "Long Term Debt is required; Current Debt is added when the row exists, else the sum of its components when either exists; a name whose vendor statements show no current debt row at all (Alphabet, Costco at FY2025) carries the long-term row alone and the composition says so. The vendor's Long Term Debt excludes finance leases where it shows them separately (Chevron's filed 39.781bn folds in 0.659bn of finance leases the vendor's row leaves out), a residual the cross-check reports.",
+        "Where the vendor shows no Long Term Debt row, as it does for some filers under IFRS, the combined rows are read, never the plain reading's zero: debt is the combined debt-and-lease row less the lease row beside it, exact arithmetic on the vendor's own rows, a filer with only leases coming to nil; where the vendor shows no lease row at all the combined rows are taken as they are and the source says they include lease liabilities, which under IFRS 16 carry their interest below operating profit, so counting them as debt does not charge the lease twice as it would for a filer under ASC 842, and the entry of a name read this way states it as a scope limit; a combined row with a lease row on the other side only cannot be separated and stays missing. The lease rows are read for that subtraction and for nothing else.",
+        "A nil from the subtraction is the vendor saying the filer owes nothing but its leases, and the vendor is sometimes wrong: for some filers its combined rows hold the leases alone while the borrowings sit in rows it does not label as debt. So a nil is taken only when the same period's cash-flow statement shows no borrowing or repayment (debt_activity) and the interest expense, where there is one, is no more than lease_interest_ceiling of the lease liabilities, which is what leases alone can explain; otherwise the figure stays missing. A filer that borrowed nothing, repaid nothing and pays only lease interest is read as debt-free; one whose cash flows or interest say otherwise is refused, never read as nil."
       ]
     },
     "ifrs": {

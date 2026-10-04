@@ -43,7 +43,8 @@
     "ownership_structure": "the listed line owns only part of the business, counts only part of the shares, or ranks behind other claims",
     "country_basis": "the country that chooses the risk premium is not the legal domicile",
     "loss_making": "loss-making on the latest filed years",
-    "filer_tagging": "the filer's own tagging puts a line under an element that means something else, so a field the record reads is not what its name says"
+    "filer_tagging": "the filer's own tagging puts a line under an element that means something else, so a field the record reads is not what its name says",
+    "leases_in_debt": "the vendor does not separate lease liabilities from borrowings, so the debt read includes the leases"
   },
   "tickers": [
     {
@@ -1047,7 +1048,13 @@
     {
       "ticker": "NESN.SW",
       "entity_class": "OperatingCompany",
-      "why": "the Swiss line of a packaged-food maker, reporting in francs on the vendor path; a second Swiss domicile beside the pharmaceutical line already in this file."
+      "why": "the Swiss line of a packaged-food maker, reporting in francs on the vendor path; a second Swiss domicile beside the pharmaceutical line already in this file.",
+      "scope_limits": [
+        "the vendor does not separate lease liabilities from borrowings for this filer, so the debt read is the two together and overstates the borrowings by the leases"
+      ],
+      "scope_limit_codes": [
+        "leases_in_debt"
+      ]
     },
     {
       "ticker": "SHOP.TO",

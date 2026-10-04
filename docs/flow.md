@@ -793,6 +793,12 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- vendor debt from the combined rows: where the vendor shows no Long Term Debt row, debt is
+  read from its combined debt-and-lease rows, less the lease rows where it shows them and
+  whole, with the source saying so, where it shows none; a nil from the subtraction is taken
+  only when the period's cash flows show no borrowing or repayment and no more interest
+  than the leases explain, otherwise the figure stays missing. Two records are valued where
+  they were refused for the missing figure; no other value moves. No new `Failed` string.
 - nine Swiss lines: Novartis, UBS, ABB, Sandoz, Alcon, Swiss Re, Logitech, Galderma and
   Richemont join the universe at a downstream reader's request, all trading in francs while
   reporting in dollars or euros, classes drafted and confirmed by the user the same day;

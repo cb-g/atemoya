@@ -204,6 +204,7 @@ class CashFlowStatement(Statement):
     dividends_paid_row: str | None
     operating_cash_flow: float | None
     operating_cash_flow_row: str | None
+    debt_activity_row: str | None = None  # the first borrowing or repayment row carrying a value other than nil
 
 
 class BalanceSheet(Statement):
@@ -316,12 +317,13 @@ def _cash(rows: Mapping[str, object], defs: reference.FieldDefinitions) -> tuple
 
 def _total_debt(rows: Mapping[str, object], defs: reference.FieldDefinitions) -> tuple[float | None, str | None, Components | None]:
     """Long-term debt, plus the current-debt row when present (it already holds commercial
-    paper), else its components when either is present. The vendor's Total Debt and lease
-    rows are never read: Total Debt includes the operating lease liabilities."""
+    paper), else its components when either is present. The vendor's Total Debt is never
+    read: it includes the operating lease liabilities. Where the vendor shows no Long Term
+    Debt row the combined debt-and-lease rows are read (_total_debt_combined)."""
     d = defs.total_debt.vendor
     long_term, row = _first_present(rows, tuple(d.long_term_debt))
     if long_term is None or row is None:
-        return None, None, None
+        return _total_debt_combined(rows, defs)
     parts: Components = [("long_term_debt", long_term, row)]
     current, current_row = _first_present(rows, tuple(d.current_debt))
     if current is not None and current_row is not None:
@@ -332,6 +334,45 @@ def _total_debt(rows: Mapping[str, object], defs: reference.FieldDefinitions) ->
             if value is not None and component_row is not None:
                 parts.append(("current_debt_components", value, component_row))
     return sum(v for _, v, _ in parts), " + ".join(r for _, _, r in parts), parts
+
+
+def _total_debt_combined(rows: Mapping[str, object], defs: reference.FieldDefinitions) -> tuple[float | None, str | None, Components | None]:
+    """Debt from the vendor's combined debt-and-lease rows, for a name with no Long Term Debt
+    row. Each side, long-term and current, is the combined row less the lease row beside it;
+    where the vendor shows no lease row on either side the combined rows are taken whole and
+    the source says they include lease liabilities. The long-term side must resolve; a
+    combined row whose leases cannot be told apart, or one smaller than its leases, is
+    missing data and the whole figure stays missing."""
+    d = defs.total_debt.vendor
+    sides = (("long_term", d.combined_long_term, d.lease_long_term), ("current", d.combined_current, d.lease_current))
+    any_lease = any(_first_present(rows, tuple(lease))[0] is not None for _, _, lease in sides)
+    parts: Components = []
+    labels: list[str] = []
+    for side, combined_rows, lease_rows in sides:
+        combined, combined_row = _first_present(rows, tuple(combined_rows))
+        if side == "current":
+            plain, plain_row = _first_present(rows, tuple(d.current_debt))
+            if plain is not None and plain_row is not None:
+                parts.append(("current_debt", plain, plain_row))
+                labels.append(plain_row)
+                continue
+        if combined is None or combined_row is None:
+            if side == "long_term":
+                return None, None, None
+            continue
+        lease, lease_row = _first_present(rows, tuple(lease_rows))
+        if lease is not None and lease_row is not None:
+            if combined - lease < -1e-6 * max(abs(combined), 1.0):
+                return None, None, None
+            parts.append((f"{side}_debt_and_leases", combined, combined_row))
+            parts.append((f"{side}_leases", -lease, lease_row))
+            labels.append(f"{combined_row} - {lease_row}")
+        elif any_lease:
+            return None, None, None
+        else:
+            parts.append((f"{side}_debt_and_leases", combined, combined_row))
+            labels.append(f"{combined_row} (includes lease liabilities; the vendor shows no lease row)")
+    return max(sum(v for _, v, _ in parts), 0.0), " + ".join(labels), parts
 
 
 def _delta_nwc(rows: Mapping[str, object], defs: reference.FieldDefinitions) -> tuple[float | None, str | None, Components | None]:
@@ -382,6 +423,8 @@ def _cashflow_values(rows: Mapping[str, object], defs: reference.FieldDefinition
     dividends, row = _first_present(rows, DIVIDEND_ROWS)
     out["dividends_paid"], out["dividends_paid_row"] = (None if dividends is None else 0.0 - dividends), row
     out["operating_cash_flow"], out["operating_cash_flow_row"] = _first_present(rows, OPERATING_CASH_FLOW_ROWS)
+    out["debt_activity_row"] = next(
+        (label for label in defs.total_debt.vendor.debt_activity if (_first_present(rows, (label,))[0] or 0.0) != 0.0), None)
     return out
 
 
@@ -487,6 +530,29 @@ def _depreciation(
     return None, None
 
 
+def _debt(
+    income: IncomeStatement | None, cashflow: CashFlowStatement | None, balance: BalanceSheet | None, defs: reference.FieldDefinitions
+) -> tuple[float | None, str | None, Components | None]:
+    """The balance sheet's debt, with one guard: a nil that came from subtracting the lease
+    rows from the combined ones is the vendor saying the filer owes only its leases, and it
+    is taken only when the period shows no borrowing or repayment and no more interest than
+    the leases explain. Otherwise the figure is missing, never nil."""
+    if balance is None:
+        return None, None, None
+    debt, source, parts = balance.total_debt, balance.total_debt_source, balance.total_debt_composition
+    if debt is None or parts is None:
+        return debt, source, parts
+    leases = -sum(v for name, v, _ in parts if name in ("long_term_leases", "current_leases"))
+    if leases <= 0 or debt > 1e-6 * leases:
+        return debt, source, parts
+    if cashflow is None or cashflow.debt_activity_row is not None:
+        return None, None, None
+    interest = income.interest_expense if income else None
+    if interest is not None and abs(interest) > defs.total_debt.vendor.lease_interest_ceiling * leases:
+        return None, None, None
+    return debt, source, parts
+
+
 def _composition(definition: str, parts: Components | None) -> boundary.Composition | None:
     if parts is None:
         return None
@@ -501,6 +567,7 @@ def _period(
     defs: reference.FieldDefinitions = DEFINITIONS,
 ) -> boundary.FiscalPeriod:
     depreciation_amortization, depreciation_amortization_row = _depreciation(income, cashflow)
+    total_debt, total_debt_source, total_debt_parts = _debt(income, cashflow, balance, defs)
     return boundary.FiscalPeriod(
         period_end=end.isoformat(),
         ebit=income.ebit if income else None,
@@ -524,9 +591,9 @@ def _period(
         cash=balance.cash if balance else None,
         cash_row=balance.cash_row if balance else None,
         cash_composition=_composition(defs.cash.name, balance.cash_composition) if balance else None,
-        total_debt=balance.total_debt if balance else None,
-        total_debt_source=balance.total_debt_source if balance else None,
-        total_debt_composition=_composition(defs.total_debt.name, balance.total_debt_composition) if balance else None,
+        total_debt=total_debt,
+        total_debt_source=total_debt_source,
+        total_debt_composition=_composition(defs.total_debt.name, total_debt_parts),
         book_equity=balance.book_equity if balance else None,
         net_income=income.net_income if income else None,
         dividends_paid=cashflow.dividends_paid if cashflow else None,
