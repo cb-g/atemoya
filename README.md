@@ -89,6 +89,9 @@ has the rules.
 | base rate | how often companies of the same size grew as fast as the record assumes and as the price needs, from filed history | the same run, `base_rate` on the record; `uv run python/base_rates.py` builds the table |
 | options-implied expected return | a required return read from option prices alone (Martin and Wagner), beside CAPM and the declared one | `... --options data/options`, `options_expected_return` on the record |
 | studies | what the records' own judgments preceded against SPY, and the same rows sorted by plain cheapness; descriptive, a declared holdout unread | `uv run python/anchor_study.py`, `baseline_study.py` |
+| implied cost of capital | what the price and the Street's two fiscal-year forecasts imply together, beside CAPM and the options-implied return | `uv run python/implied_cost.py` |
+| earnings reactions | the move across each release against its consensus surprise, with the next release and its implied move | `uv run python/earnings_reactions.py` |
+| watch | what changed between two runs, one line a name | `uv run python/watch.py` |
 | broad panel | every SEC filer with a ticker today, each June since 2010, and what cheapness, quality and a peer-implied gap did before 2022 and since; survivors only, descriptive | `uv run python/broad_panel.py --retry-missing`, `broad_study.py` |
 | rule panel | this tool's own generic DCF on the five hundred largest filers each June since 2013, chosen by size and an industry-code rule, with the study beside the earnings yield; descriptive | `uv run python/rule_panel.py`, `rule_study.py` |
 | consensus | the Street's dated bar per name and each name's surprise history; never on a record | `uv run python/consensus.py`, daily |

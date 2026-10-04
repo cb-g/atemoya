@@ -790,6 +790,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- three side tools on the run's outputs: `python/implied_cost.py` (the consensus-implied cost
+  of capital, Easton's PEG, beside CAPM and the options-implied return),
+  `python/earnings_reactions.py` (the move across each release against its consensus
+  surprise) and `python/watch.py` (what changed between two runs). They read files and
+  fetch nothing; no record moves and there is no new `Failed` string.
 - terminal growth held to the risk-free rate, and three quality lines in the summary: where
   a country's terminal growth is above the risk-free rate the valuation discounts at, the
   model uses the rate and the parameter says so; five records move, none in dollars. The

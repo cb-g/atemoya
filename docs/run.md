@@ -448,6 +448,49 @@ would have held them looks better than it was. A frame carries the latest figure
 for a period, later restatements included. A filer with several share classes is missing.
 Sixteen formations are sixteen. Nothing here feeds a model, a belief or a signal.
 
+## Three side tools on the run's own outputs
+
+Each reads what a run and the consensus tool already wrote, fetches nothing, and writes a
+table. None is on a valuation record and none feeds a model, a belief or a signal.
+
+    uv run python/implied_cost.py           # -> output/consensus/implied_cost.txt and .jsonl
+    uv run python/earnings_reactions.py     # -> output/earnings_reactions/table.txt and rows.jsonl
+    uv run python/watch.py                  # -> output/watch/<valued_on>.txt
+
+**The consensus-implied cost of capital** (`implied_cost.py`) is a third required return
+beside CAPM and the options-implied one: the discount rate at which the price equals the
+earnings the analysts forecast, by Easton's PEG model, the square root of the next fiscal
+year's consensus EPS less the current year's, over the price. It needs only what the daily
+consensus snapshot carries. A name gets a figure or the reason there is none: no snapshot,
+a forecast missing or not positive, the next year not above this one, forecasts in another
+currency than the price, or a price in a minor unit. The table puts the record's CAPM and
+options-implied figures beside it. The forecasts are the Street's adjusted earnings and run
+optimistic, and the model ignores dividends, so it reads low for a payer.
+
+**Earnings reactions** (`earnings_reactions.py`) joins two things already on disk: the
+record's last eight releases with the move across each against the benchmark, and the
+consensus tool's bar and reported figure for each. Per name it gives the median excess move
+on beats and on misses with their counts (a side with fewer than three is a count alone),
+the beats the price fell on and the misses it rose on, and beside them the next release,
+the days to it, and the implied move against the realised median where the run was made
+with the options store. A pooled line covers every matched release in the universe. Eight
+releases are a handful, and a beat on the Street's adjusted figure is not a beat on
+guidance.
+
+**The watch** (`watch.py`) compares two runs' records and lists what changed, one line a
+name, for reading a day where the batch's own `--baseline` diff is for auditing a change
+to the code. Without `--previous` it takes the newest archived run under `output/runs/`
+valued on an earlier day. Its sections: a ticker that no longer names its declared filer;
+status changed; signal changed; the price crossed the fair value; a new fiscal year was
+read; the fair value moved by more than five per cent with no new year; the price moved by
+more than ten; stretch newly at three on a side; an insider buying cluster newly present;
+releases due within seven days; names in one run and not the other. It ranks nothing and
+recommends nothing.
+
+These replace three things the first version of this project had and leave out what made
+them recommendations: its earnings scanner sized positions and named trades, and its
+watchlist scored a thesis and raised price alerts. What is kept is the descriptive core.
+
 ## Share counts and point-in-time
 
 Two share counts live in `reference/field_definitions.json` and are never interchanged: a
