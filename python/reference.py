@@ -1814,6 +1814,7 @@ class FxSources:
     max_age_days: int
     currency_countries: List[Tuple[str, str]]
     currencies: List[Tuple[str, FxSource]]
+    country_currencies: List[Tuple[str, str]] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -1825,6 +1826,7 @@ class FxSources:
                 max_age_days=_atd_read_int(x['max_age_days']) if 'max_age_days' in x else _atd_missing_json_field('FxSources', 'max_age_days'),
                 currency_countries=_atd_read_assoc_object_into_list(_atd_read_string)(x['currency_countries']) if 'currency_countries' in x else _atd_missing_json_field('FxSources', 'currency_countries'),
                 currencies=_atd_read_assoc_object_into_list(FxSource.from_json)(x['currencies']) if 'currencies' in x else _atd_missing_json_field('FxSources', 'currencies'),
+                country_currencies=_atd_read_assoc_object_into_list(_atd_read_string)(x['country_currencies']) if 'country_currencies' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -1837,6 +1839,7 @@ class FxSources:
         res['max_age_days'] = _atd_write_int(self.max_age_days)
         res['currency_countries'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.currency_countries)
         res['currencies'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.currencies)
+        res['country_currencies'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.country_currencies)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 

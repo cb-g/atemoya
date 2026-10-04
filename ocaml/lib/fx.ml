@@ -75,6 +75,11 @@ let country_of (sources : Reference_t.fx_sources) currency =
   | Some c -> Ok c
   | None -> Error (Printf.sprintf "no country for trading currency %s in fx_sources" currency)
 
+let currency_of_country (sources : Reference_t.fx_sources) country =
+  match List.assoc_opt country sources.country_currencies with
+  | Some c -> Ok c
+  | None -> Error (Printf.sprintf "no currency declared for domicile %s in fx_sources" country)
+
 let scale rate = Option.map (fun v -> v *. rate)
 
 let scale_composition rate =

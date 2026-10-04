@@ -288,3 +288,26 @@ def test_map_cik_is_ten_digits_and_spcx_declares_the_company() -> None:
     bad = json.dumps({"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "map_cik": "123"}]})
     with pytest.raises(universe.UniverseError, match="map_cik must be a ten-digit CIK"):
         universe.load_text(bad)
+
+
+def test_every_table_country_declares_its_own_currency() -> None:
+    """A record reporting in a currency that is not its domicile's own discounts on that
+    currency's curve, so every country the tables carry names its currency, and every
+    currency a domicile names leads to a country whose curve a dollar reporter would not
+    be sent to by mistake."""
+    import reference
+
+    root = Path(__file__).resolve().parents[1] / "reference"
+    fx = reference.FxSources.from_json_string((root / "fx_sources.json").read_text())
+    own = dict(fx.country_currencies)
+    params = reference.Params.from_json_string((root / "params.json").read_text())
+    rates = reference.RateSources.from_json_string((root / "rate_sources.json").read_text())
+    countries = {c for c, _ in params.terminal_growth_rate.values} | {c for c, _ in rates.countries} | set(rates.no_curve_fallback)
+    for country in countries:
+        assert country in own, country
+    assert own["United States"] == "USD" and own["Israel"] == "ILS" and own["Singapore"] == "SGD"
+    # the euro's members share one currency and the benchmark curve is one of them
+    assert own[dict(fx.currency_countries)["EUR"]] == "EUR"
+    # a currency's rate country reports in that currency, so it stays on its own curve
+    for code, country in fx.currency_countries:
+        assert own[country] == code, (code, country)

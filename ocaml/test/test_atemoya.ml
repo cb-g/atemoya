@@ -289,6 +289,7 @@ let params : Params.t =
       Reference_j.fx_sources_of_string
         {|{"source": "test", "as_of": "2026-09-10", "max_age_days": 10,
            "currency_countries": {"USD": "United States", "GBP": "United Kingdom", "BRL": "Brazil", "EUR": "Germany"},
+           "country_currencies": {"United States": "USD", "United Kingdom": "GBP", "Brazil": "BRL", "Germany": "EUR", "Singapore": "SGD", "South Korea": "KRW", "Japan": "JPY", "Uruguay": "UYU"},
            "currencies": {"BRL": {"series": "DEXBZUS", "direction": "units_per_usd"},
                           "EUR": {"series": "DEXUSEU", "direction": "usd_per_unit"},
                           "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit"}}}|};
@@ -2163,8 +2164,8 @@ let test_base_rate () =
   Alcotest.(check (option string)) "no table fetched" (Some "base rates not fetched: run python/base_rates.py") plain.base_rate_reason;
   let small = run_with (Some { rates with tables = [ table 1e9 None ] }) (financials (history ())) in
   check_mentions "no table for the size" (Option.value small.base_rate_reason ~default:"") [ "no 5-year table for a starting revenue of 1e+04 dollars" ];
-  let euro = run_with (Some rates) (financials ~currency:(Some "EUR") (history ())) in
-  check_mentions "not in dollars" (Option.value euro.base_rate_reason ~default:"") [ "the reference class is in dollars and the record is in EUR" ];
+  let won = run_with (Some rates) (financials ~currency:(Some "KRW") ~country:(Some "South Korea") (history ())) in
+  check_mentions "not in dollars" (Option.value won.base_rate_reason ~default:(Option.value won.failed_reason ~default:"")) [ "the reference class is in dollars and the record is in KRW" ];
   let wrapper = Valuation.run { params with base_rates = Some rates } ~today ~model_version:"test" ~declaration:(Some (declaration `Wrapper)) (financials (history ())) in
   Alcotest.(check bool) "neither field off a DCF-shaped record" true (Option.is_none wrapper.base_rate && Option.is_none wrapper.base_rate_reason)
 
@@ -3529,10 +3530,45 @@ let test_no_curve_domicile_takes_the_trading_currency () =
       | None -> Alcotest.fail "no country risk premium");
       check_float "tax from the domicile" 0.25 i.statutory_tax_rate.value
   | _ -> Alcotest.fail "expected a dcf");
-  (* a domicile with no curve and no declaration still fails naming the curve *)
+  (* a domicile with no declared currency fails naming it, never a guess at its curve *)
   let v = run { (filed (history ())) with country = Some "Peru" } in
   Alcotest.check status "undeclared domicile fails" `Failed v.status;
-  check_mentions "and names the curve" (Option.value v.failed_reason ~default:"") [ "risk-free curve"; "Peru" ]
+  check_mentions "and names the domicile" (Option.value v.failed_reason ~default:"")
+    [ "no currency declared for domicile Peru in fx_sources" ]
+
+let test_reporting_currency_sets_the_curve () =
+  (* A discount rate is in the currency of the cash flows: Singapore has its own curve, but a
+     Singapore company whose statements and price are in dollars discounts on the dollar
+     curve with the dollar terminal growth, and keeps Singapore's premium and tax rate. *)
+  Alcotest.(check bool) "Singapore has a curve" true (Params.has_curve params.risk_free ~country:"Singapore");
+  let dollar = run (financials ~country:(Some "Singapore") (history ())) in
+  let home = run (financials (history ())) in
+  Alcotest.(check (option string)) "it values" None dollar.failed_reason;
+  (match (dollar.inputs, home.inputs) with
+  | Some (`Dcf i), Some (`Dcf us) ->
+      check_float "the dollar curve's rate" us.risk_free_rate.value i.risk_free_rate.value;
+      Alcotest.(check string) "and its key" us.risk_free_rate.key i.risk_free_rate.key;
+      check_mentions "the source says why" i.risk_free_rate.source
+        [ "reporting currency; the domicile's own currency is SGD" ];
+      Alcotest.(check string) "terminal growth is the dollar's" "United States" i.terminal_growth_rate.key;
+      (match i.country_risk_premium with
+      | Some crp ->
+          Alcotest.(check string) "crp key is the domicile" "Singapore" crp.key;
+          check_float "crp is the domicile's, less the base" (0.0423 -. i.equity_risk_premium.value) crp.value
+      | None -> Alcotest.fail "no country risk premium");
+      check_float "tax from the domicile" 0.17 i.statutory_tax_rate.value
+  | _ -> Alcotest.fail "expected a dcf");
+  (* a domicile reporting in its own currency stays on its own curve *)
+  (match Params.domicile_currency params ~country:"United States" with
+  | Ok c -> Alcotest.(check string) "the declared currency" "USD" c
+  | Error e -> Alcotest.fail e);
+  (match home.inputs with
+  | Some (`Dcf us) ->
+      Alcotest.(check bool) "no premium at home" true (Option.is_none us.country_risk_premium);
+      Alcotest.(check bool) "and no note" false
+        (String.length us.risk_free_rate.source >= 18
+        && String.sub us.risk_free_rate.source 0 18 = "reporting currency")
+  | _ -> Alcotest.fail "expected a dcf")
 
 let test_reit_routes_and_implied () =
   let v = run ~declared:(Some (declaration `Reit)) (reit_financials (reit_history ())) in
@@ -3699,7 +3735,7 @@ let test_unknown_country () =
 
 let test_stale_parameter () =
   let v =
-    run (financials ~country:(Some "Germany") [ full_period () ])
+    run (financials ~currency:(Some "EUR") ~country:(Some "Germany") [ full_period () ])
   in
   check_reason v [ "risk_free_rate"; "97 days"; "max_age_days 45" ];
   check_nulls v;
@@ -4467,6 +4503,7 @@ let () =
           case "conversion scales totals, not price" test_fx_convert_scales_totals_only;
           case "international capm decomposes; domestic form untouched" test_international_capm;
           case "a declared no-curve domicile takes the trading currency's rate" test_no_curve_domicile_takes_the_trading_currency;
+          case "a domicile reporting in another currency discounts on that currency's curve" test_reporting_currency_sets_the_curve;
           case "adr ratio invariance" test_adr_ratio_invariance;
           case "minor-unit price guard" test_minor_unit_guard;
           case "currency gate failures name the field or pair" test_currency_gate_failures;

@@ -2,6 +2,7 @@ open Boundary_t
 
 (* (54) What the record says when the risk-free rate is not the domicile's own. *)
 let no_curve_rf_note = "trading currency; domicile curve unavailable"
+let other_currency_rf_note own = Printf.sprintf "reporting currency; the domicile's own currency is %s" own
 
 type thresholds = { buy_above : float; sell_below : float; sanity_bound : float }
 
@@ -725,7 +726,19 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
             Result.bind (Fx.country_of params.fx_sources trading) (fun rate_country ->
                 Params.resolve_cross ~hold_vintage ~rf_note:no_curve_rf_note params ~today
                   ~domicile:country ~rate_country ~industry:original.industry)
-          else Params.resolve ~hold_vintage params ~today ~country ~industry:original.industry
+          else
+            (* A discount rate is in the currency of the cash flows it discounts. A domicile
+               whose own currency is not the one the statements and the price are in (Teva
+               in dollars from Israel, Sea in dollars from Singapore) takes that currency's
+               curve and terminal growth and keeps its own country risk premium and tax
+               rate, as a name that reports at home and trades abroad already does. *)
+            Result.bind (Params.domicile_currency params ~country) (fun own ->
+                if own = trading then
+                  Params.resolve ~hold_vintage params ~today ~country ~industry:original.industry
+                else
+                  Result.bind (Fx.country_of params.fx_sources trading) (fun rate_country ->
+                      Params.resolve_cross ~hold_vintage ~rf_note:(other_currency_rf_note own) params
+                        ~today ~domicile:country ~rate_country ~industry:original.industry))
         in
         match resolved with
         | Error reason -> failed reason

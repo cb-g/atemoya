@@ -7,7 +7,8 @@
     "Cross rates go through USD: trading per financial = usd_per_unit(financial) / usd_per_unit(trading), both legs recorded. USD itself is 1 by definition.",
     "A currency with no FRED series is never scraped from a page: the valuation fails naming the pair until a human wires an official source, as was done for the tenge (the National Bank of Kazakhstan's feed, provider nbk); the shekel has none yet.",
     "currency_countries names the country whose curve and terminal growth a trading currency uses; EUR uses Germany, the euro benchmark curve.",
-    "MXN maps to Mexico (71): the peso's H.10 series was already here; the country it names for the curve and the terminal growth was not, until Mexico joined the country tables."
+    "MXN maps to Mexico (71): the peso's H.10 series was already here; the country it names for the curve and the terminal growth was not, until Mexico joined the country tables.",
+    "country_currencies names each domicile's own currency, declared by hand. A record whose statements and price are both in another currency (a dollar reporter domiciled in Israel, Singapore or the United Kingdom) discounts on that currency's curve with that currency's terminal growth and keeps the domicile's country risk premium and statutory tax rate, the risk-free parameter's source saying so: a discount rate is in the currency of the cash flows. A domicile not named here fails the record naming it."
   ],
   "currency_countries": {
     "USD": "United States",
@@ -28,6 +29,35 @@
     "ILS": "Israel",
     "KZT": "Kazakhstan",
     "MXN": "Mexico"
+  },
+  "country_currencies": {
+    "United States": "USD",
+    "Australia": "AUD",
+    "Brazil": "BRL",
+    "British Virgin Islands": "USD",
+    "Canada": "CAD",
+    "China": "CNY",
+    "Denmark": "DKK",
+    "Finland": "EUR",
+    "France": "EUR",
+    "Germany": "EUR",
+    "Hong Kong": "HKD",
+    "India": "INR",
+    "Ireland": "EUR",
+    "Israel": "ILS",
+    "Italy": "EUR",
+    "Japan": "JPY",
+    "Kazakhstan": "KZT",
+    "Mexico": "MXN",
+    "Netherlands": "EUR",
+    "Singapore": "SGD",
+    "South Korea": "KRW",
+    "Spain": "EUR",
+    "Sweden": "SEK",
+    "Switzerland": "CHF",
+    "Taiwan": "TWD",
+    "United Kingdom": "GBP",
+    "Uruguay": "UYU"
   },
   "currencies": {
     "BRL": {

@@ -274,6 +274,7 @@ type fx_sources = {
   as_of : string;
   max_age_days : int;
   currency_countries : (string * string) list <json repr="object">;   (* currency -> country whose curve and terminal growth it uses *)
+  ~country_currencies : (string * string) list <json repr="object">;  (* domicile -> its own currency; a record reporting and trading in another one discounts on that currency's curve *)
   currencies : (string * fx_source) list <json repr="object">;
   ~notes : string list;
 }

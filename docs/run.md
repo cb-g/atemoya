@@ -60,6 +60,13 @@ recorded FX rate (statement totals, never per-share fields) and valued in the tr
 currency with that currency's country's rates plus the domicile's country risk premium;
 prices quoted in pence or cents are converted to the major unit at the fetch.
 
+The curve follows the currency of the cash flows, not the address. A name whose statements
+and price are both in a currency that is not its domicile's own (Teva in dollars from
+Israel, Sea in dollars from Singapore) takes that currency's curve and terminal growth and
+keeps the domicile's country risk premium and tax rate, the risk-free parameter's source
+saying so. `reference/fx_sources.json` declares each domicile's own currency under
+`country_currencies`; a domicile it does not name fails the record naming it.
+
 ## Providers and definitions
 
 Filed statements come in the taxonomy the filer uses (us-gaap or ifrs-full, each a

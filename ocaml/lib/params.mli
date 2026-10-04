@@ -81,6 +81,11 @@ val no_curve_declared : Reference_t.rate_sources -> country:string -> bool
     declaration is inert while the domicile does have a curve, and a domicile not named
     there still fails. *)
 
+val domicile_currency : t -> country:string -> (string, string) result
+(** The domicile's own currency from reference/fx_sources.json's [country_currencies], the
+    vendor's country string mapped through the registry's aliases; an undeclared domicile
+    is an error naming it. *)
+
 val resolve_cross :
   ?hold_vintage:bool ->
   ?rf_note:string ->

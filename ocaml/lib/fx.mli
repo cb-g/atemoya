@@ -29,4 +29,10 @@ val rate :
 
 val country_of : Reference_t.fx_sources -> string -> (string, string) result
 
+val currency_of_country : Reference_t.fx_sources -> string -> (string, string) result
+(** The domicile's own currency, as declared. A record whose statements and price are both
+    in another currency discounts on that currency's curve, the cash flows' own, and keeps
+    the domicile as a country risk premium and a tax rate; an undeclared domicile is an
+    error naming it, never a guess. *)
+
 val convert : rate:float -> Boundary_t.financials -> Boundary_t.financials

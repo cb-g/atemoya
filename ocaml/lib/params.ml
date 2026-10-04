@@ -160,6 +160,9 @@ let has_curve (rf : risk_free_rates option) ~country =
 let no_curve_declared (sources : rate_sources) ~country =
   List.mem (canonical sources.aliases country) sources.no_curve_fallback
 
+let domicile_currency t ~country =
+  Fx.currency_of_country t.fx_sources (canonical t.rate_sources.aliases country)
+
 let beta ?hold_vintage (table : industry_table) ~today ~industry =
   let default key =
     Ok

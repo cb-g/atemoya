@@ -33,6 +33,8 @@ file.
 | parameters | risk-free curve not fetched for (country): run python/refresh_rates.py with your FRED key |
 | parameters | no risk-free curve for country (country) |
 | parameters | *(no reason: a domicile declared in `rate_sources.json`'s `no_curve_fallback`, whose statements and price are in one currency, takes that currency's curve and keeps its own country risk premium; the risk-free parameter's source says "trading currency; domicile curve unavailable")* |
+| parameters | no currency declared for domicile (country) in fx_sources |
+| parameters | *(no reason: a domicile whose own currency, declared in `fx_sources.json`'s `country_currencies`, is not the one its statements and price are both in takes that currency's curve and terminal growth and keeps its own country risk premium and tax rate; the risk-free parameter's source says "reporting currency; the domicile's own currency is (code)")* |
 | parameters | no (equity_risk_premium, statutory_tax_rate or terminal_growth_rate) for country (country) |
 | parameters | risk-free curve for (key) has no (tenor) tenor |
 | parameters | (parameter) for (key) (as_of date) is N days old, older than its max_age_days M |
@@ -596,7 +598,8 @@ projection horizon, deliberately not the current year, which carries the cycle. 
 vintage and its release date are on the table, `max_age_days` fails it when no newer
 vintage is transcribed, and **there is no default row**: a country the table does not
 carry fails the record naming the field. A cross-currency name takes the row of the
-trading currency's country, not its domicile's.
+trading currency's country, not its domicile's, and so does a name whose statements and
+price are both in a currency that is not its domicile's own.
 
 ## Beliefs
 
@@ -790,6 +793,15 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the curve follows the currency: a record whose statements and price are both in a
+  currency that is not its domicile's own (a dollar reporter domiciled in Israel, Singapore
+  or the United Kingdom) discounted on the domicile's curve, a rate in another currency
+  than its cash flows; it now takes the reporting currency's curve and terminal growth and
+  keeps the domicile's country risk premium and tax rate, as a name that reports at home
+  and trades abroad already did. `reference/fx_sources.json` gains `country_currencies`,
+  each domicile's own currency, declared by hand. New `Failed` string: no currency declared
+  for domicile (country) in fx_sources. Five records move, those of the five valued names
+  the rule reaches, and no other.
 - classes confirmed: the user confirmed the classes drafted for the fifty-seven names of
   briefs 71 and 81; Celestica and Dutch Bros move from `OperatingCompany` to `Cyclical` and
   are refused for too few through-cycle observations, and Kaspi gains its reason in full and
