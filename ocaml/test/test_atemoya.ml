@@ -664,10 +664,22 @@ let test_terminal_growth_comes_from_the_table_or_the_record_fails () =
   (* (57) The table is sourced now, so there is no default to fall back on: the value is the
      country's row, and a country the table does not carry is a refusal naming the field. *)
   let a = get (Params.resolve params ~today ~country:"Singapore" ~industry:None) in
-  check_float "the country's own row" 0.025 a.terminal_growth_rate.value;
+  (* Singapore's row, 0.025, is above its risk-free rate in the fixture, so it is held to
+     that rate and the parameter says so with both figures; the key is still the country's. *)
+  check_float "the country's own row, held to its risk-free rate" a.risk_free_rate.value a.terminal_growth_rate.value;
+  Alcotest.(check bool) "which is below the table's figure" true (a.terminal_growth_rate.value < 0.025);
+  check_mentions "and the parameter says so" a.terminal_growth_rate.source [ "held to the risk-free rate"; "the table's 0.0250 is above it" ];
   Alcotest.(check string) "keyed to the country" "Singapore" a.terminal_growth_rate.key;
   let b = get (Params.resolve params ~today ~country:"South Korea" ~industry:None) in
-  check_float "a different country, a different row" 0.03 b.terminal_growth_rate.value;
+  Alcotest.(check bool) "a different country, a different row, held or not by its own rate" true
+    (b.terminal_growth_rate.value = Float.min 0.03 b.risk_free_rate.value);
+  (* the rule itself: a figure at or below the rate is untouched, source and all *)
+  let rate = param ~key:"X/7y" 0.04 in
+  let below = param ~key:"X" ~source:"table" 0.03 in
+  Alcotest.(check bool) "at or below the rate: unchanged" true (Params.hold_to_risk_free ~risk_free_rate:rate below = below);
+  let held = Params.hold_to_risk_free ~risk_free_rate:rate (param ~key:"X" ~source:"table" 0.06) in
+  check_float "above it: the rate" 0.04 held.value;
+  Alcotest.(check string) "with both figures in the source" "table; held to the risk-free rate 0.0400 (X/7y): the table's 0.0600 is above it" held.source;
   (* Japan has a curve, an equity risk premium and a tax rate in the fixture, and no
      terminal-growth row: the refusal names that field and no other. *)
   (match Params.resolve params ~today ~country:"Japan" ~industry:None with
@@ -2212,7 +2224,20 @@ let test_quality () =
   check_mentions "a gap" (why { fin with periods = [ List.hd periods; year "2023-09-30" ~ni:1. ~cfo:1. ~debt:1. ~revenue:1. ~shares:1. ] }) [ "not consecutive years" ];
   (* on the record whatever it concludes: a refused wrapper carries the same block *)
   let refused = run ~declared:(Some (declaration `Wrapper)) fin in
-  Alcotest.(check bool) "the block rides on a refusal" true (Option.is_some refused.quality && Option.is_none refused.quality_reason)
+  Alcotest.(check bool) "the block rides on a refusal" true (Option.is_some refused.quality && Option.is_none refused.quality_reason);
+  (* the run summary: three plain lines, a rise in the share count named above two per cent,
+     and a lender left out of the cash-flow line; the later sections of the summary print on
+     a run with a valued record, so one rides along *)
+  let named t (v : Boundary_t.valuation) = { v with ticker = t } in
+  let weak_record = named "WEAK" (run weak) in
+  let loss = named "LOSS" (run { fin with periods = [ year "2025-09-30" ~ni:(-10.) ~cfo:(-5.) ~debt:200. ~revenue:1000. ~shares:100.5; List.nth periods 1 ] }) in
+  let bank = { (named "BANK" (run { fin with periods = [ year "2025-09-30" ~ni:100. ~cfo:(-5.) ~debt:200. ~revenue:1000. ~shares:100.; List.nth periods 1 ] })) with entity_class = Some `Bank } in
+  check_mentions "the summary's quality lines" (Batch.summary [ run (financials (history ())); named "FINE" (run fin); weak_record; loss; bank ])
+    [ "quality, from the filed statements across 4 names with the block; a description, not a signal:";
+      "not profitable on the latest fiscal year (1): LOSS";
+      "operating cash flow not positive, banks, insurers and lenders left out (1): LOSS";
+      "more shares than the year before (2), by more than 2% (1): WEAK +5%" ];
+  Alcotest.(check bool) "no lines without a block" false (contains (Batch.summary [ run (financials (history ())) ]) "quality, from the filed statements")
 
 let test_flow_chart_names_every_reason () =
   let chart =
@@ -3731,27 +3756,25 @@ let test_missing_market_data () =
   check_reason v [ "missing market data: financial_currency" ];
   Alcotest.(check bool) "nothing computed" true (Option.is_none v.inputs)
 let test_wacc_below_terminal_growth () =
-  let v =
-    Valuation.run ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany))
-      { params with
-        params =
-          Reference_j.params_of_string
-            {|{"projection_years": {"value": 7, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400},
-               "debt_spread": {"value": 0.01, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
-               "bank_nii_ratio_threshold": {"value": 0.25, "source": "a", "as_of": "2026-09-01", "max_age_days": 400},
-               "growth_clamp_lower": {"value": -0.2, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-               "growth_clamp_upper": {"value": 0.5, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-               "mean_reversion_lambda": {"value": 0.25, "source": "a", "as_of": "2026-06-01", "max_age_days": 400},
-               "mature_market_erp": {"value": 0.0423, "source": "a", "as_of": "2026-01-01", "max_age_days": 400},
-               "midcycle_window_years": {"value": 15, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "a", "as_of": "2026-06-01", "max_age_days": 400}, "interest_evidence_floor": {"value": 0.005, "source": "a", "as_of": "2026-09-24", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "a", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
-               "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
-                 "values": {"United States": 0.5}},
-               "unwired": {}}|} }
-      ~today (financials (history ()))
+  (* The engine's own guard, reached directly: a terminal growth above the discount rate is
+     an error, never a negative denominator. *)
+  check_error "the engine refuses"
+    (Dcf.value { assumptions with terminal_growth_rate = param 0.5 } ~country:"United States" (financials (history ())))
+    [ "does not exceed terminal growth" ];
+  (* Through the parameters the same table figure never reaches the engine: it is held to
+     the risk-free rate, and the parameter says what was done. *)
+  let high =
+    { params with
+      params =
+        { params.params with
+          terminal_growth_rate = { params.params.terminal_growth_rate with values = [ ("United States", 0.5) ] } } }
   in
-  check_reason v [ "terminal growth" ];
-  check_nulls v;
-  Alcotest.(check bool) "inputs" true (Option.is_none v.inputs)
+  let a = get (Params.resolve high ~today ~country:"United States" ~industry:None) in
+  check_float "terminal growth is the risk-free rate" a.risk_free_rate.value a.terminal_growth_rate.value;
+  check_mentions "and says so" a.terminal_growth_rate.source [ "held to the risk-free rate"; "the table's 0.5000 is above it" ];
+  let v = Valuation.run ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) high ~today (financials (history ())) in
+  Alcotest.(check bool) "so the record is never refused for a terminal growth above the discount rate" false
+    (contains (Option.value v.failed_reason ~default:"") "does not exceed terminal growth")
 
 (* The base flow itself (31): with ebit -1200 the fixture's fcff is -1200 x 0.5 + 200 - 50 - 50
    = -500; with capex 800 it is 600 + 200 - 800 - 50 = -50; at capex 750 it is exactly 0. *)

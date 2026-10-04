@@ -198,6 +198,23 @@ let classification_threshold ?hold_vintage t ~today =
   scalar ?hold_vintage t.params.bank_nii_ratio_threshold ~today ~name:"bank_nii_ratio_threshold"
 
 
+(* A company cannot outgrow its economy for ever, and the risk-free rate is the market's own
+   reading of long-run nominal growth: where the country's terminal growth is above the
+   risk-free rate the valuation discounts at, it is held to that rate, and the parameter
+   says so with both figures. Without it the gap between the discount rate and the terminal
+   growth closes whenever rates fall, and every value balloons (docs/run.md, the rate
+   variants on the rule panel). *)
+let hold_to_risk_free ~(risk_free_rate : Boundary_t.parameter) (terminal : Boundary_t.parameter) =
+  if terminal.value > risk_free_rate.value then
+    {
+      terminal with
+      value = risk_free_rate.value;
+      source =
+        Printf.sprintf "%s; held to the risk-free rate %.4f (%s): the table's %.4f is above it" terminal.source
+          risk_free_rate.value risk_free_rate.key terminal.value;
+    }
+  else terminal
+
 let resolve ?hold_vintage t ~today ~country ~industry =
   let* projection_years = int_scalar ?hold_vintage t.params.projection_years ~today ~name:"projection_years" in
   let* midcycle_window_years =
@@ -219,6 +236,7 @@ let resolve ?hold_vintage t ~today ~country ~industry =
     country_value ?hold_vintage t.params.terminal_growth_rate ~today
       ~name:"terminal_growth_rate" ~country
   in
+  let terminal_growth_rate = hold_to_risk_free ~risk_free_rate terminal_growth_rate in
   let* debt_spread = scalar ?hold_vintage t.params.debt_spread ~today ~name:"debt_spread" in
   let* growth_clamp_lower =
     scalar ?hold_vintage t.params.growth_clamp_lower ~today ~name:"growth_clamp_lower"
@@ -268,6 +286,7 @@ let resolve_cross ?hold_vintage ?rf_note t ~today ~domicile ~rate_country ~indus
     country_value ?hold_vintage t.params.terminal_growth_rate ~today ~name:"terminal_growth_rate"
       ~country:rate_country
   in
+  let terminal_growth_rate = hold_to_risk_free ~risk_free_rate terminal_growth_rate in
   let* statutory_tax_rate =
     country_value ?hold_vintage t.tax_rates ~today ~name:"statutory_tax_rate" ~country:domicile
   in

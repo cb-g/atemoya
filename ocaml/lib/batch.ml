@@ -70,6 +70,9 @@ let flagged_fields (v : valuation) =
 let version_of (vs : valuation list) =
   match vs with { model_version = ""; _ } :: _ | [] -> "unrecorded" | v :: _ -> v.model_version
 
+(* A rise in the weighted share count above this is named in the summary's quality lines. *)
+let share_rise_named = 0.02
+
 let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list) =
   let b = Buffer.create 4096 in
   let n = List.length vs in
@@ -352,6 +355,42 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
                  (fun ((side, (v, _)) : string * (valuation * stretch)) ->
                    Printf.sprintf "%s (%s side)" v.ticker side)
                  xs))
+    end;
+    (* Quality, three plain readings of the filed statements across every record carrying
+       the block: a description for the reader, never a signal. The studies found these
+       three, and not the nine-signal score, to be what sorted returns. Operating cash flow
+       is not a business reading on a lender or an insurer, so those classes are left out of
+       its line; nearly every company's diluted count moves by a hair each year, so the
+       share line counts every rise and names the ones above SHARE_RISE_NAMED. *)
+    let with_quality = List.filter_map (fun (v : valuation) -> Option.map (fun q -> (v, q)) v.quality) vs in
+    if with_quality <> [] then begin
+      let signal name (q : quality) = List.find_opt (fun (s : quality_signal) -> s.name = name) q.signals in
+      let failing ?(keep = fun (_ : valuation) -> true) name =
+        List.filter_map
+          (fun ((v, q) : valuation * quality) ->
+            match signal name q with Some { passed = Some false; _ } when keep v -> Some v.ticker | _ -> None)
+          with_quality
+      in
+      let line label names =
+        Printf.bprintf b "  %s (%d): %s\n" label (List.length names) (match names with [] -> "none" | _ -> String.concat ", " names)
+      in
+      let lender (v : valuation) = match v.entity_class with Some (`Bank | `Insurer | `Bdc) -> true | _ -> false in
+      let rises =
+        List.filter_map
+          (fun ((v, q) : valuation * quality) ->
+            match signal "no_more_shares" q with
+            | Some { passed = Some false; current = Some c; prior = Some p; _ } when p > 0. -> Some (v.ticker, (c /. p) -. 1.)
+            | _ -> None)
+          with_quality
+      in
+      let named = List.filter (fun (_, r) -> r > share_rise_named) rises |> List.sort (fun (_, a) (_, b) -> compare b a) in
+      Printf.bprintf b "quality, from the filed statements across %d names with the block; a description, not a signal:\n"
+        (List.length with_quality);
+      line "not profitable on the latest fiscal year" (failing "return_on_assets_positive");
+      line "operating cash flow not positive, banks, insurers and lenders left out" (failing ~keep:(fun v -> not (lender v)) "operating_cash_flow_positive");
+      Printf.bprintf b "  more shares than the year before (%d), by more than %.0f%% (%d): %s\n" (List.length rises) (share_rise_named *. 100.)
+        (List.length named)
+        (match named with [] -> "none" | _ -> String.concat ", " (List.map (fun (t, r) -> Printf.sprintf "%s +%.0f%%" t (r *. 100.)) named))
     end;
     (* (76) The runway readout, one line per Unprofitable record: a state, never a value. *)
     let with_runway = List.filter (fun (v : valuation) -> Option.is_some v.runway || Option.is_some v.runway_reason) vs in

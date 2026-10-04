@@ -790,6 +790,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- terminal growth held to the risk-free rate, and three quality lines in the summary: where
+  a country's terminal growth is above the risk-free rate the valuation discounts at, the
+  model uses the rate and the parameter says so; five records move, none in dollars. The
+  run summary lists the names not profitable, not generating cash, and issuing shares. No
+  new `Failed` string.
 - rate variants and the score in detail: `python/rule_variants.py` reruns the rule panel's
   records under a terminal growth held to the risk-free rate and under the equity risk
   premium of the date's vintage (`reference/erp_history.json`), and `broad_study.py` takes

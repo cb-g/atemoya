@@ -107,6 +107,19 @@ the record as `revenues_less_costs_and_expenses` when used. It is a fallback and
 first choice. The refinement policy in that file allows two refinements of a recipe and
 names the `Failed` reason for a miss.
 
+## Terminal growth is held to the risk-free rate
+
+A country's terminal growth comes from `reference/params.json`, one figure per country.
+Where that figure is above the risk-free rate the valuation discounts at, the model uses
+the rate, and the record's `terminal_growth_rate` parameter says so in its `source` with
+both figures ("held to the risk-free rate (rate) ((country)/7y): the table's (figure) is
+above it"). A company cannot outgrow its economy for ever, and the risk-free rate is the
+market's own reading of long-run nominal growth. Without the rule the gap between the
+discount rate and the terminal growth closes whenever rates fall, and on the rule panel the
+typical large company read as worth double its price through the low-rate years. With the
+dollar rate above the dollar figure the rule binds no dollar record today; it is there for
+the day it does.
+
 ## Readouts and diffs
 
 Every `Ok` record also carries two implied readouts solved on its own inputs, headline
@@ -150,7 +163,12 @@ assets are year-end figures and leverage reads the record's financial debt, wher
 original reads the opening balance and long-term debt; a share count up by more than a
 quarter is null, a split and an issue not being told apart; and a bank or an insurer files
 no current section and no gross profit, so three signals are null there and no score is
-formed. `baseline_study.py` reads the block on the panel's rows.
+formed. `baseline_study.py` reads the block on the panel's rows. The run summary carries
+three plain lines from it, a description and never a signal: the names not profitable on
+the latest year, those with operating cash flow not positive (banks, insurers and lenders
+left out, where it is not a business reading), and those with more shares than the year
+before, counted in full and named where the rise is above two per cent. These three, and
+not the composite score, are what the broad study found to sort returns.
 
 **Measured on the panel (2026-10-03), and it is a description, not a signal.** 2,361 rows on
 141 names over eighteen quarter-ends carry the block, 989 with all nine signals, the holdout
@@ -403,8 +421,8 @@ the sort: under every variant the cheapest fifth less the dearest is within two 
 the baseline's in both stretches. On the live run of the day, five of eighty-nine valued
 records have a terminal growth above their risk-free rate (Tencent's Hong Kong line, Roche,
 Saab, Sea and Teva), Roche with a discount rate of 3.4 per cent against a terminal growth
-of 2.0. Whether the model should hold terminal growth to the risk-free rate is a decision
-about the headline and is not made here.
+of 2.0. The decision was made the same day: the model now holds terminal growth to the
+risk-free rate (see the readouts section), and those five are the records it moved.
 
 ### What the quality score is made of
 

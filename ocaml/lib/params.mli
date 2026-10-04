@@ -45,6 +45,11 @@ val load : dir:string -> fetched:string -> (t, string) result
     [None], and every record that needs it fails naming the refresher to run. The
     error names the file and the parse problem. *)
 
+val hold_to_risk_free : risk_free_rate:Boundary_t.parameter -> Boundary_t.parameter -> Boundary_t.parameter
+(** The terminal growth held to the risk-free rate where the table's figure is above it,
+    the parameter's source saying so with both figures; unchanged otherwise. Both
+    [resolve] and [resolve_cross] apply it. *)
+
 val days_between : from:string -> until:string -> (int, string) result
 (** Calendar days from [from] to [until], both ISO 8601 dates (YYYY-MM-DD);
     negative when [until] is earlier. *)
