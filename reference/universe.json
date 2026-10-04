@@ -15,7 +15,8 @@
     "Ten names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Wipro, Accenture, EPAM, Datadog, Global-e, Amgen, Krystal Biotech, Evolution, the Hong Kong line of China Merchants Bank and Recruit. The classes were drafted by the tool's author and confirmed by the user the same day. Datadog and Global-e are Unprofitable by the class text, the first for want of an operating profit and the second until a second profitable year is filed; Evolution and Recruit are refused on the vendor's statements, which lack a debt line for the first and the latest year's depreciation and capital spending for the second.",
     "Nine Swiss lines added 2026-10-04 at a downstream reader's request: Novartis, UBS, ABB, Sandoz, Alcon, Swiss Re, Logitech, Galderma and Richemont, all trading in francs while reporting in dollars or euros, so cross-currency names converted at one recorded rate and valued on the Swiss curve. The classes were drafted by the tool's author and confirmed by the user the same day. Novartis and Alcon are refused because neither tags the amortisation of its intangible assets, Swiss Re because the insurer model needs filed statements and none are reachable; ABB declares no filer, its filings at the Securities and Exchange Commission having ended with fiscal 2023.",
     "Six Swiss franc reporters added 2026-10-04 at a downstream reader's request: Holcim, Sika, Schindler, VAT Group, Givaudan and Swisscom, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day. Holcim and VAT Group are Cyclical and refused for a history shorter than the through-cycle window; Swisscom is refused because the vendor's balance sheet carries none of its borrowings.",
-    "Eleven Swiss names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Zurich Insurance, Swiss Life, Julius Baer, Lonza, Straumann, Geberit, SGS, Kuehne+Nagel, Sonova, Partners Group and Swatch, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day, on the author's recommendation. The two insurers are refused for want of filed statements; Lonza, Kuehne+Nagel and Swatch are Cyclical and refused for a history shorter than the through-cycle window. A twelfth name asked for, Lindt & Sprüngli, is left out: its equity is in two listed lines, one worth a tenth of the other, and the vendor counts every unit of both at one line's price, so the per-share value would divide by the wrong number of shares, and the tool has no declared ratio between share lines to correct it."
+    "Eleven Swiss names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Zurich Insurance, Swiss Life, Julius Baer, Lonza, Straumann, Geberit, SGS, Kuehne+Nagel, Sonova, Partners Group and Swatch, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day, on the author's recommendation. The two insurers are refused for want of filed statements; Lonza, Kuehne+Nagel and Swatch are Cyclical and refused for a history shorter than the through-cycle window. A twelfth name asked for, Lindt & Sprüngli, is left out: its equity is in two listed lines, one worth a tenth of the other, and the vendor counts every unit of both at one line's price, so the per-share value would divide by the wrong number of shares, and the tool has no declared ratio between share lines to correct it.",
+    "Lindt & Sprüngli added 2026-10-04 as its participation certificate, LISP.SW, the class confirmed by the user: the note above left it out for want of a ratio between share lines, and reading what the vendor reports for each line showed none is needed, the certificate line being counted correctly and only the registered line wrongly. The registered share stays out."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -2239,6 +2240,21 @@
         "trough_window",
         "ownership_structure",
         "balance_sheet"
+      ]
+    },
+    {
+      "ticker": "LISP.SW",
+      "entity_class": "OperatingCompany",
+      "why": "the participation certificate of Lindt & Sprüngli, premium chocolate, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; profitable with positive free cash flow; an operating company, confirmed by the user. The certificate is the line here and not the registered share because the vendor counts the registered line wrongly: for the certificate it counts the whole equity in certificate terms, the registered shares at ten certificates each, which the company's own counts bear out, while for the registered share it adds the units of both lines together at the registered share's price, so a per-share value on that line would divide by the wrong number.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "cocoa is the main cost and its price has moved severalfold inside the window",
+        "the equity is in two listed lines: ten certificates carry the claim of one registered share and no vote, so a holder of the registered share reads this value times ten"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "commodity_exposure",
+        "ownership_structure"
       ]
     }
   ]

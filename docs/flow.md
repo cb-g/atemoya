@@ -793,6 +793,10 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- Lindt by its participation certificate: `LISP.SW` joins the universe, an operating
+  company on the vendor's statements; the vendor counts that line correctly and the
+  registered share wrongly, so the certificate is the line valued and the registered share
+  stays out. No new `Failed` string; no existing record moves.
 - eleven Swiss names: Zurich Insurance, Swiss Life, Julius Baer, Lonza, Straumann, Geberit,
   SGS, Kuehne+Nagel, Sonova, Partners Group and Swatch join the universe at a downstream
   reader's request, classes drafted and confirmed by the user the same day; six are valued,
