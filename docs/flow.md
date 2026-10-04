@@ -793,6 +793,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- ten names: Wipro, Accenture, EPAM, Datadog, Global-e, Amgen, Krystal Biotech, Evolution,
+  the Hong Kong line of China Merchants Bank and Recruit join the universe at a downstream
+  reader's request, classes drafted and confirmed by the user the same day; six are valued,
+  two are `Unprofitable` by the class text and two are refused on the vendor's statements.
+  No new `Failed` string; no existing record moves.
 - a consensus period the vendor misdates: a period dated more than 120 days before the
   snapshot day cannot be one still being forecast, so its `end_date` is null and
   `end_date_reason` says what the vendor sent, the figures kept. A side output; no record

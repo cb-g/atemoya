@@ -11,7 +11,8 @@
     "SPCX, 2026-10-03: the downstream project that runs a clone pointed out that the entry still described the SPAC-strategy fund that used the ticker; the ticker has named Space Exploration Technologies since its listing in June 2026, which the ticker map and the fetched statements confirm, so the entry is rewritten and the class is Unprofitable. A ticker can change hands; the class check did not flag it, since a wrapper's refusal reads no statements.",
     "map_cik, 2026-10-03: a ticker is a label an exchange reissues, and SPCX passed from a fund to a company without the entry noticing. Every entry whose ticker is in the ticker map of the Securities and Exchange Commission now declares map_cik, the CIK the map gave on the day a person last confirmed the entry. The fetch compares it with the map on every run and the record is refused, before anything else, when they differ; the entry is then read again by a person and redeclared. It is a guard and is never read for statements, which is what cik is for. The names outside the map, the foreign lines and a few funds, carry none and are not guarded.",
     "Mid-cycle recipe, 2026-10-03: the mid-cycle model reads the filed operating income after tax where every year in the window carries one, and stays on net income plus interest where a filer reports none. The limits that described the old reading were rewritten on the same day: Caterpillar's captive-finance limit now says what the operating-income reading does with the arm, Lumentum's limit about its note-extinguishment loss is gone because that loss no longer enters the window, and Coinbase's says where its crypto marks can still enter.",
-    "Classes confirmed, 2026-10-04: the user confirmed the class judgments drafted for the twenty-five names of brief 71 and the thirty-two of brief 81, with two changed on review: Celestica moves from OperatingCompany to Cyclical, being the same business as the Taiwanese electronics manufacturer already declared so, and Dutch Bros moves from OperatingCompany to Cyclical, a build-out the latest year's free cash flow cannot speak for, as the cloud and database builders were reclassified. The loss-making grocer stays Unprofitable by the class text until a second profitable year is filed, and the four alternative asset managers stay operating companies with their limits stated. Kaspi, declared earlier, gains the reason in full and a scope limit on the payments and marketplace income inside its return on equity."
+    "Classes confirmed, 2026-10-04: the user confirmed the class judgments drafted for the twenty-five names of brief 71 and the thirty-two of brief 81, with two changed on review: Celestica moves from OperatingCompany to Cyclical, being the same business as the Taiwanese electronics manufacturer already declared so, and Dutch Bros moves from OperatingCompany to Cyclical, a build-out the latest year's free cash flow cannot speak for, as the cloud and database builders were reclassified. The loss-making grocer stays Unprofitable by the class text until a second profitable year is filed, and the four alternative asset managers stay operating companies with their limits stated. Kaspi, declared earlier, gains the reason in full and a scope limit on the payments and marketplace income inside its return on equity.",
+    "Ten names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Wipro, Accenture, EPAM, Datadog, Global-e, Amgen, Krystal Biotech, Evolution, the Hong Kong line of China Merchants Bank and Recruit. The classes were drafted by the tool's author and confirmed by the user the same day. Datadog and Global-e are Unprofitable by the class text, the first for want of an operating profit and the second until a second profitable year is filed; Evolution and Recruit are refused on the vendor's statements, which lack a debt line for the first and the latest year's depreciation and capital spending for the second."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -1762,6 +1763,117 @@
         "build_out"
       ],
       "lei": "549300ZHO4JCQQI13M69"
+    },
+    {
+      "ticker": "WIT",
+      "entity_class": "OperatingCompany",
+      "why": "Wipro, Indian information-technology services under a dollar listing, filing a 20-F under IFRS in rupees, so a cross-currency name with India as its domicile; positive, stable free cash flow, little capital spending and net cash; an operating company, confirmed by the user; adr_ratio: one American depositary share is one equity share (20-F, deposit agreement).",
+      "map_cik": "0001123799",
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "ACN",
+      "entity_class": "OperatingCompany",
+      "why": "Accenture, consulting and information-technology services, incorporated in Ireland and reporting in dollars on a 10-K with a fiscal year ending in August, so the dollar curve with Ireland as the country premium; positive, stable free cash flow well above capital spending; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "growth is in part bought: acquisitions of small firms run every year and their goodwill is a large part of invested capital"
+      ],
+      "scope_limit_codes": [
+        "goodwill_heavy"
+      ],
+      "map_cik": "0001467373"
+    },
+    {
+      "ticker": "EPAM",
+      "entity_class": "OperatingCompany",
+      "why": "EPAM Systems, software engineering services; profitable with positive free cash flow on every filed year and net cash; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "the window holds the move of its delivery workforce out of Russia, Belarus and Ukraine and two flat years after it, so the derived starting growth reads a reset",
+        "the latest year's growth is in part acquired"
+      ],
+      "scope_limit_codes": [
+        "trough_window",
+        "acquired_history"
+      ],
+      "map_cik": "0001352010"
+    },
+    {
+      "ticker": "DDOG",
+      "entity_class": "Unprofitable",
+      "why": "Datadog, observability and security software sold by subscription and usage, revenue compounding and operating cash flow well positive; the net profit of the last three filed years is the interest on its cash, operating income being about nil after stock compensation and a loss on the latest year, so there is no operating profit to normalise from, which is the state the class text calls unprofitable; the runway lens until an operating profit is filed, as the other cash-generative software name without one here is read; confirmed by the user.",
+      "map_cik": "0001561550"
+    },
+    {
+      "ticker": "GLBE",
+      "entity_class": "Unprofitable",
+      "why": "Global-e Online, an Israeli platform for cross-border e-commerce listed in New York and reporting in dollars; operating cash flow is positive on every filed year while the result is a loss on all but the latest, which is the state the class text calls unprofitable, so the runway lens until a second profitable year is filed, as the Mexican grocer here is read; confirmed by the user.",
+      "map_cik": "0001835963"
+    },
+    {
+      "ticker": "AMGN",
+      "entity_class": "OperatingCompany",
+      "why": "Amgen, biotechnology medicines at pharmaceutical scale; profitable with positive, stable free cash flow; an operating company, as the other large drug makers here are, confirmed by the user.",
+      "scope_limits": [
+        "a large acquisition sits inside the window, so the filed history before it is a smaller company's and the debt taken on for it is most of the balance sheet",
+        "growth depends on a pipeline and on patents expiring inside the window, which the model does not see"
+      ],
+      "scope_limit_codes": [
+        "acquired_history",
+        "product_transition"
+      ],
+      "map_cik": "0000318154"
+    },
+    {
+      "ticker": "KRYS",
+      "entity_class": "OperatingCompany",
+      "why": "Krystal Biotech, a gene-therapy company with one marketed medicine; profitable with positive free cash flow on the last two filed years and no debt, which is a second profitable year filed, so an operating company and no longer the runway lens; confirmed by the user.",
+      "scope_limits": [
+        "one product carries all the revenue",
+        "two years of sales are the whole commercial history, the years before being development losses, so the derived starting growth reads a launch"
+      ],
+      "scope_limit_codes": [
+        "concentration",
+        "short_history"
+      ],
+      "map_cik": "0001711279"
+    },
+    {
+      "ticker": "EVO.ST",
+      "entity_class": "OperatingCompany",
+      "why": "the Stockholm line of Evolution, live-casino and game content supplied to gambling operators, trading in kronor while reporting in euros, so cross-currency; no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own facts, with the vendor's statements cross-checked beside them; high margins and positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "revenue rests on which markets permit and license online gambling, and on a few large operators, neither of which the model sees"
+      ],
+      "scope_limit_codes": [
+        "policy_dependent"
+      ],
+      "lei": "549300SUH6ZR1RF6TA88"
+    },
+    {
+      "ticker": "3968.HK",
+      "entity_class": "Bank",
+      "why": "the Hong Kong line of China Merchants Bank, a mainland commercial bank trading in Hong Kong dollars while reporting in yuan, so cross-currency on the vendor path; deposits, loans and net interest income are the business; a bank, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "the Hong Kong line is one of two listed lines of the same shares"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "ownership_structure"
+      ]
+    },
+    {
+      "ticker": "6098.T",
+      "entity_class": "OperatingCompany",
+      "why": "the Tokyo line of Recruit Holdings, job search and hiring platforms, staffing and marketing platforms, reporting in yen with a fiscal year ending in March; profitable with positive free cash flow and net cash; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "hiring and staffing demand follow the economy, so the latest years are a point in a cycle"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "backward_looking"
+      ]
     }
   ]
 }
