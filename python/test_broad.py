@@ -51,7 +51,20 @@ def test_a_row_carries_market_value_on_todays_basis_and_the_next_twelve_months()
     assert "market_cap" not in none and none["market_cap_reason"] == "no cover-page share count dated January to June of 2020"
     gone = bp.row_of(1, "GONE", "Gone Co", 2020, flow, None, stocks, ("2020-05-01", 110.0), prices)
     assert gone["forward_reason"] == "the vendor carries no monthly bars for the ticker"
-
+    # the same count tagged in thousands: 110,000 "shares" would be worth 22,000 times the filer's assets, and 1,000 times its own count the June before
+    wrong = bp.row_of(1, "TKR", "Test Co", 2020, flow, None, stocks, ("2020-05-01", 110_000.0), prices, (("2019-05-01", 110.0),))
+    assert "market_cap" not in wrong and wrong["cover_shares"] == 110_000.0 and "forward_12m" in wrong
+    assert wrong["market_cap_reason"] == ("the cover-page share count of 2020-05-01 gives a market value 22,000 times the larger of revenue and total assets "
+                                          "and is 1,000 times the smallest count the filer filed for another June: a count filed in the wrong unit")
+    by_weighted = bp.row_of(1, "TKR", "Test Co", 2020, {**flow, "weighted_shares": 400.0}, None, stocks, ("2020-05-01", 110_000.0), prices)
+    assert "1,100 times the fiscal year's weighted share count" in cast(str, by_weighted["market_cap_reason"])
+    # a company the market prices at 22,000 times its assets, its count agreeing with its own filings, keeps its market value
+    priced = bp.row_of(1, "TKR", "Test Co", 2020, {**flow, "weighted_shares": 420_000.0}, None, stocks, ("2020-05-01", 110_000.0), prices, (("2019-05-01", 100_000.0),))
+    assert priced["market_cap"] == 110_000.0 * 4.0 * 25.0 and "market_cap_reason" not in priced
+    # and a count a thousand times the others on a market value under the ceiling is left alone too: one sign is not two
+    small = bp.row_of(1, "TKR", "Test Co", 2020, {**flow, "revenue": 1e9}, None, stocks, ("2020-05-01", 110_000.0), prices, (("2019-05-01", 110.0),))
+    assert "market_cap" in small
+    assert bp.wrong_unit(100.0, None, []) is None and bp.wrong_unit(100.0, 2.0, [50.0]) is None
 
 def year(**over: float) -> Json:
     base: Json = {"net_income": 100.0, "operating_cash_flow": 150.0, "total_assets": 1000.0, "long_term_debt": 200.0, "current_assets": 300.0,

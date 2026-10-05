@@ -406,6 +406,70 @@ companies read as worth double their price, and 264 records met the sanity bound
 is always within the date, so the tables above do not depend on it, but a level that moves
 that far with rates is a property of the model to look at on its own.
 
+### A share count in the wrong unit, and the panels rebuilt
+
+Checking the beta study below turned up rows of the broad panel with a market value a
+thousand or a million times too large, eight rows of the rule panel among
+them. The cause is the filer's: the cover-page share count is
+tagged in thousands or millions as if in units. The market value is that count times the
+price, so it carries the error whole, the row enters the rule panel's largest five hundred
+on a false size, and its earnings yield is wrong.
+
+The guard, in `broad_panel.py`. A row carries no market value, with the reason and never a
+corrected figure, when two things hold together: the market value is above a hundred times
+the larger of the year's revenue and total assets, and the count is a hundred times the
+filer's own weighted count for the fiscal year or more, or that many times the smallest
+count it filed for another June. The second sign is what keeps a company the market really
+prices at a hundred times its sales or its assets: its count agrees with its own filings
+and it keeps its market value. Measured before the rule was set, on some thirty thousand
+rows: thirty were above the ceiling; twenty-eight carried the second sign, every one a
+count about a thousand or a million times the filer's others; two did not, the line of a
+depositary receipt counted in ordinary shares, which the rule leaves as it finds them. The
+highest ratio on a company priced that way was seventy-two.
+
+Three errors in the market value are known and not guarded, each wrong by a ratio and not
+by a thousand: a filer whose ticker is a depositary receipt and whose count is in ordinary
+shares; a count filed after a split and already on its basis though
+dated before it; and a spin-off the vendor reports as a split,
+which moves the price history and not the share count.
+
+**Rebuilt 2026-10-05.** Both panels were built again, and three things changed at once,
+which the figures below cannot separate:
+
+- the guard: twenty-eight rows of the broad panel lost their market value, and no other
+  row's market value moved;
+- the day's data: SEC's list of tickers had changed, so fifty-six rows left and nine came,
+  and twenty-three tickers the vendor had rate-limited on the first build now carry
+  prices, giving a hundred and seventy-two rows a market value they lacked; forward
+  returns moved in the sixth decimal;
+- the model: the rule panel is valued by the binary of the day, which since its first
+  build holds terminal growth to the risk-free rate. So 2,981 of its 5,180 records are
+  valued where 2,755 of 5,193 were, fewer meeting the sanity bound, and the median margin
+  of safety on a date runs between +0.05 and +0.32 from 2013 to 2020, where it ran above
+  one, and below zero in 2021 and from 2023.
+
+The broad study on the rebuilt panel, about 30,600 rows on 3,100 filers: before 2022 the
+earnings yield still sorted nothing, the cheapest fifth level with the dearest and ahead in
+five years of twelve where it was three; book-to-price and the peer-implied gap a few
+points the wrong way; gross profitability four points the right way in eight of twelve; the
+score two points the right way, in seven of eleven. From 2022 the earnings yield ten points
+the right way and the score ten, in three and in all four of the years. Nothing in the
+reading above changes.
+
+The rule study on the rebuilt panel, cut within the date on the valued rows:
+
+- before 2022: the margin of safety one and a half points the right way, ahead in five
+  years of nine; the earnings yield three points the wrong way, ahead in three of nine; the
+  score three points the right way, in seven of nine;
+- from 2022: the margin of safety ten points the wrong way and the earnings yield ten, each
+  ahead in one year of four; the score level, ahead in two of four where it was three;
+- the margin's rank correlation with the earnings yield within the date is 0.57 before 2022
+  and 0.69 since.
+
+So the first build's reading stands: the generic DCF does not sort returns on names chosen
+by rule, and no better than the earnings yield. The score's lean from 2022 is weaker than
+the first build showed.
+
 ### The rule study on market-adjusted returns
 
     uv run python/rule_alpha.py                  # -> output/rule_alpha/tables.txt
@@ -431,29 +495,30 @@ percentile where the paper uses the New York Stock Exchange's); the formations a
 into one monthly series and regressed on SPY, both over a twelfth of the one-year Treasury
 yield of the month before. The t-ratio is the plain least-squares one.
 
-**What it found on the first run (2026-10-05), descriptively.** 2,755 valued records, 156
-months, 48 of them from the 2022 formation on. Highest fifth less lowest, per cent a month:
+**What it found (2026-10-05, on the rebuilt panel), descriptively.** 2,981 valued records,
+156 months, 48 of them from the 2022 formation on. Highest fifth less lowest, per cent a
+month:
 
 | measure | stretch | equal: raw, beta, alpha (t) | capped value: raw, beta, alpha (t) |
 |---|---|---|---|
-| margin of safety | all | −0.21, −0.03, −0.17 (−0.63) | −0.32, −0.18, −0.12 (−0.42) |
-| margin of safety | before 2022 | −0.06, +0.05, −0.11 (−0.32) | −0.16, −0.09, −0.07 (−0.22) |
-| margin of safety | from 2022 | −0.53, −0.20, −0.28 (−0.62) | −0.67, −0.36, −0.20 (−0.34) |
-| earnings yield | all | −0.29, +0.03, −0.32 (−1.32) | −0.22, −0.08, −0.13 (−0.48) |
-| earnings yield | from 2022 | −0.34, +0.00, −0.34 (−0.84) | −0.10, −0.03, −0.07 (−0.14) |
-| nine-signal score | all | −0.05, −0.01, −0.04 (−0.23) | −0.13, +0.02, −0.16 (−0.70) |
-| nine-signal score | before 2022 | +0.07, −0.01, +0.08 (+0.44) | +0.04, −0.00, +0.04 (+0.18) |
-| nine-signal score | from 2022 | −0.34, −0.02, −0.31 (−0.77) | −0.51, +0.07, −0.61 (−1.06) |
+| margin of safety | all | −0.07, −0.01, −0.06 (−0.23) | −0.23, −0.14, −0.08 (−0.28) |
+| margin of safety | before 2022 | +0.13, +0.08, +0.04 (+0.14) | −0.05, −0.02, −0.03 (−0.08) |
+| margin of safety | from 2022 | −0.52, −0.21, −0.26 (−0.57) | −0.64, −0.37, −0.17 (−0.28) |
+| earnings yield | all | −0.23, +0.03, −0.26 (−1.04) | −0.24, −0.06, −0.18 (−0.67) |
+| earnings yield | from 2022 | −0.36, −0.01, −0.35 (−0.83) | −0.27, −0.06, −0.20 (−0.38) |
+| nine-signal score | all | −0.13, −0.02, −0.11 (−0.67) | −0.23, +0.03, −0.27 (−1.26) |
+| nine-signal score | before 2022 | −0.06, −0.01, −0.05 (−0.28) | −0.10, +0.02, −0.11 (−0.63) |
+| nine-signal score | from 2022 | −0.31, −0.03, −0.27 (−0.65) | −0.54, +0.07, −0.62 (−1.10) |
 
 - **The adjustment changes little here, because the fifths carry nearly the same market.**
-  The betas of the fifths run from 0.78 to 1.19 on every measure and stretch, against 0.72
+  The betas of the fifths run from 0.78 to 1.21 on every measure and stretch, against 0.72
   to 1.61 across the second paper's tenths. A universe of the five hundred largest
   operating companies, cut on value or quality, does not spread beta the way the papers'
   whole markets do.
 - **Since 2022 part of the margin of safety's shortfall was market exposure.** The cheapest
-  fifth carried less market than the dearest (a spread beta of −0.20 equal-weighted, −0.36
+  fifth carried less market than the dearest (a spread beta of −0.21 equal-weighted, −0.37
   capped), so the raw shortfall of a half to two thirds of a point a month becomes about a
-  fifth to a quarter of a point as alpha. It stays negative, and nowhere near a size the
+  sixth to a quarter of a point as alpha. It stays negative, and nowhere near a size the
   months could tell from nothing.
 - **No sort shows an alpha.** The largest t-ratio in the table is 1.3, on the wrong side.
   The rule study's finding stands, raw or adjusted: on names chosen by rule the generic
@@ -461,7 +526,7 @@ months, 48 of them from the 2022 formation on. Highest fifth less lowest, per ce
 - **The score's lean does not survive the change of measure.** The rule study found the
   nine-signal score leaning the right way in both stretches, on the median twelve-month
   excess of the names in a fifth. On the mean monthly return of the fifth as a portfolio it
-  is level before 2022 and behind since. The two are different statistics, a median over
+  is about level before 2022 and behind since. The two are different statistics, a median over
   names and a mean over a portfolio, and a lean that depends on which is read is a weak one.
 
 What this does not settle: a hundred and fifty-six months is a quarter of the shortest
@@ -502,20 +567,20 @@ lowest, beside SPY's excess return over the same months, which are equal if beta
 in full; and the alpha the spread would show had beta not been paid at all, the first
 paper's flat line.
 
-**What it found on the first run (2026-10-05), descriptively.** 5,122 names and Junes on 734
-filers, 156 months. Highest-beta fifth less lowest, per cent a month unless said:
+**What it found (2026-10-05, on the rebuilt panel), descriptively.** 5,109 names and Junes on
+735 filers, 156 months. Highest-beta fifth less lowest, per cent a month unless said:
 
 | stretch | weights | raw | spread beta | alpha (t) | flat line | earned per unit of beta, a year | SPY over the rate, a year |
 |---|---|---|---|---|---|---|---|
-| all | equal | +0.88 | +0.68 | +0.17 (+0.53) | −0.72 | +15.6% | +12.7% |
-| all | capped value | +1.19 | +0.75 | +0.40 (+0.98) | −0.80 | +19.0% | +12.7% |
-| before 2022 | equal | +0.48 | +0.53 | −0.03 (−0.11) | −0.51 | +10.8% | +11.6% |
-| before 2022 | capped value | +0.58 | +0.53 | +0.07 (+0.21) | −0.51 | +13.1% | +11.6% |
-| from 2022 | equal | +1.79 | +0.97 | +0.56 (+0.72) | −1.23 | +22.2% | +15.3% |
-| from 2022 | capped value | +2.58 | +1.19 | +1.06 (+1.03) | −1.51 | +26.0% | +15.3% |
+| all | equal | +0.89 | +0.67 | +0.19 (+0.60) | −0.71 | +16.0% | +12.7% |
+| all | capped value | +1.20 | +0.74 | +0.42 (+1.05) | −0.79 | +19.4% | +12.7% |
+| before 2022 | equal | +0.46 | +0.52 | −0.04 (−0.14) | −0.50 | +10.7% | +11.6% |
+| before 2022 | capped value | +0.56 | +0.52 | +0.06 (+0.18) | −0.50 | +12.9% | +11.6% |
+| from 2022 | equal | +1.87 | +0.96 | +0.64 (+0.84) | −1.23 | +23.3% | +15.3% |
+| from 2022 | capped value | +2.66 | +1.18 | +1.16 (+1.13) | −1.50 | +27.0% | +15.3% |
 
 - **A year's beta was a fair forecast of the next year's.** The fifths formed at 0.73, 0.90,
-  1.02, 1.13 and 1.39 realised 0.76, 0.95, 1.09, 1.23 and 1.44 over the twelve months
+  1.02, 1.13 and 1.39 realised 0.77, 0.95, 1.09, 1.24 and 1.44 over the twelve months
   after, equal-weighted.
 - **On these names in these years beta was paid, about in full.** The raw return rose with
   beta at every step, and the return earned per unit of beta was the market's own excess
@@ -542,11 +607,6 @@ universe, for taking beta out of the cost of equity. Four limits keep it from sa
 - it reads the market's side only. The rule panel values every name at a beta of one, so
   nothing here says whether a fair value built on another beta would have ranked returns
   any better.
-- eight of the panel's 5,193 rows carry a market value about a thousand times too large, a
-  cover-page share count read in the wrong unit, found while checking this study. The cap
-  at the eightieth percentile bounds what each can weigh in the capped-value tables, here
-  and in `rule_alpha.py`, and the equal-weighted tables do not read the figure. The defect
-  is the broad panel's and is not corrected here.
 
 ### Why the anchor's level moves with rates
 

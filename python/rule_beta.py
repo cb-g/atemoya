@@ -44,10 +44,8 @@ to the fourth decimal inside a window.
 **Descriptive only**, under the rule study's limits (survivors only, an industry-code rule
 for a class) and the alpha study's: a hundred and fifty-six months at most. This reads the
 market's side only. The rule panel values every name at a beta of one, so nothing here
-says what a fair value would have been under another beta. A few rows of the panel carry a
-market value far too large (a share count in the wrong unit); the cap at the formation's
-eightieth percentile bounds what each can weigh. Nothing here feeds a model, a belief or a
-signal."""
+says what a fair value would have been under another beta. Nothing here feeds a model, a
+belief or a signal."""
 
 from __future__ import annotations
 

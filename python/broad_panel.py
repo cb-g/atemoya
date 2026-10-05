@@ -28,6 +28,11 @@ value is the newest cover-page count dated in January to June of T, moved onto t
 split basis by every split after its month, times June's split-adjusted close; the two
 bases are reconciled as the vendor's split adjustment requires, and a count whose own
 month carries a split is ambiguous and the row carries no market value, with the reason.
+A filer now and then tags its cover-page count in the wrong unit, thousands or millions as
+units. Where the market value comes out above CAP_CEILING times the larger of the year's
+revenue and total assets and the count is also UNIT_RATIO times the filer's own other
+counts or more, the row carries no market value, with the reason, never a corrected figure.
+A high multiple alone refuses nothing.
 `forward_12m` is the dividend-adjusted return to the following June and `spy_12m` SPY's
 over the same months; null with the reason where the ticker has no bar at either end.
 
@@ -35,7 +40,11 @@ What it is not. Survivors only: a filer is in the sample only if it has a ticker
 map today, so the companies that failed or were bought are missing from every year, more of
 them the further back, and a row's count of years says nothing about them. A filer with
 several share classes reports its count per class and none in total, and is missing. The
-row says what was filed; ROWS_MIN_REVENUE and ROWS_MIN_CAP keep shells out."""
+row says what was filed; ROWS_MIN_REVENUE and ROWS_MIN_CAP keep shells out. Three errors in
+the market value are known and not guarded: a filer whose ticker is a depositary receipt
+and whose count is in ordinary shares; a count filed after a split and already on its
+basis though dated before it; and a spin-off the vendor reports as a split, which moves
+the price history and not the share count. Each is wrong by a ratio, not by a thousand."""
 
 from __future__ import annotations
 
@@ -58,6 +67,19 @@ BENCHMARK = "SPY"
 FIRST_YEAR = 2009
 ROWS_MIN_REVENUE = 5e7   # dollars: below it a filer is a shell or a start-up, not a business to rank
 ROWS_MIN_CAP = 1e8
+# A cover-page share count is taken as filed in the wrong unit, and the row carries no market
+# value, only when two things hold together. One: the market value it gives is above
+# CAP_CEILING times the larger of the year's revenue and total assets. Two: the count is
+# UNIT_RATIO times the filer's own weighted count for the fiscal year or more, or that many
+# times the smallest count it filed for another June. A company the market prices at a
+# hundred times its sales or its assets passes the first and not the second, its count
+# agreeing with its own filings, and keeps its market value. Measured on the first build
+# before the rule was set: thirty of some thirty thousand rows were above the ceiling;
+# twenty-eight carried the second sign, each a count a thousand or a million times the
+# filer's others, and two did not, a depositary-receipt line counted in ordinary shares,
+# which this rule leaves as it finds them.
+CAP_CEILING = 100.0
+UNIT_RATIO = 100.0
 CHUNK = 200
 # field -> elements in order of preference (the first carrying the filer-year wins)
 FLOWS: dict[str, tuple[str, ...]] = {
@@ -159,6 +181,18 @@ def split_factor(splits: dict[str, float], cover_date: str) -> tuple[float | Non
     return factor, None
 
 
+def wrong_unit(count: float, weighted: object, others: list[float]) -> str | None:
+    """What says the count is in the wrong unit, or None: UNIT_RATIO times the fiscal year's
+    weighted count or more, or that many times the smallest count the filer filed for another
+    June, all on today's split basis. The smallest, since a filer wrong in one year is often
+    wrong in the next."""
+    if isinstance(weighted, float) and weighted > 0 and count >= UNIT_RATIO * weighted:
+        return f"{count / weighted:,.0f} times the fiscal year's weighted share count"
+    if others and min(others) > 0 and count >= UNIT_RATIO * min(others):
+        return f"{count / min(others):,.0f} times the smallest count the filer filed for another June"
+    return None
+
+
 RETRY_CHUNK = 40
 RETRY_PAUSE_SECONDS = 20.0
 
@@ -236,7 +270,7 @@ def prices_of(tickers: list[str], *, refresh: bool = False, retry: bool = False,
 
 
 def row_of(cik: int, ticker: str, name: str, year: int, flow: Json, prior: Json | None, stocks: dict[tuple[int, str], Json],
-           cover: tuple[str, float] | None, prices: dict[str, Json]) -> Json:
+           cover: tuple[str, float] | None, prices: dict[str, Json], other_covers: tuple[tuple[str, float], ...] = ()) -> Json:
     """One filer's row for formation year [year]: the fiscal year filed, the year before for
     the changes, the market value on the day and the next twelve months."""
     end = cast(str, flow["fiscal_year_end"])
@@ -259,8 +293,15 @@ def row_of(cik: int, ticker: str, name: str, year: int, flow: Json, prior: Json 
         if factor is None:
             row["market_cap_reason"] = why
         else:
-            row["market_cap"] = cover[1] * factor * close[june]
+            cap = cover[1] * factor * close[june]
+            size = max((abs(v) for k in ("revenue", "total_assets") if isinstance(v := row.get(k), float)), default=0.0)
             row["cover_date"], row["cover_shares"], row["split_factor"] = cover[0], cover[1], factor
+            unit = wrong_unit(cover[1] * factor, row.get("weighted_shares"), [n * f for d, n in other_covers if (f := split_factor(splits, d)[0]) is not None])
+            if size > 0 and cap > CAP_CEILING * size and unit is not None:
+                row["market_cap_reason"] = (f"the cover-page share count of {cover[0]} gives a market value {cap / size:,.0f} times the larger of revenue and total assets "
+                                            f"and is {unit}: a count filed in the wrong unit")
+            else:
+                row["market_cap"] = cap
     if june in adjusted and next_june in adjusted:
         row["forward_12m"] = adjusted[next_june] / adjusted[june] - 1
     else:
@@ -314,7 +355,8 @@ def build(first: int, last: int, user_agent: str, *, refresh: bool = False, retr
             if not isinstance(revenue, float) or revenue < ROWS_MIN_REVENUE:
                 continue
             row = row_of(cik, tickers[cik][0], tickers[cik][1], year, flow, flows.get(year - 2, {}).get(cik), stocks,
-                         covers.get(year, {}).get(cik), prices)
+                         covers.get(year, {}).get(cik), prices,
+                         tuple(c[cik] for y, c in covers.items() if y != year and cik in c))
             cap = row.get("market_cap")
             if isinstance(cap, float) and cap < ROWS_MIN_CAP:
                 continue

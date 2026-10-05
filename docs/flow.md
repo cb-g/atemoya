@@ -793,6 +793,12 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- a share count in the wrong unit: where a filer tags its cover-page count in thousands or
+  millions, `python/broad_panel.py` no longer believes the market value it gives; a row
+  whose market value is above a hundred times the larger of revenue and total assets, on a
+  count a hundred times the filer's own others or more, carries none, with the reason.
+  Both panels rebuilt and their studies rerun. Side tools: no record on the valuation path
+  moves and there is no new `Failed` string.
 - the rule panel sorted on beta: `python/rule_beta.py` gives every name in the rule panel a
   beta from the year's daily returns each June and reads the fifths' returns, alphas and
   the return earned per unit of beta, after Frazzini and Pedersen, "Betting Against Beta",
