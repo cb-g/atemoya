@@ -73,3 +73,93 @@ def test_the_tracked_premium_history_covers_every_june_the_rule_panel_forms() ->
     history = json.loads(rv.ERP_HISTORY.read_text())["implied_premium_at_year_end"]
     assert all(rv.premium_for(year, history) is not None for year in range(2013, 2027))
     assert all(0.03 < v < 0.08 for v in history.values())
+
+
+def _alpha_fixture(tmp_path: Path, loadings: dict[int, tuple[float, float]]) -> tuple[Path, Path, Path]:
+    """Two formations of fifty invented names, ten a fifth by the measure, each name's monthly
+    return its fifth's (alpha, beta) on an invented market; a flat invented rate."""
+    import rule_alpha as ra
+
+    months = ["2020-06", *ra.months_after(2020), *ra.months_after(2021)]
+    market = [0.03 if i % 3 else -0.04 for i in range(len(months) - 1)]
+    bars: dict[str, Json] = {"SPY": {"adjusted": {}}}
+    level = 100.0
+    spy: dict[str, float] = {months[0]: level}
+    for month, r in zip(months[1:], market, strict=True):
+        level *= 1 + r
+        spy[month] = level
+    bars["SPY"] = {"adjusted": spy}
+    lines: list[Json] = []
+    for i in range(50):
+        alpha, beta = loadings[1 + i // 10]
+        price = 10.0
+        adjusted = {months[0]: price}
+        for month, r in zip(months[1:], market, strict=True):
+            price *= 1 + alpha + beta * (r - 0.001) + 0.001
+            adjusted[month] = price
+        bars[f"N{i:02d}"] = {"adjusted": adjusted}
+        for year in (2020, 2021):
+            lines.append({"ticker": f"N{i:02d}", "date": f"{year}-06-30", "status": "Ok", "margin_of_safety": 0.01 * i, "market_cap": 1e9 * (1 + i % 10)})
+    lines.append({"ticker": "REF", "date": "2020-06-30", "status": "Failed", "margin_of_safety": None})
+    panel, prices, rate = tmp_path / "panel.jsonl", tmp_path / "prices", tmp_path / "DGS1.json"
+    panel.write_text("".join(json.dumps(x) + "\n" for x in lines))
+    prices.mkdir()
+    (prices / "all.json").write_text(json.dumps(bars))
+    observations = [{"date": f"{m}-15", "value": "1.2"} for m in ["2020-05", *months]] + [{"date": "2020-08-20", "value": "."}]
+    rate.write_text(json.dumps({"observations": sorted(observations, key=lambda o: o["date"])}))
+    return panel, prices, rate
+
+
+def test_a_fifth_that_only_carries_more_market_shows_a_raw_spread_and_no_alpha(tmp_path: Path) -> None:
+    import rule_alpha as ra
+
+    loadings = {1: (0.0, 0.5), 2: (0.0, 0.75), 3: (0.0, 1.0), 4: (0.0, 1.25), 5: (0.0, 1.5)}
+    panel, prices, rate_path = _alpha_fixture(tmp_path, loadings)
+    rows, adjusted, rate = ra.load_rows(panel), ra.load_adjusted(prices), ra.load_rate(rate_path)
+    assert len(rows) == 100 and all(r.cap is not None for r in rows)          # the refused row is left out
+    assert abs(rate["2020-07"] - 0.012 / 12) < 1e-15 and "2020-05" not in rate            # the month before's yield; a "." is no observation
+    text = ra.report(rows, adjusted, rate)
+    block = text.split("margin_of_safety, all formations, equal weights")[1].split("\n\n")[0]
+    assert "fifth 1: 24 months" in block and "beta +0.50, alpha +0.00% a month" in block
+    assert "fifth 5: 24 months" in block and "beta +1.50, alpha +0.00% a month" in block
+    spread = next(x for x in block.splitlines() if "highest less lowest" in x)
+    assert "beta +1.00, alpha +0.00% a month" in spread and "mean +0.57% a month" in spread and "(t" not in spread   # a raw spread that is all market
+    assert "formations from 2022, equal weights: 0 rows" in text and "no formation year carries enough rows" in text
+    assert "Jensen, Kelly and Pedersen" in text and "Gormsen and Lazarus" in text
+
+
+def test_an_alpha_is_found_where_one_is_put_whatever_the_market_carried(tmp_path: Path) -> None:
+    import rule_alpha as ra
+
+    loadings = {1: (-0.002, 1.2), 2: (0.0, 1.0), 3: (0.0, 1.0), 4: (0.0, 1.0), 5: (0.003, 0.8)}
+    panel, prices, rate_path = _alpha_fixture(tmp_path, loadings)
+    text = ra.report(ra.load_rows(panel), ra.load_adjusted(prices), ra.load_rate(rate_path))
+    for weights in ("equal weights", "capped value weights"):                # every name in a fifth moves alike, so the weights agree
+        block = text.split(f"margin_of_safety, all formations, {weights}")[1].split("\n\n")[0]
+        spread = next(x for x in block.splitlines() if "highest less lowest" in x)
+        assert "beta -0.40, alpha +0.50% a month" in spread, spread
+
+
+def test_the_fit_and_the_capped_weights_on_figures_small_enough_to_check_by_hand() -> None:
+    import rule_alpha as ra
+    from broad_study import Row
+
+    assert ra.months_after(2020)[0] == "2020-07" and ra.months_after(2020)[-1] == "2021-06" and ra.previous("2021-01") == "2020-12"
+    assert abs((ra.monthly_return({"2020-06": 10.0, "2020-07": 11.0}, "2020-07") or 0.0) - 0.1) < 1e-12 and ra.monthly_return({"2020-07": 11.0}, "2020-07") is None
+    x = [0.01 * ((i % 5) - 2) for i in range(30)]
+    noise = [0.001 if i % 2 else -0.001 for i in range(30)]
+    f = ra.fit([0.002 + 1.5 * a + e for a, e in zip(x, noise, strict=True)], x)
+    assert f is not None and abs(f.beta - 1.5) < 0.02 and abs(f.alpha - 0.002) < 1e-4 and f.t_alpha is not None and f.t_alpha > 5
+    assert ra.fit([0.01] * 10, [0.0] * 10) is None and ra.fit([0.01] * 30, [0.02] * 30) is None    # too few months; a market that does not move
+    rows = [Row(ticker=f"T{i}", year=2020, excess=None, non_financial=True, values={"m": float(i)}, cap=1.0 if i else 1000.0) for i in range(6)]
+    adjusted = {f"T{i}": {"2020-06": 1.0, "2020-07": 1.5 if i == 0 else 1.0} for i in range(6)}
+    q = {(r.ticker, 2020): 3 for r in rows}
+    assert abs(ra.fifth_returns(rows, q, adjusted, capped_value=False)[3]["2020-07"] - 0.5 / 6) < 1e-12
+    capped = ra.fifth_returns(rows, q, adjusted, capped_value=True)[3]["2020-07"]   # the large name counts as one, the cap being the eightieth percentile
+    assert abs(capped - 0.5 / 6) < 1e-12
+
+
+def test_the_alpha_study_names_what_to_run_when_its_inputs_are_missing(tmp_path: Path) -> None:
+    import rule_alpha as ra
+
+    assert ra.main(["--panel", str(tmp_path / "none.jsonl"), "--out", str(tmp_path / "out")]) == 2

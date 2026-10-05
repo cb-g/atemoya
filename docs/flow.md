@@ -793,6 +793,13 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the rule study on market-adjusted returns: `python/rule_alpha.py` scores the rule panel's
+  sorts as the intercept of each fifth's monthly return on the market's, beside the rule
+  study's raw tables and never in place of them, after Jensen, Kelly and Pedersen, "Is
+  There a Replication Crisis in Finance?", NBER Working Paper 28432, February 2021,
+  doi:10.3386/w28432, and Gormsen and Lazarus, "Duration-Driven Returns", working paper,
+  April 2019, doi:10.2139/ssrn.3359027. A side tool: no record on
+  the valuation path moves and there is no new `Failed` string.
 - Lindt by its participation certificate: `LISP.SW` joins the universe, an operating
   company on the vendor's statements; the vendor counts that line correctly and the
   registered share wrongly, so the certificate is the line valued and the registered share

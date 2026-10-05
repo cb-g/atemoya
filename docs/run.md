@@ -406,6 +406,69 @@ companies read as worth double their price, and 264 records met the sanity bound
 is always within the date, so the tables above do not depend on it, but a level that moves
 that far with rates is a property of the model to look at on its own.
 
+### The rule study on market-adjusted returns
+
+    uv run python/rule_alpha.py                  # -> output/rule_alpha/tables.txt
+
+The tables above set a fifth's twelve-month return beside SPY's. That removes the market's
+level and nothing else, so a fifth holding the riskier names is credited with the market's
+rise as if it had earned it. `rule_alpha.py` scores the same sorts the way two papers read
+for this tool do, **beside** the raw tables and never in place of them:
+
+- Jensen, Kelly and Pedersen, "Is There a Replication Crisis in Finance?", NBER Working
+  Paper 28432, February 2021, doi:10.3386/w28432. A factor's alpha is the
+  intercept of its monthly return on a constant and the market's excess return; of their
+  US factors 84.9 per cent replicate on that alpha against 56.9 on raw returns.
+- Gormsen and Lazarus, "Duration-Driven Returns", working paper, April 2019,
+  doi:10.2139/ssrn.3359027. Their sort's spread is insignificant raw and significant as
+  alpha, the market betas of its tenths running from 0.72 to 1.61.
+
+Each June the valued rows are cut into fifths within the date as before; a fifth's monthly
+return over the twelve months from July is the mean of its names' dividend-adjusted
+returns, and again weighted by market value capped at the formation's eightieth percentile
+and carried forward (the first paper's capped value weights, with this panel's own
+percentile where the paper uses the New York Stock Exchange's); the formations are chained
+into one monthly series and regressed on SPY, both over a twelfth of the one-year Treasury
+yield of the month before. The t-ratio is the plain least-squares one.
+
+**What it found on the first run (2026-10-05), descriptively.** 2,755 valued records, 156
+months, 48 of them from the 2022 formation on. Highest fifth less lowest, per cent a month:
+
+| measure | stretch | equal: raw, beta, alpha (t) | capped value: raw, beta, alpha (t) |
+|---|---|---|---|
+| margin of safety | all | −0.21, −0.03, −0.17 (−0.63) | −0.32, −0.18, −0.12 (−0.42) |
+| margin of safety | before 2022 | −0.06, +0.05, −0.11 (−0.32) | −0.16, −0.09, −0.07 (−0.22) |
+| margin of safety | from 2022 | −0.53, −0.20, −0.28 (−0.62) | −0.67, −0.36, −0.20 (−0.34) |
+| earnings yield | all | −0.29, +0.03, −0.32 (−1.32) | −0.22, −0.08, −0.13 (−0.48) |
+| earnings yield | from 2022 | −0.34, +0.00, −0.34 (−0.84) | −0.10, −0.03, −0.07 (−0.14) |
+| nine-signal score | all | −0.05, −0.01, −0.04 (−0.23) | −0.13, +0.02, −0.16 (−0.70) |
+| nine-signal score | before 2022 | +0.07, −0.01, +0.08 (+0.44) | +0.04, −0.00, +0.04 (+0.18) |
+| nine-signal score | from 2022 | −0.34, −0.02, −0.31 (−0.77) | −0.51, +0.07, −0.61 (−1.06) |
+
+- **The adjustment changes little here, because the fifths carry nearly the same market.**
+  The betas of the fifths run from 0.78 to 1.19 on every measure and stretch, against 0.72
+  to 1.61 across the second paper's tenths. A universe of the five hundred largest
+  operating companies, cut on value or quality, does not spread beta the way the papers'
+  whole markets do.
+- **Since 2022 part of the margin of safety's shortfall was market exposure.** The cheapest
+  fifth carried less market than the dearest (a spread beta of −0.20 equal-weighted, −0.36
+  capped), so the raw shortfall of a half to two thirds of a point a month becomes about a
+  fifth to a quarter of a point as alpha. It stays negative, and nowhere near a size the
+  months could tell from nothing.
+- **No sort shows an alpha.** The largest t-ratio in the table is 1.3, on the wrong side.
+  The rule study's finding stands, raw or adjusted: on names chosen by rule the generic
+  DCF does not sort returns, and no better than the earnings yield.
+- **The score's lean does not survive the change of measure.** The rule study found the
+  nine-signal score leaning the right way in both stretches, on the median twelve-month
+  excess of the names in a fifth. On the mean monthly return of the fifth as a portfolio it
+  is level before 2022 and behind since. The two are different statistics, a median over
+  names and a mean over a portfolio, and a lean that depends on which is read is a weak one.
+
+What this does not settle: a hundred and fifty-six months is a quarter of the shortest
+sample in the papers, the universe is survivors only, and the regression has one factor.
+It answers the narrow question it was built for: the raw tables were not hiding a sort
+behind unequal market exposure.
+
 ### Why the anchor's level moves with rates
 
     uv run python/rule_variants.py               # -> output/rule_variants/tables.txt
