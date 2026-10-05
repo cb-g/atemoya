@@ -793,6 +793,15 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the rule panel sorted on beta: `python/rule_beta.py` gives every name in the rule panel a
+  beta from the year's daily returns each June and reads the fifths' returns, alphas and
+  the return earned per unit of beta, after Frazzini and Pedersen, "Betting Against Beta",
+  NBER Working Paper 16601, December 2010, doi:10.3386/w16601, Novy-Marx and Velikov,
+  "Betting Against Betting Against Beta", working paper, November 2018,
+  doi:10.2139/ssrn.3300965, and Levi and Welch, "Best Practice for Cost-of-Capital
+  Estimates", Journal of Financial and Quantitative Analysis 52(2), 2017,
+  doi:10.1017/S0022109017000114. A side tool: no record on the valuation path moves and
+  there is no new `Failed` string.
 - the rule study on market-adjusted returns: `python/rule_alpha.py` scores the rule panel's
   sorts as the intercept of each fifth's monthly return on the market's, beside the rule
   study's raw tables and never in place of them, after Jensen, Kelly and Pedersen, "Is

@@ -469,6 +469,85 @@ sample in the papers, the universe is survivors only, and the regression has one
 It answers the narrow question it was built for: the raw tables were not hiding a sort
 behind unequal market exposure.
 
+### The rule panel sorted on beta
+
+    uv run python/rule_beta.py --fetch-benchmark  # -> output/rule_beta/tables.txt
+
+This tool's cost of equity is a risk-free rate plus a premium times beta, so a name with
+twice the beta is charged twice the premium. Whether the market paid that premium on the
+kind of company this tool values is a question about returns. Three papers read for the
+tool bear on it:
+
+- Frazzini and Pedersen, "Betting Against Beta", NBER Working Paper 16601, December 2010,
+  doi:10.3386/w16601. Across ten beta-sorted portfolios of US stocks the monthly excess
+  return is flat, 0.99 per cent for the lowest beta and 1.02 for the highest, while the
+  CAPM alpha falls from 0.54 to −0.05 and the realised beta rises from 0.75 to 1.82. The
+  beta estimator used here is theirs.
+- Novy-Marx and Velikov, "Betting Against Betting Against Beta", working paper, November
+  2018, doi:10.2139/ssrn.3300965. Most of that premium comes from weighting small stocks
+  equally; weighted by value it is about half. So the tables are given under both
+  weightings, on names that are the largest five hundred to begin with.
+- Levi and Welch, "Best Practice for Cost-of-Capital Estimates", Journal of Financial and
+  Quantitative Analysis 52(2), 2017, doi:10.1017/S0022109017000114. Between a beta of 0.0
+  and one of 1.5 the textbook difference in the cost of equity is about ten points a year;
+  shrunk betas and a long-run premium bring it to about two. The tables read the same
+  quantity off these names: the return earned per unit of realised beta.
+
+Each June every name in the rule panel, valued or refused, is given a beta from the daily
+returns of the year to the date: the sum of the slopes of its return on SPY's of the same
+day and of each of the five days before, halved toward one. The names are cut into fifths
+within the date and scored as `rule_alpha.py` scores the other sorts. Two lines close each
+table: the return earned per unit of realised beta between the highest fifth and the
+lowest, beside SPY's excess return over the same months, which are equal if beta was paid
+in full; and the alpha the spread would show had beta not been paid at all, the first
+paper's flat line.
+
+**What it found on the first run (2026-10-05), descriptively.** 5,122 names and Junes on 734
+filers, 156 months. Highest-beta fifth less lowest, per cent a month unless said:
+
+| stretch | weights | raw | spread beta | alpha (t) | flat line | earned per unit of beta, a year | SPY over the rate, a year |
+|---|---|---|---|---|---|---|---|
+| all | equal | +0.88 | +0.68 | +0.17 (+0.53) | −0.72 | +15.6% | +12.7% |
+| all | capped value | +1.19 | +0.75 | +0.40 (+0.98) | −0.80 | +19.0% | +12.7% |
+| before 2022 | equal | +0.48 | +0.53 | −0.03 (−0.11) | −0.51 | +10.8% | +11.6% |
+| before 2022 | capped value | +0.58 | +0.53 | +0.07 (+0.21) | −0.51 | +13.1% | +11.6% |
+| from 2022 | equal | +1.79 | +0.97 | +0.56 (+0.72) | −1.23 | +22.2% | +15.3% |
+| from 2022 | capped value | +2.58 | +1.19 | +1.06 (+1.03) | −1.51 | +26.0% | +15.3% |
+
+- **A year's beta was a fair forecast of the next year's.** The fifths formed at 0.73, 0.90,
+  1.02, 1.13 and 1.39 realised 0.76, 0.95, 1.09, 1.23 and 1.44 over the twelve months
+  after, equal-weighted.
+- **On these names in these years beta was paid, about in full.** The raw return rose with
+  beta at every step, and the return earned per unit of beta was the market's own excess
+  return or more in every row. The alpha of the spread is near nothing throughout.
+- **This is not the first paper's flat line.** Had beta not been paid, the spread's alpha
+  would have been about seven tenths of a point a month below zero over the whole sample.
+  The estimate sits nearly three of its standard errors above that; about two in each
+  stretch taken alone.
+
+What this does and does not say. The papers that question beta in a discount rate rest on
+whole markets over many decades. On the largest five hundred US operating companies from
+2013 to 2025 the tool's own data do not show their result, so they give no ground, on this
+universe, for taking beta out of the cost of equity. Four limits keep it from saying more:
+
+- it is one stretch of thirteen years in which SPY's excess return ran at about twice the
+  six and a half per cent the third paper takes as the textbook premium, and the
+  highest-beta fifth held the large semiconductor and internet companies that led it, the
+  lowest the consumer staples and telephone companies: a single run of the
+  market's premium, earned by the names that led it, is doing much of the work;
+- the panel is survivors only, and the names that failed or were bought cheaply are likelier
+  to have been high-beta, which flatters that fifth;
+- a hundred and fifty-six months cannot tell a line a little flatter than the CAPM's from
+  the CAPM's own;
+- it reads the market's side only. The rule panel values every name at a beta of one, so
+  nothing here says whether a fair value built on another beta would have ranked returns
+  any better.
+- eight of the panel's 5,193 rows carry a market value about a thousand times too large, a
+  cover-page share count read in the wrong unit, found while checking this study. The cap
+  at the eightieth percentile bounds what each can weigh in the capped-value tables, here
+  and in `rule_alpha.py`, and the equal-weighted tables do not read the figure. The defect
+  is the broad panel's and is not corrected here.
+
 ### Why the anchor's level moves with rates
 
     uv run python/rule_variants.py               # -> output/rule_variants/tables.txt

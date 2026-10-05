@@ -163,3 +163,76 @@ def test_the_alpha_study_names_what_to_run_when_its_inputs_are_missing(tmp_path:
     import rule_alpha as ra
 
     assert ra.main(["--panel", str(tmp_path / "none.jsonl"), "--out", str(tmp_path / "out")]) == 2
+
+
+def _daily_fixture(tmp_path: Path, betas: dict[int, float]) -> Path:
+    """Daily closes for the alpha fixture's fifty names and the benchmark over two years to
+    each June: each name's daily return its fifth's beta times the invented market's, a
+    third of it a day late."""
+    from datetime import date, timedelta
+
+    days = [(date(2019, 6, 3) + timedelta(days=i)).isoformat() for i in range(760)]
+    market = [0.01 * (((i * 7) % 11) - 5) / 5 for i in range(len(days))]
+    histories = tmp_path / "histories"
+    histories.mkdir()
+
+    def write(name: str, returns: list[float]) -> None:
+        level, closes = 50.0, {}
+        for day, r in zip(days, returns, strict=True):
+            level *= 1 + r
+            closes[day] = level
+        (histories / f"{name}.json").write_text(json.dumps({"closes": closes, "splits": {}, "volumes": {}}))
+
+    write("SPY", market)
+    for i in range(50):
+        b = betas[1 + i // 10]
+        write(f"N{i:02d}", [0.0] + [b * (2 / 3 * market[d] + 1 / 3 * market[d - 1]) for d in range(1, len(days))])
+    return histories
+
+
+def test_a_beta_the_market_pays_in_full_shows_no_alpha_and_the_premium_per_unit(tmp_path: Path) -> None:
+    import rule_alpha as ra
+    import rule_beta as rb
+
+    betas = {1: 0.5, 2: 0.75, 3: 1.0, 4: 1.25, 5: 1.5}
+    panel, prices, rate_path = _alpha_fixture(tmp_path, {k: (0.0, b) for k, b in betas.items()})
+    histories = _daily_fixture(tmp_path, betas)
+    benchmark = rb.load_daily(histories / "SPY.json")
+    assert benchmark is not None and rb.load_daily(histories / "NONE.json") is None
+    rows, without = rb.load_rows(panel, histories, benchmark)
+    assert len(rows) == 100 and without == 1                                   # the refused name has no history
+    assert abs(next(r for r in rows if r.ticker == "N00").values["beta"] - 0.75) < 1e-9    # half of 0.5 and half of one, the late third counted
+    assert abs(next(r for r in rows if r.ticker == "N49").values["beta"] - 1.25) < 1e-9
+    text = rb.report(rows, without, ra.load_adjusted(prices), ra.load_rate(rate_path))
+    block = text.split("beta, all formations, equal weights")[1].split("\n\n")[0]
+    assert "fifth 1 (beta at formation 0.75): 24 months" in block and "fifth 5 (beta at formation 1.25): 24 months" in block
+    assert "highest less lowest: 24 months, mean +0.57% a month, beta +1.00, alpha +0.00% a month" in block
+    assert "highest fifth against lowest: +6.8% a year; SPY over the rate in the same months: +6.8% a year" in block
+    assert "below zero: -0.57% a month" in block
+    assert "1 left out for fewer than 200 daily returns" in text and "Frazzini and Pedersen" in text and "doi:10.3386/w16601" in text
+
+
+def test_a_beta_the_market_does_not_pay_shows_the_flat_line(tmp_path: Path) -> None:
+    import rule_alpha as ra
+    import rule_beta as rb
+
+    betas = {1: 0.5, 2: 0.75, 3: 1.0, 4: 1.25, 5: 1.5}
+    premium = 0.03 * 16 / 24 - 0.04 * 8 / 24 - 0.001                           # the alpha fixture's market over its rate, a month
+    panel, prices, rate_path = _alpha_fixture(tmp_path, {k: ((1 - b) * premium, b) for k, b in betas.items()})   # every fifth earns the market's return
+    histories = _daily_fixture(tmp_path, betas)
+    benchmark = rb.load_daily(histories / "SPY.json")
+    assert benchmark is not None
+    rows, without = rb.load_rows(panel, histories, benchmark)
+    block = rb.report(rows, without, ra.load_adjusted(prices), ra.load_rate(rate_path)).split("beta, all formations, equal weights")[1].split("\n\n")[0]
+    assert "highest less lowest: 24 months, mean +0.00% a month, beta +1.00, alpha -0.57% a month" in block
+    assert "highest fifth against lowest: +0.0% a year" in block and "below zero: -0.57% a month" in block
+
+
+def test_the_beta_estimate_needs_a_year_of_days_and_names_what_to_run(tmp_path: Path) -> None:
+    import rule_beta as rb
+
+    days = [f"2020-01-{d:02d}" for d in range(1, 29)]
+    market = {day: 0.01 * ((i % 3) - 1) for i, day in enumerate(days)}
+    assert rb.beta_of({day: 2 * market[day] for day in days}, days, market) is None          # under two hundred days
+    assert rb.daily_returns({"2020-01-01": 10.0, "2020-01-02": 11.0, "2020-01-03": 11.0}, "2020-01-01", "2020-01-02").keys() == {"2020-01-02"}
+    assert rb.main(["--panel", str(tmp_path / "none.jsonl"), "--out", str(tmp_path / "out")]) == 2
