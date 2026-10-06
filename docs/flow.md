@@ -793,6 +793,12 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the rule panel under shifted rates: `python/rule_rates.py` reruns the binary on the rule
+  panel's records under the United States curve shifted half a point either way and under a
+  partial pass-through of each date's rate, and reads each fair value's elasticity per point,
+  after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
+  34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
+  moves and there is no new `Failed` string.
 - the chart catches up with the tools: `docs/flow.mmd` and `docs/flow.svg` now draw what
   was added to the record and beside it since they were last drawn: quality, the growth
   shadow and the base rate among the readouts, the options-implied return in the

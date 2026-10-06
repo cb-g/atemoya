@@ -623,6 +623,65 @@ universe, for taking beta out of the cost of equity. Four limits keep it from sa
   nothing here says whether a fair value built on another beta would have ranked returns
   any better.
 
+### The rule panel under shifted rates
+
+    uv run python/rule_rates.py                  # -> output/rule_rates/tables.txt, about six minutes
+
+The discount rate follows the risk-free rate, so the model treats every move in the rate
+as a move in what the future is worth. Whether the market does the same is measured in
+Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper 34814,
+February 2026, doi:10.3386/w34814. A change in the trend real rate is a change in time
+preference, in expected growth or in risk, and only the first moves equity prices by their
+cash-flow duration; three-year US market returns load about −19 on a point of that
+pure-discounting part and insignificantly on a point of the raw ten-year yield; and the
+pure-discounting part was under half of the fall in the real rate over 1990–2023. A model
+that takes every rate move for pure discounting therefore moves too much, by the share of
+the move that was growth or risk.
+
+`rule_rates.py` reruns the binary on the rule panel's own point-in-time records under the
+United States curve shifted half a point either way, and reads the elasticity of each fair
+value, the difference of its logs over the point between the readings; its sign changed is
+the duration the model gives the name. A fourth reading replaces the curve by its mean over
+the panel's dates plus 35 per cent of the date's distance from it, the paper's share, to ask
+what the level and the sort would have been.
+
+**What it found (2026-10-06), descriptively.** The elasticity per point of rate, median over
+the valued records of each June:
+
+| June | rate at the projection tenor | elasticity, median | quartiles |
+|---|---|---|---|
+| 2013 to 2022 | 0.49% to 3.04% | −0.8% to −1.3% | −1.6% to +0.2% |
+| 2023 | 3.97% | −22.3% | −25.4% to −19.1% |
+| 2024 | 4.33% | −23.5% | −28.2% to −19.8% |
+| 2025 | 3.98% | −21.5% | −25.4% to −18.6% |
+
+- **The model has two regimes, with a kink at the terminal growth rate.** Terminal growth
+  is held to the risk-free rate where that is lower (the decision of 2026-10-04). Below the
+  country's terminal growth the two move together, the gap between the discount rate and
+  the growth does not change, and a point of rate moves a fair value by about one per cent,
+  the explicit years alone. Above it the growth stands still and a point of rate moves a
+  fair value by a fifth to a quarter: the full duration. In this sample the rate crossed
+  the 3.6 per cent of the United States' terminal growth between June 2022 and June 2023.
+- **Against the market's measured response, each regime is right about one thing.** Below
+  the kink the model's response is near the market's response to a raw move in the yield,
+  about nothing; above it, near the market's response to pure discounting, about −19 per
+  point, which the paper finds to be a minority of real-rate moves. So since 2023 the model
+  has carried against every move in the rate a sensitivity the market shows only to the
+  part of a move that is time preference.
+- **The pass-through reading changes the level since 2023 and nothing else.** With 35 per
+  cent of each date's distance from the mean rate, the median margin of safety is −0.02,
+  −0.10 and −0.09 in June 2023, 2024 and 2025 where it was −0.11, −0.27 and −0.19; before
+  2022 it is within a hundredth of the run's on every date, the cap having already removed
+  the rate from the gap; and the sort is untouched, the cheapest fifth less the dearest
+  +0.016 before 2022 and −0.097 from it against +0.015 and −0.098.
+
+What this does not decide. The pass-through reading is a question, not a parameter: the
+paper gives the share for one country over one span and says the split of a given move
+cannot be read in real time without its survey panel. The kink is a property of the
+present rule, which was adopted for the low-rate years and does its work there; what the
+model should do above the kink, hold the full duration or part of it, is open, and the
+figures above are what the choice is worth.
+
 ### Why the anchor's level moves with rates
 
     uv run python/rule_variants.py               # -> output/rule_variants/tables.txt

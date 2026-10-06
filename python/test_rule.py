@@ -236,3 +236,25 @@ def test_the_beta_estimate_needs_a_year_of_days_and_names_what_to_run(tmp_path: 
     assert rb.beta_of({day: 2 * market[day] for day in days}, days, market) is None          # under two hundred days
     assert rb.daily_returns({"2020-01-01": 10.0, "2020-01-02": 11.0, "2020-01-03": 11.0}, "2020-01-01", "2020-01-02").keys() == {"2020-01-02"}
     assert rb.main(["--panel", str(tmp_path / "none.jsonl"), "--out", str(tmp_path / "out")]) == 2
+
+
+def test_the_curve_is_shifted_by_a_step_or_moved_to_a_level_and_the_elasticity_read_per_point(tmp_path: Path) -> None:
+    import rule_rates as rr
+
+    source = tmp_path / "reference"
+    source.mkdir()
+    (source / "params.json").write_text(json.dumps({"projection_years": {"value": 7}, "terminal_growth_rate": {"values": {"United States": 0.036}}}))
+    (source / "equity_risk_premiums.json").write_text(json.dumps({"values": {"United States": 0.045}}))
+    (source / "risk_free_rates.json").write_text(json.dumps({"countries": {"United States": {"rates": {"1y": 0.01, "7y": 0.02, "10y": 0.025}}}}))
+    rr.shifted_reference(source, tmp_path / "up", by=0.005)
+    up = json.loads((tmp_path / "up" / "risk_free_rates.json").read_text())["countries"]["United States"]["rates"]
+    assert all(abs(up[k] - v) < 1e-12 for k, v in {"1y": 0.015, "7y": 0.025, "10y": 0.03}.items())   # every tenor, the same step
+    rr.shifted_reference(source, tmp_path / "level", to=0.03)
+    level = json.loads((tmp_path / "level" / "risk_free_rates.json").read_text())["countries"]["United States"]["rates"]
+    assert abs(level["7y"] - 0.03) < 1e-12 and abs(level["1y"] - 0.02) < 1e-12 and abs(level["10y"] - 0.035) < 1e-12   # the projection tenor at the level, the shape kept
+    assert json.loads((tmp_path / "level" / "params.json").read_text())["terminal_growth_rate"]["values"]["United States"] == 0.036   # untouched
+    import math
+    down: list[Json] = [{"ticker": "A", "status": "Ok", "fair_value": 100.0}, {"ticker": "B", "status": "Ok", "fair_value": 50.0}, {"ticker": "C", "status": "Failed", "fair_value": None}]
+    up_r: list[Json] = [{"ticker": "A", "status": "Ok", "fair_value": 100.0 * math.exp(-0.2)}, {"ticker": "B", "status": "Failed", "fair_value": None}, {"ticker": "C", "status": "Failed", "fair_value": None}]
+    e, changed = rr.elasticities(up_r, down, 0.005)
+    assert len(e) == 1 and abs(e[0] - (-0.2)) < 1e-9 and changed == 1                        # a fifth of value per point; B valued on one side only
