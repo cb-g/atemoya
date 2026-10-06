@@ -33,6 +33,9 @@ units. Where the market value comes out above CAP_CEILING times the larger of th
 revenue and total assets and the count is also UNIT_RATIO times the filer's own other
 counts or more, the row carries no market value, with the reason, never a corrected figure.
 A high multiple alone refuses nothing.
+A count filed after a split and already on its basis, though dated before it, would be
+moved onto today's basis twice; where the filer's own counts on either side of the split
+show that, the row carries no market value, with the reason.
 `forward_12m` is the dividend-adjusted return to the following June and `spy_12m` SPY's
 over the same months; null with the reason where the ticker has no bar at either end.
 
@@ -40,11 +43,11 @@ What it is not. Survivors only: a filer is in the sample only if it has a ticker
 map today, so the companies that failed or were bought are missing from every year, more of
 them the further back, and a row's count of years says nothing about them. A filer with
 several share classes reports its count per class and none in total, and is missing. The
-row says what was filed; ROWS_MIN_REVENUE and ROWS_MIN_CAP keep shells out. Three errors in
-the market value are known and not guarded: a filer whose ticker is a depositary receipt
-and whose count is in ordinary shares; a count filed after a split and already on its
-basis though dated before it; and a spin-off the vendor reports as a split, which moves
-the price history and not the share count. Each is wrong by a ratio, not by a thousand."""
+row says what was filed; ROWS_MIN_REVENUE and ROWS_MIN_CAP keep shells out. One error in the
+market value is known and not guarded: a filer whose ticker is a depositary receipt and
+whose count is in ordinary shares, wrong by the receipt's ratio. A spin-off the vendor
+carries as a split is not an error: the factor moves the price history, and the count
+times it is the count on that history's basis, so the market value is right."""
 
 from __future__ import annotations
 
@@ -80,6 +83,15 @@ ROWS_MIN_CAP = 1e8
 # which this rule leaves as it finds them.
 CAP_CEILING = 100.0
 UNIT_RATIO = 100.0
+# A split in the months after the cover date, within the window a filing is made in, may have
+# been applied to the count already; see on_split_basis. Measured on the built panel before
+# the rule was set: of 114 counts with a split of SPLIT_RATIO or more in the three months
+# after, 87 were shown by the filer's own counts to be on the basis before the split and are
+# kept, 5 were already on the new basis and lose their market value, and 22 could not be
+# told either way and are kept as they are.
+SPLIT_WINDOW = 3
+SPLIT_RATIO = 1.4
+SPLIT_TOLERANCE = 0.10
 CHUNK = 200
 # field -> elements in order of preference (the first carrying the filer-year wins)
 FLOWS: dict[str, tuple[str, ...]] = {
@@ -179,6 +191,43 @@ def split_factor(splits: dict[str, float], cover_date: str) -> tuple[float | Non
         if m > month and ratio > 0:
             factor *= ratio
     return factor, None
+
+
+def months_after(month: str, n: int) -> list[str]:
+    year, m = int(month[:4]), int(month[5:])
+    out: list[str] = []
+    for _ in range(n):
+        m += 1
+        if m > 12:
+            year, m = year + 1, 1
+        out.append(f"{year}-{m:02d}")
+    return out
+
+
+def on_split_basis(count: float, cover_date: str, splits: dict[str, float], others: tuple[tuple[str, float], ...]) -> str | None:
+    """Why the count is already on the basis of a split in the SPLIT_WINDOW months after its
+    date, or None. A filing made after a split states the count on the new basis under a
+    date before it; applying the split's factor then counts it twice. The evidence is the
+    filer's own nearest count after the split month, or before it where there is none after:
+    the count is taken as already on the new basis when it is within SPLIT_TOLERANCE of the
+    count after and that count is the one before times the ratio, or, with no count after,
+    when it is the count before times the ratio. Only a split of SPLIT_RATIO or more either
+    way is looked at: a smaller factor is a special dividend or a spin-off, which the vendor
+    carries as a split and which moves the price history and not the count."""
+    def near(a: float, b: float) -> bool:
+        return b > 0 and abs(a / b - 1) <= SPLIT_TOLERANCE
+
+    for month in months_after(cover_date[:7], SPLIT_WINDOW):
+        ratio = splits.get(month)
+        if ratio is None or ratio <= 0 or 1 / SPLIT_RATIO < ratio < SPLIT_RATIO:
+            continue
+        before = [n for d, n in sorted(others) if d[:7] < month]
+        after = [n for d, n in sorted(others) if d[:7] > month]
+        if after and near(count, after[0]) and (not before or near(after[0], before[-1] * ratio)):
+            return f"the count of {cover_date} matches the filer's count after the split of {month} ({ratio:g} for 1) and not before it: already on the split's basis"
+        if not after and before and near(count, before[-1] * ratio):
+            return f"the count of {cover_date} is the filer's count before the split of {month} ({ratio:g} for 1) times the ratio: already on the split's basis"
+    return None
 
 
 def wrong_unit(count: float, weighted: object, others: list[float]) -> str | None:
@@ -297,9 +346,12 @@ def row_of(cik: int, ticker: str, name: str, year: int, flow: Json, prior: Json 
             size = max((abs(v) for k in ("revenue", "total_assets") if isinstance(v := row.get(k), float)), default=0.0)
             row["cover_date"], row["cover_shares"], row["split_factor"] = cover[0], cover[1], factor
             unit = wrong_unit(cover[1] * factor, row.get("weighted_shares"), [n * f for d, n in other_covers if (f := split_factor(splits, d)[0]) is not None])
+            twice = on_split_basis(cover[1], cover[0], splits, other_covers)
             if size > 0 and cap > CAP_CEILING * size and unit is not None:
                 row["market_cap_reason"] = (f"the cover-page share count of {cover[0]} gives a market value {cap / size:,.0f} times the larger of revenue and total assets "
                                             f"and is {unit}: a count filed in the wrong unit")
+            elif twice is not None:
+                row["market_cap_reason"] = twice
             else:
                 row["market_cap"] = cap
     if june in adjusted and next_june in adjusted:

@@ -427,11 +427,26 @@ count about a thousand or a million times the filer's others; two did not, the l
 depositary receipt counted in ordinary shares, which the rule leaves as it finds them. The
 highest ratio on a company priced that way was seventy-two.
 
-Three errors in the market value are known and not guarded, each wrong by a ratio and not
-by a thousand: a filer whose ticker is a depositary receipt and whose count is in ordinary
-shares; a count filed after a split and already on its basis though
-dated before it; and a spin-off the vendor reports as a split,
-which moves the price history and not the share count.
+A second error, guarded the next day. A filing made shortly after a split states the count
+on the new basis under a date before it, so the split's factor would move it onto today's
+basis twice: one filer's count, dated the last day of a June and filed after a seven-for-one
+split the month after, gave a market value seven times the company's. The guard, `on_split_basis` in
+`broad_panel.py`, looks at a real split, three for two or larger either way, in the three
+months after the cover date, and reads the filer's own counts on either side of it: a count
+that matches the filer's next count after the split, that count being the one before times
+the ratio, is already on the new basis and the row carries no market value, with the
+reason; a count that matches the one before is kept; and where neither can be told the row
+is kept as it is. Measured before the rule was set: of 114 counts with such a split just
+after them, 87 were shown to be on the earlier basis, 5 were already on the new one, and 22
+could not be told. The rebuild of 2026-10-06 took the market value from those five rows,
+one of them in the rule panel's years, and moved no other; in the rule panel that row left
+and the next two names by size entered, and every figure below moved in its last decimal if at all.
+
+One error is known and not guarded, wrong by a ratio and not by a thousand: a filer whose
+ticker is a depositary receipt and whose count is in ordinary shares.
+A spin-off the vendor carries as a split was taken for a third and is not one: the factor
+moves the price history, and the count times it is the count on that history's basis, so
+the market value is right (checked on two names).
 
 **Rebuilt 2026-10-05.** Both panels were built again, and three things changed at once,
 which the figures below cannot separate:
@@ -443,7 +458,7 @@ which the figures below cannot separate:
   prices, giving a hundred and seventy-two rows a market value they lacked; forward
   returns moved in the sixth decimal;
 - the model: the rule panel is valued by the binary of the day, which since its first
-  build holds terminal growth to the risk-free rate. So 2,981 of its 5,180 records are
+  build holds terminal growth to the risk-free rate. So 2,981 of its 5,181 records are
   valued where 2,755 of 5,193 were, fewer meeting the sanity bound, and the median margin
   of safety on a date runs between +0.05 and +0.32 from 2013 to 2020, where it ran above
   one, and below zero in 2021 and from 2023.
@@ -495,16 +510,16 @@ percentile where the paper uses the New York Stock Exchange's); the formations a
 into one monthly series and regressed on SPY, both over a twelfth of the one-year Treasury
 yield of the month before. The t-ratio is the plain least-squares one.
 
-**What it found (2026-10-05, on the rebuilt panel), descriptively.** 2,981 valued records,
+**What it found (2026-10-06, on the rebuilt panel), descriptively.** 2,981 valued records,
 156 months, 48 of them from the 2022 formation on. Highest fifth less lowest, per cent a
 month:
 
 | measure | stretch | equal: raw, beta, alpha (t) | capped value: raw, beta, alpha (t) |
 |---|---|---|---|
-| margin of safety | all | −0.07, −0.01, −0.06 (−0.23) | −0.23, −0.14, −0.08 (−0.28) |
-| margin of safety | before 2022 | +0.13, +0.08, +0.04 (+0.14) | −0.05, −0.02, −0.03 (−0.08) |
+| margin of safety | all | −0.07, −0.01, −0.07 (−0.26) | −0.22, −0.14, −0.08 (−0.27) |
+| margin of safety | before 2022 | +0.13, +0.09, +0.04 (+0.12) | −0.03, −0.02, −0.02 (−0.06) |
 | margin of safety | from 2022 | −0.52, −0.21, −0.26 (−0.57) | −0.64, −0.37, −0.17 (−0.28) |
-| earnings yield | all | −0.23, +0.03, −0.26 (−1.04) | −0.24, −0.06, −0.18 (−0.67) |
+| earnings yield | all | −0.23, +0.03, −0.26 (−1.06) | −0.24, −0.06, −0.18 (−0.68) |
 | earnings yield | from 2022 | −0.36, −0.01, −0.35 (−0.83) | −0.27, −0.06, −0.20 (−0.38) |
 | nine-signal score | all | −0.13, −0.02, −0.11 (−0.67) | −0.23, +0.03, −0.27 (−1.26) |
 | nine-signal score | before 2022 | −0.06, −0.01, −0.05 (−0.28) | −0.10, +0.02, −0.11 (−0.63) |
@@ -567,15 +582,15 @@ lowest, beside SPY's excess return over the same months, which are equal if beta
 in full; and the alpha the spread would show had beta not been paid at all, the first
 paper's flat line.
 
-**What it found (2026-10-05, on the rebuilt panel), descriptively.** 5,109 names and Junes on
+**What it found (2026-10-06, on the rebuilt panel), descriptively.** 5,110 names and Junes on
 735 filers, 156 months. Highest-beta fifth less lowest, per cent a month unless said:
 
 | stretch | weights | raw | spread beta | alpha (t) | flat line | earned per unit of beta, a year | SPY over the rate, a year |
 |---|---|---|---|---|---|---|---|
-| all | equal | +0.89 | +0.67 | +0.19 (+0.60) | −0.71 | +16.0% | +12.7% |
+| all | equal | +0.89 | +0.67 | +0.18 (+0.59) | −0.71 | +16.0% | +12.7% |
 | all | capped value | +1.20 | +0.74 | +0.42 (+1.05) | −0.79 | +19.4% | +12.7% |
-| before 2022 | equal | +0.46 | +0.52 | −0.04 (−0.14) | −0.50 | +10.7% | +11.6% |
-| before 2022 | capped value | +0.56 | +0.52 | +0.06 (+0.18) | −0.50 | +12.9% | +11.6% |
+| before 2022 | equal | +0.46 | +0.52 | −0.04 (−0.15) | −0.50 | +10.6% | +11.6% |
+| before 2022 | capped value | +0.56 | +0.52 | +0.06 (+0.17) | −0.50 | +12.8% | +11.6% |
 | from 2022 | equal | +1.87 | +0.96 | +0.64 (+0.84) | −1.23 | +23.3% | +15.3% |
 | from 2022 | capped value | +2.66 | +1.18 | +1.16 (+1.13) | −1.50 | +27.0% | +15.3% |
 

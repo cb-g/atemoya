@@ -793,6 +793,11 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- a count already on a split's basis: where a filer's cover-page count, dated before a split
+  in the three months after it, matches the filer's own count after the split and not
+  before, `python/broad_panel.py` no longer moves it onto today's basis a second time; the
+  row carries no market value, with the reason. Both panels rebuilt and their studies rerun.
+  Side tools: no record on the valuation path moves and there is no new `Failed` string.
 - a share count in the wrong unit: where a filer tags its cover-page count in thousands or
   millions, `python/broad_panel.py` no longer believes the market value it gives; a row
   whose market value is above a hundred times the larger of revenue and total assets, on a

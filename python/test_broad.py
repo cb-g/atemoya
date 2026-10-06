@@ -66,6 +66,28 @@ def test_a_row_carries_market_value_on_todays_basis_and_the_next_twelve_months()
     assert "market_cap" in small
     assert bp.wrong_unit(100.0, None, []) is None and bp.wrong_unit(100.0, 2.0, [50.0]) is None
 
+
+def test_a_count_already_on_the_basis_of_a_split_just_after_its_date_is_not_counted_twice() -> None:
+    splits = {"2021-08": 5.0}
+    others = (("2020-06-30", 80.0), ("2022-06-30", 410.0))
+    assert bp.on_split_basis(400.0, "2021-06-30", splits, others) == (
+        "the count of 2021-06-30 matches the filer's count after the split of 2021-08 (5 for 1) and not before it: already on the split's basis")
+    assert bp.on_split_basis(82.0, "2021-06-30", splits, others) is None                        # on the basis before the split: the factor is right
+    assert bp.on_split_basis(400.0, "2021-06-30", splits, (("2020-06-30", 80.0),)) == (
+        "the count of 2021-06-30 is the filer's count before the split of 2021-08 (5 for 1) times the ratio: already on the split's basis")
+    assert bp.on_split_basis(400.0, "2021-06-30", splits, ()) is None                           # nothing to tell it by: kept as it is
+    assert bp.on_split_basis(400.0, "2021-06-30", {"2021-08": 1.2}, others) is None             # a spin-off's factor moves the price history, not the count
+    assert bp.on_split_basis(400.0, "2021-06-30", {"2021-12": 5.0}, others) is None             # outside the filing window
+    assert bp.on_split_basis(100.0, "2021-06-30", {"2021-08": 2.0}, (("2020-06-30", 80.0), ("2022-06-30", 100.0))) is None   # the count after is not the one before times two: unclear, kept
+    flow: Json = {"fiscal_year_end": "2020-12-31", "net_income": 10.0, "revenue": 100.0}
+    stocks: dict[tuple[int, str], Json] = {(1, "2020-12-31"): {"total_assets": 500.0}}
+    prices: dict[str, Json] = {"TKR": {"close": {"2021-06": 10.0, "2022-06": 11.0}, "adjusted": {"2021-06": 10.0, "2022-06": 11.0}, "splits": splits}}
+    row = bp.row_of(1, "TKR", "Test Co", 2021, flow, None, stocks, ("2021-06-30", 400.0), prices, others)
+    assert "market_cap" not in row and "already on the split's basis" in cast(str, row["market_cap_reason"]) and row["cover_shares"] == 400.0
+    fine = bp.row_of(1, "TKR", "Test Co", 2021, flow, None, stocks, ("2021-06-30", 82.0), prices, others)
+    assert fine["market_cap"] == 82.0 * 5.0 * 10.0
+
+
 def year(**over: float) -> Json:
     base: Json = {"net_income": 100.0, "operating_cash_flow": 150.0, "total_assets": 1000.0, "long_term_debt": 200.0, "current_assets": 300.0,
                   "current_liabilities": 150.0, "weighted_shares": 100.0, "gross_profit": 400.0, "revenue": 1000.0}
