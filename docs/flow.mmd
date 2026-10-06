@@ -18,13 +18,15 @@ flowchart TD
   RI --> C
   INS --> C
   REIT --> C
-  C --> RO[implied readouts, sensitivity]
+  C --> RO[implied readouts, sensitivity, quality, growth shadow, base rate]
   RO --> B[belief map, declared belief]
   B --> SC[surplus curve]
-  SC --> MK[market-implied block]
+  SC --> MK[market-implied block, options-implied return]
   MK --> REC[(record)]
-  REC --> OUT[summary, run diff, stability]
-  REC --> PAN[point-in-time panel]
+  REC --> OUT[summary, run diff, stability, watch]
+  REC --> PAN[point-in-time panel: anchor and baseline studies]
+  REC --> RS[rule study: raw, market-adjusted, sorted on beta]
+  REC --> IC[implied cost of capital, earnings reactions]
   REC --> FR[frontier]
   REC --> H[hedges: name, book, FX]
   REC --> V[view expression, fills]
@@ -36,8 +38,10 @@ flowchart TD
   A -. "Unprofitable" .-> RW[runway readout]
   RW --> REC
   U -. "side output, never on the record" .-> CS[consensus and surprise]
+  CS -.-> IC
+  BP[(broad panel: every filer, each June; its study)] -. "the largest by size and rule, each June" .-> U
   C -. "bound or sign" .-> FF3[Failed: see table]
   classDef failed fill:#f8d7da,stroke:#b02a37,color:#000
   classDef store fill:#e2e3e5,stroke:#6c757d,color:#000
   class FF1,FF2,FF3 failed
-  class ST store
+  class ST,BP store

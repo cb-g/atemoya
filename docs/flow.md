@@ -793,6 +793,14 @@ states are written into its files, not into a record:
   reason. Two declarations per name in the universe entry, drafted for AMZN and VG and
   marked for the user to confirm; `python/plot_build_out.py` draws it. Every other record
   carries neither field and is byte-identical.
+- the chart catches up with the tools: `docs/flow.mmd` and `docs/flow.svg` now draw what
+  was added to the record and beside it since they were last drawn: quality, the growth
+  shadow and the base rate among the readouts, the options-implied return in the
+  market-implied block, watch beside the run outputs, the rule study in its three readings
+  and the implied cost of capital with the earnings reactions off the record, and the
+  broad panel feeding the universe its largest names by rule. Stages, models and `Failed`
+  terminals are unchanged. A documentation change: no record moves and there is no new
+  `Failed` string.
 - a count already on a split's basis: where a filer's cover-page count, dated before a split
   in the three months after it, matches the filer's own count after the split and not
   before, `python/broad_panel.py` no longer moves it onto today's basis a second time; the
