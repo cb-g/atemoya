@@ -646,6 +646,14 @@ largest purchase with its owner and relationship as filed, and whether a chief e
 financial officer bought. `cluster_buy` is two **distinct** insiders buying inside a fourteen-day
 window in the trailing ninety days.
 
+Routine or opportunistic (83): each buyer and seller in a window is classified by the timing of
+this name's own open-market trades over the three calendar years before the as-of year, after
+Cohen, Malloy and Pomorski, "Decoding Inside Information", NBER Working Paper 16454, October
+2010, doi:10.3386/w16454: a trade in the same calendar month in each of the three years is
+routine, a trade in each year with no month in common is opportunistic, fewer years is
+unclassified with the reason. The history is read from the cache `python/insider_history.py`
+fills and never fetched by the run; an incomplete history classifies nobody and says so.
+
 Everything is cut on the **filing** date, which the index carries and the document does not, so
 the point-in-time panel reads only what was public on its date. The summary prints the ninety-day
 counts beside every stretched name and then lists those **stretched with insiders on the other
@@ -799,6 +807,14 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- routine and opportunistic traders (83): every buyer and seller in the insiders block's
+  windows is classified by the timing of the name's own open-market trades over the three
+  calendar years before the as-of year, after Cohen, Malloy and Pomorski, "Decoding Inside
+  Information", NBER Working Paper 16454, October 2010, doi:10.3386/w16454; the windows
+  carry the counts and dollars by kind, each seller its kind, and the block what history
+  was read. `python/insider_history.py` fills the cache once; the run reads it and
+  classifies nobody where it is incomplete, saying so. A readout: the block never fails a
+  record and there is no new `Failed` string.
 - the chart catches up with the tools: `docs/flow.mmd` and `docs/flow.svg` now draw what
   was added to the record and beside it since they were last drawn: quality, the growth
   shadow and the base rate among the readouts, the options-implied return in the

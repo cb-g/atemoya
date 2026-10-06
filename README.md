@@ -33,8 +33,8 @@ One line of JSON per name, `Ok` with a fair value or `Failed` with a reason.
   and an options-implied expected return, read as the market's risk pricing and not as a
   forecast.
 - **Readouts.** Quality signals from the statements alone, a growth shadow, price stretch
-  against the name's own history, insider transactions, the Street's consensus and the
-  name's surprise history.
+  against the name's own history, insider transactions with each trader told routine from
+  opportunistic by their own timing, the Street's consensus and the name's surprise history.
 - **Provenance.** The provider of every figure, the definition and the tags summed, and
   the version of the code and of every declaration it read.
 

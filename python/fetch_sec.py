@@ -255,6 +255,23 @@ def insiders_cached(cik: str, filings: Iterable[tuple[str, date, str]],
     return transactions, excluded, read, missing
 
 
+def insider_history_cached(cik: str, index: Mapping[str, object] | None, as_of: date) -> "insiders_mod.History | None":
+    """(83) The three calendar years before the as-of year, as the cache holds them: every Form
+    4 filed from the first day of the span to INSIDER_FILING_LAG_DAYS after its last, since a
+    December trade is filed in January, read from the index's recent filings and the older
+    pages ON DISK. Fetches nothing: python/insider_history.py fills the cache, and a page or a
+    document it has not filled is counted, so that the block can say the history is incomplete
+    rather than call a quiet year routine. None when there is no index to read by."""
+    import insiders as insiders_mod  # noqa: PLC0415
+
+    if index is None:
+        return None
+    first, last = insiders_mod.history_span(as_of)
+    filings, absent = form4_filings_cached(cik, index, first, last + timedelta(days=INSIDER_FILING_LAG_DAYS))
+    transactions, _excluded, read, missing = insiders_cached(cik, filings)
+    return insiders_mod.History(transactions=transactions, filings_read=read, filings_missing=missing, pages_missing=len(absent))
+
+
 def insiders_of(cik: str | None, index: Mapping[str, object] | None, as_of: date, user_agent: str) -> tuple[boundary.Insiders | None, str | None]:
     """(66) The Form 4 block for one name, from filings made on or before [as_of].
 
@@ -287,7 +304,7 @@ def insiders_of(cik: str | None, index: Mapping[str, object] | None, as_of: date
         transactions += found
         excluded += codes
         read += 1
-    return insiders_mod.compute(transactions, excluded, as_of, cik, read)
+    return insiders_mod.compute(transactions, excluded, as_of, cik, read, insider_history_cached(cik, index, as_of))
 
 
 def latest_annual_submission(index: Mapping[str, object] | None) -> tuple[boundary.Submission | None, str | None]:

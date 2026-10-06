@@ -3168,6 +3168,8 @@ class InsiderSeller:
     plan_dollars_sold: float
     shares_owned_after: Optional[float] = None
     fraction_of_holdings_sold: Optional[float] = None
+    trader: str = field(default_factory=lambda: "")
+    trader_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'InsiderSeller':
@@ -3181,6 +3183,8 @@ class InsiderSeller:
                 plan_dollars_sold=_atd_read_float(x['plan_dollars_sold']) if 'plan_dollars_sold' in x else _atd_missing_json_field('InsiderSeller', 'plan_dollars_sold'),
                 shares_owned_after=_atd_read_float(x['shares_owned_after']) if 'shares_owned_after' in x else None,
                 fraction_of_holdings_sold=_atd_read_float(x['fraction_of_holdings_sold']) if 'fraction_of_holdings_sold' in x else None,
+                trader=_atd_read_string(x['trader']) if 'trader' in x else "",
+                trader_reason=_atd_read_string(x['trader_reason']) if 'trader_reason' in x else None,
             )
         else:
             _atd_bad_json('InsiderSeller', x)
@@ -3197,6 +3201,9 @@ class InsiderSeller:
             res['shares_owned_after'] = _atd_write_float(self.shares_owned_after)
         if self.fraction_of_holdings_sold is not None:
             res['fraction_of_holdings_sold'] = _atd_write_float(self.fraction_of_holdings_sold)
+        res['trader'] = _atd_write_string(self.trader)
+        if self.trader_reason is not None:
+            res['trader_reason'] = _atd_write_string(self.trader_reason)
         return res
 
     @classmethod
@@ -3224,6 +3231,14 @@ class InsiderWindow:
     plan_sellers: int = field(default_factory=lambda: 0)
     plan_dollars_sold: float = field(default_factory=lambda: 0.0)
     sellers_detail: List[InsiderSeller] = field(default_factory=lambda: [])
+    routine_buyers: int = field(default_factory=lambda: 0)
+    opportunistic_buyers: int = field(default_factory=lambda: 0)
+    routine_dollars_bought: float = field(default_factory=lambda: 0.0)
+    opportunistic_dollars_bought: float = field(default_factory=lambda: 0.0)
+    routine_sellers: int = field(default_factory=lambda: 0)
+    opportunistic_sellers: int = field(default_factory=lambda: 0)
+    routine_dollars_sold: float = field(default_factory=lambda: 0.0)
+    opportunistic_dollars_sold: float = field(default_factory=lambda: 0.0)
 
     @classmethod
     def from_json(cls, x: Any) -> 'InsiderWindow':
@@ -3241,6 +3256,14 @@ class InsiderWindow:
                 plan_sellers=_atd_read_int(x['plan_sellers']) if 'plan_sellers' in x else 0,
                 plan_dollars_sold=_atd_read_float(x['plan_dollars_sold']) if 'plan_dollars_sold' in x else 0.0,
                 sellers_detail=_atd_read_list(InsiderSeller.from_json)(x['sellers_detail']) if 'sellers_detail' in x else [],
+                routine_buyers=_atd_read_int(x['routine_buyers']) if 'routine_buyers' in x else 0,
+                opportunistic_buyers=_atd_read_int(x['opportunistic_buyers']) if 'opportunistic_buyers' in x else 0,
+                routine_dollars_bought=_atd_read_float(x['routine_dollars_bought']) if 'routine_dollars_bought' in x else 0.0,
+                opportunistic_dollars_bought=_atd_read_float(x['opportunistic_dollars_bought']) if 'opportunistic_dollars_bought' in x else 0.0,
+                routine_sellers=_atd_read_int(x['routine_sellers']) if 'routine_sellers' in x else 0,
+                opportunistic_sellers=_atd_read_int(x['opportunistic_sellers']) if 'opportunistic_sellers' in x else 0,
+                routine_dollars_sold=_atd_read_float(x['routine_dollars_sold']) if 'routine_dollars_sold' in x else 0.0,
+                opportunistic_dollars_sold=_atd_read_float(x['opportunistic_dollars_sold']) if 'opportunistic_dollars_sold' in x else 0.0,
             )
         else:
             _atd_bad_json('InsiderWindow', x)
@@ -3260,10 +3283,68 @@ class InsiderWindow:
         res['plan_sellers'] = _atd_write_int(self.plan_sellers)
         res['plan_dollars_sold'] = _atd_write_float(self.plan_dollars_sold)
         res['sellers_detail'] = _atd_write_list((lambda x: x.to_json()))(self.sellers_detail)
+        res['routine_buyers'] = _atd_write_int(self.routine_buyers)
+        res['opportunistic_buyers'] = _atd_write_int(self.opportunistic_buyers)
+        res['routine_dollars_bought'] = _atd_write_float(self.routine_dollars_bought)
+        res['opportunistic_dollars_bought'] = _atd_write_float(self.opportunistic_dollars_bought)
+        res['routine_sellers'] = _atd_write_int(self.routine_sellers)
+        res['opportunistic_sellers'] = _atd_write_int(self.opportunistic_sellers)
+        res['routine_dollars_sold'] = _atd_write_float(self.routine_dollars_sold)
+        res['opportunistic_dollars_sold'] = _atd_write_float(self.opportunistic_dollars_sold)
         return res
 
     @classmethod
     def from_json_string(cls, x: str) -> 'InsiderWindow':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class InsiderHistory:
+    """Original type: insider_history = { ... }
+    """
+
+    first_year: int
+    last_year: int
+    filings_read: int
+    filings_missing: int
+    pages_missing: int
+    complete: bool
+    traders: int
+    routine: int
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'InsiderHistory':
+        if isinstance(x, dict):
+            return cls(
+                first_year=_atd_read_int(x['first_year']) if 'first_year' in x else _atd_missing_json_field('InsiderHistory', 'first_year'),
+                last_year=_atd_read_int(x['last_year']) if 'last_year' in x else _atd_missing_json_field('InsiderHistory', 'last_year'),
+                filings_read=_atd_read_int(x['filings_read']) if 'filings_read' in x else _atd_missing_json_field('InsiderHistory', 'filings_read'),
+                filings_missing=_atd_read_int(x['filings_missing']) if 'filings_missing' in x else _atd_missing_json_field('InsiderHistory', 'filings_missing'),
+                pages_missing=_atd_read_int(x['pages_missing']) if 'pages_missing' in x else _atd_missing_json_field('InsiderHistory', 'pages_missing'),
+                complete=_atd_read_bool(x['complete']) if 'complete' in x else _atd_missing_json_field('InsiderHistory', 'complete'),
+                traders=_atd_read_int(x['traders']) if 'traders' in x else _atd_missing_json_field('InsiderHistory', 'traders'),
+                routine=_atd_read_int(x['routine']) if 'routine' in x else _atd_missing_json_field('InsiderHistory', 'routine'),
+            )
+        else:
+            _atd_bad_json('InsiderHistory', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['first_year'] = _atd_write_int(self.first_year)
+        res['last_year'] = _atd_write_int(self.last_year)
+        res['filings_read'] = _atd_write_int(self.filings_read)
+        res['filings_missing'] = _atd_write_int(self.filings_missing)
+        res['pages_missing'] = _atd_write_int(self.pages_missing)
+        res['complete'] = _atd_write_bool(self.complete)
+        res['traders'] = _atd_write_int(self.traders)
+        res['routine'] = _atd_write_int(self.routine)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'InsiderHistory':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -3319,6 +3400,8 @@ class Insiders:
     cluster: Optional[InsiderCluster] = None
     excluded_by_code: List[Tuple[str, int]] = field(default_factory=lambda: [])
     scope_limits: List[str] = field(default_factory=lambda: [])
+    trader_history: Optional[InsiderHistory] = None
+    trader_history_reason: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Insiders':
@@ -3333,6 +3416,8 @@ class Insiders:
                 cluster=InsiderCluster.from_json(x['cluster']) if 'cluster' in x else None,
                 excluded_by_code=_atd_read_assoc_object_into_list(_atd_read_int)(x['excluded_by_code']) if 'excluded_by_code' in x else [],
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
+                trader_history=InsiderHistory.from_json(x['trader_history']) if 'trader_history' in x else None,
+                trader_history_reason=_atd_read_string(x['trader_history_reason']) if 'trader_history_reason' in x else None,
             )
         else:
             _atd_bad_json('Insiders', x)
@@ -3349,6 +3434,10 @@ class Insiders:
             res['cluster'] = (lambda x: x.to_json())(self.cluster)
         res['excluded_by_code'] = _atd_write_assoc_list_to_object(_atd_write_int)(self.excluded_by_code)
         res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        if self.trader_history is not None:
+            res['trader_history'] = (lambda x: x.to_json())(self.trader_history)
+        if self.trader_history_reason is not None:
+            res['trader_history_reason'] = _atd_write_string(self.trader_history_reason)
         return res
 
     @classmethod

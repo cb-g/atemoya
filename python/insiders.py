@@ -9,6 +9,19 @@ Everything is cut on the FILING date, not the transaction date, so the point-in-
 reads only what was public on its date. The filing date is not in the document — SEC's
 submissions index carries it, and the signature date disagrees with it often enough to
 matter, so the index is the only source for it.
+
+Routine and opportunistic (83). Most selling is stock pay sold on a schedule, and a reader
+who cannot tell scheduled selling from the other kind ignores all of it. The classification
+is the one in Cohen, Malloy and Pomorski, "Decoding Inside Information", NBER Working Paper
+16454, October 2010, doi:10.3386/w16454: an insider who placed a trade in the same calendar
+month in each of the three preceding years is a routine trader, every other insider with a
+trade in each of those three years is opportunistic, and the designation is made from past
+history alone and inherited by the trades that follow it. In their data the trades of
+opportunistic insiders carried the information and those of routine insiders carried none.
+Here the three years are the calendar years before the as-of year, the trades are this
+name's open-market purchases and sales with buys and sells pooled for the timing test, a
+choice the paper leaves open, and an insider with fewer than three such years, or whose
+history is not on disk, is unclassified with the reason: never a default.
 """
 
 from __future__ import annotations
@@ -31,6 +44,9 @@ PURCHASE, SALE = "P", "S"
 CLUSTER_DAYS = 14          # the standard window, kept because it is the standard one
 CLUSTER_BUYERS = 2
 WINDOWS = (90, 365)
+HISTORY_YEARS = 3          # the paper's back-window: a trade in each of the three preceding calendar years
+ROUTINE, OPPORTUNISTIC, UNCLASSIFIED = "routine", "opportunistic", "unclassified"
+HISTORY_NOT_FETCHED = "Form 4 history for the three prior calendar years is not on disk: run python/insider_history.py"
 CHIEF = re.compile(r"chief\s+(executive|financial)|(^|\b)(ceo|cfo)(\b|$)", re.IGNORECASE)
 
 NO_CIK = "no CIK: Form 4 covers SEC registrants, and this name is on the vendor path"
@@ -41,6 +57,8 @@ SCOPE_LIMITS = [
     "the plan marking is a checkbox on the filing, in use on forms filed from April 2023, and covers every line of the filing: an earlier sale reads unmarked, and a filing mixing planned and unplanned sales reads as one",
     "the share of holdings sold is over the ownership lines the seller sold from, each line's balance as its last sale in the window reported it; shares on a line with no sale in the window, and options and unvested awards, are not in it, so the share overstates what was sold of everything the seller holds",
     "open-market purchases and sales only: awards, exercises, tax withholding and gifts are counted by code and never summed",
+    "a trader is routine or opportunistic by the timing of this name's own open-market trades over the three calendar years before the as-of year, buys and sells pooled; fewer than three years with a trade, or a history not on disk, leaves the trader unclassified with the reason",
+    "the routine test reads timing only, as the paper does: a scheduled seller whose months shift by one reads opportunistic, and a plan sale is a separate marking",
 ]
 
 
@@ -232,7 +250,7 @@ def deduplicate(transactions: list[Transaction]) -> list[Transaction]:
     return sorted(best.values(), key=lambda t: (t.transaction_date, t.accession))
 
 
-def sellers(sells: list[Transaction]) -> list[boundary.InsiderSeller]:
+def sellers(sells: list[Transaction], traders: Mapping[str, tuple[str, str | None]] = {}, history_reason: str | None = None) -> list[boundary.InsiderSeller]:
     """Per seller: the sales summed, the part under a marked plan, and the share of reported
     holdings sold. Holdings are filed per ownership line (direct, each trust, a spouse), so
     the balance is read per line, from the last sale on that line in the window, and summed
@@ -251,17 +269,60 @@ def sellers(sells: list[Transaction]) -> list[boundary.InsiderSeller]:
             last_on_line[t.ownership] = t
         balances = [t.shares_owned_after for t in last_on_line.values()]
         after = None if any(b is None for b in balances) else sum(b for b in balances if b is not None)
+        trader, why = trader_of(latest, traders, history_reason)
         out.append(boundary.InsiderSeller(
             owner=owner, relationship=latest.relationship, sales=len(lines), shares_sold=shares,
             dollars_sold=sum(t.dollars for t in lines), plan_dollars_sold=sum(t.dollars for t in lines if t.plan_10b5_1),
             shares_owned_after=after,
-            fraction_of_holdings_sold=None if after is None or shares + after <= 0 else shares / (shares + after)))
+            fraction_of_holdings_sold=None if after is None or shares + after <= 0 else shares / (shares + after),
+            trader=trader, trader_reason=why))
     return sorted(out, key=lambda s: (-s.dollars_sold, s.owner))
 
 
-def window(transactions: list[Transaction], as_of: date, days: int) -> boundary.InsiderWindow:
+def owner_key(t: Transaction) -> str:
+    return t.owner_cik or t.owner
+
+
+def history_span(as_of: date) -> tuple[date, date]:
+    """The three calendar years before the as-of year, first day to last."""
+    return date(as_of.year - HISTORY_YEARS, 1, 1), date(as_of.year - 1, 12, 31)
+
+
+def classify(history: list[Transaction], as_of: date) -> dict[str, tuple[str, str | None]]:
+    """owner key -> (routine | opportunistic | unclassified, reason). Over this name's
+    open-market trades in the three calendar years before the as-of year, buys and sells
+    pooled: routine where some calendar month carries a trade in every one of the three
+    years, opportunistic where every year carries a trade and no month is common to all,
+    unclassified with the reason where a year carries none."""
+    first, last = history_span(as_of)
+    years = range(first.year, last.year + 1)
+    months: dict[str, dict[int, set[int]]] = {}
+    for t in deduplicate(history):
+        if first <= t.transaction_date <= last:
+            months.setdefault(owner_key(t), {}).setdefault(t.transaction_date.year, set()).add(t.transaction_date.month)
+    out: dict[str, tuple[str, str | None]] = {}
+    for owner, by_year in months.items():
+        traded = [y for y in years if by_year.get(y)]
+        if len(traded) < len(years):
+            out[owner] = (UNCLASSIFIED, f"trades in {len(traded)} of the {len(years)} calendar years {first.year}-{last.year}")
+        elif any(all(m in by_year[y] for y in years) for m in range(1, 13)):
+            out[owner] = (ROUTINE, None)
+        else:
+            out[owner] = (OPPORTUNISTIC, None)
+    return out
+
+
+def trader_of(t: Transaction, traders: Mapping[str, tuple[str, str | None]], history_reason: str | None) -> tuple[str, str | None]:
+    if history_reason is not None:
+        return UNCLASSIFIED, history_reason
+    return traders.get(owner_key(t), (UNCLASSIFIED, f"no trade in the calendar years before {t.transaction_date.year}"))
+
+
+def window(transactions: list[Transaction], as_of: date, days: int, traders: Mapping[str, tuple[str, str | None]] = {},
+           history_reason: str | None = HISTORY_NOT_FETCHED) -> boundary.InsiderWindow:
     """One window's counts and dollars. Public because the through-time study (67) reads one
-    window from a cache filled for that window alone, and must not claim the other."""
+    window from a cache filled for that window alone, and must not claim the other. Without
+    a history every trader is unclassified, and the routine and opportunistic counts are nil."""
     start = as_of - timedelta(days=days)
     inside = [t for t in transactions if start <= t.transaction_date <= as_of]
     buys = [t for t in inside if t.code == PURCHASE]
@@ -270,13 +331,26 @@ def window(transactions: list[Transaction], as_of: date, days: int) -> boundary.
     sold = sum(t.dollars for t in sells)
     largest = max(buys, key=lambda t: t.dollars, default=None)
     planned = [t for t in sells if t.plan_10b5_1]
+
+    def of_kind(lines: list[Transaction], kind: str) -> tuple[int, float]:
+        mine = [t for t in lines if trader_of(t, traders, history_reason)[0] == kind]
+        return len({t.owner for t in mine}), sum(t.dollars for t in mine)
+
+    routine_buyers, routine_bought = of_kind(buys, ROUTINE)
+    opportunistic_buyers, opportunistic_bought = of_kind(buys, OPPORTUNISTIC)
+    routine_sellers, routine_sold = of_kind(sells, ROUTINE)
+    opportunistic_sellers, opportunistic_sold = of_kind(sells, OPPORTUNISTIC)
     return boundary.InsiderWindow(
         days=days, buyers=len({t.owner for t in buys}), sellers=len({t.owner for t in sells}),
         dollars_bought=bought, dollars_sold=sold, net_dollars=bought - sold,
         largest_purchase=None if largest is None else largest.to_boundary(),
         ceo_or_cfo_bought=any(CHIEF.search(t.relationship) for t in buys),
         plan_sales=len(planned), plan_sellers=len({t.owner for t in planned}),
-        plan_dollars_sold=sum(t.dollars for t in planned), sellers_detail=sellers(sells))
+        plan_dollars_sold=sum(t.dollars for t in planned), sellers_detail=sellers(sells, traders, history_reason),
+        routine_buyers=routine_buyers, opportunistic_buyers=opportunistic_buyers,
+        routine_dollars_bought=routine_bought, opportunistic_dollars_bought=opportunistic_bought,
+        routine_sellers=routine_sellers, opportunistic_sellers=opportunistic_sellers,
+        routine_dollars_sold=routine_sold, opportunistic_dollars_sold=opportunistic_sold)
 
 
 def cluster(transactions: list[Transaction], as_of: date, days: int = 90) -> boundary.InsiderCluster | None:
@@ -296,15 +370,45 @@ def cluster(transactions: list[Transaction], as_of: date, days: int = 90) -> bou
     return None
 
 
+@dataclass(frozen=True)
+class History:
+    """(83) What the cache held of the three prior calendar years: the trades, and whether
+    every page and document the index lists for them was on disk."""
+    transactions: list[Transaction]
+    filings_read: int
+    filings_missing: int
+    pages_missing: int
+
+    @property
+    def complete(self) -> bool:
+        return self.filings_missing == 0 and self.pages_missing == 0
+
+
 def compute(transactions: list[Transaction], excluded: Counter[str], as_of: date, cik: str,
-            filings_read: int) -> tuple[boundary.Insiders | None, str | None]:
-    """The block, or the reason there is none. Everything here counts and lists."""
+            filings_read: int, history: History | None = None) -> tuple[boundary.Insiders | None, str | None]:
+    """The block, or the reason there is none. Everything here counts and lists. [history]
+    is the three prior years as read from disk (None: no index to read them by); the
+    traders are classified from it only when it is complete, and the block says so."""
     if not transactions and not excluded and filings_read == 0:
         return None, NO_FILINGS
     kept = deduplicate(transactions)
     found = cluster(kept, as_of)
+    first, last = history_span(as_of)
+    traders: dict[str, tuple[str, str | None]] = {}
+    history_block: boundary.InsiderHistory | None = None
+    history_reason: str | None = HISTORY_NOT_FETCHED
+    if history is not None:
+        if history.complete:
+            traders = classify(history.transactions, as_of)
+            history_reason = None
+        history_block = boundary.InsiderHistory(
+            first_year=first.year, last_year=last.year, filings_read=history.filings_read,
+            filings_missing=history.filings_missing, pages_missing=history.pages_missing, complete=history.complete,
+            traders=sum(1 for kind, _ in traders.values() if kind != UNCLASSIFIED),
+            routine=sum(1 for kind, _ in traders.values() if kind == ROUTINE))
     return boundary.Insiders(
         as_of=as_of.isoformat(), cik=cik,
-        window_90=window(kept, as_of, 90), window_365=window(kept, as_of, 365),
+        window_90=window(kept, as_of, 90, traders, history_reason), window_365=window(kept, as_of, 365, traders, history_reason),
         cluster_buy=found is not None, cluster=found, filings_read=filings_read,
-        excluded_by_code=sorted(excluded.items()), scope_limits=list(SCOPE_LIMITS)), None
+        excluded_by_code=sorted(excluded.items()), scope_limits=list(SCOPE_LIMITS),
+        trader_history=history_block, trader_history_reason=history_reason if history_block is None or not history_block.complete else None), None

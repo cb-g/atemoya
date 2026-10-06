@@ -948,6 +948,8 @@ type insider_seller = {
   plan_dollars_sold : float;          (* of dollars_sold, the part on filings that mark a Rule 10b5-1 plan *)
   ?shares_owned_after : float option; (* summed over the ownership lines sold from (direct, each trust), each as its last sale in the window reported it; absent when a line gives none *)
   ?fraction_of_holdings_sold : float option;  (* shares_sold / (shares_sold + shares_owned_after); absent with shares_owned_after *)
+  ~trader : string;                   (* (83) routine | opportunistic | unclassified: the seller's own timing over the three calendar years before the as_of year, see insiders *)
+  ?trader_reason : string option;     (* (83) present on unclassified: why the seller could not be told *)
 }
 
 type insider_window = {
@@ -963,6 +965,14 @@ type insider_window = {
   ~plan_sellers : int;                (* distinct sellers with at least one such sale *)
   ~plan_dollars_sold : float;         (* of dollars_sold, the part on such filings *)
   ~sellers_detail : insider_seller list;   (* every seller in the window, largest dollars first *)
+  ~routine_buyers : int;              (* (83) of buyers, those whose own timing over the three prior calendar years is routine *)
+  ~opportunistic_buyers : int;        (* (83) of buyers, those with a trade in each of the three prior years and no month in common *)
+  ~routine_dollars_bought : float;    (* (83) of dollars_bought, the part by routine buyers *)
+  ~opportunistic_dollars_bought : float;
+  ~routine_sellers : int;             (* (83) as for buyers; the rest of sellers are unclassified, their history too short or not fetched *)
+  ~opportunistic_sellers : int;
+  ~routine_dollars_sold : float;
+  ~opportunistic_dollars_sold : float;
 }
 
 (* Two distinct insiders buying on the open market inside one fourteen-day window, which is
@@ -971,6 +981,22 @@ type insider_cluster = {
   window_start : string;
   window_end : string;
   buyers : string list;               (* at least two, distinct *)
+}
+
+(* (83) The Form 4 history the trader classification reads: the three calendar years before
+   the as_of year, every Form 4 the issuer's submissions index lists for them, read from the
+   cache and never fetched by the valuation path. Complete means every page and every
+   document was on disk; otherwise every trader is unclassified and the reason names the
+   command that fills the cache. *)
+type insider_history = {
+  first_year : int;
+  last_year : int;
+  filings_read : int;                 (* Form 4 and 4/A documents parsed across the three years *)
+  filings_missing : int;              (* listed by the index and not on disk *)
+  pages_missing : int;                (* older submissions pages the span needs and the cache lacks *)
+  complete : bool;
+  traders : int;                      (* owners with a trade in each of the three years, routine or opportunistic *)
+  routine : int;                      (* of traders, those with a calendar month traded in all three years *)
 }
 
 type insiders = {
@@ -983,6 +1009,8 @@ type insiders = {
   filings_read : int;                 (* Form 4 and 4/A documents parsed within the year *)
   ~excluded_by_code : (string * int) list <json repr="object">;   (* codes seen and not summed, counted by code *)
   ~scope_limits : string list;        (* what Form 4 cannot see for this name *)
+  ?trader_history : insider_history option;   (* (83) present when the history could be read at all *)
+  ?trader_history_reason : string option;     (* (83) present when it could not: no index, or nothing on disk *)
 }
 
 (* The depositary-receipt check (42): on a name with a declared ratio or a financial

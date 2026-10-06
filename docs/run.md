@@ -913,6 +913,38 @@ sale reads unmarked; lines with no sale in the window, options and unvested awar
 in the holdings, so the share overstates what was sold of everything the seller owns; and
 nothing here weighs or scores a sale.
 
+**Routine traders and opportunistic ones (83).** A reader who cannot tell scheduled
+selling from the other kind ignores all of it, and most of it is scheduled. The block
+therefore tells them apart by the rule in Cohen, Malloy and Pomorski, "Decoding Inside
+Information", NBER Working Paper 16454, October 2010, doi:10.3386/w16454: an insider who
+placed a trade in the same calendar month in each of the three preceding years is a
+routine trader, every other insider with a trade in each of those three years is
+opportunistic, and the designation is made from past history alone and inherited by the
+trades that follow it. In their data the trades of opportunistic insiders carried the
+information and those of routine insiders none: after an opportunistic sale the stock
+ran lower in the month that followed, after a routine one it did not. Here the three
+years are the calendar years before the as-of year, the trades are this name's
+open-market purchases and sales with buys and sells pooled for the timing test, which
+the paper leaves open, and an insider with fewer than three such years is unclassified
+with the reason, never defaulted. Each window carries `routine_buyers`,
+`opportunistic_buyers`, `routine_sellers` and `opportunistic_sellers` with the dollars
+each way, the rest of the buyers and sellers being unclassified; each seller in
+`sellers_detail` carries `trader` and, when unclassified, `trader_reason`; and
+`trader_history` says what the classification read, the years, the documents parsed, the
+documents and pages the cache lacked, and whether it was complete. The plan marking stays
+a separate axis: a scheduled seller whose months shift by one reads opportunistic, and the
+two are meant to be read together.
+
+**The history is fetched once and never by the valuation path.** Three years of Form 4 is
+tens of thousands of documents across the universe, so `uv run python/insider_history.py`
+fills the cache (the older submissions pages whose span meets the three years, then every
+Form 4 and 4/A filed in them, paced), hours the first time and the index reads after. The
+run reads only what is on disk: where a page or a document the index lists is missing,
+every trader in the window is unclassified with `trader_history_reason` naming the command,
+and the counts by kind are nil, because a quiet year that was never read must not become a
+routine one. A name without a filer, or a foreign private issuer, has no history to read,
+as it has no block.
+
 **The cut is on the filing date, not the transaction date.** A Form 4 carries no filing date
 in its XML and its signature date disagrees with the index often enough to matter, so the
 index is the only source for it. The point-in-time path reads the same index with everything

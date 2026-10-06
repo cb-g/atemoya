@@ -250,3 +250,58 @@ def test_the_window_tells_planned_sales_apart_and_gives_each_sellers_share() -> 
     # buyers alone leave the seller side empty
     quiet = insiders.window(buy("Jane", "2026-05-04"), as_of, 90)
     assert quiet.sellers_detail == [] and quiet.plan_sales == 0 and quiet.plan_dollars_sold == 0
+
+
+def sell(owner: str, when: str, shares: float = 100, price: str = "10") -> list[insiders.Transaction]:
+    return insiders.parse_form4(form4(owner=owner, owner_cik=owner, transactions=line("S", when, shares, price)),
+                                f"acc-{owner}-{when}", date.fromisoformat(when))[0]
+
+
+def test_a_routine_trader_traded_the_same_month_in_each_of_the_three_prior_years() -> None:
+    """The paper's rule (83) on invented insiders: May every year is routine; three years
+    in different months is opportunistic; two years is not enough; the as-of year itself
+    and the year before the span count for nothing; buys and sells are pooled."""
+    as_of = date(2026, 6, 1)
+    assert insiders.history_span(as_of) == (date(2023, 1, 1), date(2025, 12, 31))
+    history = (sell("May", "2023-05-03") + sell("May", "2024-05-20") + buy("May", "2025-05-11")        # the same month, a buy among sells
+               + sell("Roam", "2023-02-01") + sell("Roam", "2024-07-01") + sell("Roam", "2025-11-01")   # every year, never the same month
+               + sell("Two", "2024-05-01") + sell("Two", "2025-05-01")                                   # two years only
+               + sell("Edge", "2022-05-01") + sell("Edge", "2023-05-01") + sell("Edge", "2024-05-01") + sell("Edge", "2026-05-01")   # 2022 and 2026 are outside the span
+               + sell("Rich", "2023-05-01") + sell("Rich", "2023-09-01") + sell("Rich", "2024-09-01") + sell("Rich", "2025-09-01"))   # a common month among others
+    kinds = insiders.classify(history, as_of)
+    assert kinds["May"] == ("routine", None) and kinds["Rich"] == ("routine", None)
+    assert kinds["Roam"] == ("opportunistic", None)
+    assert kinds["Two"] == ("unclassified", "trades in 2 of the 3 calendar years 2023-2025")
+    assert kinds["Edge"] == ("unclassified", "trades in 2 of the 3 calendar years 2023-2025")
+    assert "Never" not in kinds
+
+
+def test_the_window_counts_each_kind_and_says_why_a_trader_is_unclassified() -> None:
+    as_of = date(2026, 6, 1)
+    history = (sell("May", "2023-05-03") + sell("May", "2024-05-20") + sell("May", "2025-05-11")
+               + sell("Roam", "2023-02-01") + sell("Roam", "2024-07-01") + sell("Roam", "2025-11-01"))
+    now = sell("May", "2026-05-05", 100, "10") + sell("Roam", "2026-05-06", 200, "10") + sell("New", "2026-05-07", 300, "10") + buy("Roam", "2026-04-01", 50, "10")
+    complete = insiders.History(transactions=history, filings_read=6, filings_missing=0, pages_missing=0)
+    block, reason = insiders.compute(now, Counter(), as_of, "0000000001", 4, complete)
+    assert reason is None and block is not None and block.trader_history is not None and block.trader_history_reason is None
+    h = block.trader_history
+    assert (h.first_year, h.last_year, h.complete, h.traders, h.routine) == (2023, 2025, True, 2, 1)
+    w = block.window_90
+    assert (w.sellers, w.routine_sellers, w.opportunistic_sellers) == (3, 1, 1)                 # New is unclassified
+    assert (w.routine_dollars_sold, w.opportunistic_dollars_sold, w.dollars_sold) == (1000, 2000, 6000)
+    assert (w.buyers, w.routine_buyers, w.opportunistic_buyers, w.opportunistic_dollars_bought) == (1, 0, 1, 500)
+    by_owner = {s.owner: s for s in w.sellers_detail}
+    assert by_owner["May"].trader == "routine" and by_owner["May"].trader_reason is None
+    assert by_owner["Roam"].trader == "opportunistic"
+    assert by_owner["New"].trader == "unclassified" and by_owner["New"].trader_reason == "no trade in the calendar years before 2026"
+    # a history with a document or a page missing classifies nobody and says what to run
+    short = insiders.History(transactions=history, filings_read=5, filings_missing=1, pages_missing=0)
+    held, _ = insiders.compute(now, Counter(), as_of, "0000000001", 4, short)
+    assert held is not None and held.trader_history is not None and not held.trader_history.complete
+    assert held.trader_history_reason == insiders.HISTORY_NOT_FETCHED and held.trader_history.traders == 0
+    assert held.window_90.routine_sellers == 0 and held.window_90.opportunistic_sellers == 0
+    assert all(s.trader == "unclassified" and s.trader_reason == insiders.HISTORY_NOT_FETCHED for s in held.window_90.sellers_detail)
+    # and no history at all, no index to read it by: the same, with no history block
+    none, _ = insiders.compute(now, Counter(), as_of, "0000000001", 4, None)
+    assert none is not None and none.trader_history is None and none.trader_history_reason == insiders.HISTORY_NOT_FETCHED
+    assert any("routine or opportunistic" in s for s in none.scope_limits)
