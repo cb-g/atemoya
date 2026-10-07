@@ -807,6 +807,11 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the insider study: `python/insider_study.py` reads every name's trailing ninety days of
+  Form 4 at each quarter-end since March 2024 from the cache, classifies each trader as the
+  block does, and sets the next quarter's, half-year's and year's excess over SPY beside the
+  kind of seller present. A side tool: no record on the valuation path moves and there is
+  no new `Failed` string.
 - the fifths followed by event year: `python/rule_beta.py` also follows each June's beta
   fifths, fixed at formation, through five years, reading the realised beta gap and the
   spread per year, after Keloharju, Linnainmaa and Nyberg, "Long-Term Discount Rates Do Not

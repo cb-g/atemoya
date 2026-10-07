@@ -305,3 +305,21 @@ def test_the_window_counts_each_kind_and_says_why_a_trader_is_unclassified() -> 
     none, _ = insiders.compute(now, Counter(), as_of, "0000000001", 4, None)
     assert none is not None and none.trader_history is None and none.trader_history_reason == insiders.HISTORY_NOT_FETCHED
     assert any("routine or opportunistic" in s for s in none.scope_limits)
+
+
+def test_the_study_groups_a_name_date_by_its_worst_classified_seller_and_walks_quarter_ends() -> None:
+    import insider_study as st
+
+    assert st.group_of({"routine": 2, "opportunistic": 1}) == "opportunistic present"
+    assert st.group_of({"routine": 1, "unclassified": 3}) == "routine only"
+    assert st.group_of({"unclassified": 1}) == "unclassified only" and st.group_of({}) == "none"
+    assert [d.isoformat() for d in st.quarter_ends(date(2024, 3, 31), date(2025, 1, 15))] == ["2024-03-31", "2024-06-30", "2024-09-30", "2024-12-31"]
+    as_of = date(2026, 6, 30)
+    history = insiders.History(transactions=sell("May", "2023-05-03") + sell("May", "2024-05-20") + sell("May", "2025-05-11")
+                               + sell("Roam", "2023-02-01") + sell("Roam", "2024-07-01") + sell("Roam", "2025-11-01"),
+                               filings_read=6, filings_missing=0, pages_missing=0)
+    window = sell("May", "2026-05-05") + sell("Roam", "2026-06-06") + sell("New", "2026-06-07") + buy("Roam", "2026-04-20") + sell("Old", "2026-01-15")
+    sellers, buyers = st.classify_window(window, history, as_of)
+    assert sellers == {"routine": 1, "opportunistic": 1, "unclassified": 1} and buyers == {"opportunistic": 1}   # Old sold before the window
+    row = st.Row(ticker="T", as_of="2026-06-30", sellers=sellers, buyers=buyers, excess={"63": 0.1, "126": None, "252": -0.2})
+    assert st.group_of(row.sellers) == "opportunistic present" and st.cell([row], 63) == "n=1"

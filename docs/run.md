@@ -972,6 +972,36 @@ and the counts by kind are nil, because a quiet year that was never read must no
 routine one. A name without a filer, or a foreign private issuer, has no history to read,
 as it has no block.
 
+**What the classification preceded on these names (2026-10-07).**
+
+    uv run python/insider_study.py                 # -> output/insider_study/tables.txt
+
+`insider_study.py` reads, for every universe name with a filer at every quarter-end from
+March 2024 to the last before the holdout, the trailing ninety days of Form 4 from the
+cache and classifies each seller and buyer from the three years before the date's year, as
+the block does; a name and date is then one row in one of four groups on each side, an
+opportunistic seller present, routine sellers only, unclassified sellers only, no seller,
+and its excess over SPY at 63, 126 and 252 trading days after is read from the anchor
+study's closes. Ten quarter-ends, 1,670 name-dates on 167 names, every history complete.
+Of the sellers in the windows 17 per cent read opportunistic, 23 routine and 59
+unclassified, their history shorter than three years.
+
+| sellers in the window | rows | names | +63d median excess | +126d | +252d (positive share) |
+|---|---|---|---|---|---|
+| an opportunistic seller present | 408 | 83 | −0.023 | −0.035 | −0.053 (113/252) |
+| routine sellers only | 232 | 59 | −0.006 | −0.009 | −0.026 (64/134) |
+| unclassified sellers only | 329 | 102 | −0.018 | −0.016 | +0.004 (89/176) |
+| no seller | 701 | 120 | −0.008 | −0.025 | −0.025 (179/406) |
+
+So on these names, in these ten quarters, the names where an opportunistic insider had
+sold ran about three points behind the names with routine sellers only at a year, and
+behind the names with no seller, on the side the paper found and by about a third of its
+size; the routine sellers' names ran with the rest. That is a lean, read on one market
+over two and a half years with cells of a few hundred, and the study claims nothing more
+than that it is on the paper's side rather than against it. The buying side has too few
+classified buyers to read: 23 rows with an opportunistic buyer, 15 with routine ones.
+Nothing feeds back: the block carries the kinds and the reader weighs them.
+
 **The cut is on the filing date, not the transaction date.** A Form 4 carries no filing date
 in its XML and its signature date disagrees with the index often enough to matter, so the
 index is the only source for it. The point-in-time path reads the same index with everything
