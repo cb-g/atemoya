@@ -807,6 +807,11 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the fifths followed by event year: `python/rule_beta.py` also follows each June's beta
+  fifths, fixed at formation, through five years, reading the realised beta gap and the
+  spread per year, after Keloharju, Linnainmaa and Nyberg, "Long-Term Discount Rates Do Not
+  Vary Across Firms", NBER Working Paper 25579, February 2019, doi:10.3386/w25579. A side
+  tool: no record on the valuation path moves and there is no new `Failed` string.
 - routine and opportunistic traders (83): every buyer and seller in the insiders block's
   windows is classified by the timing of the name's own open-market trades over the three
   calendar years before the as-of year, after Cohen, Malloy and Pomorski, "Decoding Inside

@@ -83,8 +83,10 @@ class Fit:
     t_alpha: float | None
 
 
-def months_after(year: int) -> list[str]:
-    """The twelve months a June formation holds: July of the year to June of the next."""
+def months_after(year: int, event_year: int = 1) -> list[str]:
+    """The twelve months a June formation holds in its [event_year]th year: July of the year
+    to June of the next for the first, the twelve after for the second, and so on."""
+    year += event_year - 1
     return [f"{year}-{m:02d}" for m in range(7, 13)] + [f"{year + 1}-{m:02d}" for m in range(1, 7)]
 
 
@@ -140,9 +142,12 @@ def load_rate(path: Path) -> Series:
     return {month: last[before] for before, month in zip(months, months[1:], strict=False) if previous(month) == before}
 
 
-def fifth_returns(rows: list[Row], q: dict[tuple[str, int], int], adjusted: dict[str, dict[str, float]], *, capped_value: bool) -> dict[int, Series]:
-    """fifth -> month -> the fifth's return, the formations chained. A month with fewer than
-    MIN_NAMES names carrying a return is left out of that fifth."""
+def fifth_returns(rows: list[Row], q: dict[tuple[str, int], int], adjusted: dict[str, dict[str, float]], *, capped_value: bool,
+                  event_year: int = 1) -> dict[int, Series]:
+    """fifth -> month -> the fifth's return, the formations chained, in their [event_year]th
+    year after formation (the first unless said): the fifths fixed at formation, the capped
+    value weights carried forward within that year from the formation's values. A month with
+    fewer than MIN_NAMES names carrying a return is left out of that fifth."""
     out: dict[int, Series] = {k: {} for k in range(1, 6)}
     for year in sorted({r.year for r in rows}):
         formed = [r for r in rows if r.year == year and (r.ticker, r.year) in q]
@@ -151,7 +156,7 @@ def fifth_returns(rows: list[Row], q: dict[tuple[str, int], int], adjusted: dict
         for k in range(1, 6):
             members = [r for r in formed if q[(r.ticker, r.year)] == k]
             weight = {r.ticker: 1.0 if not capped_value else (min(r.cap, ceiling) if r.cap is not None and ceiling is not None else 0.0) for r in members}
-            for month in months_after(year):
+            for month in months_after(year, event_year):
                 got = [(t, r) for t in weight if (r := monthly_return(adjusted.get(t, {}), month)) is not None and weight[t] > 0]
                 total = sum(weight[t] for t, _ in got)
                 if len(got) >= MIN_NAMES and total > 0:

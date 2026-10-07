@@ -605,6 +605,33 @@ paper's flat line.
   The estimate sits nearly three of its standard errors above that; about two in each
   stretch taken alone.
 
+**How long a beta lasts (2026-10-07).** The discount rate built on a beta is applied to
+every projection year and the terminal value alike, so the run also follows each June's
+fifths, fixed at formation, through their first five years. Keloharju, Linnainmaa and
+Nyberg, "Long-Term Discount Rates Do Not Vary Across Firms", NBER Working Paper 25579,
+February 2019, doi:10.3386/w25579, sort on a quarter's beta and find the gap between the
+top and bottom tenths, 1.01 in the quarter after, half of that after five years and 0.36
+after ten, while the return spreads of their other sorts are gone within about five years.
+Here, per event year after formation, the realised beta of the lowest and highest fifth
+and the spread between them:
+
+| event year | months | realised beta, lowest | highest | gap | spread, raw | alpha (t) |
+|---|---|---|---|---|---|---|
+| at formation | | 0.73 | 1.39 | 0.66 | | |
+| 1 | 156 | 0.77 | 1.44 | 0.67 | +0.89 | +0.18 (+0.59) |
+| 2 | 148 | 0.87 | 1.33 | 0.46 | +0.49 | +0.05 (+0.16) |
+| 3 | 136 | 0.86 | 1.36 | 0.50 | +0.20 | −0.30 (−1.08) |
+| 4 | 124 | 0.93 | 1.37 | 0.44 | +0.51 | +0.04 (+0.13) |
+| 5 | 112 | 1.02 | 1.30 | 0.28 | +0.84 | +0.55 (+1.99) |
+
+Equal weights; the capped-value figures run from a gap of 0.74 in the first year to 0.36 in
+the fifth. So on these names the beta gap of a sort loses a third of itself in a year and
+more than half in five, as the paper finds for tenths of the whole market, while the raw
+spread stays on beta's side in every year. A discount rate that holds the first year's beta
+over seven projection years and a terminal value is charging a spread that the names
+themselves do not keep; what a fair value built on a beta faded toward one would read is
+not measured here, the rule panel valuing every name at one.
+
 What this does and does not say. The papers that question beta in a discount rate rest on
 whole markets over many decades. On the largest five hundred US operating companies from
 2013 to 2025 the tool's own data do not show their result, so they give no ground, on this

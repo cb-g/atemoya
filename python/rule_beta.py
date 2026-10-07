@@ -22,6 +22,17 @@ question about returns, and three papers read for this tool bear on it:
   each table reads the same quantity off these names: the return earned per unit of
   realised beta across the fifths, beside the market's own excess return.
 
+A second question is how long a beta lasts, since the discount rate built on it is applied
+to every projection year and the terminal value alike. Keloharju, Linnainmaa and Nyberg,
+"Long-Term Discount Rates Do Not Vary Across Firms", NBER Working Paper 25579, February
+2019, doi:10.3386/w25579, sort on a quarter's beta and follow the tenths: the gap between
+the top and the bottom is 1.01 in the quarter after, half of that after five years and 0.36
+after ten (their Figure 6), and the return spreads of their other sorts are gone within
+about five years (their Table 4). So each run ends with the fifths followed by event year:
+the fifths fixed at formation, their realised beta, the gap, and the spread's raw mean and
+alpha in the first, second, third, fourth and fifth year after, the formations chained
+within each event year as the first year's are.
+
 Each table ends with two lines for that. The first is the return earned per unit of
 realised beta between the highest fifth and the lowest, beside the benchmark's excess
 return over the same months: equal, if beta was paid in full. The second is the alpha the
@@ -168,6 +179,38 @@ def block(rows: list[Row], adjusted: dict[str, dict[str, float]], market: alpha.
     return lines
 
 
+EVENT_YEARS = 5
+
+
+def by_event_year(rows: list[Row], adjusted: dict[str, dict[str, float]], market: alpha.Series, rate: alpha.Series, *, capped_value: bool) -> list[str]:
+    """The fifths of every formation followed for EVENT_YEARS years: per event year the
+    months, the lowest and highest fifth's realised beta and the gap between them, and the
+    highest-less-lowest spread's raw mean and alpha."""
+    q = broad.quintiles(rows, MEASURE)
+    years = sorted({year for _, year in q})
+    weighting = "capped value" if capped_value else "equal"
+    title = f"the fifths followed by event year, {weighting} weights: {len(q)} rows over {len(years)} formation years"
+    lines = [title, "-" * len(title)]
+    if not q:
+        return lines + ["  no formation year carries enough rows"]
+    formed = {k: [r.values[MEASURE] for r in rows if q.get((r.ticker, r.year)) == k] for k in (1, 5)}
+    lines.append(f"  at formation: beta {sum(formed[1]) / len(formed[1]):.2f} in the lowest fifth, {sum(formed[5]) / len(formed[5]):.2f} in the highest, gap {sum(formed[5]) / len(formed[5]) - sum(formed[1]) / len(formed[1]):.2f}")
+    for k in range(1, EVENT_YEARS + 1):
+        months = [m for year in years for m in alpha.months_after(year, k)]
+        fifths = alpha.fifth_returns(rows, q, adjusted, capped_value=capped_value, event_year=k)
+        low = alpha.regress(fifths[1], market, rate, months, over_rate=True)
+        high = alpha.regress(fifths[5], market, rate, months, over_rate=True)
+        spread = {m: fifths[5][m] - fifths[1][m] for m in fifths[5] if m in fifths[1]}
+        across = alpha.regress(spread, market, rate, months, over_rate=False)
+        if low is None or high is None or across is None:
+            lines.append(f"  year {k}: fewer than {alpha.MIN_MONTHS} months")
+            continue
+        t_ = "" if across.t_alpha is None else f" (t {across.t_alpha:+.2f})"
+        lines.append(f"  year {k}: {across.months} months; realised beta {low.beta + 0.0:.2f} lowest, {high.beta + 0.0:.2f} highest, gap {high.beta - low.beta + 0.0:.2f}; "
+                     f"spread mean {round(100 * across.mean, 2) + 0.0:+.2f}% a month, alpha {round(100 * across.alpha, 2) + 0.0:+.2f}% a month{t_}")
+    return lines
+
+
 def report(rows: list[Row], without: int, adjusted: dict[str, dict[str, float]], rate: alpha.Series) -> str:
     market = {m: r for m in adjusted.get(BENCHMARK, {}) if (r := alpha.monthly_return(adjusted[BENCHMARK], m)) is not None}
     years = sorted({r.year for r in rows})
@@ -177,7 +220,8 @@ def report(rows: list[Row], without: int, adjusted: dict[str, dict[str, float]],
         f"monthly returns over the twelve months from July regressed on {BENCHMARK} over the one-year Treasury rate. The t-ratio is the plain least-squares one on at most 156 months: a scale, not a test.",
         "After Frazzini and Pedersen, \"Betting Against Beta\", NBER Working Paper 16601, December 2010, doi:10.3386/w16601; "
         "Novy-Marx and Velikov, \"Betting Against Betting Against Beta\", working paper, November 2018, doi:10.2139/ssrn.3300965; "
-        "and Levi and Welch, \"Best Practice for Cost-of-Capital Estimates\", Journal of Financial and Quantitative Analysis 52(2), 2017, doi:10.1017/S0022109017000114.",
+        "Levi and Welch, \"Best Practice for Cost-of-Capital Estimates\", Journal of Financial and Quantitative Analysis 52(2), 2017, doi:10.1017/S0022109017000114; "
+        "and, for the fifths followed by event year, Keloharju, Linnainmaa and Nyberg, \"Long-Term Discount Rates Do Not Vary Across Firms\", NBER Working Paper 25579, February 2019, doi:10.3386/w25579.",
         "",
     ]
 
@@ -194,6 +238,8 @@ def report(rows: list[Row], without: int, adjusted: dict[str, dict[str, float]],
         kept = [r for r in rows if keep(r)]
         for capped_value in (False, True):
             lines += block(kept, adjusted, market, rate, label, capped_value=capped_value) + [""]
+    for capped_value in (False, True):
+        lines += by_event_year(rows, adjusted, market, rate, capped_value=capped_value) + [""]
     return "\n".join(lines)
 
 

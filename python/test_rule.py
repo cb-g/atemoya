@@ -258,3 +258,29 @@ def test_the_curve_is_shifted_by_a_step_or_moved_to_a_level_and_the_elasticity_r
     up_r: list[Json] = [{"ticker": "A", "status": "Ok", "fair_value": 100.0 * math.exp(-0.2)}, {"ticker": "B", "status": "Failed", "fair_value": None}, {"ticker": "C", "status": "Failed", "fair_value": None}]
     e, changed = rr.elasticities(up_r, down, 0.005)
     assert len(e) == 1 and abs(e[0] - (-0.2)) < 1e-9 and changed == 1                        # a fifth of value per point; B valued on one side only
+
+
+def test_the_fifths_are_followed_into_later_event_years_on_the_same_formation(tmp_path: Path) -> None:
+    import rule_alpha as ra
+    import rule_beta as rb
+    from broad_study import quintiles
+
+    assert ra.months_after(2020, 2) == ra.months_after(2021) and ra.months_after(2020, 3)[0] == "2022-07"
+    betas = {1: 0.5, 2: 0.75, 3: 1.0, 4: 1.25, 5: 1.5}
+    panel, prices, rate_path = _alpha_fixture(tmp_path, {k: (0.0, b) for k, b in betas.items()})
+    rows = ra.load_rows(panel)
+    q = quintiles(rows, "margin_of_safety")
+    adjusted = ra.load_adjusted(prices)
+    second = ra.fifth_returns(rows, q, adjusted, capped_value=False, event_year=2)
+    assert len(second[5]) == 12 and min(second[5]) == "2021-07"                      # only the 2020 formation has a second year of bars
+    first = ra.fifth_returns(rows, q, adjusted, capped_value=False)
+    assert second[5]["2021-07"] == first[5]["2021-07"]                                 # the same names, the same month: the 2020 fifth in its second year, the 2021 fifth in its first
+    histories = _daily_fixture(tmp_path, betas)
+    benchmark = rb.load_daily(histories / "SPY.json")
+    assert benchmark is not None
+    brows, _ = rb.load_rows(panel, histories, benchmark)
+    market = {m: r for m in adjusted["SPY"] if (r := ra.monthly_return(adjusted["SPY"], m)) is not None}
+    lines = rb.by_event_year(brows, adjusted, market, ra.load_rate(rate_path), capped_value=False)
+    assert lines[2] == "  at formation: beta 0.75 in the lowest fifth, 1.25 in the highest, gap 0.50"
+    assert lines[3].startswith("  year 1: 24 months; realised beta 0.50 lowest, 1.50 highest, gap 1.00")
+    assert lines[4].startswith("  year 2: fewer than")                                  # twelve months is under the floor
