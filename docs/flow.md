@@ -807,6 +807,12 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the studies on their own page: `docs/studies.md` takes the thirteen studies out of
+  `docs/run.md`, which is again the manual for the tool, and puts before them a map of the
+  three panels, what each can and cannot answer, and after the map the model questions the
+  studies measured and left open, each with its measurement, why it did not settle and the
+  options on the table; README points at it. Words only: no record moves and there is no new
+  `Failed` string.
 - the statistics the panel studies share: `python/panel_stats.py` holds the forecast line, the
   least-squares fit, the ranks and rank correlation, winsorising, and the daily-close readers
   and June-to-June window, which the betas, growth, duration, surprise, broad, baseline and

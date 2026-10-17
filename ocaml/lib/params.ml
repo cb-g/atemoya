@@ -207,8 +207,8 @@ let classification_threshold ?hold_vintage t ~today =
    reading of long-run nominal growth: where the country's terminal growth is above the
    risk-free rate the valuation discounts at, it is held to that rate, and the parameter
    says so with both figures. Without it the gap between the discount rate and the terminal
-   growth closes whenever rates fall, and every value balloons (docs/run.md, the rate
-   variants on the rule panel). *)
+   growth closes whenever rates fall, and every value balloons (docs/studies.md, why the
+   anchor's level moves with rates). *)
 let hold_to_risk_free ~(risk_free_rate : Boundary_t.parameter) (terminal : Boundary_t.parameter) =
   if terminal.value > risk_free_rate.value then
     {

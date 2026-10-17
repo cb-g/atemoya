@@ -68,10 +68,20 @@ The tool tests its own outputs, and the results are kept whether or not they fla
 - **The model's level moves with rates.** With a terminal growth that did not come down
   with the risk-free rate, most large companies read as worth double their price in the
   low-rate years; the model now holds terminal growth to the risk-free rate.
+- **No starting parameter forecasts what followed.** On the same five hundred, no growth
+  estimate the model starts from explains more than a few per cent of the growth the
+  companies then reported, a name's own beta is forecastable but valuing at it sorts
+  returns no better than a beta of one, and the model's duration says nothing about next
+  year's risk. The decisions these bear on are listed as open, with the measurements.
+- **A beat follows a beat, a little.** After a beat a name beats the Street 77 times in a
+  hundred, after a miss 54; the next surprise carries a sixth of the last. Since 2022 the
+  dearest fifth of the margin sort was beaten upward far more than the cheapest, which
+  describes why the sort lost and was not foreseeable from the record.
 
-`docs/run.md` has each study with its figures and limits; `docs/tried.md` records what was
-built, measured and taken out again. The reading that informs changes is cited where it is
-used, by the version that was read.
+`docs/studies.md` has the three panels, each study with its figures and limits, and the
+model questions left open; `docs/tried.md` records what was built, measured and taken out
+again. The reading that informs changes is cited where it is used, by the version that was
+read.
 
 ## Setup
 
@@ -189,7 +199,9 @@ Everything below hangs off the records and never moves them.
 ## Documentation
 
 - `docs/run.md`: every command, the record, providers and definitions, readouts and diffs,
-  point-in-time, and each study with its figures.
+  point-in-time, the side tools.
+- `docs/studies.md`: the three panels and what each can answer, every study with its
+  figures and limits, and the model questions the studies left open.
 - `docs/flow.md`: the stages from ticker to record as one chart, every `Failed` reason
   against its stage, and the changelog.
 - `docs/tried.md`: what was built, measured and taken out again, and what would have to be
