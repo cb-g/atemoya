@@ -23,9 +23,10 @@ only what its panel can mean.
 | **broad** | `broad_panel.py` → `data/broad/panel.jsonl`, filed items from the SEC frames and a market value from the cover-page share count | every SEC filer with a ticker today, about three thousand one hundred, each June from 2010 | whether plain cheapness, quality and a peer-implied gap sorted returns over a long span and across sizes, without any model | survivors only (a filer with no ticker today is missing), restated frames, no DCF since no class is declared; it says nothing about the tool's own model |
 | **rule** | `rule_panel.py` → `data/broad/rule/panel.jsonl` and `output/rule_panel/<date>/valuations.jsonl`, the real pipeline on the point-in-time fetch | the five hundred largest filers by market value each June 2013 to 2025 among those reporting current assets, chosen by a rule that reads nothing later than the date, one class for all | what the tool's own DCF does on names not picked in hindsight, and what its parameters do: the rate, the beta, the starting growth, the duration | large survivors under one lens with a beta of one and no vendor cross-check, parameter tables at the 2026 vintage except the rates; a finding here is about large US companies since 2013 |
 
-Two studies read a store rather than a panel: the surprise study reads the consensus tool's
-release history (about fifty releases a name, returns from 2020), and the stretch-and-insiders
-study reads the Form 4 store over the windows stretch marked.
+Three studies read a store rather than a panel: the surprise study reads the consensus tool's
+release history (about fifty releases a name, returns from 2020), the stretch-and-insiders
+study reads the Form 4 store over the windows stretch marked, and the bound study reads the
+options store (62 names, daily from April 2025).
 
 ## What stays open
 
@@ -1003,3 +1004,71 @@ item, returns on the revision of next year's forecast, needs the consensus as it
 year before each release, which the daily snapshots will carry only from their first day on
 disk (2026-10-02); it is not built. Nothing here feeds back.
 
+
+## The options bound against what followed
+
+    uv run python/bound_study.py [--holdout]      # -> output/bound_study/tables.txt, rows.jsonl; three minutes
+
+Every record valued under `--options` carries `options_expected_return`, the Martin–Wagner
+formula on three risk-neutral variances, labelled a lower bound and the market's risk pricing
+rather than a forecast. Back, Crotty and Kazempour, "Validity, tightness, and forecasting
+power of risk premium bounds", Journal of Financial Economics 144 (2022) 732–760,
+doi:10.1016/j.jfineco.2022.02.003, test it as that bound on S&P 500 names 1996–2020: valid
+and slack, the realised excess return about twice the bound (Table 2, 9.23 per cent against
+4.50 at twelve months); the ranking of names on it carrying almost nothing (Table 7's
+Fama–MacBeth slope negative, Table 10's top less bottom fifth 1.93 points on a standard error
+of 4.60); what information there is sitting in a name's bound against its own history; and
+the Martin formula on the name itself, the Kadan–Tang bound, a lower bound only where delta,
+the name's return variance over its covariance with the market, is small, meeting or
+exceeding what followed above seven. Their discrete sum over quoted strikes "is always smaller
+than the integral" (p. 759).
+
+The records never carried the expected return on the point-in-time dates, so the study
+computes the bound from each day's chains with the paper's own sum: the shortest expiry at
+least 365 days out with eight quoted strikes each side of the spot, the record's rule for an
+expiry, the strikes with both a put and a call quoted and the cheaper of the two, the strike
+step times the smaller neighbouring price summed, twice that over the squared spot, per year.
+The Martin–Wagner bound is the benchmark's plus half the name's excess over the names' mean,
+equal-weighted here where the record weights by market capitalisation. Delta is from the 252
+trading days of closes to the day, two hundred at least; the realised excess is over the
+one-year Treasury rate at one, three, six and twelve months, annualised, from split-adjusted
+closes without dividends. The tables read the last store day of each month, the held-out
+names and dates aside.
+
+**What it found (2026-10-17), on 62 names over 302 store days from April 2025, fifteen
+month-ends.** The levels replicate: the market bound 2.8–4.2 per cent a year against the
+paper's 3.7, the names' Kadan–Tang median 5.8–9.1 against its 6.9, the Martin–Wagner median
+0.4–2.6 against its 2.9. The chains ran from a median 0.41–0.50 of spot to 1.46–1.69 over
+29–40 strikes; cutting every chain to a common 0.75–1.50 window takes 10–18 per cent off the
+bound, and the chains reached that window in 36–82 per cent of a month's names, so a name
+quoted narrower understates by up to a fifth against its peers. The record reads the longest
+usable expiry; its bound is 0.91–1.00 of the twelve-month one here. The slack is of one
+regime: the dates with a twelve-month outcome run April to September 2025, from the trough,
+and the mean excess return was 40 per cent against a Martin–Wagner bound of 3.3 and a
+Kadan–Tang of 9.1, so the bound was met on 37 per cent of rows and on 21 of 58 names, the
+names that fell. The bound ranks with delta (+0.16 within the date, the paper's direction)
+and with the twelve-month return that followed +0.26 over five dates, where the paper's slope
+is negative; five dates. The paper's delta groups do not reproduce on these names: the
+"other" group is thirteen defensive names whose covariance with the market over the year was
+not positive, with the lowest bound and the lowest return, not the volatile high-delta names
+of the paper, and the "liberal" group holds the semiconductor names that returned 68 per cent.
+A name's demeaned bound against its own six-month mean preceded a lower return at one month
+and a higher one at six: nothing to read yet.
+
+**What this closes.** The queue asked for delta on the record with a flag where the bound has
+met realised returns, the demeaned bound stored for an own-history test, and strike coverage
+beside the variance. The record already carries the strike range; the study measures what the
+range does and the limit text on the block already says it. Delta is computed and ranks the
+bound as the paper says, but a flag on a record would read as a forecast from six months of
+one regime, and the names the formula does not bound here are the ones that fell, not a
+delta group; not built. Every day's demeaned bound is in `rows.jsonl` for the own-history
+test, which needs years the store does not have. One thing on the record was wrong and is
+fixed: the block's first scope limit said the formula is a lower bound without the paper's
+assumptions, and it is one only for a name whose return covaries positively with the market's
+and whose variance is not large against that covariance, possibly an upper bound otherwise;
+the limit now says so. The model reads none of it.
+
+**Limits.** Fifteen month-ends and five with a year's outcome, overlapping; one market from a
+trough; 62 names the store happens to hold; dividends left out of the realised return; the
+paper's bounds come from a vendor's interpolated surface at exact horizons and these from
+quotes at the nearest usable expiry. Nothing here feeds back.

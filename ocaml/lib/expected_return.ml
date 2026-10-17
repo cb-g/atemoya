@@ -21,7 +21,7 @@ let svix2 ?(lower = -3.) ?(upper = 3.) (p : Market_implied.svi) ~forward =
   2. /. (forward *. forward) *. (!sum *. h /. 3.)
 
 let scope_limits =
-  [ "under Martin and Wagner's assumptions the formula is an equality; without them it is a lower bound, and it is the market's risk pricing, not a forecast";
+  [ "under Martin and Wagner's assumptions the formula is an equality; without them it is a lower bound only for a name whose return covaries positively with the market's and whose variance is not large against that covariance, and may be an upper bound otherwise; either way it is the market's risk pricing, not a forecast";
     "the average runs over the names the options store holds with a usable chain, weighted by market capitalisation, not over every index member as in the paper";
     "each name's variance is read at its own longest expiry and annualised, so the horizons differ by a few months across names";
     "the integral runs only between the lowest and the highest quoted strike the fit read, so the variance beyond them is left out and each figure understates; a name quoted over a narrower range is understated more";

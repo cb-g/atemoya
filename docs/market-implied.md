@@ -119,9 +119,13 @@ variance understates and a name quoted over a narrower range understates more; t
 average runs over every index member and this one over the names the store holds; each
 name's variance is read at its own longest expiry, a few months apart across names;
 single-stock options are American and the inversion is European; and under the paper's
-assumptions the formula is an equality, without them a lower bound, and either way the
-market's risk pricing and not a forecast. Fewer than ten names with a chain is a reason, not
-an average.
+assumptions the formula is an equality, without them a lower bound only for a name whose
+return covaries positively with the market's and whose variance is not large against that
+covariance (Kadan and Tang's delta), and possibly an upper bound otherwise, as Back, Crotty
+and Kazempour, "Validity, tightness, and forecasting power of risk premium bounds", Journal
+of Financial Economics 144 (2022) 732–760, doi:10.1016/j.jfineco.2022.02.003, find for names
+with delta above seven; either way the market's risk pricing and not a forecast. Fewer than
+ten names with a chain is a reason, not an average.
 
 ## What it is not
 

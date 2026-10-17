@@ -807,6 +807,17 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the options bound against what followed: `python/bound_study.py` computes the
+  options-implied bound from every store day's chains with the discrete sum of Back, Crotty
+  and Kazempour, "Validity, tightness, and forecasting power of risk premium bounds", Journal
+  of Financial Economics 144 (2022) 732–760, doi:10.1016/j.jfineco.2022.02.003, reads the
+  strike coverage beside it, each name's delta, the slack against the excess return that
+  followed by the paper's delta groups, the bound's rank against delta and the return, and the
+  demeaned bound against the name's own history, the held-out names and dates aside. The
+  options-expected-return block's first scope limit is corrected: a lower bound only for a
+  name whose return covaries positively with the market's and whose variance is not large
+  against that covariance, possibly an upper bound otherwise. A side tool and one limit
+  string: no value or status moves and there is no new `Failed` string.
 - the studies on their own page: `docs/studies.md` takes the thirteen studies out of
   `docs/run.md`, which is again the manual for the tool, and puts before them a map of the
   three panels, what each can and cannot answer, and after the map the model questions the
