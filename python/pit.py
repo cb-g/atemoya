@@ -262,7 +262,8 @@ def curve_on(rule: reference.RateSource, d: date, key: str) -> reference.Curve |
         fetched = rr._substituted(rr.Fetched(as_of=rr._month_end(observed), rates={"10y": round(rate / 100.0, 6)},  # pyright: ignore[reportPrivateUsage]
                                              notes=[f"monthly average for {observed.strftime('%B %Y')}; point-in-time: observed on or before {d}"]), rule)
         return reference.Curve(source=rule.source, tier=rule.tier, as_of=fetched.as_of.isoformat(), rates=list(fetched.rates.items()),
-                               estimated=fetched.estimated, tenor_used=list(fetched.tenor_used.items()), notes=fetched.notes)
+                               estimated=fetched.estimated, tenor_used=list(fetched.tenor_used.items()), notes=fetched.notes,
+                               max_age_days=rule.max_age_days)
     return None
 
 

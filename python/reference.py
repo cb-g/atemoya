@@ -838,6 +838,7 @@ class Curve:
     estimated: List[str] = field(default_factory=lambda: [])
     tenor_used: List[Tuple[str, str]] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
+    max_age_days: Optional[int] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Curve':
@@ -850,6 +851,7 @@ class Curve:
                 estimated=_atd_read_list(_atd_read_string)(x['estimated']) if 'estimated' in x else [],
                 tenor_used=_atd_read_assoc_object_into_list(_atd_read_string)(x['tenor_used']) if 'tenor_used' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                max_age_days=_atd_read_int(x['max_age_days']) if 'max_age_days' in x else None,
             )
         else:
             _atd_bad_json('Curve', x)
@@ -863,6 +865,8 @@ class Curve:
         res['estimated'] = _atd_write_list(_atd_write_string)(self.estimated)
         res['tenor_used'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.tenor_used)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        if self.max_age_days is not None:
+            res['max_age_days'] = _atd_write_int(self.max_age_days)
         return res
 
     @classmethod
@@ -1062,6 +1066,7 @@ class RateSource:
     substitute: List[Tuple[str, str]] = field(default_factory=lambda: [])
     proxy_of: str = field(default_factory=lambda: "")
     notes: List[str] = field(default_factory=lambda: [])
+    max_age_days: Optional[int] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'RateSource':
@@ -1076,6 +1081,7 @@ class RateSource:
                 substitute=_atd_read_assoc_object_into_list(_atd_read_string)(x['substitute']) if 'substitute' in x else [],
                 proxy_of=_atd_read_string(x['proxy_of']) if 'proxy_of' in x else "",
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                max_age_days=_atd_read_int(x['max_age_days']) if 'max_age_days' in x else None,
             )
         else:
             _atd_bad_json('RateSource', x)
@@ -1091,6 +1097,8 @@ class RateSource:
         res['substitute'] = _atd_write_assoc_list_to_object(_atd_write_string)(self.substitute)
         res['proxy_of'] = _atd_write_string(self.proxy_of)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        if self.max_age_days is not None:
+            res['max_age_days'] = _atd_write_int(self.max_age_days)
         return res
 
     @classmethod

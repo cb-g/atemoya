@@ -15,6 +15,7 @@ type curve = {
   ~estimated : string list;                             (* tenors interpolated, not sourced *)
   ~tenor_used : (string * string) list <json repr="object">;   (* requested tenor -> tenor actually used, where they differ *)
   ~notes : string list;
+  ?max_age_days : int option;                           (* (84) this curve's own gate, copied from its source at the refresh; absent, the file's applies *)
 }
 
 (* Where each country's curve comes from and how it is refreshed. Read by
@@ -29,6 +30,7 @@ type rate_source = {
   ~proxy_of : string;                                   (* another country whose curve stands in *)
   tenors : string list;                                 (* the tenors this source provides, after substitution *)
   ~notes : string list;
+  ?max_age_days : int option;                           (* (84) a gate of this source's own where its cadence is slower than the file's: a monthly average posted two months late is current at ninety days and stale at the file's forty-five *)
 }
 
 type rate_sources = {

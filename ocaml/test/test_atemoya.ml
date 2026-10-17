@@ -232,7 +232,9 @@ let risk_free_json =
     "Germany": {"source": "copied", "as_of": "2026-06-05",
       "rates": {"1y": 0.025, "3y": 0.026, "5y": 0.027, "7y": 0.028, "10y": 0.030}},
     "Japan": {"source": "copied", "as_of": "2026-09-08",
-      "rates": {"1y": 0.005, "3y": 0.007, "5y": 0.009, "7y": 0.011, "10y": 0.013}}
+      "rates": {"1y": 0.005, "3y": 0.007, "5y": 0.009, "7y": 0.011, "10y": 0.013}},
+    "India": {"source": "copied", "tier": "fred_oecd_10y", "as_of": "2026-06-05", "max_age_days": 100,
+      "rates": {"7y": 0.07, "10y": 0.07}, "tenor_used": {"7y": "10y"}}
   }}|}
 
 let country_table_json ~source values =
@@ -253,7 +255,7 @@ let params_json =
   "midcycle_window_years": {"value": 15, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "midcycle_scale_floor": {"value": 0.10, "source": "seed", "as_of": "2026-06-01", "max_age_days": 400}, "interest_evidence_floor": {"value": 0.005, "source": "seed", "as_of": "2026-09-24", "max_age_days": 400}, "frontier_draws": {"value": 20000, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "frontier_seed": {"value": 0, "source": "seed", "as_of": "2026-09-19", "max_age_days": 400}, "sensitivity_steps": {"growth": 0.02, "lambda": 0.1, "terminal_growth": 0.005, "discount_rate": 0.01, "base_fraction": 0.1, "source": "readability steps", "as_of": "2026-09-19", "max_age_days": 400},
   "terminal_growth_rate": {"source": "seed", "as_of": "2026-06-01", "max_age_days": 400,
     "aliases": {"USA": "United States"},
-    "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03, "Brazil": 0.035}},
+    "values": {"United States": 0.02, "Singapore": 0.025, "Germany": 0.015, "South Korea": 0.03, "Brazil": 0.035, "India": 0.06}},
   "unwired": {"growth_clamp": {"upper": 0.5}}
   }|}
 
@@ -263,11 +265,11 @@ let params : Params.t =
     equity_risk_premiums =
       Reference_j.country_table_of_string
         (country_table_json ~source:"Damodaran Jan 2026"
-           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423, "South Korea": 0.0487, "Brazil": 0.0747, "Uruguay": 0.0680, "Japan": 0.0514}|});
+           {|{"United States": 0.0446, "Singapore": 0.0423, "Germany": 0.0423, "South Korea": 0.0487, "Brazil": 0.0747, "Uruguay": 0.0680, "Japan": 0.0514, "India": 0.0700}|});
     tax_rates =
       Reference_j.country_table_of_string
         (country_table_json ~source:"PwC 2026"
-           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30, "South Korea": 0.275, "Brazil": 0.34, "Uruguay": 0.25, "Japan": 0.3152}|});
+           {|{"United States": 0.21, "Singapore": 0.17, "Germany": 0.30, "South Korea": 0.275, "Brazil": 0.34, "Uruguay": 0.25, "Japan": 0.3152, "India": 0.25}|});
     industry_betas =
       Reference_j.industry_table_of_string
         {|{"source": "sector betas 2026", "as_of": "2026-01-01", "max_age_days": 400,
@@ -289,7 +291,7 @@ let params : Params.t =
       Reference_j.fx_sources_of_string
         {|{"source": "test", "as_of": "2026-09-10", "max_age_days": 10,
            "currency_countries": {"USD": "United States", "GBP": "United Kingdom", "BRL": "Brazil", "EUR": "Germany"},
-           "country_currencies": {"United States": "USD", "United Kingdom": "GBP", "Brazil": "BRL", "Germany": "EUR", "Singapore": "SGD", "South Korea": "KRW", "Japan": "JPY", "Uruguay": "UYU"},
+           "country_currencies": {"United States": "USD", "United Kingdom": "GBP", "Brazil": "BRL", "Germany": "EUR", "Singapore": "SGD", "South Korea": "KRW", "Japan": "JPY", "Uruguay": "UYU", "India": "INR"},
            "currencies": {"BRL": {"series": "DEXBZUS", "direction": "units_per_usd"},
                           "EUR": {"series": "DEXUSEU", "direction": "usd_per_unit"},
                           "GBP": {"series": "DEXUSUK", "direction": "usd_per_unit"}}}|};
@@ -718,6 +720,13 @@ let test_resolve_stale () =
   check_error "stale curve"
     (Params.resolve params ~today ~country:"Germany" ~industry:None)
     [ "risk_free_rate"; "Germany/7y"; "97 days"; "45" ]
+
+(* (84) A curve carrying its source's own gate is read under it: India's is as old as
+   Germany's, 97 days, and its gate of 100 admits it where the file's 45 would not. *)
+let test_resolve_own_gate () =
+  let a = get (Params.resolve params ~today ~country:"India" ~industry:None) in
+  Alcotest.(check int) "97 days old, under its own gate" 97 a.risk_free_rate.age_days;
+  Alcotest.(check string) "the substituted tenor is recorded" "10y" a.risk_free_rate.tenor_used
 
 let test_resolve_future_as_of () =
   let rf =
@@ -4386,6 +4395,7 @@ let () =
           case "resolve follows aliases" test_resolve_alias;
           case "unknown country is an error naming it" test_resolve_unknown_country;
           case "stale parameter is an error naming it and its age" test_resolve_stale;
+          case "a curve with its own gate is read under it" test_resolve_own_gate;
           case "as_of in the future is an error" test_resolve_future_as_of;
           case "beta defaults only without a listed industry" test_beta_default;
           case "tracked reference files load" test_reference_files_load;

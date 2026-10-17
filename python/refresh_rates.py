@@ -575,6 +575,7 @@ def to_curve(fetched: Fetched, rule: reference.RateSource) -> reference.Curve:
         estimated=list(fetched.estimated),
         tenor_used=sorted(fetched.tenor_used.items()),
         notes=list(fetched.notes),
+        max_age_days=rule.max_age_days,
     )
 
 

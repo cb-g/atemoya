@@ -137,8 +137,10 @@ let risk_free ?hold_vintage (rf : risk_free_rates option) ~today ~country ~tenor
       | Some value ->
           let key = key ^ "/" ^ tenor in
           let* age_days =
+            (* (84) a curve carries its source's own gate where that source's cadence is
+               slower than the file's: a monthly average posted two months late *)
             age ?hold_vintage ~today ~name:"risk_free_rate" ~key ~as_of:curve.as_of
-              ~max_age_days:rf.max_age_days ()
+              ~max_age_days:(Option.value curve.max_age_days ~default:rf.max_age_days) ()
           in
           let tenor_used =
             Option.value (List.assoc_opt tenor curve.tenor_used) ~default:tenor

@@ -807,6 +807,13 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- a gate per rate source (84): a source whose cadence is slower than the file's forty-five
+  days may declare `max_age_days` of its own in `reference/rate_sources.json`; the refresher
+  and the point-in-time path copy it onto the curve and the valuation reads it in place of
+  the file's. India's OECD monthly average, posted about two months late, declares one
+  hundred days, so a rupee record is no longer refused by the source's cadence alone and
+  carries the observation's age as before. The `Failed` string for a stale rate is
+  unchanged; two rupee records read the curve where they were refused for its age.
 - three names and a mortgage-REIT class (84): EMCOR, United Rentals and Starwood Property
   Trust join at the downstream reader's request, the classes confirmed by the user; the
   admissibility rule adds `MortgageReit`, a lender in a trust's wrapper, with no admissible
@@ -974,7 +981,8 @@ states are written into its files, not into a record:
   `Failed` string.
 - India's curve: from the manual tier to the OECD ten-year through FRED, which answers the
   refresher but lags about two months, so a rupee record is still refused on the 45-day gate
-  on most days. No new `Failed` string; no record's status moves.
+  on most days. No new `Failed` string; no record's status moves. (From 2026-10-17 the source
+  declares a gate of its own; see the entry of that date.)
 - three statement rules: `IncreaseDecreaseInDueFromRelatedParties` is a working-capital asset
   line (Sea), the IFRS deferred-income-with-contract-liabilities adjustment a working-capital
   line (Spotify), and the IFRS depreciation chain ends on the cash-flow reconciliation's own

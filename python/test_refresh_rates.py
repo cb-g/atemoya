@@ -234,3 +234,16 @@ def test_the_tenge_rate_is_read_from_the_national_banks_feed() -> None:
     assert (rate.series, rate.as_of, rate.quoted, rate.usd_per_unit) == ("nbk:USD", "2026-10-04", 400.0, 0.0025)
     tracked = reference.FxSources.from_json_string((rr.REPO_ROOT / "reference" / "fx_sources.json").read_text())
     assert dict(tracked.currencies)["KZT"].provider == "nbk" and dict(tracked.currencies)["INR"].provider == ""
+
+
+def test_a_source_with_its_own_gate_hands_it_to_the_curve() -> None:
+    """(84) A monthly average posted two months late declares a gate of its own; the
+    refresher copies it onto the curve, and a source without one leaves the curve to the
+    file's. India is the one declaration in the registry."""
+    fetched = rr.Fetched(as_of=date(2026, 8, 31), rates={"7y": 0.07, "10y": 0.07}, notes=[])
+    slow = rr.to_curve(fetched, rule(tier="fred_oecd_10y", tenors=["7y", "10y"], max_age_days=100))
+    assert slow.max_age_days == 100
+    assert rr.to_curve(fetched, rule(tenors=["7y", "10y"])).max_age_days is None
+    registry = reference.RateSources.from_json_string((rr.REGISTRY_PATH).read_text())
+    own = {c: s.max_age_days for c, s in registry.countries if s.max_age_days is not None}
+    assert own == {"India": 100} and registry.max_age_days == 45
