@@ -179,7 +179,7 @@ Everything below hangs off the records and never moves them.
 | surprise study | whether a beat follows a beat, the return after a surprise, and which arm of the margin sort the Street was beaten on | `uv run python/surprise_study.py` |
 | bound study | the options-implied bound from the store's chains against what followed: its level, the strikes it ran over, delta, and each name's bound against its own history | `uv run python/bound_study.py` |
 | broad panel | every SEC filer with a ticker, each June since 2010: cheapness, quality, a peer-implied gap | `uv run python/broad_panel.py --retry-missing`, `broad_study.py` |
-| rule panel | the tool's own DCF on the five hundred largest filers each June since 2013, chosen by rule | `uv run python/rule_panel.py`, `rule_study.py`, `rule_alpha.py`, `rule_beta.py`, `rule_betas.py`, `rule_growth.py`, `rule_duration.py`, `rule_rates.py` |
+| rule panel | the tool's own DCF on the five hundred largest filers each June since 2013, chosen by rule | `uv run python/rule_panel.py`, `rule_study.py`, `rule_alpha.py`, `rule_beta.py`, `rule_betas.py`, `rule_growth.py`, `rule_duration.py`, `rule_rates.py`, `rule_discount.py` |
 
 ## Rules
 

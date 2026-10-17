@@ -807,6 +807,15 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the discount rate on the rule panel: `python/rule_discount.py` reruns the binary on the
+  rule panel's records with the United States curve moved to its mean plus a share of each
+  date's distance from it, after Gormsen and Lazarus, "Interest Rates and Equity Valuations",
+  NBER Working Paper 34814, February 2026, doi:10.3386/w34814, and with the premium replaced
+  by the panel's aggregate earnings yield plus two per cent plus trailing ten-year CPI
+  inflation less the rate, after Gormsen and Huber, "Corporate Discount Rates", NBER Working
+  Paper 31329, June 2023, doi:10.3386/w31329; reads each reading's level, rank against the
+  run and return sort. The CPI series is fetched once into the rule panel's cache. A side
+  tool: no record on the valuation path moves and there is no new `Failed` string.
 - the options bound against what followed: `python/bound_study.py` computes the
   options-implied bound from every store day's chains with the discrete sum of Back, Crotty
   and Kazempour, "Validity, tightness, and forecasting power of risk premium bounds", Journal

@@ -69,11 +69,16 @@ each line says what was measured, why it did not settle the question, and what w
   model has two regimes: below the kink a point of rate moves a fair value about one per cent,
   above it the full duration, 21 to 24 per cent (under
   [The rule panel under shifted rates](#the-rule-panel-under-shifted-rates) and the duration
-  study's ratio of 0.85–0.98 above against 0.03–0.05 below). Not settled because the published
-  reading of how much of a rate move is pure discounting (35 per cent) lifts the 2023–2025
-  medians by a tenth or so and leaves the sort untouched, so the data do not choose. The
-  options: the full pass-through as it is, a partial pass-through of the rate into the WACC
-  with the long-run mean as anchor, or a point-in-time premium that moves against the rate.
+  study's ratio of 0.85–0.98 above against 0.03–0.05 below). Measured under
+  [The discount rate on the rule panel](#the-discount-rate-on-the-rule-panel-how-much-of-a-rate-move-to-take-and-a-premium-that-moves):
+  a partial pass-through halves the level's swing with the rate and keeps its sign, a flat
+  rate the same, a premium built on the market's earnings yield reverses it; every reading
+  shifts the discount rate of every name alike, so no rank and no return sort moves. Not
+  settled because the readings decide a level, what the margin means in absolute terms, and
+  the market's return has not followed the margin in either stretch, so the data cannot
+  choose one. The options: the full pass-through as it is, a partial pass-through of the rate
+  into the WACC with the long-run mean as anchor, or a point-in-time premium that moves
+  against the rate.
 - **A four-quarter base beside the annual.** The recency readout says how far the filed
   quarters have moved on from the annual base the models read; a shadow valuation on the last
   four quarters, beside the annual headline as the growth shadow sits beside the growth, was
@@ -808,6 +813,59 @@ cannot be read in real time without its survey panel. The kink is a property of 
 present rule, which was adopted for the low-rate years and does its work there; what the
 model should do above the kink, hold the full duration or part of it, is open, and the
 figures above are what the choice is worth.
+
+### The discount rate on the rule panel: how much of a rate move to take, and a premium that moves
+
+    uv run python/rule_discount.py [--lambdas 0.7 0.46 0.3 0]    # -> output/rule_discount/tables.txt; about ten minutes
+
+The rate study above found the model carrying its full duration against every rate move
+above the kink. Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working
+Paper 34814, February 2026, doi:10.3386/w34814, find only the pure-discounting part of a rate
+move passes to equity yields, about 35 per cent of the US fall over 1990–2023 and almost
+none of it after 2000 (pp. 3, 20, 45). Gormsen and Huber, "Corporate Discount Rates", NBER
+Working Paper 31329, June 2023, doi:10.3386/w31329, value firms at a country cost of equity
+equal to the earnings yield plus two per cent plus trailing ten-year inflation (p. 14,
+equation 6), so the premium over the risk-free rate moves against the rate, and find
+managers' perceived cost of equity tracks that measure rather than a constant premium on the
+rate (p. 20). The sweep reruns the binary on the rule panel's records under both: the curve
+moved to its mean over the panel's dates plus λ of the date's distance from it for λ in 0.7,
+0.46, 0.3 and 0 (λ = 1 the run, λ = 0 one flat rate on every date, the flat rate of
+candidate C3), and the table's premium replaced by the paper's construct on the panel's own
+names, the aggregate earnings yield (each name's mean net income over at most five filed
+periods, summed, over the sum of market values) plus two per cent plus trailing ten-year CPI
+inflation, less the rate at the projection tenor. The CPI series is fetched once from FRED
+into the rule panel's cache.
+
+**What it found (2026-10-17), on thirteen Junes.** Below the kink nothing moves: with the
+terminal growth held to the rate, the 2013–2022 medians are the same to the second decimal
+under every λ. Above it the partial pass-through lifts the medians, 2023–2025 from −0.11,
+−0.27 and −0.19 as run to −0.02, −0.10 and −0.09 at λ = 0.3, and the level's swing, the mean
+of the yearly medians before 2022 less from 2023, falls from +0.29 to +0.16 at λ = 0.3 and
++0.15 at a flat rate; the sign flip stays (+0.09 before, −0.07 after), and 2021's −0.24 at a
+rate of 1.2 per cent is not the rate's doing. The implied premium runs from 7.3 per cent in
+2013 to 3.0 in 2024, against the table's 4.46, because the panel's aggregate earnings yield
+fell from 4.9 to 2.4 per cent as the names grew dear while the rate rose two points: it
+reverses the swing (−0.17 before, +0.06 after; the yearly median's rank correlation with the
+rate +0.71 against −0.36 as run), which is the paper's premium moving against the rate taken
+to its end. Under every reading the within-date rank correlation of the margins with the
+run's is 1.00 (0.98 at the lowest date), because on this panel every name carries a beta of
+one and the readings shift every discount rate alike, and the sort is the run's: the
+cheapest fifth less the dearest +1.5 points before 2022 and −9.7 to −10.0 from it under all
+six.
+
+**What this closes.** Q5 and the discount-rate half of C3: a flat rate, a partial
+pass-through and a premium anchored on the market's earnings yield each move the level and
+none moves a rank or a return sort on this panel; the beta half of C3 is the betas study
+above. What the readings decide between is what the margin of safety means in absolute
+terms, a level, and the data cannot choose a level: the market's return has not followed the
+margin in either stretch. That is the open question under *What the model does above the
+kink*, now with these figures beside it. Nothing moves on the valuation path.
+
+**Limits.** The rule study's: large US survivors under one lens with a beta of one, so a
+discount-rate reading cannot change a rank here that it could on a universe with declared
+betas and classes; thirteen formations; the aggregate earnings yield is the panel's own,
+not Shiller's CAPE, and net income is not inflation-adjusted; the premium is applied over the
+rate at the projection tenor where the paper's is over the short rate.
 
 ### Why the anchor's level moves with rates
 
