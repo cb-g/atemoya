@@ -684,6 +684,96 @@ universe, for taking beta out of the cost of equity. Four limits keep it from sa
   nothing here says whether a fair value built on another beta would have ranked returns
   any better.
 
+### Growth on the rule panel: does the starting growth forecast what followed
+
+    uv run python/rule_growth.py                   # -> output/rule_growth/tables.txt, growth.jsonl; seconds
+
+Every generic DCF record starts its projection from one of two estimates: the fundamental
+one, the return on invested capital times the reinvestment rate, taken where after-tax
+operating profit and net reinvestment are both positive, and otherwise the historical
+revenue growth held to the return on capital; the growth shadow carries the higher of the
+two beside the headline. The projection then fades the starting growth toward the terminal
+rate, a quarter of the gap closing each year. None of it had been tested against what the
+companies then did. Weber, "Cash Flow Duration and the Term Structure of Equity Returns",
+NBER Working Paper 22520, August 2016, doi:10.3386/w22520, sorts US stocks on a duration
+built from the same kind of projection and finds, in his Table 7, the realised five-year
+earnings growth of the sorted tenths running from 7 to 31 per cent a year before the sort
+and from 10 to 11 after it: the growth the sort read did not persist; the pooled
+year-on-year persistence he uses is 0.41 for the return on equity and 0.24 for growth.
+
+**What it does.** For every generic DCF record in the rule panel, each June 2013 to 2025,
+the record's own estimates are read as the model computed them at the date: `fundamental`,
+`historical`, `headline` (the one the rule chose, after the clamp), `shadow` (the higher),
+`path` (the growth the model projected over the horizon, the geometric mean of its faded
+path) and `terminal` (the terminal rate alone, the forecast of knowing nothing about the
+name). The outcome is what the filer then reported, read from the SEC frames the broad panel
+cached: revenue, on the broad panel's chain of revenue elements, and operating income, at
+the record's base fiscal year end and at the end one, three and five years after it, within
+forty-five days of the anniversary, annualised where both figures are positive. Both sides
+are winsorised at the first and ninety-ninth percentile, as the paper does. Each estimate is
+scored at forecasting each outcome as it is (one less the squared errors over the squared
+deviations from the realised mean, and the root mean squared error) and fitted; then within
+each growth source; then the level, what each source read against what followed; then the
+paper's table, fifths on the headline within each June; then the persistence of each
+estimate and of realised growth on the same name's a year before.
+
+**What it found (2026-10-17), descriptively.** 3,069 records on 518 names: 1,501 whose
+headline is the fundamental estimate, 985 the historical, 583 the historical held to the
+return on capital. Realised revenue growth at five years (1,998 records, formations 2013 to
+2020) has a mean of 7.0 per cent and a standard deviation of 10.6 points.
+
+| estimate, revenue at five years | fitted R² | slope | rmse as it is |
+|---|---|---|---|
+| fundamental | 0.8% | −0.18 | 0.119 |
+| historical | 3.4% | 0.11 | 0.157 |
+| headline | 1.3% | 0.20 | 0.098 |
+| shadow | 1.9% | 0.20 | 0.098 |
+| path | 1.3% | 0.38 | 0.094 |
+| terminal | 0.0% | — | 0.099 |
+
+At one and three years the fitted R² is below three per cent for every estimate, the
+historical one's the highest (2.8 and 2.2 per cent); the fundamental estimate's slope is
+negative at every horizon on the whole panel and 0.04 to 0.11 on the records where the rule
+chose it, where the shadow reaches 1.3 to 2.5 per cent. On operating income nothing reaches
+2.5 per cent at any horizon. The level: the records whose headline is the fundamental
+estimate read a median 2.4 per cent and then grew revenue 5.4 per cent a year over five years
+and operating income 6.1; the historical ones read 4.3 and grew 5.6 and 6.4; the capped ones
+read 6.9 against a history of 17.6 and grew 9.5 and 12.2; over every record the headline's
+median is 3.6 per cent and the realised 6.0 and 7.1. Realised five-year revenue growth was
+above the headline on 63, 62 and 58 per cent of the records by source. The fifths on the
+headline read a median 0.1 per cent at the bottom and 10.4 at the top, a gap of ten points;
+what followed was revenue growth of 5.2 and 8.7 per cent at five years, a gap of 3.5 points
+(3.2 at one year, 2.4 at three), and operating income growth of 7.1 and 7.9, a gap of under
+one point (−2.0 at three years). Persistence: realised revenue growth one year on the year
+before has a slope of 0.21 (the paper's 0.24); realised operating income growth −0.03; the
+estimates themselves persist at 0.80 (fundamental), 0.77 (historical, a rate over periods
+that mostly overlap from one June to the next) and 0.60 (headline).
+
+**Reading.** On the five hundred largest filers the starting growth carries almost no
+information about the growth that followed: the best estimate explains three per cent of it
+fitted, and as they stand all of them, the model's faded path included, forecast about as
+well as the terminal rate alone. The fundamental estimate carries none, its slope on realised
+growth negative pooled and near zero where the rule chose it, and it sits a median three
+points below what those companies then did; the historical one carries a little, a tenth to
+a quarter of its excess persisting, which is the paper's finding in our form, a year-on-year
+persistence of 0.21 against his 0.24. A ten-point gap in the headline across the fifths
+became three and a half points of revenue growth at five years and nothing in operating
+income, as his Table 7 has it. And every estimate reads below the level that followed, the
+terminal rate most of all, on a panel of names that were the largest when read.
+
+**Limits.** Survivors twice over: the names were the largest five hundred at formation, and
+an outcome is read while the filer still files, so a company bought or delisted inside the
+horizon is among the unmatched (544 of 3,062 at three years, 1,063 at five, most of them
+the formations whose horizon has not yet closed). The frames carry each period's latest
+reported figure, so base and end are both as restated, while the estimates were computed
+from what was filed by the date. Operating income before tax stands for after-tax operating
+profit. The five-year horizon reaches the formations of 2013 to 2020 only. Nothing here moves
+a record or a parameter: which estimate heads the record is the decision of the third of
+October, held with the other model questions, and this is the measure it was to be weighed
+on; the fitted line of realised five-year growth on the path, 5.7 per cent plus 0.38 of the
+path, says what a shrinkage toward the panel's mean would have fitted, and is recorded for
+that weighing.
+
 ### Betas on the rule panel: which forecasts, and the fair values under each
 
     uv run python/rule_betas.py [--forecast-only]  # -> output/rule_betas/tables.txt, betas.jsonl; about four minutes

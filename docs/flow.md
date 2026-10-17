@@ -807,6 +807,15 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- growth on the rule panel: `python/rule_growth.py` reads every generic DCF record's starting
+  growth estimates as the model computed them, the fundamental one, the historical one, the
+  headline the rule chose, the shadow, the faded path and the terminal rate, and scores each
+  at forecasting the revenue and operating income growth the filer then reported over one,
+  three and five years, from the SEC frames the broad panel cached; then the level by growth
+  source, fifths on the headline and the year-on-year persistence, after Weber, "Cash Flow
+  Duration and the Term Structure of Equity Returns", NBER Working Paper 22520, August 2016,
+  doi:10.3386/w22520, whose Table 7 finds the growth a sort read did not persist. A side
+  tool: no record on the valuation path moves and there is no new `Failed` string.
 - betas on the rule panel: `python/rule_betas.py` gives every name in the rule panel six
   betas from its year of daily returns and scores each at forecasting the next year's,
   after Levi and Welch, "Best Practice for Cost-of-Capital Estimates", Journal of

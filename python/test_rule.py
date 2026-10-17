@@ -353,3 +353,93 @@ def test_the_betas_of_the_panel_carry_the_year_ahead_and_the_reading_is_written_
     assert json.loads((reference / "params.json").read_text()) == {"kept": True} and (pit / "reference" / "industry_betas.json").read_text() == "{}"
     assert rbs.reading_beta(low, "one") == 1.0 and rbs.reading_beta(low, "lw_faded") == rbs.faded(low.lw)
     assert rbs.main(["--panel", str(tmp_path / "none.jsonl"), "--out", str(tmp_path / "out")]) == 2
+
+
+def _growth_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
+    """Sixty invented names on two Junes with a fundamental estimate rising with the index, frames
+    for the seven fiscal years after the first base, and the oddities the matching must handle."""
+    import rule_growth as rg
+
+    panel_out, universe_dir, frames = tmp_path / "rule_panel", tmp_path / "universe", tmp_path / "frames"
+    frames.mkdir()
+    for year, base_end in ((2020, "2019-12-31"), (2021, "2020-12-31")):
+        day = f"{year}-06-30"
+        (panel_out / day).mkdir(parents=True)
+        universe_dir.mkdir(exist_ok=True)
+        universe_dir.joinpath(f"{day}.json").write_text(json.dumps([{"ticker": f"N{i:02d}", "cik": f"{1000 + i:010d}"} for i in range(60)] + [{"ticker": "MID", "cik": "0000009999"}]))
+        lines: list[Json] = []
+        for i in range(60):
+            g0 = 0.002 * i
+            lines.append({"ticker": f"N{i:02d}", "status": "Ok",
+                          "inputs": ["dcf", {"fiscal_period_end": base_end, "growth_source": "fundamental", "g_fundamental": g0, "g_historical": 0.1, "g0": g0,
+                                             "growth_path": [g0] * 7, "terminal_growth_rate": {"value": 0.02, "key": "United States"}}],
+                          "growth_shadow": {"g0_shadow": max(g0, 0.1)}})
+        lines.append({"ticker": "MID", "status": "Ok", "inputs": ["midcycle", {"fcff_mid": 1.0}]})
+        lines.append({"ticker": "REF", "status": "Failed", "failed_reason": "invented"})
+        (panel_out / day / "valuations.jsonl").write_text("".join(json.dumps(x) + "\n" for x in lines))
+    for n, year in enumerate(range(2019, 2026)):
+        end = f"{year}-12-31"
+        revenues: list[Json] = []
+        sales: list[Json] = []
+        operating: list[Json] = []
+        for i in range(60):
+            cik, rate = 1000 + i, 0.05 + 0.0005 * i
+            revenue, income = 100.0 * (1 + rate) ** n, 10.0 * (1 + rate) ** n
+            if i == 1 and year == 2022:
+                end_i = "2023-01-02"                                             # a 53-week year: within the tolerance
+            else:
+                end_i = end
+            if i == 2:
+                sales.append({"cik": cik, "end": end_i, "val": revenue})         # tagged on the chain's last element only
+                revenues.append({"cik": cik, "end": end_i, "val": 999.0}) if year == 2019 else None   # the first element wins where both carry the year
+            else:
+                revenues.append({"cik": cik, "end": end_i, "val": revenue})
+            if i == 3 and year == 2020:
+                operating.append({"cik": cik, "end": end_i, "val": -1.0})        # a loss: no rate describes it
+            elif not (i == 4 and year == 2024):                                  # a filer gone before its fifth year
+                operating.append({"cik": cik, "end": end_i, "val": income})
+        for tag, rows in (("Revenues", revenues), ("SalesRevenueNet", sales), ("OperatingIncomeLoss", operating)):
+            (frames / f"us-gaap-{tag}-CY{year}.json").write_text(json.dumps({"data": rows}))
+    assert rg.OUTCOMES == ("revenue", "operating_income")
+    return panel_out, universe_dir, frames
+
+
+def test_the_growth_estimates_are_read_as_the_model_computed_them_and_scored_against_what_the_filer_then_reported(tmp_path: Path) -> None:
+    import rule_growth as rg
+
+    assert rg.path_mean([0.1, 0.1, 0.1], 2) is not None and abs(cast(float, rg.path_mean([0.1, 0.1, 0.1], 2)) - 0.1) < 1e-12
+    assert abs(cast(float, rg.path_mean([0.2, 0.0], 2)) - (1.2 ** 0.5 - 1)) < 1e-12 and rg.path_mean([0.1], 2) is None
+    assert abs(cast(float, rg.annualised(100.0, 121.0, 2)) - 0.1) < 1e-12 and rg.annualised(0.0, 1.0, 1) is None and rg.annualised(1.0, -1.0, 1) is None
+    panel_out, universe_dir, frames_dir = _growth_fixture(tmp_path)
+    records = rg.load_records(panel_out, universe_dir)
+    assert len(records) == 120 and all(r.source == "fundamental" and r.terminal == 0.02 for r in records)   # the mid-cycle and the refused record carry no growth
+    n05 = next(r for r in records if r.ticker == "N05" and r.year == 2020)
+    assert n05.cik == 1005 and n05.base_end == "2019-12-31" and abs(n05.headline - 0.01) < 1e-12 and abs(n05.shadow - 0.1) < 1e-12 and n05.historical == 0.1
+    frames = rg.load_frames(frames_dir)
+    assert frames["revenue"][(1000, "2019-12-31")] == 100.0 and frames["revenue"][(1002, "2019-12-31")] == 999.0   # the chain's first element wins
+    assert frames["revenue"][(1002, "2020-12-31")] == 100.0 * 1.051                                             # and the last carries the years it alone has
+    rg.realise(records, frames)
+    for k in (1, 3, 5):
+        assert abs(n05.realised[("revenue", k)] - 0.0525) < 1e-9 and abs(n05.realised[("operating_income", k)] - 0.0525) < 1e-9
+    n01 = next(r for r in records if r.ticker == "N01" and r.year == 2020)
+    assert abs(n01.realised[("revenue", 3)] - 0.0505) < 1e-9                                           # the 53-week end matched within the tolerance
+    n03 = next(r for r in records if r.ticker == "N03" and r.year == 2020)
+    assert n03.unmatched[("operating_income", 1)] == "a figure at or below zero" and ("operating_income", 1) not in n03.realised and ("operating_income", 3) in n03.realised
+    n04 = next(r for r in records if r.ticker == "N04" and r.year == 2020)
+    assert n04.unmatched[("operating_income", 5)] == "no figure at the horizon" and ("revenue", 5) in n04.realised
+    later = next(r for r in records if r.ticker == "N05" and r.year == 2021)
+    assert ("revenue", 5) in later.realised and later.unmatched == {}                                   # 2020 to 2025: the frames reach it
+    pairs, moved = rg.winsorise([(0.01 * i, 0.01 * i) for i in range(99)] + [(5.0, -5.0)])
+    assert moved == 4 and max(x for x, _ in pairs) < 5.0 and min(y for _, y in pairs) > -5.0            # the extreme on each side of each column
+    assert rg.winsorise([(1.0, 1.0)] * 5) == ([(1.0, 1.0)] * 5, 0)
+    assigned = rg.fifths(records)
+    assert assigned[("N00", 2020)] == 1 and assigned[("N59", 2020)] == 5 and assigned[("N30", 2021)] == 3 and len(assigned) == 120
+    text = rg.report(records)
+    assert "120 generic DCF records on 60 names, 2020 to 2021; sources: fundamental 120, historical 0" in text
+    assert "operating income, 1 year(s): 118 realised; a figure at or below zero 2" in text              # N03 on both Junes' first year
+    assert "operating income, 5 year(s): 118 realised; a figure at or below zero 1, no figure at the horizon 1" in text   # N03's 2021 base is the loss; N04's fifth year is missing from 2020 only
+    assert "which estimate forecasts realised revenue growth, every record" in text and "fifth 5 less fifth 1" in text
+    assert "realised revenue growth, one year on the year before: 60 pairs" in text
+    assert rg.main(["--panel-out", str(tmp_path / "none"), "--out", str(tmp_path / "out")]) == 2
+    assert rg.main(["--panel-out", str(panel_out), "--universe-dir", str(universe_dir), "--frames", str(frames_dir), "--out", str(tmp_path / "out")]) == 0
+    assert len((tmp_path / "out" / "growth.jsonl").read_text().splitlines()) == 120 and (tmp_path / "out" / "tables.txt").read_text() == text
