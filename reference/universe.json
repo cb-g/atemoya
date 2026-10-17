@@ -17,7 +17,8 @@
     "Six Swiss franc reporters added 2026-10-04 at a downstream reader's request: Holcim, Sika, Schindler, VAT Group, Givaudan and Swisscom, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day. Holcim and VAT Group are Cyclical and refused for a history shorter than the through-cycle window; Swisscom is refused because the vendor's balance sheet carries none of its borrowings.",
     "Eleven Swiss names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Zurich Insurance, Swiss Life, Julius Baer, Lonza, Straumann, Geberit, SGS, Kuehne+Nagel, Sonova, Partners Group and Swatch, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day, on the author's recommendation. The two insurers are refused for want of filed statements; Lonza, Kuehne+Nagel and Swatch are Cyclical and refused for a history shorter than the through-cycle window. A twelfth name asked for, Lindt & Sprüngli, is left out: its equity is in two listed lines, one worth a tenth of the other, and the vendor counts every unit of both at one line's price, so the per-share value would divide by the wrong number of shares, and the tool has no declared ratio between share lines to correct it.",
     "Lindt & Sprüngli added 2026-10-04 as its participation certificate, LISP.SW, the class confirmed by the user: the note above left it out for want of a ratio between share lines, and reading what the vendor reports for each line showed none is needed, the certificate line being counted correctly and only the registered line wrongly. The registered share stays out.",
-    "Three names added 2026-10-17 (84) at the downstream reader's request, who supplied the facts and left the classes to this file: EMCOR an operating company, United Rentals a cyclical, Starwood Property Trust a mortgage real estate investment trust, a class added for it with no admissible model, since a lender's trust has no FFO for the equity REIT's lens and no capex or working capital for a DCF; the classes were drafted by the tool's author and confirmed by the user the same day."
+    "Three names added 2026-10-17 (84) at the downstream reader's request, who supplied the facts and left the classes to this file: EMCOR an operating company, United Rentals a cyclical, Starwood Property Trust a mortgage real estate investment trust, a class added for it with no admissible model, since a lender's trust has no FFO for the equity REIT's lens and no capex or working capital for a DCF; the classes were drafted by the tool's author and confirmed by the user the same day.",
+    "growth_without_reinvestment added 2026-10-17 (84) at the downstream reader's question whether the fundamental growth estimate stays the headline for companies that grow with little reinvestment: it does, by the user's decision of 2026-10-03 that the growth shadow stays a shadow, and the code lets a reader skip the valuation layer by rule for the names where the two estimates part. Measured on the run of the day: the names valued by the generic DCF whose shadow growth is at least three times the headline and ten points above it, Nvidia, Palantir, Deckers, MercadoLibre, Evolution and Uber; the user confirmed the six the same day."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -48,7 +49,8 @@
     "country_basis": "the country that chooses the risk premium is not the legal domicile",
     "loss_making": "loss-making on the latest filed years",
     "filer_tagging": "the filer's own tagging puts a line under an element that means something else, so a field the record reads is not what its name says",
-    "leases_in_debt": "the vendor does not separate lease liabilities from borrowings, so the debt read includes the leases"
+    "leases_in_debt": "the vendor does not separate lease liabilities from borrowings, so the debt read includes the leases",
+    "growth_without_reinvestment": "the fundamental growth estimate, reinvestment times the return on capital, reads far below the revenue history because the business grows with little reinvestment, so the headline value stands on the lower estimate and the growth shadow carries the other"
   },
   "tickers": [
     {
@@ -288,7 +290,13 @@
       "ticker": "NVDA",
       "entity_class": "OperatingCompany",
       "why": "accelerated computing; positive, growing free cash flow",
-      "map_cik": "0001045810"
+      "map_cik": "0001045810",
+      "scope_limits": [
+        "the business grows with little reinvestment, so the fundamental growth estimate the headline stands on reads far below the revenue history and the growth shadow carries the other reading"
+      ],
+      "scope_limit_codes": [
+        "growth_without_reinvestment"
+      ]
     },
     {
       "ticker": "AVGO",
@@ -318,7 +326,13 @@
       "ticker": "PLTR",
       "entity_class": "HighGrowthSoftware",
       "why": "software compounding revenue, profitable",
-      "map_cik": "0001321655"
+      "map_cik": "0001321655",
+      "scope_limits": [
+        "the business grows with little reinvestment, so the fundamental growth estimate the headline stands on reads far below the revenue history and the growth shadow carries the other reading"
+      ],
+      "scope_limit_codes": [
+        "growth_without_reinvestment"
+      ]
     },
     {
       "ticker": "INTC",
@@ -426,7 +440,13 @@
       "ticker": "UBER",
       "entity_class": "HighGrowthSoftware",
       "why": "a platform recently profitable; declared software rather than a plain operating company, a judgment",
-      "map_cik": "0001543151"
+      "map_cik": "0001543151",
+      "scope_limits": [
+        "the business grows with little reinvestment, so the fundamental growth estimate the headline stands on reads far below the revenue history and the growth shadow carries the other reading"
+      ],
+      "scope_limit_codes": [
+        "growth_without_reinvestment"
+      ]
     },
     {
       "ticker": "MU",
@@ -772,10 +792,12 @@
       "entity_class": "HighGrowthSoftware",
       "why": "Marketplace, payments and credit in Latin America, a 10-K filer under us-gaap despite the listing; profitable platform revenue; the software lens.",
       "scope_limits": [
-        "The credit book inside the payments business carries interest income and provisions the software lens does not read."
+        "The credit book inside the payments business carries interest income and provisions the software lens does not read.",
+        "the business grows with little reinvestment, so the fundamental growth estimate the headline stands on reads far below the revenue history and the growth shadow carries the other reading"
       ],
       "scope_limit_codes": [
-        "mixed_business"
+        "mixed_business",
+        "growth_without_reinvestment"
       ],
       "map_cik": "0001099590"
     },
@@ -1114,7 +1136,13 @@
       "ticker": "DECK",
       "entity_class": "OperatingCompany",
       "why": "a footwear brand owner whose fiscal year ends in March; the discounted cash flow on stable free cash flow.",
-      "map_cik": "0000910521"
+      "map_cik": "0000910521",
+      "scope_limits": [
+        "the business grows with little reinvestment, so the fundamental growth estimate the headline stands on reads far below the revenue history and the growth shadow carries the other reading"
+      ],
+      "scope_limit_codes": [
+        "growth_without_reinvestment"
+      ]
     },
     {
       "ticker": "WSM",
@@ -1854,10 +1882,12 @@
       "entity_class": "OperatingCompany",
       "why": "the Stockholm line of Evolution, live-casino and game content supplied to gambling operators, trading in kronor while reporting in euros, so cross-currency; no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own facts, with the vendor's statements cross-checked beside them; high margins and positive, stable free cash flow; an operating company, confirmed by the user.",
       "scope_limits": [
-        "revenue rests on which markets permit and license online gambling, and on a few large operators, neither of which the model sees"
+        "revenue rests on which markets permit and license online gambling, and on a few large operators, neither of which the model sees",
+        "the business grows with little reinvestment, so the fundamental growth estimate the headline stands on reads far below the revenue history and the growth shadow carries the other reading"
       ],
       "scope_limit_codes": [
-        "policy_dependent"
+        "policy_dependent",
+        "growth_without_reinvestment"
       ],
       "lei": "549300SUH6ZR1RF6TA88"
     },

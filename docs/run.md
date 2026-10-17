@@ -271,6 +271,7 @@ codes, as a `--universe` file from before them does; no tracked limit reads it.
 | code | a limit under it says |
 |---|---|
 | `build_out` | capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business |
+| `growth_without_reinvestment` | the fundamental growth estimate, reinvestment times the return on capital, reads far below the revenue history because the business grows with little reinvestment, so the headline value stands on the lower estimate and the growth shadow carries the other (84) |
 | `rebound_window` | the growth window opens on a recovery from a collapse, so the derived starting growth reads the rebound as growth |
 | `trough_window` | a reset or trough year sits inside the growth window, so the derived starting growth reads the trough |
 | `product_transition` | a product transition inside the growth window: a franchise in decline or a launch not yet in the statements |

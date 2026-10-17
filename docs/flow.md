@@ -807,6 +807,12 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- `growth_without_reinvestment` (84): a scope code for the names whose fundamental growth
+  estimate reads far below the revenue history because the business grows with little
+  reinvestment, on six entries the user confirmed; the headline stays on the fundamental
+  estimate, by the decision of 2026-10-03, and the code lets a reader skip the valuation
+  layer by rule. A declaration: no record's value or status moves and there is no new
+  `Failed` string.
 - recency (84): `recency` on every record with filed statements, from the same facts: the
   latest quarter's revenue against a year earlier, the trailing four quarters against the
   annual base the models read, the quarters filed since it, and `base_stale` beyond the
