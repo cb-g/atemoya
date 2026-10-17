@@ -8,6 +8,7 @@ import math
 from pathlib import Path
 from typing import cast
 
+import panel_stats as ps
 import rule_panel as rp
 import rule_study as rs
 
@@ -199,8 +200,8 @@ def test_a_beta_the_market_pays_in_full_shows_no_alpha_and_the_premium_per_unit(
     betas = {1: 0.5, 2: 0.75, 3: 1.0, 4: 1.25, 5: 1.5}
     panel, prices, rate_path = _alpha_fixture(tmp_path, {k: (0.0, b) for k, b in betas.items()})
     histories = _daily_fixture(tmp_path, betas)
-    benchmark = rb.load_daily(histories / "SPY.json")
-    assert benchmark is not None and rb.load_daily(histories / "NONE.json") is None
+    benchmark = ps.load_daily(histories / "SPY.json")
+    assert benchmark is not None and ps.load_daily(histories / "NONE.json") is None
     rows, without = rb.load_rows(panel, histories, benchmark)
     assert len(rows) == 100 and without == 1                                   # the refused name has no history
     assert abs(next(r for r in rows if r.ticker == "N00").values["beta"] - 0.75) < 1e-9    # half of 0.5 and half of one, the late third counted
@@ -222,7 +223,7 @@ def test_a_beta_the_market_does_not_pay_shows_the_flat_line(tmp_path: Path) -> N
     premium = 0.03 * 16 / 24 - 0.04 * 8 / 24 - 0.001                           # the alpha fixture's market over its rate, a month
     panel, prices, rate_path = _alpha_fixture(tmp_path, {k: ((1 - b) * premium, b) for k, b in betas.items()})   # every fifth earns the market's return
     histories = _daily_fixture(tmp_path, betas)
-    benchmark = rb.load_daily(histories / "SPY.json")
+    benchmark = ps.load_daily(histories / "SPY.json")
     assert benchmark is not None
     rows, without = rb.load_rows(panel, histories, benchmark)
     block = rb.report(rows, without, ra.load_adjusted(prices), ra.load_rate(rate_path)).split("beta, all formations, equal weights")[1].split("\n\n")[0]
@@ -236,7 +237,7 @@ def test_the_beta_estimate_needs_a_year_of_days_and_names_what_to_run(tmp_path: 
     days = [f"2020-01-{d:02d}" for d in range(1, 29)]
     market = {day: 0.01 * ((i % 3) - 1) for i, day in enumerate(days)}
     assert rb.beta_of({day: 2 * market[day] for day in days}, days, market) is None          # under two hundred days
-    assert rb.daily_returns({"2020-01-01": 10.0, "2020-01-02": 11.0, "2020-01-03": 11.0}, "2020-01-01", "2020-01-02").keys() == {"2020-01-02"}
+    assert ps.daily_returns({"2020-01-01": 10.0, "2020-01-02": 11.0, "2020-01-03": 11.0}, "2020-01-01", "2020-01-02").keys() == {"2020-01-02"}
     assert rb.main(["--panel", str(tmp_path / "none.jsonl"), "--out", str(tmp_path / "out")]) == 2
 
 
@@ -278,7 +279,7 @@ def test_the_fifths_are_followed_into_later_event_years_on_the_same_formation(tm
     first = ra.fifth_returns(rows, q, adjusted, capped_value=False)
     assert second[5]["2021-07"] == first[5]["2021-07"]                                 # the same names, the same month: the 2020 fifth in its second year, the 2021 fifth in its first
     histories = _daily_fixture(tmp_path, betas)
-    benchmark = rb.load_daily(histories / "SPY.json")
+    benchmark = ps.load_daily(histories / "SPY.json")
     assert benchmark is not None
     brows, _ = rb.load_rows(panel, histories, benchmark)
     market = {m: r for m in adjusted["SPY"] if (r := ra.monthly_return(adjusted["SPY"], m)) is not None}
@@ -306,17 +307,16 @@ def test_the_beta_estimates_shrink_as_the_papers_have_them_and_the_forecast_is_s
     codes: dict[str, int | None] = {f"T{i}": 3570 + i for i in range(6)} | {"U0": 2800, "U1": 2834, "X": None}
     by = rbs.industry_betas({f"T{i}": 1.0 + 0.1 * i for i in range(6)} | {"U0": 0.5, "U1": 0.7, "X": 2.0}, codes)
     assert abs(by["T0"] - 1.3) < 1e-12 and "U0" not in by and "X" not in by                 # five others; two are too few; no code
-    f = rbs.forecast([1.0 + 0.01 * i for i in range(40)], [1.0 + 0.01 * i for i in range(40)])
+    f = ps.forecast([1.0 + 0.01 * i for i in range(40)], [1.0 + 0.01 * i for i in range(40)])
     assert f is not None and abs(f.r2_as_is - 1) < 1e-9 and f.rmse_as_is < 1e-9 and abs(f.slope - 1) < 1e-9 and abs(f.intercept) < 1e-9
-    g = rbs.forecast([1.0] * 40, [1.0 + 0.01 * i for i in range(40)])
+    g = ps.forecast([1.0] * 40, [1.0 + 0.01 * i for i in range(40)])
     assert g is not None and g.slope == 0.0 and abs(g.r2_fitted) < 1e-9 and g.r2_as_is < 0            # a constant below the mean explains nothing
-    assert rbs.forecast([1.0] * 10, [1.0] * 10) is None
-    assert rbs.window(2020, "2020-06-30", 0) == ("2019-06-30", "2020-06-30") and rbs.window(2020, "2020-06-30", 3) == ("2022-06-30", "2023-06-30")
-    assert rbs.spearman([(float(i), float(-i)) for i in range(12)]) == -1.0 and rbs.spearman([(1.0, 2.0)] * 12) is None
+    assert ps.forecast([1.0] * 10, [1.0] * 10) is None
+    assert ps.window(2020, "2020-06-30", 0) == ("2019-06-30", "2020-06-30") and ps.window(2020, "2020-06-30", 3) == ("2022-06-30", "2023-06-30")
+    assert ps.spearman([(float(i), float(-i)) for i in range(12)]) == -1.0 and ps.spearman([(1.0, 2.0)] * 12) is None
 
 
 def test_the_betas_of_the_panel_carry_the_year_ahead_and_the_reading_is_written_as_an_industry_table(tmp_path: Path) -> None:
-    import rule_beta as rb
     import rule_betas as rbs
 
     betas = {1: 0.5, 2: 0.75, 3: 1.0, 4: 1.25, 5: 1.5}
@@ -325,7 +325,7 @@ def test_the_betas_of_the_panel_carry_the_year_ahead_and_the_reading_is_written_
     universe_dir = tmp_path / "universe"
     universe_dir.mkdir()
     universe_dir.joinpath("2020-06-30.json").write_text(json.dumps([{"ticker": f"N{i:02d}", "sic": 7372 if i < 40 else 2800} for i in range(50)]))
-    benchmark = rb.load_daily(histories / "SPY.json")
+    benchmark = ps.load_daily(histories / "SPY.json")
     assert benchmark is not None
     rows, without = rbs.betas_of(panel, histories, benchmark, universe_dir)
     assert len(rows) == 100 and without == 1
@@ -430,9 +430,9 @@ def test_the_growth_estimates_are_read_as_the_model_computed_them_and_scored_aga
     assert n04.unmatched[("operating_income", 5)] == "no figure at the horizon" and ("revenue", 5) in n04.realised
     later = next(r for r in records if r.ticker == "N05" and r.year == 2021)
     assert ("revenue", 5) in later.realised and later.unmatched == {}                                   # 2020 to 2025: the frames reach it
-    pairs, moved = rg.winsorise([(0.01 * i, 0.01 * i) for i in range(99)] + [(5.0, -5.0)])
+    pairs, moved = ps.winsorise_pairs([(0.01 * i, 0.01 * i) for i in range(99)] + [(5.0, -5.0)])
     assert moved == 4 and max(x for x, _ in pairs) < 5.0 and min(y for _, y in pairs) > -5.0            # the extreme on each side of each column
-    assert rg.winsorise([(1.0, 1.0)] * 5) == ([(1.0, 1.0)] * 5, 0)
+    assert ps.winsorise_pairs([(1.0, 1.0)] * 5) == ([(1.0, 1.0)] * 5, 0)
     assigned = rg.fifths(records)
     assert assigned[("N00", 2020)] == 1 and assigned[("N59", 2020)] == 5 and assigned[("N30", 2021)] == 3 and len(assigned) == 120
     text = rg.report(records)
@@ -465,8 +465,8 @@ def test_the_durations_follow_the_papers_worked_examples_and_the_closed_forms_an
     assert implied is not None and abs(implied - perpetuity) < 1e-9                                                            # at the model's own value the two agree
     dearer = rd.implied_duration(fcff=100.0, wacc=0.08, growth_path=[0.03] * 7, terminal_growth=0.03, net_debt=0.0, market_cap=2 * enterprise)
     assert dearer is not None and dearer > perpetuity                                                                           # a price above the value puts more on the terminal
-    f = rd.fit([[float(i)] for i in range(40)], [2.0 + 3.0 * i for i in range(40)])
-    assert f is not None and abs(f[0][0] - 3.0) < 1e-9 and abs(f[1] - 1.0) < 1e-9 and rd.fit([[1.0]] * 10, [1.0] * 10) is None
+    f = ps.fit([[float(i)] for i in range(40)], [2.0 + 3.0 * i for i in range(40)])
+    assert f is not None and abs(f[0][0] - 3.0) < 1e-9 and abs(f[1] - 1.0) < 1e-9 and ps.fit([[1.0]] * 10, [1.0] * 10) is None
     closes = {f"2020-{m:02d}-{d:02d}": 100.0 + (1.0 if (m + d) % 2 else -1.0) for m in range(1, 13) for d in range(1, 29)}
     vol = rd.volatility(closes, "2019-12-31", "2020-12-31")
     assert vol is not None and 0.019 < vol < 0.021 and rd.volatility(closes, "2020-10-01", "2020-12-31") is None                 # about two per cent a day; under the floor of days

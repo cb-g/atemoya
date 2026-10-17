@@ -86,6 +86,7 @@ import numpy as np
 
 import anchor_study as study
 import broad_study as broad
+import panel_stats as ps
 import rule_alpha as alpha
 import rule_beta as rb
 import rule_panel
@@ -104,7 +105,6 @@ MIN_GROUP = 5                  # fewer names than this in an industry code and i
 HORIZONS = 5
 ESTIMATORS = ("one", "ols", "vck", "lw", "fp", "industry")
 READINGS = ("one", "lw", "fp", "lw_faded")
-MIN_PAIRS = 30                 # fewer pairs than this and no forecast line is printed
 Json = dict[str, object]
 
 
@@ -185,12 +185,6 @@ def industry_betas(betas: dict[str, float], codes: dict[str, int | None]) -> dic
     return out
 
 
-def window(year: int, day: str, k: int) -> tuple[str, str]:
-    """The year ending k years after a June date (k = 0 the year to it): (first, last) days,
-    returns counted after the first up to the last."""
-    return f"{year + k - 1}{day[4:]}", f"{year + k}{day[4:]}"
-
-
 def load_codes(universe_dir: Path, d: str) -> dict[str, int | None]:
     path = universe_dir / f"{d}.json"
     if not path.exists():
@@ -198,16 +192,16 @@ def load_codes(universe_dir: Path, d: str) -> dict[str, int | None]:
     return {str(e["ticker"]): (int(cast(int, e["sic"])) if e.get("sic") is not None else None) for e in cast(list[Json], json.loads(path.read_text()))}
 
 
-def betas_of(panel: Path, histories: Path, benchmark: rb.Daily, universe_dir: Path) -> tuple[list[Betas], int]:
+def betas_of(panel: Path, histories: Path, benchmark: ps.Daily, universe_dir: Path) -> tuple[list[Betas], int]:
     """(one entry per panel name and June carrying an `ols` at the date, the count that did not)."""
     market_days = sorted(benchmark)
-    market = rb.daily_returns(benchmark, "0000", "9999")
+    market = ps.daily_returns(benchmark, "0000", "9999")
     by_date: dict[str, list[Json]] = {}
     for line in panel.read_text().splitlines():
         if line.strip():
             raw = cast(Json, json.loads(line))
             by_date.setdefault(str(raw["date"]), []).append(raw)
-    cache: dict[str, rb.Daily | None] = {}
+    cache: dict[str, ps.Daily | None] = {}
     out: list[Betas] = []
     without = 0
     for d in sorted(by_date):
@@ -217,13 +211,13 @@ def betas_of(panel: Path, histories: Path, benchmark: rb.Daily, universe_dir: Pa
         for raw in by_date[d]:
             ticker = str(raw["ticker"])
             if ticker not in cache:
-                cache[ticker] = rb.load_daily(histories / f"{ticker}.json")
+                cache[ticker] = ps.load_daily(histories / f"{ticker}.json")
             closes = cache[ticker]
             if closes is None:
                 without += 1
                 continue
-            first, last = window(year, d, 0)
-            returns = rb.daily_returns(closes, first, last)
+            first, last = ps.window(year, d, 0)
+            returns = ps.daily_returns(closes, first, last)
             ols = ols_of(returns, market)
             if ols is None:
                 without += 1
@@ -231,7 +225,7 @@ def betas_of(panel: Path, histories: Path, benchmark: rb.Daily, universe_dir: Pa
             fp = rb.beta_of(returns, market_days, market)
             ahead: dict[int, float] = {}
             for k in range(1, HORIZONS + 1):
-                later = ols_of(rb.daily_returns(closes, *window(year, d, k)), market)
+                later = ols_of(ps.daily_returns(closes, *ps.window(year, d, k)), market)
                 if later is not None:
                     ahead[k] = later.beta
             own[ticker] = (ols, fp, ahead)
@@ -246,46 +240,15 @@ def betas_of(panel: Path, histories: Path, benchmark: rb.Daily, universe_dir: Pa
     return out, without
 
 
-@dataclass(frozen=True)
-class Forecast:
-    pairs: int
-    r2_as_is: float
-    rmse_as_is: float
-    intercept: float
-    slope: float
-    r2_fitted: float
-
-
-def forecast(xs: list[float], ys: list[float]) -> Forecast | None:
-    """The target on the estimate: as it is, and fitted. None under MIN_PAIRS pairs or where
-    the estimate does not vary."""
-    n = len(xs)
-    if n < MIN_PAIRS or n != len(ys):
-        return None
-    x, y = np.asarray(xs, dtype=float), np.asarray(ys, dtype=float)
-    sst = float(((y - y.mean()) ** 2).sum())
-    sxx = float(((x - x.mean()) ** 2).sum())
-    if sst <= 0:
-        return None
-    sse_as_is = float(((y - x) ** 2).sum())
-    if sxx <= 0:
-        slope, intercept = 0.0, float(y.mean())
-    else:
-        slope = float(((x - x.mean()) * (y - y.mean())).sum()) / sxx
-        intercept = float(y.mean()) - slope * float(x.mean())
-    sse = float(((y - intercept - slope * x) ** 2).sum())
-    return Forecast(pairs=n, r2_as_is=1 - sse_as_is / sst, rmse_as_is=math.sqrt(sse_as_is / n), intercept=intercept, slope=slope, r2_fitted=1 - sse / sst)
-
-
 def forecast_block(rows: list[Betas]) -> list[str]:
     lines = ["which beta forecasts next year's: the name's plain slope over the twelve months after the date, on each estimate at the date",
              "-" * 100,
              f"  {'estimate':<10} {'pairs':>6}   as it is: R2    rmse   fitted: intercept  slope   R2"]
     for name in ESTIMATORS:
         pairs = [(e, r.ahead[1]) for r in rows if 1 in r.ahead and (e := r.estimate(name)) is not None]
-        f = forecast([x for x, _ in pairs], [y for _, y in pairs])
+        f = ps.forecast([x for x, _ in pairs], [y for _, y in pairs])
         if f is None:
-            lines.append(f"  {name:<10} {len(pairs):>6}   fewer than {MIN_PAIRS} pairs")
+            lines.append(f"  {name:<10} {len(pairs):>6}   fewer than {ps.MIN_PAIRS} pairs")
             continue
         lines.append(f"  {name:<10} {f.pairs:>6}   {100 * f.r2_as_is + 0.0:>13.1f}%  {f.rmse_as_is:.3f}   {f.intercept + 0.0:>17.2f}  {f.slope + 0.0:>5.2f}  {100 * f.r2_fitted + 0.0:.1f}%")
     sd = statistics.pstdev([r.ahead[1] for r in rows if 1 in r.ahead]) if sum(1 for r in rows if 1 in r.ahead) > 1 else 0.0
@@ -293,8 +256,8 @@ def forecast_block(rows: list[Betas]) -> list[str]:
     lines += ["", "the horizon: the plain slope one to five years ahead on today's vck", "-" * 100]
     for k in range(1, HORIZONS + 1):
         pairs = [(r.vck, r.ahead[k]) for r in rows if k in r.ahead]
-        f = forecast([x for x, _ in pairs], [y for _, y in pairs])
-        lines.append(f"  {k} year(s) ahead: " + (f"fewer than {MIN_PAIRS} pairs" if f is None else f"{f.pairs} pairs, slope {f.slope + 0.0:.2f}, intercept {f.intercept + 0.0:.2f}, R2 {100 * f.r2_fitted + 0.0:.1f}%"))
+        f = ps.forecast([x for x, _ in pairs], [y for _, y in pairs])
+        lines.append(f"  {k} year(s) ahead: " + (f"fewer than {ps.MIN_PAIRS} pairs" if f is None else f"{f.pairs} pairs, slope {f.slope + 0.0:.2f}, intercept {f.intercept + 0.0:.2f}, R2 {100 * f.r2_fitted + 0.0:.1f}%"))
     return lines
 
 
@@ -333,31 +296,6 @@ def reading_inputs(pit_dir: Path, target: Path, d: str, betas: dict[str, float],
     return target, reference
 
 
-def ranks(values: list[float]) -> np.ndarray:
-    """Ranks from one, ties given the mean of the ranks they span."""
-    v = np.asarray(values, dtype=float)
-    order = np.argsort(v, kind="stable")
-    out = np.empty(len(v), dtype=float)
-    i = 0
-    while i < len(v):
-        j = i
-        while j + 1 < len(v) and v[order[j + 1]] == v[order[i]]:
-            j += 1
-        out[order[i:j + 1]] = (i + j) / 2 + 1
-        i = j + 1
-    return out
-
-
-def spearman(pairs: list[tuple[float, float]]) -> float | None:
-    """The rank correlation; None under MIN_CELL pairs or where either side does not vary."""
-    if len(pairs) < study.MIN_CELL:
-        return None
-    a, b = ranks([x for x, _ in pairs]), ranks([y for _, y in pairs])
-    if a.std() == 0 or b.std() == 0:
-        return None
-    return float(np.corrcoef(a, b)[0, 1])
-
-
 def date_line(d: str, readings: dict[str, list[Json]]) -> str:
     base = {str(r["ticker"]): r for r in readings["one"]}
     cells: list[str] = []
@@ -373,7 +311,7 @@ def date_line(d: str, readings: dict[str, list[Json]]) -> str:
             logs = [math.log(fv / bfv) for r in records if r["status"] == "Ok" and (fv := study.as_float(r.get("fair_value"))) and fv > 0
                     and (b := base.get(str(r["ticker"]))) is not None and (bfv := study.as_float(b.get("fair_value"))) and bfv > 0]
             changed = sum(1 for r in records if (b := base.get(str(r["ticker"]))) is not None and (r["status"] == "Ok") != (b["status"] == "Ok"))
-            rho = spearman(pairs)
+            rho = ps.spearman(pairs)
             cell += (f", rank correlation with one {rho:+.2f}" if rho is not None else ", rank correlation with one n/a") + \
                     (f", median fair value {100 * statistics.median(logs) + 0.0:+.1f}% of one's" if logs else "") + f", {changed} change status"
         cells.append(cell)
@@ -386,7 +324,7 @@ def margin_against_beta(rows_by_reading: dict[str, list[Row]], lw: dict[tuple[st
         rhos: list[float] = []
         for year in sorted({r.year for r in rows_by_reading[name]}):
             pairs = [(lw[(r.ticker, r.year)], r.values["margin_of_safety"]) for r in rows_by_reading[name] if r.year == year and (r.ticker, r.year) in lw]
-            rho = spearman(pairs)
+            rho = ps.spearman(pairs)
             if rho is not None:
                 rhos.append(rho)
         lines.append(f"  {name}: " + (f"median {statistics.median(rhos):+.2f} over {len(rhos)} dates, from {min(rhos):+.2f} to {max(rhos):+.2f}" if rhos else "no date with enough rows"))
@@ -413,7 +351,7 @@ def main(argv: list[str]) -> int:
         if not path.exists():
             print(f"{path} not built: {how}", file=sys.stderr)
             return 2
-    benchmark = rb.load_daily(histories / f"{BENCHMARK}.json")
+    benchmark = ps.load_daily(histories / f"{BENCHMARK}.json")
     if benchmark is None:
         print(f"no daily history for {BENCHMARK} under {histories}: run python/rule_beta.py --fetch-benchmark", file=sys.stderr)
         return 2

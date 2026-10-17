@@ -10,6 +10,7 @@ from typing import Any
 
 import anchor_study as study
 import baseline_study as base
+import panel_stats as ps
 import universe as universe_file
 
 FX: dict[str, object] = {"currencies": {"EUR": {"usd_per_unit": 1.25}, "GBP": {"usd_per_unit": 2.0}}}
@@ -61,12 +62,13 @@ def test_quintiles_are_cut_within_the_date_and_a_thin_date_gets_none() -> None:
 
 
 def test_rank_correlation_with_ties_and_its_nulls() -> None:
-    assert base.ranks([10.0, 20.0, 20.0, 30.0]) == [1.0, 2.5, 2.5, 4.0]
-    assert base.spearman([1.0, 2.0, 3.0, 4.0, 5.0], [10.0, 20.0, 30.0, 40.0, 50.0]) == 1.0
-    rho = base.spearman([1.0, 2.0, 3.0, 4.0, 5.0], [5.0, 4.0, 3.0, 2.0, 1.0])
+    assert ps.ranks([10.0, 20.0, 20.0, 30.0]).tolist() == [1.0, 2.5, 2.5, 4.0]
+    rho = ps.spearman(list(zip([1.0, 2.0, 3.0, 4.0, 5.0], [10.0, 20.0, 30.0, 40.0, 50.0])), min_pairs=base.MIN_RANKED)
+    assert rho is not None and abs(rho - 1.0) < 1e-12
+    rho = ps.spearman(list(zip([1.0, 2.0, 3.0, 4.0, 5.0], [5.0, 4.0, 3.0, 2.0, 1.0])), min_pairs=base.MIN_RANKED)
     assert rho is not None and abs(rho + 1.0) < 1e-12
-    assert base.spearman([1.0, 2.0], [1.0, 2.0]) is None
-    assert base.spearman([1.0, 2.0, 3.0, 4.0, 5.0], [7.0] * 5) is None
+    assert ps.spearman([(1.0, 1.0), (2.0, 2.0)], min_pairs=base.MIN_RANKED) is None
+    assert ps.spearman([(float(i), 7.0) for i in range(1, 6)], min_pairs=base.MIN_RANKED) is None
 
 
 def test_the_spread_is_the_cheapest_median_less_the_dearest_and_a_thin_end_is_a_count() -> None:

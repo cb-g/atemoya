@@ -807,6 +807,11 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the statistics the panel studies share: `python/panel_stats.py` holds the forecast line, the
+  least-squares fit, the ranks and rank correlation, winsorising, and the daily-close readers
+  and June-to-June window, which the betas, growth, duration, surprise, broad, baseline and
+  rule studies each carried a copy of or borrowed from a sibling; every study's tables rerun
+  byte for byte. No record on the valuation path moves and there is no new `Failed` string.
 - what the surprise history preceded: `python/surprise_study.py` reads every universe name's
   releases from the consensus history with the holdout aside, and asks whether a beat follows
   a beat and how much of the last surprise the next carries, what the excess return after a

@@ -70,6 +70,7 @@ import numpy as np
 
 import anchor_study as study
 import broad_study as broad
+import panel_stats as ps
 import rule_alpha as alpha
 from broad_study import Row
 
@@ -86,23 +87,6 @@ SHRINK = 0.5                 # its weight on the estimate, the rest on one
 MIN_BETA_GAP = 0.05          # fifths this close in realised beta carry no price of beta to read
 MEASURE = "beta"
 Json = dict[str, object]
-Daily = dict[str, float]     # day "YYYY-MM-DD" -> split-adjusted close
-
-
-def load_daily(path: Path) -> Daily | None:
-    if not path.exists():
-        return None
-    closes = cast(Json, json.loads(path.read_text())).get("closes")
-    if not isinstance(closes, dict):
-        return None
-    return {str(day): float(v) for day, v in cast(dict[str, object], closes).items() if isinstance(v, (int, float)) and v > 0}
-
-
-def daily_returns(closes: Daily, first: str, last: str) -> dict[str, float]:
-    """day -> the return into it, for the days after [first] up to [last], each on the
-    trading day before it."""
-    days = sorted(closes)
-    return {day: closes[day] / closes[before] - 1 for before, day in zip(days, days[1:], strict=False) if first < day <= last}
 
 
 def beta_of(stock: dict[str, float], market_days: list[str], market: dict[str, float]) -> float | None:
@@ -126,13 +110,13 @@ def beta_of(stock: dict[str, float], market_days: list[str], market: dict[str, f
     return SHRINK * float(coefficients[1:].sum()) + (1 - SHRINK)
 
 
-def load_rows(panel: Path, histories: Path, benchmark: Daily) -> tuple[list[Row], int]:
+def load_rows(panel: Path, histories: Path, benchmark: ps.Daily) -> tuple[list[Row], int]:
     """(one row per panel name and June that carries a beta, the count that did not)."""
     market_days = sorted(benchmark)
-    market_all = daily_returns(benchmark, "0000", "9999")
+    market_all = ps.daily_returns(benchmark, "0000", "9999")
     rows: list[Row] = []
     without = 0
-    cache: dict[str, Daily | None] = {}
+    cache: dict[str, ps.Daily | None] = {}
     for line in panel.read_text().splitlines():
         if not line.strip():
             continue
@@ -140,9 +124,9 @@ def load_rows(panel: Path, histories: Path, benchmark: Daily) -> tuple[list[Row]
         ticker, day = str(raw["ticker"]), str(raw["date"])
         year = int(day[:4])
         if ticker not in cache:
-            cache[ticker] = load_daily(histories / f"{ticker}.json")
+            cache[ticker] = ps.load_daily(histories / f"{ticker}.json")
         closes = cache[ticker]
-        beta = None if closes is None else beta_of(daily_returns(closes, f"{year - 1}{day[4:]}", day), market_days, market_all)
+        beta = None if closes is None else beta_of(ps.daily_returns(closes, f"{year - 1}{day[4:]}", day), market_days, market_all)
         if beta is None:
             without += 1
             continue
@@ -266,7 +250,7 @@ def main(argv: list[str]) -> int:
         import rule_panel  # noqa: PLC0415
 
         rule_panel.history_of(BENCHMARK)
-    benchmark = load_daily(histories / f"{BENCHMARK}.json")
+    benchmark = ps.load_daily(histories / f"{BENCHMARK}.json")
     if benchmark is None:
         print(f"no daily history for {BENCHMARK} under {histories}: run python/rule_beta.py --fetch-benchmark", file=sys.stderr)
         return 2

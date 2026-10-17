@@ -36,6 +36,7 @@ from typing import cast
 import anchor_study as study
 import baseline_study
 import broad_study as broad
+import panel_stats as ps
 from broad_study import Row
 
 PANEL = study.REPO_ROOT / "data" / "broad" / "rule" / "panel.jsonl"
@@ -79,7 +80,7 @@ def correlation(rows: list[Row]) -> str:
     for year in sorted({r.year for r in rows}):
         pairs = [(r.values["margin_of_safety"], r.values["earnings_yield"]) for r in rows
                  if r.year == year and "margin_of_safety" in r.values and "earnings_yield" in r.values]
-        rho = baseline_study.spearman([a for a, _ in pairs], [b for _, b in pairs])
+        rho = ps.spearman(pairs, min_pairs=baseline_study.MIN_RANKED)
         if rho is not None:
             per_year.append(rho)
     if not per_year:

@@ -54,8 +54,7 @@ import numpy as np
 
 import anchor_study as study
 import consensus
-import rule_betas as rbs
-import rule_growth as rg
+import panel_stats as ps
 
 OUT = study.REPO_ROOT / "output" / "surprise_study"
 HORIZONS = (63, 126, 252)
@@ -212,22 +211,16 @@ def persistence_block(rows: list[Row]) -> list[str]:
     predictors: tuple[tuple[str, str], ...] = (("the last surprise", "previous"), (f"the mean of the trailing {TRAILING}", "trailing"), ("the mean of every earlier one", "history"))
     for label, attribute in predictors:
         pairs = [(cast(float, getattr(r, attribute)), r.next) for r in rows if getattr(r, attribute) is not None and r.next is not None]
-        pairs, moved = rg.winsorise(pairs)
-        f = rbs.forecast([x for x, _ in pairs], [y for _, y in pairs])
-        rho = rbs.spearman(pairs)
-        lines.append(f"  on {label:<30} " + (f"fewer than {rbs.MIN_PAIRS} pairs" if f is None else
+        pairs, moved = ps.winsorise_pairs(pairs)
+        f = ps.forecast([x for x, _ in pairs], [y for _, y in pairs])
+        rho = ps.spearman(pairs)
+        lines.append(f"  on {label:<30} " + (f"fewer than {ps.MIN_PAIRS} pairs" if f is None else
                      f"{f.pairs} pairs ({moved} winsorised): slope {f.slope + 0.0:+.3f}, intercept {f.intercept + 0.0:+.2f}, R2 {100 * f.r2_fitted + 0.0:.1f}%, rank correlation {('n/a' if rho is None else f'{rho:+.2f}')}"))
     both = [r for r in rows if r.previous is not None and r.history is not None and r.next is not None]
-    if len(both) >= rbs.MIN_PAIRS:
-        xs = np.column_stack([np.ones(len(both)), [cast(float, r.previous) for r in both], [cast(float, r.history) for r in both]])
-        ys = np.asarray([cast(float, r.next) for r in both])
-        lo, hi = np.percentile(ys, (1, 99))
-        ys = np.clip(ys, lo, hi)
-        for j in (1, 2):
-            lo, hi = np.percentile(xs[:, j], (1, 99))
-            xs[:, j] = np.clip(xs[:, j], lo, hi)
-        coef, *_ = np.linalg.lstsq(xs, ys, rcond=None)
-        lines.append(f"  on both together, {len(both)} rows: the last surprise {coef[1] + 0.0:+.3f}, the name's mean of every earlier one {coef[2] + 0.0:+.3f}")
+    columns = [ps.winsorise(np.asarray([cast(float, getattr(r, attribute)) for r in both])).tolist() for attribute in ("previous", "history", "next")]
+    joint = ps.fit([[p, h] for p, h in zip(columns[0], columns[1], strict=True)], columns[2]) if both else None
+    if joint is not None:
+        lines.append(f"  on both together, {len(both)} rows: the last surprise {joint[0][0] + 0.0:+.3f}, the name's mean of every earlier one {joint[0][1] + 0.0:+.3f}")
     lines.append("  the paper's firm-level prediction, on fiscal-year errors a year apart: the error rank a year earlier enters the next year's expectations-based return at +0.033 standardised, "
                  "three and five years at -0.047 and -0.084 (Table C4); the whole regression reaches an adjusted R2 of 3%")
     return lines
@@ -273,10 +266,10 @@ def contemporaneous_block(rows: list[Row]) -> list[str]:
             inside = [s.release.surprise for s in series[i + 1:] if date.fromisoformat(s.release.report_date) <= end]
             if len(inside) >= 3:
                 pairs.append((statistics.fmean(inside), r.excess[252]))
-    pairs, moved = rg.winsorise(pairs)
-    f = rbs.forecast([x for x, _ in pairs], [y for _, y in pairs])
-    rho = rbs.spearman(pairs)
-    lines.append(f"  " + (f"fewer than {rbs.MIN_PAIRS} pairs" if f is None else
+    pairs, moved = ps.winsorise_pairs(pairs)
+    f = ps.forecast([x for x, _ in pairs], [y for _, y in pairs])
+    rho = ps.spearman(pairs)
+    lines.append(f"  " + (f"fewer than {ps.MIN_PAIRS} pairs" if f is None else
                  f"{f.pairs} pairs ({moved} winsorised): slope {f.slope + 0.0:+.4f} per point of surprise, R2 {100 * f.r2_fitted + 0.0:.1f}%, rank correlation {('n/a' if rho is None else f'{rho:+.2f}')}"))
     lines.append("  the paper's: realised returns on the year's forecast errors reach a slope of 0.29 standardised and an R2 of 28% at the firm level (Table B7); a year's surprises moving its return is not in dispute, the question above is whether they are foreseeable")
     return lines

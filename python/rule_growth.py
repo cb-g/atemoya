@@ -63,17 +63,14 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import cast
 
-import numpy as np
-
 import anchor_study as study
 import broad_panel
-import rule_betas as rbs
+import panel_stats as ps
 import rule_panel
 
 OUT = study.REPO_ROOT / "output" / "rule_growth"
 HORIZONS = (1, 3, 5)
 FRAME_TOLERANCE_DAYS = 45       # a fiscal year end moves a week or two; a 53-week year a little more
-WINSOR_PERCENTILES = (1.0, 99.0)
 ESTIMATES = ("fundamental", "historical", "headline", "shadow", "path", "terminal")
 OUTCOMES = ("revenue", "operating_income")
 SOURCES = ("fundamental", "historical", "historical_capped_at_roic")
@@ -215,21 +212,6 @@ def load_records(panel_out: Path, universe_dir: Path) -> list[Record]:
     return out
 
 
-def winsorise(pairs: list[tuple[float, float]]) -> tuple[list[tuple[float, float]], int]:
-    """Both sides held to the pooled percentiles; the count of values moved."""
-    if len(pairs) < rbs.MIN_PAIRS:
-        return pairs, 0
-    xs, ys = np.asarray([x for x, _ in pairs]), np.asarray([y for _, y in pairs])
-    moved = 0
-    out: list[np.ndarray] = []
-    for column in (xs, ys):
-        lo, hi = np.percentile(column, WINSOR_PERCENTILES)
-        clipped = np.clip(column, lo, hi)
-        moved += int((clipped != column).sum())
-        out.append(clipped)
-    return list(zip(out[0].tolist(), out[1].tolist())), moved
-
-
 def pairs_of(records: list[Record], name: str, outcome: str, horizon: int) -> list[tuple[float, float]]:
     return [(e, r.realised[(outcome, horizon)]) for r in records
             if (outcome, horizon) in r.realised and (e := r.estimate(name, horizon)) is not None]
@@ -240,18 +222,18 @@ def forecast_block(records: list[Record], outcome: str, label: str) -> list[str]
              "-" * 110]
     for k in HORIZONS:
         realised = [r.realised[(outcome, k)] for r in records if (outcome, k) in r.realised]
-        if len(realised) < rbs.MIN_PAIRS:
-            lines.append(f"  {k} year(s): {len(realised)} rows with a realised figure, fewer than {rbs.MIN_PAIRS}")
+        if len(realised) < ps.MIN_PAIRS:
+            lines.append(f"  {k} year(s): {len(realised)} rows with a realised figure, fewer than {ps.MIN_PAIRS}")
             continue
         sd = statistics.pstdev(realised)
         lines.append(f"  {k} year(s) ahead: {len(realised)} rows with a realised figure, mean {statistics.fmean(realised) + 0.0:+.3f}, standard deviation {sd:.3f}")
         lines.append(f"  {'estimate':<12} {'pairs':>6} {'moved':>6}   as it is: R2    rmse   fitted: intercept  slope   R2")
         for name in ESTIMATES:
             raw = pairs_of(records, name, outcome, k)
-            pairs, moved = winsorise(raw)
-            f = rbs.forecast([x for x, _ in pairs], [y for _, y in pairs])
+            pairs, moved = ps.winsorise_pairs(raw)
+            f = ps.forecast([x for x, _ in pairs], [y for _, y in pairs])
             if f is None:
-                lines.append(f"  {name:<12} {len(pairs):>6} {moved:>6}   fewer than {rbs.MIN_PAIRS} pairs or no variation")
+                lines.append(f"  {name:<12} {len(pairs):>6} {moved:>6}   fewer than {ps.MIN_PAIRS} pairs or no variation")
                 continue
             lines.append(f"  {name:<12} {f.pairs:>6} {moved:>6}   {100 * f.r2_as_is + 0.0:>13.1f}%  {f.rmse_as_is:.3f}   {f.intercept + 0.0:>17.3f}  {f.slope + 0.0:>5.2f}  {100 * f.r2_fitted + 0.0:.1f}%")
         lines.append("")
@@ -356,9 +338,9 @@ def persistence_block(records: list[Record]) -> list[str]:
             a, b = prior.estimate(name, 1), r.estimate(name, 1)
             if a is not None and b is not None:
                 pairs.append((a, b))
-        pairs, moved = winsorise(pairs)
-        f = rbs.forecast([x for x, _ in pairs], [y for _, y in pairs])
-        lines.append(f"  {name:<12} " + (f"fewer than {rbs.MIN_PAIRS} pairs" if f is None else
+        pairs, moved = ps.winsorise_pairs(pairs)
+        f = ps.forecast([x for x, _ in pairs], [y for _, y in pairs])
+        lines.append(f"  {name:<12} " + (f"fewer than {ps.MIN_PAIRS} pairs" if f is None else
                      f"{f.pairs} pairs ({moved} values winsorised), slope {f.slope + 0.0:.2f}, intercept {f.intercept + 0.0:+.3f}, R2 {100 * f.r2_fitted + 0.0:.1f}%"))
     for outcome in OUTCOMES:
         pairs = []
@@ -366,10 +348,10 @@ def persistence_block(records: list[Record]) -> list[str]:
             prior = by_key.get((r.ticker, r.year - 1))
             if prior is not None and (outcome, 1) in prior.realised and (outcome, 1) in r.realised:
                 pairs.append((prior.realised[(outcome, 1)], r.realised[(outcome, 1)]))
-        pairs, moved = winsorise(pairs)
-        f = rbs.forecast([x for x, _ in pairs], [y for _, y in pairs])
+        pairs, moved = ps.winsorise_pairs(pairs)
+        f = ps.forecast([x for x, _ in pairs], [y for _, y in pairs])
         lines.append(f"  realised {outcome.replace('_', ' ')} growth, one year on the year before: "
-                     + (f"fewer than {rbs.MIN_PAIRS} pairs" if f is None else
+                     + (f"fewer than {ps.MIN_PAIRS} pairs" if f is None else
                         f"{f.pairs} pairs ({moved} values winsorised), slope {f.slope + 0.0:.2f}, intercept {f.intercept + 0.0:+.3f}, R2 {100 * f.r2_fitted + 0.0:.1f}%"))
     lines.append("  the historical estimate is a growth rate over the record's fiscal periods, so one June's shares most of its span with the next; "
                  "the realised rows are the year-on-year persistence the paper's 0.24 for growth measures (p.7); the model's fade keeps 0.78 of the gap to terminal each year")

@@ -60,6 +60,7 @@ from pathlib import Path
 from typing import cast
 
 import anchor_study as study
+import panel_stats as ps
 from anchor_study import HORIZONS, MIN_CELL, Record
 
 PIT = study.REPO_ROOT / "data" / "pit"
@@ -179,7 +180,7 @@ def shadow_section(valued: list[Record], shadow: dict[tuple[str, str], float], m
     moved = sum(1 for r in rows if q_shadow.get((r.ticker, r.as_of)) != q_head.get((r.ticker, r.as_of)))
     for d in sorted({r.as_of for r in rows}):
         pairs = [(shadow[(r.ticker, d)], cast(float, r.margin_of_safety)) for r in rows if r.as_of == d]
-        rho = spearman([a for a, _ in pairs], [b for _, b in pairs])
+        rho = ps.spearman(pairs, min_pairs=MIN_RANKED)
         if rho is not None:
             per_date.append(rho)
     if per_date:
@@ -298,7 +299,7 @@ def expected_return_section(records: list[Record], expected: dict[tuple[str, str
         per_date: list[float] = []
         for d in dates:
             pairs = [(expected[(r.ticker, d)], x) for r in rows if r.as_of == d and (x := other.get((r.ticker, d))) is not None]
-            rho = spearman([a for a, _ in pairs], [b for _, b in pairs])
+            rho = ps.spearman(pairs, min_pairs=MIN_RANKED)
             if rho is not None:
                 per_date.append(rho)
         if per_date:
@@ -320,33 +321,6 @@ def quintiles_within_date(rows: list[tuple[Record, float]]) -> dict[tuple[str, s
         for k, (r, _) in enumerate(ordered):
             out[(r.ticker, r.as_of)] = min(5, 1 + (k * 5) // n)
     return out
-
-
-def ranks(values: list[float]) -> list[float]:
-    """Average ranks, ties sharing the mean of the places they span."""
-    order = sorted(range(len(values)), key=lambda i: values[i])
-    out = [0.0] * len(values)
-    i = 0
-    while i < len(order):
-        j = i
-        while j + 1 < len(order) and values[order[j + 1]] == values[order[i]]:
-            j += 1
-        for k in range(i, j + 1):
-            out[order[k]] = (i + j) / 2 + 1
-        i = j + 1
-    return out
-
-
-def spearman(xs: list[float], ys: list[float]) -> float | None:
-    if len(xs) < MIN_RANKED:
-        return None
-    rx, ry = ranks(xs), ranks(ys)
-    mx, my = statistics.fmean(rx), statistics.fmean(ry)
-    sxx = sum((a - mx) ** 2 for a in rx)
-    syy = sum((b - my) ** 2 for b in ry)
-    if sxx == 0 or syy == 0:
-        return None
-    return sum((a - mx) * (b - my) for a, b in zip(rx, ry)) / (sxx * syy) ** 0.5
 
 
 def quintile_block(title: str, rows: list[Record], q: dict[tuple[str, str], int]) -> list[str]:
@@ -406,7 +380,7 @@ def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_
         for d in dates:
             pairs = [(cast(float, r.margin_of_safety), cast(float, measures[(r.ticker, d)].get(name)))
                      for r in valued if r.as_of == d and measures[(r.ticker, d)].get(name) is not None]
-            rho = spearman([a for a, _ in pairs], [b for _, b in pairs])
+            rho = ps.spearman(pairs, min_pairs=MIN_RANKED)
             if rho is not None:
                 per_date.append(rho)
         lines.append(f"  {name}: no date ranks {MIN_RANKED} rows" if not per_date else

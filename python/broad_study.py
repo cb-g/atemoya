@@ -57,6 +57,7 @@ from typing import cast
 import numpy as np
 
 import anchor_study as study
+import panel_stats as ps
 
 PANEL = study.REPO_ROOT / "data" / "broad" / "panel.jsonl"
 OUT = study.REPO_ROOT / "output" / "broad_study"
@@ -168,11 +169,6 @@ def measures_of(raw: Json) -> dict[str, float]:
     return out
 
 
-def winsorise(column: np.ndarray, lower: float = 1.0, upper: float = 99.0) -> np.ndarray:
-    lo, hi = np.percentile(column, [lower, upper])
-    return np.clip(column, lo, hi)
-
-
 def peer_gaps(raws: list[Json], regressors: tuple[str, ...] = REGRESSORS) -> dict[int, float]:
     """index in [raws] -> fitted market value over the market value, less one, from one
     year's cross-section; rows lacking an item are left out of the fit and get no gap."""
@@ -185,8 +181,8 @@ def peer_gaps(raws: list[Json], regressors: tuple[str, ...] = REGRESSORS) -> dic
         usable.append((i, cap, assets, [cast(float, x) / assets for x in items] + [1.0 / assets]))
     if len(usable) < MIN_YEAR:
         return {}
-    y = winsorise(np.array([cap / assets for _, cap, assets, _ in usable]))
-    x = np.column_stack([np.ones(len(usable))] + [winsorise(np.array([row[3][j] for row in usable])) for j in range(len(regressors) + 1)])
+    y = ps.winsorise(np.array([cap / assets for _, cap, assets, _ in usable]))
+    x = np.column_stack([np.ones(len(usable))] + [ps.winsorise(np.array([row[3][j] for row in usable])) for j in range(len(regressors) + 1)])
     beta, *_ = np.linalg.lstsq(x, y, rcond=None)
     fitted = x @ beta
     out: dict[int, float] = {}

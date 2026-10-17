@@ -59,9 +59,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
-import numpy as np
-
 import anchor_study as study
+import panel_stats as ps
 import rule_beta as rb
 import rule_betas as rbs
 import rule_panel
@@ -226,22 +225,22 @@ def attach_betas(records: list[Record], betas_path: Path) -> None:
         r.beta_ahead = study.as_float(cast(Json, b.get("ahead", {})).get("1"))
 
 
-def volatility(closes: rb.Daily, first: str, last: str) -> float | None:
-    returns = list(rb.daily_returns(closes, first, last).values())
+def volatility(closes: ps.Daily, first: str, last: str) -> float | None:
+    returns = list(ps.daily_returns(closes, first, last).values())
     return statistics.pstdev(returns) if len(returns) >= rbs.MIN_DAYS else None
 
 
 def attach_volatility(records: list[Record], histories: Path) -> None:
-    cache: dict[str, rb.Daily | None] = {}
+    cache: dict[str, ps.Daily | None] = {}
     for r in records:
         if r.ticker not in cache:
-            cache[r.ticker] = rb.load_daily(histories / f"{r.ticker}.json")
+            cache[r.ticker] = ps.load_daily(histories / f"{r.ticker}.json")
         closes = cache[r.ticker]
         if closes is None:
             continue
         day = f"{r.year}-06-30"
-        r.vol = volatility(closes, *rbs.window(r.year, day, 0))
-        r.vol_ahead = volatility(closes, *rbs.window(r.year, day, 1))
+        r.vol = volatility(closes, *ps.window(r.year, day, 0))
+        r.vol_ahead = volatility(closes, *ps.window(r.year, day, 1))
 
 
 def attach_elasticities(records: list[Record], rates_out: Path, shift: float) -> None:
@@ -303,11 +302,11 @@ def within_date_correlation(records: list[Record], a: str, b: str) -> tuple[floa
     pooled: list[tuple[float, float]] = []
     for year in sorted({r.year for r in records}):
         pairs = [(cast(float, getattr(r, a)), cast(float, getattr(r, b))) for r in records if r.year == year and getattr(r, a) is not None and getattr(r, b) is not None]
-        rho = rbs.spearman(pairs)
+        rho = ps.spearman(pairs)
         if rho is not None:
             per_date.append(rho)
         pooled += pairs
-    return (statistics.median(per_date) if per_date else None), len(per_date), rbs.spearman(pooled)
+    return (statistics.median(per_date) if per_date else None), len(per_date), ps.spearman(pooled)
 
 
 def correlations_block(records: list[Record]) -> list[str]:
@@ -326,25 +325,6 @@ def correlations_block(records: list[Record]) -> list[str]:
     return lines
 
 
-def fit(xs: list[list[float]], ys: list[float]) -> tuple[list[float], float] | None:
-    """Least squares with an intercept: the coefficients after it and the adjusted R-squared; None
-    under MIN_PAIRS rows."""
-    n = len(ys)
-    if n < rbs.MIN_PAIRS or n != len(xs):
-        return None
-    x = np.column_stack([np.ones(n)] + [np.asarray(c, dtype=float) for c in zip(*xs, strict=True)])
-    y = np.asarray(ys, dtype=float)
-    coef, *_ = np.linalg.lstsq(x, y, rcond=None)
-    residual = y - x @ coef
-    sst = float(((y - y.mean()) ** 2).sum())
-    if sst <= 0:
-        return None
-    k = x.shape[1] - 1
-    r2 = 1 - float((residual ** 2).sum()) / sst
-    adjusted = 1 - (1 - r2) * (n - 1) / (n - k - 1) if n - k - 1 > 0 else r2
-    return [float(c) for c in coef[1:]], adjusted
-
-
 def table5_block(records: list[Record]) -> list[str]:
     """The paper's Table 5 on the panel: next year's beta on relative duration, alone and beside this
     year's beta; the same for the standard deviation of daily returns."""
@@ -352,16 +332,16 @@ def table5_block(records: list[Record]) -> list[str]:
     for outcome, now, label in (("beta_ahead", "beta", "beta"), ("vol_ahead", "vol", "daily standard deviation")):
         for name in MEASURES:
             rows = [r for r in records if name in r.relative and getattr(r, outcome) is not None and getattr(r, now) is not None]
-            pooled1 = fit([[r.relative[name]] for r in rows], [cast(float, getattr(r, outcome)) for r in rows])
-            pooled2 = fit([[r.relative[name], cast(float, getattr(r, now))] for r in rows], [cast(float, getattr(r, outcome)) for r in rows])
+            pooled1 = ps.fit([[r.relative[name]] for r in rows], [cast(float, getattr(r, outcome)) for r in rows])
+            pooled2 = ps.fit([[r.relative[name], cast(float, getattr(r, now))] for r in rows], [cast(float, getattr(r, outcome)) for r in rows])
             yearly: list[float] = []
             for year in sorted({r.year for r in rows}):
                 sub = [r for r in rows if r.year == year]
-                f = fit([[r.relative[name], cast(float, getattr(r, now))] for r in sub], [cast(float, getattr(r, outcome)) for r in sub])
+                f = ps.fit([[r.relative[name], cast(float, getattr(r, now))] for r in sub], [cast(float, getattr(r, outcome)) for r in sub])
                 if f is not None:
                     yearly.append(f[0][0])
             if pooled1 is None or pooled2 is None:
-                lines.append(f"  {label}, {name}: fewer than {rbs.MIN_PAIRS} rows")
+                lines.append(f"  {label}, {name}: fewer than {ps.MIN_PAIRS} rows")
                 continue
             sd_x = statistics.pstdev([r.relative[name] for r in rows])
             sd_y = statistics.pstdev([cast(float, getattr(r, outcome)) for r in rows])
@@ -388,7 +368,7 @@ def elasticity_block(records: list[Record]) -> list[str]:
             continue
         measured = statistics.median([-cast(float, r.elasticity) for r in rows])
         analytic = statistics.median([cast(float, r.modified) for r in rows])
-        rho = rbs.spearman([(cast(float, r.modified), -cast(float, r.elasticity)) for r in rows])
+        rho = ps.spearman([(cast(float, r.modified), -cast(float, r.elasticity)) for r in rows])
         lines.append(f"  {year:<6} {len(rows):>5}   {100 * measured:>+15.1f}%   {100 * analytic:>+23.1f}%   {measured / analytic:>6.2f}   {('n/a' if rho is None else f'{rho:+.2f}'):>16}")
     lines.append("  below the kink the model holds terminal growth to the risk-free rate, so a rate move changes the discount rate and the terminal growth together and the "
                  "fair value barely moves; above it the discount rate moves alone and the measured fall is the analytic duration times the share of a risk-free move that "
