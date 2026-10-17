@@ -684,6 +684,106 @@ universe, for taking beta out of the cost of equity. Four limits keep it from sa
   nothing here says whether a fair value built on another beta would have ranked returns
   any better.
 
+### Betas on the rule panel: which forecasts, and the fair values under each
+
+    uv run python/rule_betas.py [--forecast-only]  # -> output/rule_betas/tables.txt, betas.jsonl; about four minutes
+
+The beta study above left two questions open: which beta, if any, belongs in a cost of
+equity, and whether one beta belongs on every projection year. Two papers read for the tool
+bear on them. Levi and Welch, "Best Practice for Cost-of-Capital Estimates", Journal of
+Financial and Quantitative Analysis 52(2), 2017, doi:10.1017/S0022109017000114, ask which
+historical beta best forecasts next year's realised beta: a year of daily returns,
+Vasicek's shrinkage toward the cross-sectional mean, then a second shrinkage of about a
+quarter toward a target near one for large firms reaches an R-squared near a half; an
+industry beta in place of the stock's own explains four per cent; and the slope of a future
+beta on today's falls from 0.73 one year ahead to 0.52 at five and 0.39 at ten. Keloharju,
+Linnainmaa and Nyberg, "Long-Term Discount Rates Do Not Vary Across Firms", NBER Working
+Paper 25579, February 2019, doi:10.3386/w25579, find the beta gap of a sort half gone after
+five years and recommend about the same discount rate for every stock.
+
+**The forecast.** Each June every name in the rule panel with a year of daily closes gets
+six estimates: `ols`, the plain slope on SPY over the year to the date (220 days at least,
+winsorised at −3 and 5); `vck`, that slope weighted by the date's cross-sectional variance
+of slopes against its own squared standard error, the rest on the cross-sectional mean;
+`lw`, three quarters of `vck` and a quarter on one, the second paper's recipe for a large
+firm; `fp`, the beta study's estimate (five lagged market terms, the slopes summed, halved
+toward one); `industry`, the mean `ols` of the other names in the same two-digit SEC
+industry code, five at least; and `one`. The target is the name's `ols` over the twelve
+months after. Each estimate is scored as it is (one less the squared errors over the
+squared deviations from the targets' mean, and the root mean squared error) and fitted.
+
+**What it found (2026-10-17), descriptively.** 5,108 names and Junes on 734 filers, 2013 to
+2025; the targets' standard deviation, the error of knowing nothing, is 0.436.
+
+| estimate | as it is: R² | rmse | fitted: intercept | slope | R² |
+|---|---|---|---|---|---|
+| one | −1.1% | 0.438 | 1.05 | 0.00 | 0.0% |
+| ols | 39.1% | 0.340 | 0.26 | 0.74 | 44.4% |
+| vck | 46.8% | 0.318 | 0.12 | 0.89 | 47.6% |
+| lw | 46.3% | 0.320 | −0.17 | 1.18 | 47.6% |
+| fp | 28.6% | 0.368 | 0.07 | 0.95 | 28.8% |
+| industry (4,221 pairs) | 18.8% | 0.398 | 0.12 | 0.88 | 19.2% |
+
+- **A name's own year of daily slopes forecasts its next year's beta about as the second
+  paper finds**, an R-squared near a half once shrunk once; a constant forecasts nothing.
+- **The second shrinkage adds nothing on these names.** Their mean beta is already near one
+  (1.05), so a quarter toward one is a quarter toward the mean twice; the fitted slope on
+  `vck` is 0.89, so a tenth would be the right second shrink here, not a quarter, and `lw`'s
+  fitted slope of 1.18 says it over-shrinks.
+- **The beta study's own estimate forecasts worse** than the plain slope: the lagged terms
+  add noise on names that trade with the market, and halving toward one is too much. That
+  study's sort stands, the fifths being ranks; this says what not to put in a cost of equity.
+- **An industry mean is far behind the name's own**, though better here than the paper's four
+  per cent, these codes being coarse and the names large.
+- **The horizon.** The slope of the plain slope one to five years ahead on today's `vck`:
+  0.89, 0.83, 0.85, 0.77, 0.75; its R-squared 48%, 39%, 35%, 27%, 24%. The paper's 0.73,
+  0.66, 0.61, 0.52 at one to five years. Today's beta says half as much about the beta five
+  years out as about next year's, and more than half of the deviation from the mean is still
+  there, where the fifths followed above lost more than half of their gap.
+
+**The fair values.** The binary is rerun on the rule panel's point-in-time records with each
+name's industry set to its own ticker and a beta table of the date carrying that name's
+beta, so the valuation reads it as it reads an industry table and the record says so
+(`beta_source` reads the table). Four readings per date: `one`, `lw`, `fp`, and `lw_faded`,
+one plus half of `lw`'s deviation from it, the third paper's five-year figure put on a
+seven-year projection and its terminal value. Across the thirteen dates:
+
+| reading | rank correlation of margins with `one` | median fair value against `one`'s | status changes |
+|---|---|---|---|
+| lw | 0.86 to 0.96 | −9.5% to +7.0% | 42 of about 3,000 |
+| fp | 0.88 to 0.96 | −5.7% to +4.0% | 36 |
+| lw_faded | 0.96 to 0.99 | −4.8% to +4.0% | 20 |
+
+The rank correlation of the margin with `lw` beta within a date, median over the dates:
+−0.12 under `one`, −0.40 under `lw`, −0.30 under `fp`, −0.26 under `lw_faded`. At a flat
+rate the high-beta names already read a little dear; charging them for beta makes them read
+dearer still. The sort, cheapest fifth less dearest on the next twelve months over SPY:
+
+| reading | before 2022, pooled | from 2022, pooled | alpha, equal (t) | alpha, capped value (t) |
+|---|---|---|---|---|
+| one | +0.015 | −0.098 | −0.07 (−0.26) | −0.08 (−0.27) |
+| lw | +0.017 | −0.120 | −0.03 (−0.09) | −0.13 (−0.40) |
+| fp | +0.016 | −0.100 | −0.03 (−0.11) | −0.03 (−0.10) |
+| lw_faded | +0.018 | −0.110 | −0.06 (−0.21) | −0.06 (−0.19) |
+
+- **No beta sorts returns better than none.** The spreads are nothing before 2022 and
+  negative since under every reading, the alphas within half a standard error of zero.
+  Whatever beta does to a fair value, it does not move the names the market later paid
+  into the cheap fifth.
+- **Betas move fair values by a few per cent at the median** and reorder the ranks
+  moderately; a faded beta moves them half as far, as it must.
+
+What this does and does not say. The market paid for beta on these names (the study
+above), a name's beta is forecastable from its own year of daily returns, and a beta in the
+cost of equity does not improve what the fair value sorts. So the tool's data neither
+condemn a beta in the cost of equity nor reward one. Three limits: the forecast is pooled
+over the largest five hundred on one market and its mean and dispersion are theirs; an
+industry here is a mean of own betas, not an industry portfolio's beta; and a faded beta
+is put on as one number, the deviation halved, where the question is a beta that falls
+year by year through the projection, which the model does not take. Whether to put a beta
+back into the rule panel, and whether to fade it, stay open decisions; nothing here moves
+a record or a parameter.
+
 ### The rule panel under shifted rates
 
     uv run python/rule_rates.py                  # -> output/rule_rates/tables.txt, about six minutes

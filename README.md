@@ -167,7 +167,7 @@ Everything below hangs off the records and never moves them.
 | anchor and baseline studies | what the records' judgments preceded against SPY, beside plain cheapness | `uv run python/anchor_study.py`, `baseline_study.py` |
 | insider study | what routine and opportunistic insider trades preceded, by quarter-end since 2024 | `uv run python/insider_history.py` once, then `insider_study.py` |
 | broad panel | every SEC filer with a ticker, each June since 2010: cheapness, quality, a peer-implied gap | `uv run python/broad_panel.py --retry-missing`, `broad_study.py` |
-| rule panel | the tool's own DCF on the five hundred largest filers each June since 2013, chosen by rule | `uv run python/rule_panel.py`, `rule_study.py`, `rule_alpha.py`, `rule_beta.py`, `rule_rates.py` |
+| rule panel | the tool's own DCF on the five hundred largest filers each June since 2013, chosen by rule | `uv run python/rule_panel.py`, `rule_study.py`, `rule_alpha.py`, `rule_beta.py`, `rule_betas.py`, `rule_rates.py` |
 
 ## Rules
 

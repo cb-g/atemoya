@@ -807,6 +807,17 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- betas on the rule panel: `python/rule_betas.py` gives every name in the rule panel six
+  betas from its year of daily returns and scores each at forecasting the next year's,
+  after Levi and Welch, "Best Practice for Cost-of-Capital Estimates", Journal of
+  Financial and Quantitative Analysis 52(2), 2017, doi:10.1017/S0022109017000114; then
+  reruns the binary on the panel's point-in-time records under four readings of beta, the
+  name's own shrunk beta, the beta study's, that beta with its deviation from one halved
+  after Keloharju, Linnainmaa and Nyberg, "Long-Term Discount Rates Do Not Vary Across
+  Firms", NBER Working Paper 25579, February 2019, doi:10.3386/w25579, and one, each
+  name's industry set to its ticker and a beta table of the date keyed the same way, and
+  reads the ranks, the fair values and the sort under each. A side tool: no record on the
+  valuation path moves and there is no new `Failed` string.
 - `growth_without_reinvestment` (84): a scope code for the names whose fundamental growth
   estimate reads far below the revenue history because the business grows with little
   reinvestment, on six entries the user confirmed; the headline stays on the fundamental

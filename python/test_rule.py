@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import rule_panel as rp
 import rule_study as rs
@@ -284,3 +285,71 @@ def test_the_fifths_are_followed_into_later_event_years_on_the_same_formation(tm
     assert lines[2] == "  at formation: beta 0.75 in the lowest fifth, 1.25 in the highest, gap 0.50"
     assert lines[3].startswith("  year 1: 24 months; realised beta 0.50 lowest, 1.50 highest, gap 1.00")
     assert lines[4].startswith("  year 2: fewer than")                                  # twelve months is under the floor
+
+
+def test_the_beta_estimates_shrink_as_the_papers_have_them_and_the_forecast_is_scored_as_it_is_and_fitted() -> None:
+    import rule_betas as rbs
+
+    days = [f"2020-{m:02d}-{d:02d}" for m in range(1, 13) for d in range(1, 29)]           # 336 invented days
+    market = {day: 0.01 * (((i * 7) % 11) - 5) / 5 for i, day in enumerate(days)}
+    exact = rbs.ols_of({day: 1.5 * market[day] for day in days}, market)
+    assert exact is not None and abs(exact.beta - 1.5) < 1e-9 and exact.se < 1e-9 and exact.days == 336
+    noisy = rbs.ols_of({day: 1.5 * market[day] + (0.002 if i % 2 else -0.002) for i, day in enumerate(days)}, market)
+    assert noisy is not None and abs(noisy.beta - 1.5) < 0.05 and noisy.se > 0
+    assert rbs.ols_of({day: 2 * market[day] for day in days[:100]}, market) is None          # under the floor
+    assert rbs.ols_of({day: 9.0 * market[day] for day in days}, market).beta == 5.0           # pyright: ignore[reportOptionalMemberAccess]  # winsorised
+    assert abs(rbs.vasicek(rbs.Ols(beta=1.5, se=0.0, days=300), mean=1.0, sd=0.5) - 1.5) < 1e-12   # a precise slope keeps itself
+    assert abs(rbs.vasicek(rbs.Ols(beta=1.5, se=0.5, days=300), mean=1.0, sd=0.0) - 1.0) < 1e-12   # no dispersion to hold it: the mean
+    assert abs(rbs.vasicek(rbs.Ols(beta=1.5, se=0.3, days=300), mean=1.0, sd=0.3) - 1.25) < 1e-12  # equal variances, halfway
+    assert abs(rbs.levi_welch(1.4) - 1.3) < 1e-12 and abs(rbs.faded(1.4) - 1.2) < 1e-12
+    codes: dict[str, int | None] = {f"T{i}": 3570 + i for i in range(6)} | {"U0": 2800, "U1": 2834, "X": None}
+    by = rbs.industry_betas({f"T{i}": 1.0 + 0.1 * i for i in range(6)} | {"U0": 0.5, "U1": 0.7, "X": 2.0}, codes)
+    assert abs(by["T0"] - 1.3) < 1e-12 and "U0" not in by and "X" not in by                 # five others; two are too few; no code
+    f = rbs.forecast([1.0 + 0.01 * i for i in range(40)], [1.0 + 0.01 * i for i in range(40)])
+    assert f is not None and abs(f.r2_as_is - 1) < 1e-9 and f.rmse_as_is < 1e-9 and abs(f.slope - 1) < 1e-9 and abs(f.intercept) < 1e-9
+    g = rbs.forecast([1.0] * 40, [1.0 + 0.01 * i for i in range(40)])
+    assert g is not None and g.slope == 0.0 and abs(g.r2_fitted) < 1e-9 and g.r2_as_is < 0            # a constant below the mean explains nothing
+    assert rbs.forecast([1.0] * 10, [1.0] * 10) is None
+    assert rbs.window(2020, "2020-06-30", 0) == ("2019-06-30", "2020-06-30") and rbs.window(2020, "2020-06-30", 3) == ("2022-06-30", "2023-06-30")
+    assert rbs.spearman([(float(i), float(-i)) for i in range(12)]) == -1.0 and rbs.spearman([(1.0, 2.0)] * 12) is None
+
+
+def test_the_betas_of_the_panel_carry_the_year_ahead_and_the_reading_is_written_as_an_industry_table(tmp_path: Path) -> None:
+    import rule_beta as rb
+    import rule_betas as rbs
+
+    betas = {1: 0.5, 2: 0.75, 3: 1.0, 4: 1.25, 5: 1.5}
+    panel, _prices, _rate = _alpha_fixture(tmp_path, {k: (0.0, b) for k, b in betas.items()})
+    histories = _daily_fixture(tmp_path, betas)
+    universe_dir = tmp_path / "universe"
+    universe_dir.mkdir()
+    universe_dir.joinpath("2020-06-30.json").write_text(json.dumps([{"ticker": f"N{i:02d}", "sic": 7372 if i < 40 else 2800} for i in range(50)]))
+    benchmark = rb.load_daily(histories / "SPY.json")
+    assert benchmark is not None
+    rows, without = rbs.betas_of(panel, histories, benchmark, universe_dir)
+    assert len(rows) == 100 and without == 1
+    low, high = (next(r for r in rows if r.ticker == t and r.year == 2020) for t in ("N00", "N49"))
+    mean = sum(r.ols.beta for r in rows if r.year == 2020) / 50
+    assert low.ols.beta < low.vck < mean < high.vck < high.ols.beta                              # Vasicek pulls each slope toward the date's mean
+    assert low.vck < low.lw < 1.0 and high.vck < high.lw < 1.0                                   # the second shrinkage toward one; the fixture's slopes all sit below it
+    assert abs(cast(float, low.fp) - 0.75) < 1e-9 and abs(cast(float, high.fp) - 1.25) < 1e-9  # the beta study's estimate, unchanged
+    assert low.industry is not None and high.industry is not None and low.industry < high.industry   # forty names in one code, the highest fifth alone in the other
+    assert abs(high.industry - high.ols.beta) < 1e-9                                                # the other nine in its code carry the same slope
+    assert 1 in low.ahead and abs(low.ahead[1] - low.ols.beta) < 0.01                        # the fixture repeats itself, nearly, a year on
+    assert all(r.ahead == {} for r in rows if r.year == 2021)                                 # no bars after June 2021
+    assert all(r.industry is None for r in rows if r.year == 2021)                            # no codes for the date
+    pit = tmp_path / "pit"
+    pit.mkdir()
+    (pit / "reference").mkdir()
+    (pit / "reference" / "industry_betas.json").write_text("{}")
+    (pit / "reference" / "params.json").write_text("{\"kept\": true}")
+    (pit / "N00.json").write_text(json.dumps({"ticker": "N00", "industry": None, "price": 1.0}))
+    (pit / "N01.json").write_text(json.dumps({"ticker": "N01", "industry": None}))
+    records, reference = rbs.reading_inputs(pit, tmp_path / "copy", "2020-06-30", {"N00": 0.8}, "lw")
+    assert json.loads((records / "N00.json").read_text()) == {"ticker": "N00", "industry": "N00", "price": 1.0}
+    assert json.loads((records / "N01.json").read_text())["industry"] is None                 # no beta, no key: the valuation keeps one
+    table = json.loads((reference / "industry_betas.json").read_text())
+    assert table["values"] == {"N00": 0.8} and table["as_of"] == "2020-06-30" and "lw" in table["source"]
+    assert json.loads((reference / "params.json").read_text()) == {"kept": True} and (pit / "reference" / "industry_betas.json").read_text() == "{}"
+    assert rbs.reading_beta(low, "one") == 1.0 and rbs.reading_beta(low, "lw_faded") == rbs.faded(low.lw)
+    assert rbs.main(["--panel", str(tmp_path / "none.jsonl"), "--out", str(tmp_path / "out")]) == 2
