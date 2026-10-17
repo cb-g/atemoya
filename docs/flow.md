@@ -807,6 +807,12 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- recency (84): `recency` on every record with filed statements, from the same facts: the
+  latest quarter's revenue against a year earlier, the trailing four quarters against the
+  annual base the models read, the quarters filed since it, and `base_stale` beyond the
+  declared divergence (`recency_divergence`, a new parameter read by the fetcher and no
+  model); `recency_reason` where there is none. The summary lists the stale names. A
+  readout: no model reads it, no record's status or value moves, no new `Failed` string.
 - a gate per rate source (84): a source whose cadence is slower than the file's forty-five
   days may declare `max_age_days` of its own in `reference/rate_sources.json`; the refresher
   and the point-in-time path copy it onto the curve and the valuation reads it in place of

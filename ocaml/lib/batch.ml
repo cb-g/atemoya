@@ -392,6 +392,23 @@ let summary ?universe ?definitions ?stability_line ?run_dir (vs : valuation list
         (List.length named)
         (match named with [] -> "none" | _ -> String.concat ", " (List.map (fun (t, r) -> Printf.sprintf "%s +%.0f%%" t (r *. 100.)) named))
     end;
+    (* (84) Recency: the names whose trailing four quarters have left the annual base the
+       models read behind, beyond the declared divergence either way; a description of how
+       far behind the base is, never a change to it. *)
+    let stale =
+      List.filter_map
+        (fun (v : valuation) ->
+          match v.recency with
+          | Some (r : recency) when r.base_stale -> Option.map (fun x -> (v.ticker, x)) r.trailing_over_annual
+          | _ -> None)
+        vs
+      |> List.sort (fun (_, a) (_, b) -> compare (abs_float b) (abs_float a))
+    in
+    let with_recency = List.length (List.filter (fun (v : valuation) -> Option.is_some v.recency) vs) in
+    if with_recency > 0 then
+      Printf.bprintf b "annual base left behind by the trailing four quarters, beyond the declared divergence, across %d names with the block (%d): %s\n"
+        with_recency (List.length stale)
+        (match stale with [] -> "none" | _ -> String.concat ", " (List.map (fun (t, x) -> Printf.sprintf "%s %+.0f%%" t (x *. 100.)) stale));
     (* (76) The runway readout, one line per Unprofitable record: a state, never a value. *)
     let with_runway = List.filter (fun (v : valuation) -> Option.is_some v.runway || Option.is_some v.runway_reason) vs in
     if with_runway <> [] then begin

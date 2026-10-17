@@ -1686,6 +1686,118 @@ class ReitInputs:
 
 
 @dataclass
+class RecencyQuarter:
+    """Original type: recency_quarter = { ... }
+    """
+
+    period_end: str
+    revenue: float
+    derived: bool = field(default_factory=lambda: False)
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'RecencyQuarter':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('RecencyQuarter', 'period_end'),
+                revenue=_atd_read_float(x['revenue']) if 'revenue' in x else _atd_missing_json_field('RecencyQuarter', 'revenue'),
+                derived=_atd_read_bool(x['derived']) if 'derived' in x else False,
+            )
+        else:
+            _atd_bad_json('RecencyQuarter', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['revenue'] = _atd_write_float(self.revenue)
+        res['derived'] = _atd_write_bool(self.derived)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'RecencyQuarter':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class Recency:
+    """Original type: recency = { ... }
+    """
+
+    tag: str
+    latest_quarter_end: str
+    latest_quarter_revenue: float
+    quarters: List[RecencyQuarter]
+    annual_base_end: str
+    annual_base_revenue: float
+    quarters_since_base: int
+    base_stale: bool
+    year_earlier_quarter_revenue: Optional[float] = None
+    quarter_yoy: Optional[float] = None
+    trailing_four_quarters_revenue: Optional[float] = None
+    trailing_reason: Optional[str] = None
+    trailing_over_annual: Optional[float] = None
+    divergence: Optional[float] = None
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Recency':
+        if isinstance(x, dict):
+            return cls(
+                tag=_atd_read_string(x['tag']) if 'tag' in x else _atd_missing_json_field('Recency', 'tag'),
+                latest_quarter_end=_atd_read_string(x['latest_quarter_end']) if 'latest_quarter_end' in x else _atd_missing_json_field('Recency', 'latest_quarter_end'),
+                latest_quarter_revenue=_atd_read_float(x['latest_quarter_revenue']) if 'latest_quarter_revenue' in x else _atd_missing_json_field('Recency', 'latest_quarter_revenue'),
+                quarters=_atd_read_list(RecencyQuarter.from_json)(x['quarters']) if 'quarters' in x else _atd_missing_json_field('Recency', 'quarters'),
+                annual_base_end=_atd_read_string(x['annual_base_end']) if 'annual_base_end' in x else _atd_missing_json_field('Recency', 'annual_base_end'),
+                annual_base_revenue=_atd_read_float(x['annual_base_revenue']) if 'annual_base_revenue' in x else _atd_missing_json_field('Recency', 'annual_base_revenue'),
+                quarters_since_base=_atd_read_int(x['quarters_since_base']) if 'quarters_since_base' in x else _atd_missing_json_field('Recency', 'quarters_since_base'),
+                base_stale=_atd_read_bool(x['base_stale']) if 'base_stale' in x else _atd_missing_json_field('Recency', 'base_stale'),
+                year_earlier_quarter_revenue=_atd_read_float(x['year_earlier_quarter_revenue']) if 'year_earlier_quarter_revenue' in x else None,
+                quarter_yoy=_atd_read_float(x['quarter_yoy']) if 'quarter_yoy' in x else None,
+                trailing_four_quarters_revenue=_atd_read_float(x['trailing_four_quarters_revenue']) if 'trailing_four_quarters_revenue' in x else None,
+                trailing_reason=_atd_read_string(x['trailing_reason']) if 'trailing_reason' in x else None,
+                trailing_over_annual=_atd_read_float(x['trailing_over_annual']) if 'trailing_over_annual' in x else None,
+                divergence=_atd_read_float(x['divergence']) if 'divergence' in x else None,
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('Recency', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['tag'] = _atd_write_string(self.tag)
+        res['latest_quarter_end'] = _atd_write_string(self.latest_quarter_end)
+        res['latest_quarter_revenue'] = _atd_write_float(self.latest_quarter_revenue)
+        res['quarters'] = _atd_write_list((lambda x: x.to_json()))(self.quarters)
+        res['annual_base_end'] = _atd_write_string(self.annual_base_end)
+        res['annual_base_revenue'] = _atd_write_float(self.annual_base_revenue)
+        res['quarters_since_base'] = _atd_write_int(self.quarters_since_base)
+        res['base_stale'] = _atd_write_bool(self.base_stale)
+        if self.year_earlier_quarter_revenue is not None:
+            res['year_earlier_quarter_revenue'] = _atd_write_float(self.year_earlier_quarter_revenue)
+        if self.quarter_yoy is not None:
+            res['quarter_yoy'] = _atd_write_float(self.quarter_yoy)
+        if self.trailing_four_quarters_revenue is not None:
+            res['trailing_four_quarters_revenue'] = _atd_write_float(self.trailing_four_quarters_revenue)
+        if self.trailing_reason is not None:
+            res['trailing_reason'] = _atd_write_string(self.trailing_reason)
+        if self.trailing_over_annual is not None:
+            res['trailing_over_annual'] = _atd_write_float(self.trailing_over_annual)
+        if self.divergence is not None:
+            res['divergence'] = _atd_write_float(self.divergence)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Recency':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class ReceiptCheck:
     """Original type: receipt_check = { ... }
     """
@@ -5084,6 +5196,8 @@ class Valuation:
     options_expected_return_reason: Optional[str] = None
     quality: Optional[Quality] = None
     quality_reason: Optional[str] = None
+    recency: Optional[Recency] = None
+    recency_reason: Optional[str] = None
     growth_shadow: Optional[GrowthShadow] = None
     base_rate: Optional[BaseRate] = None
     base_rate_reason: Optional[str] = None
@@ -5150,6 +5264,8 @@ class Valuation:
                 options_expected_return_reason=_atd_read_string(x['options_expected_return_reason']) if 'options_expected_return_reason' in x else None,
                 quality=Quality.from_json(x['quality']) if 'quality' in x else None,
                 quality_reason=_atd_read_string(x['quality_reason']) if 'quality_reason' in x else None,
+                recency=Recency.from_json(x['recency']) if 'recency' in x else None,
+                recency_reason=_atd_read_string(x['recency_reason']) if 'recency_reason' in x else None,
                 growth_shadow=GrowthShadow.from_json(x['growth_shadow']) if 'growth_shadow' in x else None,
                 base_rate=BaseRate.from_json(x['base_rate']) if 'base_rate' in x else None,
                 base_rate_reason=_atd_read_string(x['base_rate_reason']) if 'base_rate_reason' in x else None,
@@ -5253,6 +5369,10 @@ class Valuation:
             res['quality'] = (lambda x: x.to_json())(self.quality)
         if self.quality_reason is not None:
             res['quality_reason'] = _atd_write_string(self.quality_reason)
+        if self.recency is not None:
+            res['recency'] = (lambda x: x.to_json())(self.recency)
+        if self.recency_reason is not None:
+            res['recency_reason'] = _atd_write_string(self.recency_reason)
         if self.growth_shadow is not None:
             res['growth_shadow'] = (lambda x: x.to_json())(self.growth_shadow)
         if self.base_rate is not None:
@@ -5867,6 +5987,8 @@ class Financials:
     statements_unavailable: str = field(default_factory=lambda: "")
     quality_lines: List[QualityLines] = field(default_factory=lambda: [])
     quality_lines_reason: Optional[str] = None
+    recency: Optional[Recency] = None
+    recency_reason: Optional[str] = None
     identity_mismatch: Optional[str] = None
     latest_filing: Optional[str] = None
     cross_check: Optional[CrossCheck] = None
@@ -5910,6 +6032,8 @@ class Financials:
                 statements_unavailable=_atd_read_string(x['statements_unavailable']) if 'statements_unavailable' in x else "",
                 quality_lines=_atd_read_list(QualityLines.from_json)(x['quality_lines']) if 'quality_lines' in x else [],
                 quality_lines_reason=_atd_read_string(x['quality_lines_reason']) if 'quality_lines_reason' in x else None,
+                recency=Recency.from_json(x['recency']) if 'recency' in x else None,
+                recency_reason=_atd_read_string(x['recency_reason']) if 'recency_reason' in x else None,
                 identity_mismatch=_atd_read_string(x['identity_mismatch']) if 'identity_mismatch' in x else None,
                 latest_filing=_atd_read_string(x['latest_filing']) if 'latest_filing' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
@@ -5956,6 +6080,10 @@ class Financials:
         res['quality_lines'] = _atd_write_list((lambda x: x.to_json()))(self.quality_lines)
         if self.quality_lines_reason is not None:
             res['quality_lines_reason'] = _atd_write_string(self.quality_lines_reason)
+        if self.recency is not None:
+            res['recency'] = (lambda x: x.to_json())(self.recency)
+        if self.recency_reason is not None:
+            res['recency_reason'] = _atd_write_string(self.recency_reason)
         if self.identity_mismatch is not None:
             res['identity_mismatch'] = _atd_write_string(self.identity_mismatch)
         if self.latest_filing is not None:

@@ -79,6 +79,16 @@
       "Interest that is income is never evidence of debt whatever its size, which is the sign half of the same rule and needs no parameter."
     ]
   },
+  "recency_divergence": {
+    "value": 0.1,
+    "source": "a tenth of a year's revenue is a year of ordinary growth: the trailing four quarters this far from the annual base, either way, mean the base the models read is a year behind the business",
+    "as_of": "2026-10-17",
+    "max_age_days": 400,
+    "notes": [
+      "(84) Read by the fetcher into the recency block's base_stale and never by a model: the block describes, the models keep the annual base. The downstream reader compares the growth the price implies with the growth observed, and a stale base misreads both on exactly the names that move fastest; the flag says when.",
+      "Either way: a trailing figure a tenth below the base marks it stale as a tenth above does. A collapse is as much a stale base as a surge."
+    ]
+  },
   "sensitivity_steps": {
     "growth": 0.02,
     "lambda": 0.1,
@@ -157,8 +167,8 @@
       "mode": "static",
       "vix_mean": 19.5,
       "vix_sensitivity": 0.4,
-      "_comment_mode": "Options: 'static' (Damodaran, from equity_risk_premiums.json) or 'dynamic' (VIX-adjusted). Dynamic mode fetches current VIX and adjusts base ERP: ERP_dynamic = ERP_base \u00d7 (VIX/VIX_mean)^sensitivity.",
-      "_comment_vix": "VIX historical mean ~19.5. Sensitivity 0.3-0.5 typical. Higher sensitivity = more reactive to VIX changes. Example: VIX=30, mean=20, sens=0.4 \u2192 adjustment=1.18 (18% higher ERP)."
+      "_comment_mode": "Options: 'static' (Damodaran, from equity_risk_premiums.json) or 'dynamic' (VIX-adjusted). Dynamic mode fetches current VIX and adjusts base ERP: ERP_dynamic = ERP_base × (VIX/VIX_mean)^sensitivity.",
+      "_comment_vix": "VIX historical mean ~19.5. Sensitivity 0.3-0.5 typical. Higher sensitivity = more reactive to VIX changes. Example: VIX=30, mean=20, sens=0.4 → adjustment=1.18 (18% higher ERP)."
     }
   }
 }

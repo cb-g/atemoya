@@ -189,6 +189,39 @@ on its documented side, the lowest fifth about four points ahead of the highest 
 which is small on this sample. So quality is on the record as a reading of the statements
 and feeds no model, belief or signal.
 
+## Recency
+
+`recency` on a record (84) says how far the filed quarters have moved on from the annual
+base the models read. Every model's base cash flow and growth history start from the last
+annual period, and nothing filed after the last annual report reaches a fair value, so a
+name that changes fast is read on figures up to a year old and a whole year's change
+arrives in one step when the next annual report lands. The downstream reader compares the
+growth the price implies with the growth observed, and a stale base misreads both on
+exactly the names that move fastest. The block does not move the base; it says how far
+behind it is.
+
+It reads revenue alone, the one line every quarterly filing carries on the same element as
+the annual one, from the same companyfacts the statements come from: the quarterly filings'
+revenue (Form 10-Q, the first three fiscal quarters, a duration of about a quarter) and the
+annual filings' (Form 10-K), under the revenue chain's elements, one element throughout, the
+one with the most quarters; the fourth quarter of each fiscal year is the year less its
+three filed quarters, marked `derived`. Then: `latest_quarter_end` and its revenue against
+`year_earlier_quarter_revenue`, giving `quarter_yoy`; the four latest consecutive quarters
+summed as `trailing_four_quarters_revenue` against `annual_base_revenue` at
+`annual_base_end`, giving `trailing_over_annual`; `quarters_since_base`, the filed quarters
+ending after the base; and `base_stale`, true when the trailing figure is beyond the
+declared `divergence` (`reference/params.json`, `recency_divergence`, a tenth) either way,
+since a collapse is as much a stale base as a surge. Where the quarters do not chain the
+trailing figure is absent with `trailing_reason`; a 20-F filer reports half-years on Form
+6-K, which companyfacts does not carry, and has `recency_reason` instead of a block, as does
+a name on the vendor's statements. On the point-in-time path the filings are cut at the
+date. The summary lists the names whose base is stale, with the trailing figure over the
+base.
+
+Nothing reads the block: the models keep the annual base. Whether a four-quarter base should
+stand beside the annual one, as the growth shadow stands beside the headline growth, is a
+model question held with the others of its kind.
+
 ## The growth shadow
 
 The generic DCF picks its starting growth by a switch. With positive after-tax operating

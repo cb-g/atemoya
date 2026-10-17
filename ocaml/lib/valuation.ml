@@ -380,6 +380,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       growth_shadow = None;
       quality = fst quality;
       quality_reason = snd quality;
+      recency = original.recency;
+      recency_reason = original.recency_reason;
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,

@@ -135,6 +135,7 @@ type params = {
   midcycle_window_years : int_scalar; (* the mid-cycle DCF's window (22): annual periods normalised over, and the period depth the fetch keeps for the class *)
   midcycle_scale_floor : scalar;      (* (55) the smallest opening invested capital, as a fraction of the latest period's, that lets a year into the mid-cycle return average; the reinvestment sums are untouched *)
   interest_evidence_floor : scalar;   (* (65) interest below this fraction of operating income is not evidence that the filer owes anything; read by the fetcher, not by any model *)
+  ?recency_divergence : scalar option;   (* (84) the trailing four quarters this far from the annual base, either way, mark the base stale on the recency block; read by the fetcher, not by any model; absent on reference sets written before it *)
   sensitivity_steps : sensitivity_steps;   (* (23) *)
   frontier_draws : int_scalar;        (* (35) draws from the joint belief distribution; a change is a decision *)
   frontier_seed : int_scalar;         (* (35) the sampler's seed; a change is a decision *)

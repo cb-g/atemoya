@@ -34,6 +34,7 @@ import fetch
 import fetch_sec
 import reference
 import quality
+import recency
 import refresh_fx
 import refresh_rates as rr
 
@@ -420,6 +421,11 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
     provider = fetch_sec.PROVIDER if why is None else "yfinance"
     # the quality block's lines, from the same facts cut at the date
     quality_lines, quality_reason = quality.of_record(facts if why is None else None, decision.taxonomy if decision is not None else "", filing_currency if why is None else None, sec.tags)
+    # (84) the recency block, from the same facts, the filings cut at the date
+    base = periods[0] if why is None and periods else None
+    recency_block, recency_reason = recency.of_record(
+        facts if why is None else None, decision.taxonomy if decision is not None else "", filing_currency if why is None else None, sec.tags,
+        None if base is None else base.period_end, None if base is None else base.total_revenue, recency.divergence_of(fetch_sec.load_params()), as_of=d)
     return boundary.Financials(
         ticker=symbol, as_of=f"{d.isoformat()}T00:00:00+00:00",
         currency=currency, financial_currency=filing_currency if why is None else (quote.financial_currency if quote else None),
@@ -433,6 +439,7 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         market_provider="yfinance (closes and splits), SEC dei (shares)", provider_reason=(decision.reason if decision is not None and why is None else why or ""),
         latest_filing=fetch_sec.latest_filing(periods) if why is None else None,
         cross_check=check, quality_lines=quality_lines, quality_lines_reason=quality_reason,
+        recency=recency_block, recency_reason=recency_reason,
         submissions_latest_annual=submission, point_in_time=pit,
         stretch=stretch_block, stretch_reason=stretch_reason,
         insiders=insiders_block, insiders_reason=insiders_reason,

@@ -48,6 +48,7 @@ import fetch_dart
 import fetch_esef
 import fetch_sec
 import quality
+import recency
 import reference
 import earnings
 import universe as universe_file
@@ -1055,6 +1056,11 @@ def main(argv: list[str]) -> int:
             filer, _ = cik_of(symbol, sec.tickers, entry.cik if entry else None)
             filed_facts = fetch_sec.companyfacts(filer, sec.user_agent) if filer else None
         financials.quality_lines, financials.quality_lines_reason = quality.of_record(filed_facts, financials.taxonomy, financials.financial_currency, sec.tags)
+        # (84) the recency block: the quarters filed since the annual base the models read, from the same facts
+        base = financials.periods[0] if financials.periods else None
+        financials.recency, financials.recency_reason = recency.of_record(
+            filed_facts, financials.taxonomy, financials.financial_currency, sec.tags,
+            None if base is None else base.period_end, None if base is None else base.total_revenue, recency.divergence_of(sec.params))
         # allow_nan=False: a NaN that slipped through is a bug here, not invalid JSON
         # for the other side to choke on.
         text = financials.to_json_string(indent=2, allow_nan=False)

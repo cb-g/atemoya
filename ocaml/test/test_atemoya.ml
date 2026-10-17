@@ -161,6 +161,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     identity_mismatch = None;
     quality_lines = [];
     quality_lines_reason = None;
+    recency = None;
+    recency_reason = None;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
