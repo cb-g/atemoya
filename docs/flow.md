@@ -807,6 +807,15 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- what the surprise history preceded: `python/surprise_study.py` reads every universe name's
+  releases from the consensus history with the holdout aside, and asks whether a beat follows
+  a beat and how much of the last surprise the next carries, what the excess return after a
+  release did by fifths of the surprise, and whether the dear fifth of the margin sort on the
+  anchor panel was beating the Street more than the cheap fifth over the year after, after
+  Bordalo, Gennaioli, La Porta and Shleifer, "Finance Without Exotic Risk", NBER Working
+  Paper 33004, September 2024, doi:10.3386/w33004, whose firm-level forecast-error rank
+  predicts the next year's expectations-based return a little. A side tool: no record on the
+  valuation path moves and there is no new `Failed` string.
 - duration on the rule panel: `python/rule_duration.py` gives every valued generic DCF record
   three durations, the published measure of Dechow, Sloan and Soliman, "Implied Equity
   Duration: A New Measure of Equity Risk", working paper, University of Michigan Business

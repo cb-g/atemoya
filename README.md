@@ -166,6 +166,7 @@ Everything below hangs off the records and never moves them.
 | point-in-time panel | every name at every quarter-end from what was known then | `uv run python/build_panel.py --options data/options` |
 | anchor and baseline studies | what the records' judgments preceded against SPY, beside plain cheapness | `uv run python/anchor_study.py`, `baseline_study.py` |
 | insider study | what routine and opportunistic insider trades preceded, by quarter-end since 2024 | `uv run python/insider_history.py` once, then `insider_study.py` |
+| surprise study | whether a beat follows a beat, the return after a surprise, and which arm of the margin sort the Street was beaten on | `uv run python/surprise_study.py` |
 | broad panel | every SEC filer with a ticker, each June since 2010: cheapness, quality, a peer-implied gap | `uv run python/broad_panel.py --retry-missing`, `broad_study.py` |
 | rule panel | the tool's own DCF on the five hundred largest filers each June since 2013, chosen by rule | `uv run python/rule_panel.py`, `rule_study.py`, `rule_alpha.py`, `rule_beta.py`, `rule_betas.py`, `rule_growth.py`, `rule_duration.py`, `rule_rates.py` |
 

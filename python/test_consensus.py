@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -264,3 +264,60 @@ def test_the_chart_names_every_state_the_files_carry() -> None:
     for s in states:
         assert s in chart, s
         assert s in source or s.startswith("no filed fiscal period"), s
+
+
+def test_the_surprise_study_reads_what_each_name_said_before_a_release_and_what_followed_with_the_holdout_aside(tmp_path: Path) -> None:
+    import surprise_study as ss
+
+    # two invented names: AAA beats by a growing margin every quarter from 2020, BBB alternates beat and miss; HELD is a held-out name
+    history, closes, out = tmp_path / "history", tmp_path / "closes", tmp_path / "out"
+    history.mkdir()
+    closes.mkdir()
+    quarters = [f"{y}-{m:02d}-15" for y in range(2020, 2026) for m in (2, 5, 8, 11)]          # 24 releases a name
+    def releases(surprises: list[float]) -> list[dict[str, Any]]:
+        return [{"report_date": d, "eps_estimate": 2.0, "eps_reported": 2.0 * (1 + s / 100)} for d, s in zip(quarters, surprises, strict=True)]
+    (history / "AAA.json").write_text(json.dumps({"ticker": "AAA", "status": "ok", "releases": releases([1.0 * i for i in range(24)])}))
+    (history / "BBB.json").write_text(json.dumps({"ticker": "BBB", "status": "ok", "releases": releases([5.0 if i % 2 else -5.0 for i in range(24)])
+                                                  + [{"report_date": "2026-02-15", "eps_estimate": 0.0, "eps_reported": 1.0}]}))       # a zero estimate: no surprise
+    (history / "HELD.json").write_text(json.dumps({"ticker": "HELD", "status": "ok", "releases": releases([50.0] * 24)}))
+    (history / "NONE.json").write_text(json.dumps({"ticker": "NONE", "status": "none", "reason": c.NO_RELEASES}))
+    days = [date(2020, 1, 1) + __import__("datetime").timedelta(days=i) for i in range(0, 2400)]
+    days = [d for d in days if d.weekday() < 5]
+    spy = {d.isoformat(): 100.0 * 1.0002 ** i for i, d in enumerate(days)}
+    (closes / "SPY-2026-07-31.json").write_text(json.dumps(spy))
+    (closes / "AAA-2026-07-31.json").write_text(json.dumps({d: v * 1.0001 ** i for i, (d, v) in enumerate(spy.items())}))    # AAA outruns the benchmark every day
+    (closes / "BBB-2026-07-31.json").write_text(json.dumps(spy))                                                               # BBB is the benchmark
+    holdout = tmp_path / "holdout.json"
+    holdout.write_text(json.dumps({"names": ["HELD"], "dates_after": "2025-06-30"}))
+    rows_all = ss.load_releases(history)
+    assert len(rows_all) == 72 and all(r.estimate != 0 for r in rows_all)                       # the none record and the zero estimate are left out
+    kept, line = ss.set_aside(rows_all, ss.study.load_holdout(holdout), opened=False)
+    assert len(kept) == 44 and "28 releases set aside" in line and "every release after 2025-06-30" in line   # HELD's 24 and two late releases a name
+    opened, line = ss.set_aside(rows_all, ss.study.load_holdout(holdout), opened=True)
+    assert len(opened) == 72 and line.startswith("HOLDOUT OPENED")
+    rows = ss.rows_of(kept)
+    aaa = sorted((r for r in rows if r.release.ticker == "AAA"), key=lambda r: r.release.report_date)
+    assert aaa[0].previous is None and aaa[0].trailing is None and abs(cast(float, aaa[0].next) - 1.0) < 1e-9 and aaa[0].next_sign == "beat"
+    assert abs(cast(float, aaa[5].previous) - 4.0) < 1e-9 and abs(cast(float, aaa[5].trailing) - 2.5) < 1e-9 and abs(cast(float, aaa[5].history) - 2.0) < 1e-9
+    assert aaa[-1].next is None and aaa[0].quarter == "2020Q1" and aaa[1].quarter == "2020Q2"
+    assert aaa[0].release.sign == "meet" and abs(aaa[3].release.surprise - 3.0) < 1e-9
+    attached = ss.attach_excess(rows, closes)
+    assert attached == len([r for r in rows if r.excess])
+    with_year = [r for r in aaa if 252 in r.excess]
+    assert with_year and all(r.excess[252] > 0 for r in with_year) and all(r.excess[63] > 0 for r in with_year)                # AAA's excess is positive at every horizon
+    assert all(abs(r.excess[k]) < 1e-9 for r in rows if r.release.ticker == "BBB" for k in r.excess)                          # BBB's is nought
+    ss.assign_fifths(rows)
+    assert all(r.fifth is None for r in rows)                                                                                   # two names a quarter: no fifths
+    text = ss.report(rows, [], "holdout line", attached)
+    assert "44 releases on 2 names" in text and "after a beat:" in text and "on the last surprise" in text and "highest less lowest fifth: 63 days n/a" in text
+    panel = tmp_path / "panel.jsonl"
+    panel.write_text(json.dumps({"ticker": "AAA", "as_of": "2021-03-31", "status": "Ok", "margin_of_safety": 0.5, "forward_12m_return": 0.30}) + "\n"
+                     + json.dumps({"ticker": "BBB", "as_of": "2021-03-31", "status": "Ok", "margin_of_safety": -0.5, "forward_12m_return": 0.10}) + "\n"
+                     + json.dumps({"ticker": "AAA", "as_of": "2021-06-30", "status": "Failed", "margin_of_safety": None}) + "\n")
+    arms = ss.load_arms(panel, rows, ss.study.load_holdout(holdout), closes, opened=False)
+    assert [a.ticker for a in arms] == ["AAA", "BBB"] and len(arms[0].surprises) == 4 and arms[0].fifth is None              # four releases inside the year; two rows, no fifths
+    spy_year = 1.0002 ** 252 - 1
+    assert arms[0].excess is not None and abs(arms[0].excess - (0.30 - spy_year)) < 1e-9
+    assert ss.main(["--history", str(tmp_path / "none"), "--out", str(out)]) == 2
+    assert ss.main(["--history", str(history), "--closes", str(closes), "--panel", str(panel), "--holdout-file", str(holdout), "--out", str(out)]) == 0
+    assert len((out / "rows.jsonl").read_text().splitlines()) == 44 and "Holdout (reference/holdout.json)" in (out / "tables.txt").read_text()

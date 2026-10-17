@@ -1466,6 +1466,72 @@ vendor's earnings-trend module, reached through a private surface of yfinance 1.
 change in the library is a failed record with the reason; the vendor's dated earnings
 table; SEC companyfacts.
 
+### What the surprise history preceded
+
+    uv run python/surprise_study.py [--holdout]    # -> output/surprise_study/tables.txt, rows.jsonl; seconds
+
+A pattern of beats and misses is only worth reading if it persists. Bordalo, Gennaioli, La
+Porta and Shleifer, "Finance Without Exotic Risk", NBER Working Paper 33004, September 2024,
+doi:10.3386/w33004, account for the returns of characteristic sorts by the forecast errors
+that followed them under one required return for every firm, and find at the firm level that
+a name's forecast-error rank a year earlier predicts its expectations-based return over the
+next year positively (0.033 standardised, their Table C4) and over three and five years
+negatively; the whole firm-level prediction reaches an adjusted R² of three per cent. Their
+errors are on fiscal-year earnings against the consensus of a year before; ours are the
+quarterly release against the last consensus before it, which is what the tool holds, so
+this is the question in the tool's own terms and not the paper's test.
+
+**What it does.** Every release with an estimate and a reported figure, the estimate not
+zero, is a surprise in per cent of the estimate's magnitude with its sign; the held-out names
+and every release after the holdout's date are set aside unless `--holdout` opens them.
+Three questions. Persistence: whether a beat follows a beat more often than a miss (the
+transition rates against the base rate); the pooled slope of the next surprise on the last
+and on the trailing four, winsorised at the first and ninety-ninth percentile; and whether
+what persists is the name or the quarter, the next surprise on the name's mean over every
+earlier release beside the last one. The return after: each release's excess over SPY from
+the second close after the report date, so the move across the release is left out, to 63,
+126 and 252 trading days, by fifths of the surprise within the calendar quarter, from the
+anchor study's closes cache. And the arms of the margin sort: on the anchor panel's
+quarter-ends, the valued names in fifths on the margin of safety within the date, each
+fifth's mean surprise and beat rate over the twelve months after beside its excess return.
+
+**What it found (2026-10-17), descriptively.** 6,554 releases on 165 names with the holdout
+aside (1,231 releases set aside); 3,763 since 2020 carry a forward return.
+
+- *A beat follows a beat.* The base rate of a beat is 69.9 per cent; after a beat 77.1, after
+  a miss 53.7, after a meet 52.4. The next surprise on the last: slope 0.17, R² 3.1 per cent,
+  rank correlation 0.25; on the trailing four, 0.19 and 3.0 per cent; on the name's mean of
+  every earlier release, 0.05 and 0.2 per cent, and beside the last surprise it adds 0.02 to
+  the last's 0.16. So what persists is the recent surprise, a sixth of it, not a name's
+  habit of beating; the paper's firm-level R² is the same three per cent.
+- *The return after.* Highest less lowest fifth of the surprise: +2.0 points at 63 days,
+  +3.3 at 126, +0.6 at 252; the top fifth positive on 391 of 742 at 63 days, the bottom on
+  367 of 762. A small drift for two quarters, gone by a year, on the paper's side at a year
+  only in sign.
+- *The arms.* On the anchor panel the dearest fifth's names beat by a mean 12.1 per cent
+  over the year after the date (577 beats in 774 releases) and ran level with SPY (+0.001);
+  the cheapest fifth beat by 4.1 (477 in 672) and ran 6.2 points behind; the fourth fifth,
+  3.5 and 12.1 behind. The paper's account, the dear arm's lead coming from its forecasts
+  being beaten more than the cheap arm's, is what these years show, on a hundred and
+  seventy names.
+
+**Reading.** The surprise history is a readout of the recent past with a little persistence:
+the last surprise says something about the next, a sixth of it, and the name's longer record
+adds nothing beside it, so the summary's eight-release window is the right one to read and
+the twelve-release one adds little. The drift after a surprise is small and short. And the
+tool's own finding, that the cheapest fifth by margin ran behind since 2022, has the shape
+the paper gives it: the dear names kept beating the Street and the cheap ones did not. That
+is a description of why the sort lost, not a reason to change the model, since the surprises
+were not foreseeable from the record at the date (the R² of three per cent above).
+
+**Limits.** Street-adjusted EPS against the Street's own last estimate, on the vendor's dated
+table of about fifty releases a name; the return questions reach back to 2020 only, the span
+of the closes; the paper's errors are annual and ours quarterly, so the contemporaneous slope
+(R² 4.1 per cent against its 28) is not the same quantity. The second half of the queue's
+item, returns on the revision of next year's forecast, needs the consensus as it stood a
+year before each release, which the daily snapshots will carry only from their first day on
+disk (2026-10-02); it is not built. Nothing here feeds back.
+
 ## Build, test, type-check
 
 ```sh
