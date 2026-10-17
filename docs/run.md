@@ -684,6 +684,87 @@ universe, for taking beta out of the cost of equity. Four limits keep it from sa
   nothing here says whether a fair value built on another beta would have ranked returns
   any better.
 
+### Duration on the rule panel: the model's timing against a published measure
+
+    uv run python/rule_duration.py                 # -> output/rule_duration/tables.txt, durations.jsonl; about fifteen seconds
+
+A fair value is a sum of discounted cash flows, and its sensitivity to the discount rate is
+the weighted average time of those flows, the duration. Dechow, Sloan and Soliman, "Implied
+Equity Duration: A New Measure of Equity Risk", working paper, University of Michigan
+Business School, May 2002, build one from four filed items and the market value with one
+discount rate for every firm, so that the measure carries timing alone: book equity and
+sales, each with the year before, and earnings; the return on equity reverts to 12 per cent
+with a persistence of 0.57 and sales growth to 6 per cent with 0.24; ten years of
+clean-surplus cash flows are discounted at 12 per cent, and the value the price carries
+beyond them is taken as a level perpetuity whose duration is 19.33 years. They show
+algebraically that the measure is a cousin of the earnings yield and of book to market and
+find Spearman correlations of −0.76 and −0.73 with them (their Table 3), and that it
+forecasts the next two years' beta and volatility a little (their Table 5: beta on relative
+duration, slope 0.32 and an R² of 0.02; with the lagged beta beside it 0.20 and 0.19).
+Weber, "Cash Flow Duration and the Term Structure of Equity Returns", NBER Working Paper
+22520, August 2016, doi:10.3386/w22520, uses the same construction over fifteen years.
+
+**What it does.** For every valued generic DCF record in the rule panel, three durations.
+`dss` is the paper's measure as specified, from the point-in-time record's two latest fiscal
+periods and the market value on the date (a name with book equity at or below zero carries
+none, as the paper drops them). `model` is the model's own, price-free: the Macaulay duration
+of its enterprise value at its own discount rate, the explicit cash flows at their years and
+the terminal value as a growing perpetuity whose duration is the horizon plus one plus the
+rate over the rate less the terminal growth, levered onto the model's equity value with net
+debt at a duration of nought; it reads the shape of the projection and nothing of the price.
+`implied` is the paper's device on the model's flows: the explicit present values weighted
+over the enterprise value at the price, the model's terminal duration carrying the rest.
+Then the measures by date; their rank correlations within the date with the earnings yield,
+the margin of safety and book to market; the paper's Table 5 on the panel, the name's plain
+beta over the twelve months after the date on its relative duration (its duration over the
+date's value-weighted mean), alone and beside this year's beta, and the same for the standard
+deviation of daily returns; and the rate study's measured fall in each fair value per point
+of risk-free rate against the model's modified duration, within the date.
+
+**What it found (2026-10-17), descriptively.** 2,981 records on 510 names; 2,690 carry the
+paper's measure. Pooled medians: `dss` 17.7 years (quartiles 17.0 to 18.3), `model` 29.1
+(24.5 to 34.2), `implied` 26.6 (24.1 to 28.8); the paper's mean is 15.1 with quartiles 13.3
+to 17.4 on all US stocks, its terminal duration 19.33 for every firm, where the model's is
+the horizon plus the rate over the rate less terminal growth, which the panel's rates put
+near thirty years.
+
+| rank correlation within the date, median over 13 Junes | earnings yield | margin | book to market | dss | model |
+|---|---|---|---|---|---|
+| dss | −0.70 | −0.53 | −0.78 | — | −0.26 |
+| model | +0.15 | +0.28 | +0.24 | −0.26 | — |
+| implied | −0.46 | −0.62 | −0.07 | +0.27 | +0.42 |
+
+The paper's measure replicates on the panel (its −0.76 and −0.73). The model's price-free
+duration ranks almost apart from it, and mildly with the margin: a longer projection is a
+higher fair value. On Table 5, nothing: next year's beta on any of the three relative
+durations has a slope within a hundredth of a standard deviation per standard deviation and
+adds nothing to this year's beta (adjusted R² 50.7 to 51.3 per cent with it, 0.0 without);
+the same for next year's daily standard deviation (0.015 to 0.038 standard deviations per
+standard deviation beside this year's). The measured fall per point of risk-free rate against
+the model's modified duration per point of discount rate: below the kink, 2013 to 2022,
+medians of 0.8 to 1.3 per cent against 26 to 29, a ratio of 0.03 to 0.05, and a rank
+correlation of −0.5 to −0.8 (the names with more of their value in the terminal are hurt
+less, since the terminal growth rises with the rate); above it, 2023 to 2025, 21.5 to 23.5
+per cent against 24 to 26, a ratio of 0.85 to 0.98, and a rank correlation of 1.00.
+
+**Reading.** The published measure is what its authors say it is, a yield in years: it ranks
+the panel as the earnings yield and book to market do, and our margin of safety sits halfway
+to it (−0.53; the margin's own rank correlation with the earnings yield is 0.57 to 0.69). The
+model's duration carries no information about the beta or the volatility that followed, on
+these names in these years, so a duration-implied beta is not an alternative to the beta of
+one the panel runs on. And the analytic duration describes a record only above the kink:
+below it, with terminal growth held to the risk-free rate, a point of rate moves a fair value
+by a thirtieth of its duration, so the margin's swing between the regimes does not scale with
+duration at all; above it, the swing is the duration times the share of a risk-free move that
+reaches the weighted cost of capital.
+
+**Limits.** No new field: every record already carries the fair value at the discount rate
+stepped a point either way in its sensitivity block, and the model duration here is that
+step's analytic twin. The paper's market value is at the fiscal year end and ours at the June
+date; its discount rate is one constant and the panel's varies only with the date's rate and
+each name's debt weight, beta being one; its sample is every US stock over 1963 to 1998 and
+ours the largest five hundred over 2013 to 2025. Nothing here moves a record or a parameter.
+
 ### Growth on the rule panel: does the starting growth forecast what followed
 
     uv run python/rule_growth.py                   # -> output/rule_growth/tables.txt, growth.jsonl; seconds

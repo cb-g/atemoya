@@ -4,6 +4,7 @@ largest by market value with the held-out names left out, and the study's tables
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import cast
 
@@ -443,3 +444,70 @@ def test_the_growth_estimates_are_read_as_the_model_computed_them_and_scored_aga
     assert rg.main(["--panel-out", str(tmp_path / "none"), "--out", str(tmp_path / "out")]) == 2
     assert rg.main(["--panel-out", str(panel_out), "--universe-dir", str(universe_dir), "--frames", str(frames_dir), "--out", str(tmp_path / "out")]) == 0
     assert len((tmp_path / "out" / "growth.jsonl").read_text().splitlines()) == 120 and (tmp_path / "out" / "tables.txt").read_text() == text
+
+
+def test_the_durations_follow_the_papers_worked_examples_and_the_closed_forms_and_are_read_off_the_panel(tmp_path: Path) -> None:
+    import rule_duration as rd
+
+    # the paper's Table 2 (pp.31-32): Alaska Air and Amazon.com for 1999, in millions, sales growth 9.70% and 168.90%
+    alaska = rd.dss_duration(market_cap=685.90, book=930.70, book_lagged=789.50, sales=1.0970, sales_lagged=1.0, earnings=134.20)
+    amazon = rd.dss_duration(market_cap=8905.00, book=266.28, book_lagged=138.75, sales=2.6890, sales_lagged=1.0, earnings=-719.97)
+    assert alaska is not None and abs(alaska - 10.01) < 0.01 and amazon is not None and abs(amazon - 23.02) < 0.01
+    assert rd.dss_duration(market_cap=100.0, book=-1.0, book_lagged=5.0, sales=1.0, sales_lagged=1.0, earnings=1.0) is None      # negative book equity: dropped
+    perpetuity = rd.model_duration(fcff=100.0, wacc=0.08, growth_path=[0.03] * 7, terminal_growth=0.03, net_debt=0.0)
+    assert perpetuity is not None and abs(perpetuity - 1.08 / 0.05) < 1e-9                                  # a flat growing perpetuity: (1 + r) / (r - g), whatever the horizon
+    pvs, terminal_pv, terminal_duration = rd.model_flows(100.0, 0.08, [0.03] * 7, 0.03)
+    enterprise = sum(pvs) + terminal_pv
+    levered = rd.model_duration(fcff=100.0, wacc=0.08, growth_path=[0.03] * 7, terminal_growth=0.03, net_debt=0.5 * enterprise)
+    assert levered is not None and abs(levered - 2 * perpetuity) < 1e-9 and abs(terminal_duration - (7 + 1.08 / 0.05)) < 1e-12   # net debt at a duration of nought doubles it at half the value
+    assert rd.model_duration(fcff=100.0, wacc=0.03, growth_path=[0.03], terminal_growth=0.03, net_debt=0.0) is None            # the rate must exceed terminal growth
+    implied = rd.implied_duration(fcff=100.0, wacc=0.08, growth_path=[0.03] * 7, terminal_growth=0.03, net_debt=0.0, market_cap=enterprise)
+    assert implied is not None and abs(implied - perpetuity) < 1e-9                                                            # at the model's own value the two agree
+    dearer = rd.implied_duration(fcff=100.0, wacc=0.08, growth_path=[0.03] * 7, terminal_growth=0.03, net_debt=0.0, market_cap=2 * enterprise)
+    assert dearer is not None and dearer > perpetuity                                                                           # a price above the value puts more on the terminal
+    f = rd.fit([[float(i)] for i in range(40)], [2.0 + 3.0 * i for i in range(40)])
+    assert f is not None and abs(f[0][0] - 3.0) < 1e-9 and abs(f[1] - 1.0) < 1e-9 and rd.fit([[1.0]] * 10, [1.0] * 10) is None
+    closes = {f"2020-{m:02d}-{d:02d}": 100.0 + (1.0 if (m + d) % 2 else -1.0) for m in range(1, 13) for d in range(1, 29)}
+    vol = rd.volatility(closes, "2019-12-31", "2020-12-31")
+    assert vol is not None and 0.019 < vol < 0.021 and rd.volatility(closes, "2020-10-01", "2020-12-31") is None                 # about two per cent a day; under the floor of days
+    # the panel: two valued names, a refused one and a mid-cycle one on one June, with their point-in-time items, the panel's row, betas and shifted runs
+    day, panel_out, pit, rates = "2020-06-30", tmp_path / "rule_panel", tmp_path / "pit", tmp_path / "rates"
+    (panel_out / day).mkdir(parents=True)
+    (pit / day).mkdir(parents=True)
+    dcf = {"market_cap": 1000.0, "fcff": 50.0, "wacc": 0.08, "net_debt": 100.0, "growth_path": [0.05] * 7, "terminal_growth_rate": {"value": 0.03}}
+    records: list[Json] = [{"ticker": "AAA", "status": "Ok", "inputs": ["dcf", dcf]},
+                           {"ticker": "BBB", "status": "Ok", "inputs": ["dcf", dcf | {"market_cap": 4000.0, "fcff": 10.0}]},
+                           {"ticker": "REF", "status": "Failed", "inputs": ["dcf", dcf]},
+                           {"ticker": "MID", "status": "Ok", "inputs": ["midcycle", {"fcff_mid": 1.0}]}]
+    (panel_out / day / "valuations.jsonl").write_text("".join(json.dumps(r) + "\n" for r in records))
+    (pit / day / "AAA.json").write_text(json.dumps({"periods": [{"book_equity": 500.0, "total_revenue": 1100.0, "net_income": 80.0}, {"book_equity": 450.0, "total_revenue": 1000.0}]}))
+    (pit / day / "BBB.json").write_text(json.dumps({"periods": [{"book_equity": 200.0, "total_revenue": 900.0, "net_income": -20.0}]}))   # one period: no paper's measure
+    panel = tmp_path / "panel.jsonl"
+    panel.write_text(json.dumps({"ticker": "AAA", "date": day, "margin_of_safety": 0.2, "earnings_yield": 0.08}) + "\n"
+                     + json.dumps({"ticker": "BBB", "date": day, "margin_of_safety": -0.5, "earnings_yield": -0.005}) + "\n")
+    rows = rd.load_records(panel_out, pit, panel)
+    assert [r.ticker for r in rows] == ["AAA", "BBB"]
+    aaa, bbb = rows
+    expected = rd.dss_duration(market_cap=1000.0, book=500.0, book_lagged=450.0, sales=1100.0, sales_lagged=1000.0, earnings=80.0)
+    assert aaa.dss == expected and bbb.dss is None and aaa.book_to_market == 0.5 and aaa.margin == 0.2 and bbb.earnings_yield == -0.005
+    assert aaa.model is not None and bbb.model is not None and aaa.modified is not None and abs(aaa.modified - aaa.model / 1.08 / 100) < 1e-12
+    assert aaa.implied is not None and bbb.implied is not None and bbb.implied > aaa.implied                   # the dearer name on the same flows carries more terminal
+    betas = tmp_path / "betas.jsonl"
+    betas.write_text(json.dumps({"ticker": "AAA", "year": 2020, "ols": 0.9, "ahead": {"1": 1.1}}) + "\n" + json.dumps({"ticker": "BBB", "year": 2020, "ols": 1.2, "ahead": {}}) + "\n")
+    rd.attach_betas(rows, betas)
+    assert aaa.beta == 0.9 and aaa.beta_ahead == 1.1 and bbb.beta == 1.2 and bbb.beta_ahead is None
+    for side, factor in (("up", 0.9), ("down", 1.1)):
+        (rates / side / day).mkdir(parents=True)
+        (rates / side / day / "valuations.jsonl").write_text(json.dumps({"ticker": "AAA", "status": "Ok", "fair_value": 100.0 * factor}) + "\n")
+    rd.attach_elasticities(rows, rates, 0.005)
+    assert aaa.elasticity is not None and abs(aaa.elasticity - (math.log(90.0) - math.log(110.0)) / 0.01 / 100) < 1e-12 and bbb.elasticity is None
+    rd.attach_relative(rows)
+    mean = (aaa.model * 1000.0 + bbb.model * 4000.0) / 5000.0
+    assert abs(aaa.relative["model"] - aaa.model / mean) < 1e-12 and "dss" not in bbb.relative and abs(aaa.relative["dss"] - 1.0) < 1e-12
+    text = rd.report(rows)
+    assert "2 generic DCF records on 2 names, 2020 to 2020; with a figure: dss 1, model 2, implied 2" in text
+    assert "the paper's Table 5" in text and "beta, dss: fewer than 30 rows" in text and "2020       1   fewer than 10 rows" in text
+    assert rd.main(["--panel-out", str(tmp_path / "none"), "--out", str(tmp_path / "out")]) == 2
+    assert rd.main(["--panel-out", str(panel_out), "--pit", str(pit), "--panel", str(panel), "--betas", str(betas), "--histories", str(tmp_path / "none"),
+                    "--rates-out", str(rates), "--out", str(tmp_path / "out")]) == 0
+    assert len((tmp_path / "out" / "durations.jsonl").read_text().splitlines()) == 2 and (tmp_path / "out" / "tables.txt").read_text() == text

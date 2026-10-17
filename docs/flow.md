@@ -807,6 +807,15 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- duration on the rule panel: `python/rule_duration.py` gives every valued generic DCF record
+  three durations, the published measure of Dechow, Sloan and Soliman, "Implied Equity
+  Duration: A New Measure of Equity Risk", working paper, University of Michigan Business
+  School, May 2002, from the point-in-time record's filed items and the market value, the
+  model's own price-free Macaulay duration from its projected flows and terminal value, and
+  the paper's device on the model's flows; ranks each against the earnings yield, the margin
+  and book to market, runs the paper's Table 5 on next year's beta and volatility, and sets
+  the rate study's measured fall per point against the model's modified duration. A side
+  tool: no record on the valuation path moves and there is no new `Failed` string.
 - growth on the rule panel: `python/rule_growth.py` reads every generic DCF record's starting
   growth estimates as the model computed them, the fundamental one, the historical one, the
   headline the rule chose, the shadow, the faded path and the terminal rate, and scores each
