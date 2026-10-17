@@ -16,7 +16,8 @@
     "Nine Swiss lines added 2026-10-04 at a downstream reader's request: Novartis, UBS, ABB, Sandoz, Alcon, Swiss Re, Logitech, Galderma and Richemont, all trading in francs while reporting in dollars or euros, so cross-currency names converted at one recorded rate and valued on the Swiss curve. The classes were drafted by the tool's author and confirmed by the user the same day. Novartis and Alcon are refused because neither tags the amortisation of its intangible assets, Swiss Re because the insurer model needs filed statements and none are reachable; ABB declares no filer, its filings at the Securities and Exchange Commission having ended with fiscal 2023.",
     "Six Swiss franc reporters added 2026-10-04 at a downstream reader's request: Holcim, Sika, Schindler, VAT Group, Givaudan and Swisscom, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day. Holcim and VAT Group are Cyclical and refused for a history shorter than the through-cycle window; Swisscom is refused because the vendor's balance sheet carries none of its borrowings.",
     "Eleven Swiss names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Zurich Insurance, Swiss Life, Julius Baer, Lonza, Straumann, Geberit, SGS, Kuehne+Nagel, Sonova, Partners Group and Swatch, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day, on the author's recommendation. The two insurers are refused for want of filed statements; Lonza, Kuehne+Nagel and Swatch are Cyclical and refused for a history shorter than the through-cycle window. A twelfth name asked for, Lindt & Sprüngli, is left out: its equity is in two listed lines, one worth a tenth of the other, and the vendor counts every unit of both at one line's price, so the per-share value would divide by the wrong number of shares, and the tool has no declared ratio between share lines to correct it.",
-    "Lindt & Sprüngli added 2026-10-04 as its participation certificate, LISP.SW, the class confirmed by the user: the note above left it out for want of a ratio between share lines, and reading what the vendor reports for each line showed none is needed, the certificate line being counted correctly and only the registered line wrongly. The registered share stays out."
+    "Lindt & Sprüngli added 2026-10-04 as its participation certificate, LISP.SW, the class confirmed by the user: the note above left it out for want of a ratio between share lines, and reading what the vendor reports for each line showed none is needed, the certificate line being counted correctly and only the registered line wrongly. The registered share stays out.",
+    "Three names added 2026-10-17 (84) at the downstream reader's request, who supplied the facts and left the classes to this file: EMCOR an operating company, United Rentals a cyclical, Starwood Property Trust a mortgage real estate investment trust, a class added for it with no admissible model, since a lender's trust has no FFO for the equity REIT's lens and no capex or working capital for a DCF; the classes were drafted by the tool's author and confirmed by the user the same day."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -2255,6 +2256,36 @@
         "vendor_statements",
         "commodity_exposure",
         "ownership_structure"
+      ]
+    },
+    {
+      "ticker": "EME",
+      "entity_class": "OperatingCompany",
+      "why": "EMCOR Group, electrical and mechanical construction and facilities services, a 10-K filer in dollars with a December year end, added at a downstream reader's request who supplied the facts; profitable, with positive free cash flow on contract work, an operating company confirmed by the user",
+      "map_cik": "0000105634"
+    },
+    {
+      "ticker": "URI",
+      "entity_class": "Cyclical",
+      "why": "United Rentals, equipment rental, a 10-K filer in dollars with a December year end, added at a downstream reader's request who supplied the facts; rental demand follows construction and the fleet is bought and sold through the cycle, so the through-cycle return on today's capital is the lens, a cyclical confirmed by the user",
+      "map_cik": "0001067701",
+      "scope_limits": [
+        "the fleet is the business: capital spending on rental equipment runs large in every year and its sale is a source of cash, and the filer's latest annual report tags the purchases under no standard element, so that year is left out of the reinvestment sum and no spot free cash flow is read, the mid-cycle figure standing on the fourteen years before it"
+      ],
+      "scope_limit_codes": [
+        "filer_tagging"
+      ]
+    },
+    {
+      "ticker": "STWD",
+      "entity_class": "MortgageReit",
+      "why": "Starwood Property Trust, a commercial mortgage real estate investment trust, a 10-K filer in dollars with a December year end, added at a downstream reader's request who supplied the facts; it reports distributable earnings and book value per share, a lender's measures, which neither the equity REIT's FFO lens nor an FCFF DCF reads, so it takes a class of its own with no admissible model and is refused with the lens named, confirmed by the user",
+      "map_cik": "0001465128",
+      "scope_limits": [
+        "the loan book is carried at the filer's own credit marks, with losses visible late"
+      ],
+      "scope_limit_codes": [
+        "filer_marks"
       ]
     }
   ]

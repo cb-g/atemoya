@@ -19,6 +19,7 @@ let class_name : Boundary_t.entity_class -> string = function
   | `Ballast -> "Ballast"
   | `Bdc -> "Bdc"
   | `HoldingCompany -> "HoldingCompany"
+  | `MortgageReit -> "MortgageReit"
 
 let all_classes : Boundary_t.entity_class list =
   [
@@ -39,6 +40,7 @@ let all_classes : Boundary_t.entity_class list =
     `Ballast;
     `Bdc;
     `HoldingCompany;
+    `MortgageReit;
   ]
 
 let class_of_string s =

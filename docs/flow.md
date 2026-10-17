@@ -807,6 +807,16 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- three names and a mortgage-REIT class (84): EMCOR, United Rentals and Starwood Property
+  Trust join at the downstream reader's request, the classes confirmed by the user; the
+  admissibility rule adds `MortgageReit`, a lender in a trust's wrapper, with no admissible
+  model, refused with the lens named (distributable earnings against book value per share,
+  read with the loan book's credit marks), since a loan book has no FFO for the equity
+  REIT's lens and no capex or working capital for a DCF. EMCOR is refused this year for a
+  debt line the filer does not tag while its interest expense is above the evidence floor;
+  United Rentals is valued by the mid-cycle DCF on fourteen years, its latest year's capex
+  untagged. The universe goes to two hundred and fifty. No new `Failed` string: the class
+  takes the admissibility branch's existing one.
 - the insider study: `python/insider_study.py` reads every name's trailing ninety days of
   Form 4 at each quarter-end since March 2024 from the cache, classifies each trader as the
   block does, and sets the next quarter's, half-year's and year's excess over SPY beside the
