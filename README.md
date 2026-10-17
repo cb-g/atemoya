@@ -50,6 +50,36 @@ exists and from the vendor's statements where it does not, that limit stated on 
 Every entry is a declaration: the class, confirmed by a person, the scope limits the model
 should be read under, and nothing fetched. `reference/universe.json` is the list.
 
+## How it is laid out
+
+A small core with four layers around it, each reading the one inside and none reaching in.
+
+- **The valuer**, `ocaml/lib/`, about six thousand lines in small modules. It reads one
+  name's filed statements and the day's rates and FX, checks the declared class, runs the
+  one model that class admits, attaches the readouts and writes the record. It never
+  fetches, never estimates a parameter, never falls back silently. `docs/flow.md` is its
+  map, every branch and every `Failed` string, and a test holds the code to the map.
+- **The boundary and the declarations.** The record's shape is declared once in
+  `schema/*.atd`; `dune build` generates the OCaml types and `python/boundary.py` from it,
+  so the two languages cannot disagree about a field. `reference/` holds everything a
+  person declares: the universe, the beliefs, the admissibility table, the parameter
+  tables. Nothing else is edited by hand.
+- **The fetchers**, `python/fetch*.py`, `refresh_*.py`, `consensus.py`, `insiders.py`,
+  `fetch_options.py`. They fill `data/` from SEC XBRL, ESEF, DART, the vendor, FRED and the
+  options terminal, with cross-checks, and `data/` is never committed. The largest part of
+  the code by line count and the least interesting: plumbing.
+- **The tools**, which read a run's records and the stores and write a table for a reader:
+  the watch, the consensus bar, the implied cost of capital, hedging, the frontier, the
+  view. None feeds back into a fair value.
+- **The studies**, the tool testing itself: three panels built once under `data/` (the
+  tool's own records at every quarter-end, every SEC filer each June, the five hundred
+  largest filers run through the valuer under one rule) and the scripts that ask them what
+  the records preceded, sharing one statistics module and one holdout no study reads.
+  Their findings are on `docs/studies.md`, with the model questions they left open.
+
+`docs/run.md` is the manual; `docs/studies.md` is what the tool found about itself;
+`docs/tried.md` is what was built, measured and taken out.
+
 ## What the studies found
 
 The tool tests its own outputs, and the results are kept whether or not they flatter it:
