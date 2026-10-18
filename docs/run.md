@@ -991,3 +991,12 @@ dune test
 uv run pyright
 uv run pytest
 ```
+
+Every figure in every test and fixture is invented. The tickers are `TEST`, `GEN`, `BNK`,
+`NIL` and the like, the statements are round numbers chosen so the arithmetic can be checked
+by hand, and the fixture files under `ocaml/test/fixtures/` say so in their `notes`. Nothing
+under test was ever fetched: a fixture written from a snapshot would be fetched data in the
+tree, which the data policy forbids, and a filer's real figures, public as they are, would
+read as a claim about that filer rather than a check on the code. A record a reader holds
+was produced from their own fetch and carries its provenance on itself; no test figure
+reaches one.
