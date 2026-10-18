@@ -14,6 +14,8 @@ val insiders : string
 val earnings : string
 val build_out : string
 val runway : string
+val capital_intensity : string
+val goodwill : string
 
 val all : (string * string) list
 (** Every block's sentence, by the record field it rides on. *)

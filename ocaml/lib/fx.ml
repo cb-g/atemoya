@@ -104,6 +104,7 @@ let convert ~rate (fin : financials) =
       cash = scale rate p.cash;
       total_debt = scale rate p.total_debt;
       book_equity = scale rate p.book_equity;
+      goodwill = scale rate p.goodwill;
       net_income = scale rate p.net_income;
       dividends_paid = scale rate p.dividends_paid;
       (* (69) the common-only side is money too: a preferred amount left in the statement

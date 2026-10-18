@@ -34,10 +34,16 @@ let build_out =
 let runway =
   "not measured against what followed: cash against the burn as this tool reads it, and no study on docs/studies.md reads it"
 
+let capital_intensity =
+  "not measured against what followed: the latest period's capital spending against its depreciation, from the statements, and no study on docs/studies.md reads it; whether the capital is a build-out and what it will earn is the universe entry's judgment, which the build-out readout maps where it is declared"
+
+let goodwill =
+  "not measured against what followed: the return on capital with and without acquired goodwill, from the statements, and no study on docs/studies.md reads it yet; the growth study can ask whether the fundamental estimate on the return without goodwill forecasts better once the panel carries it"
+
 let all =
   [ ("quality", quality); ("growth_shadow", growth_shadow); ("four_quarter_shadow", four_quarter_shadow);
     ("base_rate", base_rate); ("stretch", stretch); ("insiders", insiders); ("earnings", earnings);
-    ("build_out", build_out); ("runway", runway) ]
+    ("build_out", build_out); ("runway", runway); ("capital_intensity", capital_intensity); ("goodwill", goodwill) ]
 
 (* The heading a sentence points at, "(docs/studies.md, <heading>)", or None where it says
    no study reads the block. *)

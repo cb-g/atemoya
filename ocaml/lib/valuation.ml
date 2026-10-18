@@ -312,6 +312,9 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   (* Quality, from the original statements in their own currency, on every record: it reads
      two fiscal years and no model, so it is the same whatever the record concludes. *)
   let quality = Quality.of_financials original in
+  (* capital intensity from the statements, on every record; the generic-DCF branch adds the
+     free cash flow with maintenance capex on the converted period *)
+  let capital_intensity = Capital.intensity (Period.latest original) ~fcff:None in
   (* [fin] is the record the model saw: the original, or its converted copy. *)
   let record ~(fin : financials) ?model ?class_check ?inputs ?fair_value ?margin_of_safety
       ?signal ?failed_reason ?build_out ?build_out_reason ~price ~status ~floor () =
@@ -385,6 +388,10 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       four_quarter_shadow = None;
       four_quarter_shadow_reason = None;
       base_limits = [];
+      capital_intensity = Result.to_option capital_intensity;
+      capital_intensity_reason = (match capital_intensity with Error r -> Some r | Ok _ -> None);
+      goodwill = None;
+      goodwill_reason = None;
       quality = fst quality;
       quality_reason = snd quality;
       recency = original.recency;
@@ -682,9 +689,16 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                    the base sentence says what the annual base costs and is on Ok records only. *)
                 let record = finish ~price:inputs.price (`Dcf inputs) fair_value in
                 let shadow = Four_quarter_shadow.value ~declared:class_name assumptions ~country fin ~fair_value in
+                (* on the converted period, with the headline's free cash flow for the maintenance figure *)
+                let intensity = Capital.intensity (Period.latest fin) ~fcff:(Some inputs.fcff) in
+                let goodwill = Capital.goodwill (Period.latest fin) inputs in
                 {
                   record with
                   growth_shadow = Some (Growth_shadow.of_inputs inputs ~fair_value);
+                  capital_intensity = Result.to_option intensity;
+                  capital_intensity_reason = (match intensity with Error r -> Some r | Ok _ -> None);
+                  goodwill = Result.to_option goodwill;
+                  goodwill_reason = (match goodwill with Error r -> Some r | Ok _ -> None);
                   four_quarter_shadow = Result.to_option shadow;
                   four_quarter_shadow_reason = (match shadow with Error reason -> Some reason | Ok _ -> None);
                   base_limits =

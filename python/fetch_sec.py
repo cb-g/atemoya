@@ -1340,6 +1340,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 capex=v["capex"], delta_nwc=nwc, cash=cash_value,
                 total_debt=debt, total_debt_source=debt_row,
                 book_equity=v["book_equity"], net_income=v["net_income"],
+                goodwill=v["goodwill"], goodwill_row=r["goodwill"],
                 dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
                 operating_cash_flow=v["operating_cash_flow"], operating_cash_flow_row=r["operating_cash_flow"],
                 # (69) the common-only side, read on every filed period and used by the

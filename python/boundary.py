@@ -3742,6 +3742,63 @@ class GrowthShadow:
 
 
 @dataclass
+class GoodwillReadout:
+    """Original type: goodwill_readout = { ... }
+    """
+
+    period_end: str
+    goodwill: float
+    invested_capital: float
+    invested_capital_ex_goodwill: float
+    scope_limits: List[str]
+    goodwill_row: Optional[str] = None
+    goodwill_share: Optional[float] = None
+    roic: Optional[float] = None
+    roic_ex_goodwill: Optional[float] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'GoodwillReadout':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('GoodwillReadout', 'period_end'),
+                goodwill=_atd_read_float(x['goodwill']) if 'goodwill' in x else _atd_missing_json_field('GoodwillReadout', 'goodwill'),
+                invested_capital=_atd_read_float(x['invested_capital']) if 'invested_capital' in x else _atd_missing_json_field('GoodwillReadout', 'invested_capital'),
+                invested_capital_ex_goodwill=_atd_read_float(x['invested_capital_ex_goodwill']) if 'invested_capital_ex_goodwill' in x else _atd_missing_json_field('GoodwillReadout', 'invested_capital_ex_goodwill'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('GoodwillReadout', 'scope_limits'),
+                goodwill_row=_atd_read_string(x['goodwill_row']) if 'goodwill_row' in x else None,
+                goodwill_share=_atd_read_float(x['goodwill_share']) if 'goodwill_share' in x else None,
+                roic=_atd_read_float(x['roic']) if 'roic' in x else None,
+                roic_ex_goodwill=_atd_read_float(x['roic_ex_goodwill']) if 'roic_ex_goodwill' in x else None,
+            )
+        else:
+            _atd_bad_json('GoodwillReadout', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['goodwill'] = _atd_write_float(self.goodwill)
+        res['invested_capital'] = _atd_write_float(self.invested_capital)
+        res['invested_capital_ex_goodwill'] = _atd_write_float(self.invested_capital_ex_goodwill)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        if self.goodwill_row is not None:
+            res['goodwill_row'] = _atd_write_string(self.goodwill_row)
+        if self.goodwill_share is not None:
+            res['goodwill_share'] = _atd_write_float(self.goodwill_share)
+        if self.roic is not None:
+            res['roic'] = _atd_write_float(self.roic)
+        if self.roic_ex_goodwill is not None:
+            res['roic_ex_goodwill'] = _atd_write_float(self.roic_ex_goodwill)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'GoodwillReadout':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class FourQuarterShadow:
     """Original type: four_quarter_shadow = { ... }
     """
@@ -4733,6 +4790,54 @@ class ClassCheck:
 
 
 @dataclass
+class CapitalIntensity:
+    """Original type: capital_intensity = { ... }
+    """
+
+    period_end: str
+    capex: float
+    depreciation_amortization: float
+    capex_over_depreciation: float
+    growth_capex: float
+    scope_limits: List[str]
+    fcff_maintenance: Optional[float] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'CapitalIntensity':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('CapitalIntensity', 'period_end'),
+                capex=_atd_read_float(x['capex']) if 'capex' in x else _atd_missing_json_field('CapitalIntensity', 'capex'),
+                depreciation_amortization=_atd_read_float(x['depreciation_amortization']) if 'depreciation_amortization' in x else _atd_missing_json_field('CapitalIntensity', 'depreciation_amortization'),
+                capex_over_depreciation=_atd_read_float(x['capex_over_depreciation']) if 'capex_over_depreciation' in x else _atd_missing_json_field('CapitalIntensity', 'capex_over_depreciation'),
+                growth_capex=_atd_read_float(x['growth_capex']) if 'growth_capex' in x else _atd_missing_json_field('CapitalIntensity', 'growth_capex'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('CapitalIntensity', 'scope_limits'),
+                fcff_maintenance=_atd_read_float(x['fcff_maintenance']) if 'fcff_maintenance' in x else None,
+            )
+        else:
+            _atd_bad_json('CapitalIntensity', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['capex'] = _atd_write_float(self.capex)
+        res['depreciation_amortization'] = _atd_write_float(self.depreciation_amortization)
+        res['capex_over_depreciation'] = _atd_write_float(self.capex_over_depreciation)
+        res['growth_capex'] = _atd_write_float(self.growth_capex)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        if self.fcff_maintenance is not None:
+            res['fcff_maintenance'] = _atd_write_float(self.fcff_maintenance)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'CapitalIntensity':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class BuildOutTranche:
     """Original type: build_out_tranche = { ... }
     """
@@ -5268,6 +5373,10 @@ class Valuation:
     growth_shadow: Optional[GrowthShadow] = None
     four_quarter_shadow: Optional[FourQuarterShadow] = None
     four_quarter_shadow_reason: Optional[str] = None
+    capital_intensity: Optional[CapitalIntensity] = None
+    capital_intensity_reason: Optional[str] = None
+    goodwill: Optional[GoodwillReadout] = None
+    goodwill_reason: Optional[str] = None
     base_limits: List[str] = field(default_factory=lambda: [])
     base_rate: Optional[BaseRate] = None
     base_rate_reason: Optional[str] = None
@@ -5341,6 +5450,10 @@ class Valuation:
                 growth_shadow=GrowthShadow.from_json(x['growth_shadow']) if 'growth_shadow' in x else None,
                 four_quarter_shadow=FourQuarterShadow.from_json(x['four_quarter_shadow']) if 'four_quarter_shadow' in x else None,
                 four_quarter_shadow_reason=_atd_read_string(x['four_quarter_shadow_reason']) if 'four_quarter_shadow_reason' in x else None,
+                capital_intensity=CapitalIntensity.from_json(x['capital_intensity']) if 'capital_intensity' in x else None,
+                capital_intensity_reason=_atd_read_string(x['capital_intensity_reason']) if 'capital_intensity_reason' in x else None,
+                goodwill=GoodwillReadout.from_json(x['goodwill']) if 'goodwill' in x else None,
+                goodwill_reason=_atd_read_string(x['goodwill_reason']) if 'goodwill_reason' in x else None,
                 base_limits=_atd_read_list(_atd_read_string)(x['base_limits']) if 'base_limits' in x else [],
                 base_rate=BaseRate.from_json(x['base_rate']) if 'base_rate' in x else None,
                 base_rate_reason=_atd_read_string(x['base_rate_reason']) if 'base_rate_reason' in x else None,
@@ -5456,6 +5569,14 @@ class Valuation:
             res['four_quarter_shadow'] = (lambda x: x.to_json())(self.four_quarter_shadow)
         if self.four_quarter_shadow_reason is not None:
             res['four_quarter_shadow_reason'] = _atd_write_string(self.four_quarter_shadow_reason)
+        if self.capital_intensity is not None:
+            res['capital_intensity'] = (lambda x: x.to_json())(self.capital_intensity)
+        if self.capital_intensity_reason is not None:
+            res['capital_intensity_reason'] = _atd_write_string(self.capital_intensity_reason)
+        if self.goodwill is not None:
+            res['goodwill'] = (lambda x: x.to_json())(self.goodwill)
+        if self.goodwill_reason is not None:
+            res['goodwill_reason'] = _atd_write_string(self.goodwill_reason)
         res['base_limits'] = _atd_write_list(_atd_write_string)(self.base_limits)
         if self.base_rate is not None:
             res['base_rate'] = (lambda x: x.to_json())(self.base_rate)
@@ -5784,6 +5905,8 @@ class FiscalPeriod:
     delta_nwc_row: Optional[str] = None
     cash_row: Optional[str] = None
     book_equity_row: Optional[str] = None
+    goodwill: Optional[float] = None
+    goodwill_row: Optional[str] = None
     net_income_row: Optional[str] = None
     net_interest_income_row: Optional[str] = None
     ffo: Optional[float] = None
@@ -5881,6 +6004,8 @@ class FiscalPeriod:
                 delta_nwc_row=_atd_read_string(x['delta_nwc_row']) if 'delta_nwc_row' in x else None,
                 cash_row=_atd_read_string(x['cash_row']) if 'cash_row' in x else None,
                 book_equity_row=_atd_read_string(x['book_equity_row']) if 'book_equity_row' in x else None,
+                goodwill=_atd_read_float(x['goodwill']) if 'goodwill' in x else None,
+                goodwill_row=_atd_read_string(x['goodwill_row']) if 'goodwill_row' in x else None,
                 net_income_row=_atd_read_string(x['net_income_row']) if 'net_income_row' in x else None,
                 net_interest_income_row=_atd_read_string(x['net_interest_income_row']) if 'net_interest_income_row' in x else None,
                 ffo=_atd_read_float(x['ffo']) if 'ffo' in x else None,
@@ -6011,6 +6136,10 @@ class FiscalPeriod:
             res['cash_row'] = _atd_write_string(self.cash_row)
         if self.book_equity_row is not None:
             res['book_equity_row'] = _atd_write_string(self.book_equity_row)
+        if self.goodwill is not None:
+            res['goodwill'] = _atd_write_float(self.goodwill)
+        if self.goodwill_row is not None:
+            res['goodwill_row'] = _atd_write_string(self.goodwill_row)
         if self.net_income_row is not None:
             res['net_income_row'] = _atd_write_string(self.net_income_row)
         if self.net_interest_income_row is not None:

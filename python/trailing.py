@@ -321,6 +321,7 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
         capex=v["capex"], delta_nwc=nwc, cash=cash_value,
         total_debt=debt, total_debt_source=debt_row,
         book_equity=v["book_equity"], net_income=v["net_income"],
+        goodwill=v["goodwill"], goodwill_row=r["goodwill"],
         dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
         operating_cash_flow=v["operating_cash_flow"], operating_cash_flow_row=r["operating_cash_flow"],
         net_income_to_common=v["net_income_to_common"], net_income_to_common_row=r["net_income_to_common"],

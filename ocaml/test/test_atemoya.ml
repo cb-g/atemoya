@@ -20,7 +20,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates ?aoci_recipe ?aoci_composition
     ?interest_recipe ?depreciation_amortization_recipe ?depreciation_amortization_composition
     ?net_income_to_common ?preferred_equity ?preferred_dividends ?preferred_outside_equity
-    ?common_dividends_paid ?operating_cash_flow ?operating_cash_flow_row () : Boundary_t.fiscal_period =
+    ?common_dividends_paid ?operating_cash_flow ?operating_cash_flow_row ?goodwill ?goodwill_row () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -43,6 +43,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     dividends_paid_row;
     operating_cash_flow;
     operating_cash_flow_row;
+    goodwill;
+    goodwill_row;
     provision_for_credit_losses;
     provision_for_credit_losses_row;
     net_loans;
@@ -2351,7 +2353,7 @@ let test_every_readout_says_what_was_measured () =
           if not (contains studies ("# " ^ h)) then Alcotest.failf "%s points at a docs/studies.md heading that does not exist: %S" block h
       | None -> Alcotest.(check bool) (block ^ " without a heading says no study reads it") true (contains sentence "no study on docs/studies.md reads it"))
     Measured.all;
-  Alcotest.(check int) "nine blocks" 9 (List.length Measured.all);
+  Alcotest.(check int) "eleven blocks" 11 (List.length Measured.all);
   let last l = List.nth l (List.length l - 1) in
   let v = run (financials (history ())) in
   Alcotest.(check string) "the quality block ends with its measurement" Measured.quality (last Quality.scope_limits);
@@ -2364,6 +2366,48 @@ let test_every_readout_says_what_was_measured () =
   | None -> Alcotest.fail "no four-quarter shadow");
   Alcotest.(check bool) "the heading parser reads the pointer" true (Measured.heading Measured.quality = Some "What the quality score is made of");
   Alcotest.(check (option string)) "and none where there is none" None (Measured.heading Measured.base_rate)
+
+(* Capital intensity on every record with the two lines; the goodwill readout on a generic
+   DCF record whose period files goodwill; the reasons where there is none. *)
+let test_capital_intensity_and_the_goodwill_readout () =
+  let v = run (financials (history ())) in
+  (match (v.capital_intensity, v.inputs) with
+  | Some c, Some (`Dcf i) ->
+      Alcotest.(check string) "the latest period" "2025-09-30" c.period_end;
+      check_float "capex over depreciation on the fixture: 50 over 200" 0.25 c.capex_over_depreciation;
+      check_float "no growth capex where capex is below depreciation" 0. c.growth_capex;
+      check_float "so the maintenance free cash flow is the headline's" i.fcff (Option.get c.fcff_maintenance);
+      Alcotest.(check string) "its last limit is the measurement" Measured.capital_intensity (List.nth c.scope_limits (List.length c.scope_limits - 1))
+  | _ -> Alcotest.fail "no capital intensity on a generic record");
+  let heavy = run (financials (history ~capex:500. ())) in
+  (match (heavy.capital_intensity, heavy.inputs) with
+  | Some c, Some (`Dcf i) ->
+      check_float "capex 500 over depreciation 200" 2.5 c.capex_over_depreciation;
+      check_float "growth capex is the excess" 300. c.growth_capex;
+      check_float "the maintenance figure adds it back" (i.fcff +. 300.) (Option.get c.fcff_maintenance)
+  | _ -> Alcotest.fail "no capital intensity on the heavy spender");
+  (* a refused record carries the block from the statements, without the maintenance figure *)
+  let refused = run ~declared:(Some (declaration `Bank)) (financials (history ())) in
+  (match refused.capital_intensity with
+  | Some c -> Alcotest.(check bool) "no free cash flow on a record without generic inputs" true (Option.is_none c.fcff_maintenance)
+  | None -> Alcotest.failf "no capital intensity on the refused record: %s" (Option.value refused.capital_intensity_reason ~default:""));
+  (* goodwill: absent with the reason, present with both returns *)
+  Alcotest.(check bool) "no goodwill filed, no readout" true (Option.is_none v.goodwill);
+  Alcotest.(check bool) "and the reason says so" true
+    (match v.goodwill_reason with Some r -> String.starts_with ~prefix:"goodwill not filed" r | None -> false);
+  let acquirer = run (financials (List.map (fun (p : Boundary_t.fiscal_period) -> { p with goodwill = Some 1000.; goodwill_row = Some "Goodwill" }) (history ()))) in
+  (match (acquirer.goodwill, acquirer.inputs) with
+  | Some g, Some (`Dcf i) ->
+      check_float "goodwill as filed" 1000. g.goodwill;
+      check_float "invested capital is the headline's: 5000 equity + 5000 debt" i.invested_capital g.invested_capital;
+      check_float "less goodwill" (i.invested_capital -. 1000.) g.invested_capital_ex_goodwill;
+      check_float "the share" (1000. /. i.invested_capital) (Option.get g.goodwill_share);
+      Alcotest.(check (option approx)) "the headline's return is copied" i.roic g.roic;
+      check_float "the return without goodwill is nopat over the thinner base" (i.nopat /. (i.invested_capital -. 1000.)) (Option.get g.roic_ex_goodwill);
+      Alcotest.(check bool) "higher than with it" true (Option.get g.roic_ex_goodwill > Option.get i.roic);
+      Alcotest.(check string) "its last limit is the measurement" Measured.goodwill (List.nth g.scope_limits (List.length g.scope_limits - 1));
+      check_float "the headline's growth and value are untouched" (Option.get v.fair_value) (Option.get acquirer.fair_value)
+  | _ -> Alcotest.failf "no goodwill readout on the acquirer: %s" (Option.value acquirer.goodwill_reason ~default:""))
 
 let test_flow_chart_names_every_reason () =
   let chart =
@@ -4535,6 +4579,7 @@ let () =
           case "batch summary" test_batch_summary;
           case "flow chart names every failure reason" test_flow_chart_names_every_reason;
           case "every readout says what was measured about it" test_every_readout_says_what_was_measured;
+          case "capital intensity and the goodwill readout" test_capital_intensity_and_the_goodwill_readout;
           case "depositary receipt ratio: the check, its flags, the loader" test_receipt_ratio_check;
           case "stretch: copied through, the summary lines, no thesis anywhere" test_stretch_alert_rule;
           case "market-implied smile: fit, butterfly, density, quantiles" test_market_implied_smile;

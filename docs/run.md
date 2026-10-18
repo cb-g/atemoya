@@ -74,6 +74,9 @@ rate](#terminal-growth-is-held-to-the-risk-free-rate)). `base_limits` says which
 period the models read and what the quarters filed since cost the fair value, and
 `four_quarter_shadow` values the generic DCF once more on the last four quarters, beside the
 headline (below under [The four-quarter shadow](#the-four-quarter-shadow)).
+`capital_intensity` and `goodwill` read what the capital is doing, spending against
+depreciation and the return on capital with and without acquired goodwill (below under
+[Capital intensity and goodwill](#capital-intensity-and-goodwill)).
 
 **Every readout says what was measured about it (decided 2026-10-18).** A readout, the quality
 block, the two shadows, the base rate, stretch, insiders, earnings, the build-out and the
@@ -450,6 +453,57 @@ say and not a finding. The residual-income, REIT and mid-cycle paths read annual
 have no shadow: a trailing base for them is a declared recipe each (book equity at the
 quarter end with trailing income and payouts; trailing FFO; a window that cannot be
 trailing), none written.
+
+## Capital intensity and goodwill
+
+Two readouts from the statements on what the capital is doing, beside the fair value and
+never inside it (`ocaml/lib/capital.ml`).
+
+`capital_intensity`, on every record whose latest period carries capex and a positive
+depreciation: the two figures, capex over depreciation, and `growth_capex`, capex less
+depreciation where positive. The split is the build-out readout's own rule, stated:
+depreciation is maintenance and the excess is growth spending, because no filer discloses
+the split. On a generic DCF record the block also carries `fcff_maintenance`, the headline's
+free cash flow with maintenance capex in place of the capex spent, what the standing business
+throws off if the growth spending stopped: a figure, not a value, and not the headline's
+base. `capital_intensity_reason` names the missing line otherwise. The block declares no
+build-out; whether the capital is one, and what it will earn, stays the universe entry's
+judgment (`build_out`, `build_out_return`, `build_out_lag_years`), which the build-out
+readout maps where it is declared.
+
+`goodwill`, on a record whose generic DCF completed and whose latest period files goodwill
+under the `Goodwill` element (now read by the fetcher as `goodwill` on every filed period):
+the filed balance, the headline's invested capital (book equity plus debt), the same less
+goodwill, goodwill's share of it, and the return on capital both ways, `roic` as the
+headline reads it and `roic_ex_goodwill` on the thinner base. `goodwill_reason` says why
+there is none. The headline keeps the return with goodwill, so an acquirer's fundamental
+growth estimate leans low, and the block says so.
+
+**Decided (2026-10-18): the last open model question, four declared limits, is settled as
+two readouts and two declarations.** The universe marks ten names `build_out` by hand;
+measured on the run, forty of the hundred and eighty-four names with the two lines spend at
+or above twice their depreciation, and the uncoded ones include the largest build-outs in
+the universe by dollars, Alphabet, Meta, Microsoft, Micron, Texas Instruments, Nvidia, all
+valued records whose headline free cash flow is after that spending with nothing on the
+record saying so, since the build-out readout appears only on refusals. So the condition is
+now measured on every record and the code stays what it was, a judgment. Goodwill was a code
+on seven names and the figure was not fetched; now it is, and the claim the code makes is a
+number a reader can see and a study can test once the panel carries it. The measurement found
+two definition defects on the way, Accenture's depreciation and Lilly's capex, corrected in
+the commit before this one. The other two of the four stay declared: a rebound, trough or
+one-off year inside the growth window, whose remedies are a year in the universe entry
+(against the rule that entries carry none), a fitted detector, or a scope code read as a
+model input, each breaking a rule the tool keeps; and the growth rule's cliff at zero
+reinvestment, already carried by the growth shadow and the `growth_without_reinvestment`
+code, whose remedies are a blend weight nobody declared or a per-name choice of estimate,
+which is what a belief is for and the anchor is not. Weighed and not taken for the two built:
+promoting the maintenance free cash flow to a headline for build-outs, which capitalises a
+declared return on growth capex as if every dollar became earning capital, the fallback the
+contract forbids; and switching the headline's return to the one without goodwill, a
+definition change on every acquirer's record before it is measured. Should the philosophy
+change: the headline's base is `Dcf.fcff` and its return `Growth.estimate`, one place each;
+the eight undeclared build-outs want their return and lag declared on the entry, which is the
+user's judgment and the readout's only input.
 
 ## Scope limit codes
 

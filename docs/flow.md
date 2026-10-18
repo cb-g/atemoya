@@ -505,6 +505,17 @@ the statement's structure — and it is exactly the identity a period assembled 
 filings breaks. The fetch run tallies how many of those periods reconcile and names the
 filers that do not. It gates nothing.
 
+### Goodwill is read, and the capital's intensity measured
+
+`goodwill` on every filed period is the balance under the `Goodwill` element at period end,
+an instant, read for the goodwill readout alone: the generic DCF's invested capital stays
+book equity plus debt, and the readout shows the return on it with and without the goodwill.
+`capital_intensity` on every record with capex and a positive depreciation splits the
+spending by the build-out readout's rule, depreciation as maintenance and the excess as
+growth, and on a generic DCF record adds the free cash flow at maintenance capex. Both are
+readouts: a missing line is a reason, never a zero, and neither declares a build-out, which
+stays the universe entry's judgment.
+
 ### The trailing period beside the annual ones
 
 The models read `periods`, the annual ones. A US filer's statements also carry
@@ -855,6 +866,14 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- capital intensity and goodwill: `capital_intensity` on every record whose latest period
+  carries capex and depreciation, spending against depreciation and the growth share by the
+  build-out readout's split rule, with the free cash flow at maintenance capex on a generic
+  DCF record; `goodwill` on a generic DCF record whose period files it, the return on capital
+  with and without acquired goodwill, the fetcher now reading `goodwill` on every filed
+  period; both describe and move nothing. Decided 2026-10-18 as the settlement of the last
+  open model question, the hand-coded build-outs and goodwill measured, the windows and the
+  cliff staying declared. Two blocks and a field: no value, status or `Failed` string moves.
 - two definition corrections found by measuring capital spending against depreciation
   across the universe: the combined depreciation line is the filer's total only where it is
   at least the depreciation note, else the note pair is read (Accenture's D&A had read a

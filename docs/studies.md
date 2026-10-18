@@ -58,15 +58,16 @@ and the comparisons and the accruals ratio not (under
 sentence; weighed and not taken were prediction as the test for a readout, which would
 remove the anchor itself, and reshaping or pruning the quality block on one panel of
 survivors, a per-field change on a fitted reading.
-The questions below were each measured
-and not settled, because the data cannot distinguish the options or because the choice is one
-of principle. They are held together and decided together, never on one study or one paper;
-each line says what was measured, why it did not settle the question, and what would.
-
-- **Build-outs, rebound windows, goodwill, and the growth rule's cliff at zero
-  reinvestment.** Named on the universe entries as scope limits and on the records as
-  readouts; each is a model question the tool declares rather than answers today, and none has
-  a study yet.
+And the last, the four limits the universe declares by hand, build-outs, rebound and trough
+windows, goodwill and the growth rule's cliff at zero reinvestment, was settled on 2026-10-18
+as two readouts and two declarations (`docs/run.md`, capital intensity and goodwill):
+capital spending against depreciation is now measured on every record, since the hand code
+reached ten names where forty spend at twice their depreciation and the largest were valued
+records with nothing on them saying so; goodwill is now fetched and the return on capital
+read with and without it; and the windows and the cliff stay declared, each remedy breaking a
+rule the tool keeps. Nothing on this list is open. What remains owed is measurement: the
+four-quarter shadow and the two capital readouts against what followed, once the panels
+carry them, and the holdout's one read when the rule is fixed.
 
 What was built, measured and taken out again is on `docs/tried.md`.
 

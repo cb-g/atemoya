@@ -118,6 +118,8 @@ type fiscal_period = {
   ?delta_nwc_row : string option;
   ?cash_row : string option;
   ?book_equity_row : string option;
+  ?goodwill : float option;                   (* acquired goodwill at period end, as filed; >= 0; read by the goodwill readout alone *)
+  ?goodwill_row : string option;
   ?net_income_row : string option;
   ?net_interest_income_row : string option;
   (* The definition each composed field follows and the components summed (11). *)
@@ -1267,6 +1269,37 @@ type growth_shadow = {
   scope_limits : string list;
 }
 
+(* Capital intensity: the latest fiscal period's capital spending against its depreciation,
+   from the statements, on every record that carries both. The split is the build-out
+   readout's own rule, stated: capex less depreciation is growth spending where positive,
+   depreciation is maintenance, because no filer discloses the split. Describes; declares no
+   build-out, which is the universe entry's judgment. *)
+type capital_intensity = {
+  period_end : string;
+  capex : float;
+  depreciation_amortization : float;
+  capex_over_depreciation : float;    (* capex / depreciation *)
+  growth_capex : float;               (* capex less depreciation where positive, else 0 *)
+  ?fcff_maintenance : float option;   (* on a generic DCF record: the headline's free cash flow with maintenance capex (depreciation) in place of the capex spent, i.e. fcff + growth_capex; what the standing business throws off, not a value *)
+  scope_limits : string list;
+}
+
+(* The goodwill readout: the generic DCF's return on capital with and without acquired
+   goodwill, from the statements. Invested capital is book equity plus debt and so carries
+   the price paid for acquired businesses; the return on it reads what was paid rather than
+   what the operations earn. Describes; the headline's roic and growth are unchanged. *)
+type goodwill_readout = {
+  period_end : string;
+  goodwill : float;                   (* as filed at period end *)
+  ?goodwill_row : string option;
+  invested_capital : float;           (* the headline's: book equity + total debt *)
+  invested_capital_ex_goodwill : float;   (* less goodwill *)
+  ?goodwill_share : float option;     (* goodwill / invested_capital, where the latter is positive *)
+  ?roic : float option;               (* the headline's: nopat / invested_capital *)
+  ?roic_ex_goodwill : float option;   (* nopat / invested_capital_ex_goodwill, where that is positive *)
+  scope_limits : string list;
+}
+
 (* The trailing period's provenance: the filings and spans each line was read from. A
    duration is the fiscal year-to-date figure ending at quarter_end, plus the prior fiscal
    year's annual figure, less the prior year's year-to-date figure ending at
@@ -1448,6 +1481,10 @@ type valuation = {
   ?growth_shadow : growth_shadow option;        (* on a record whose generic DCF completed: the value on the higher of the two growth estimates, beside the headline and never replacing it *)
   ?four_quarter_shadow : four_quarter_shadow option;   (* on a record whose generic DCF completed and whose statements carry a trailing period: the same DCF on the last four quarters, beside the headline and never replacing it *)
   ?four_quarter_shadow_reason : string option;         (* on a record whose generic DCF completed without one: why *)
+  ?capital_intensity : capital_intensity option;       (* on every record whose latest period carries capex and depreciation: spending against depreciation, the growth share, and on a generic DCF record the free cash flow with maintenance capex *)
+  ?capital_intensity_reason : string option;           (* present instead: why there is none *)
+  ?goodwill : goodwill_readout option;                 (* on a record whose generic DCF completed and whose latest period files goodwill: the return on capital with and without it *)
+  ?goodwill_reason : string option;                    (* present instead on a generic DCF record: why there is none *)
   ~base_limits : string list;                   (* on every Ok record with a recency block: which annual period the models read, how far the filed quarters have moved on from it and which way the fair value leans for it, and whether a four-quarter shadow stands beside it *)
   ?base_rate : base_rate option;                (* on a dollar record valued by a DCF-shaped model: how often companies of this size grew as fast as the record assumes and as the price needs *)
   ?base_rate_reason : string option;            (* present instead on such a record: why there is none *)

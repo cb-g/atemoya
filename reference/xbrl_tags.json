@@ -87,6 +87,12 @@
         "PaymentsForSoftware"
       ]
     },
+    "goodwill": {
+      "kind": "instant",
+      "tags": [
+        "Goodwill"
+      ]
+    },
     "book_equity": {
       "kind": "instant",
       "tags": [
@@ -299,6 +305,12 @@
         "PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities",
         "PurchaseOfPropertyPlantAndEquipmentIntangibleAssetsOtherThanGoodwillInvestmentPropertyAndOtherNoncurrentAssets",
         "PurchaseOfOtherLongtermAssetsClassifiedAsInvestingActivities"
+      ]
+    },
+    "goodwill": {
+      "kind": "instant",
+      "tags": [
+        "Goodwill"
       ]
     },
     "book_equity": {

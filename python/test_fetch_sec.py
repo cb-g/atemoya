@@ -930,6 +930,14 @@ def test_capex_reads_the_other_property_tag_and_capital_improvements_after_the_u
     assert p.capex == 1e9 and p.capex_row == "PaymentsToAcquirePropertyPlantAndEquipment"
 
 
+def test_goodwill_is_read_at_period_end_and_left_null_where_the_filer_tags_none() -> None:
+    """Acquired goodwill as filed under the Goodwill element, an instant at period end, read
+    for the goodwill readout alone; a filer without the tag has None, never zero."""
+    p = period({"Goodwill": usd(fact("2025-12-31", 12.5e9))})
+    assert p.goodwill == 12.5e9 and p.goodwill_row == "Goodwill"
+    assert period({}).goodwill is None and period({}).goodwill_row is None
+
+
 def test_the_note_pair_needs_both_parts_or_a_filer_with_no_intangibles() -> None:
     """(62) Depreciation alone is a filer's whole D&A only where it has no intangibles to
     amortise. With a finite-lived intangibles balance filed and no amortisation tagged, the
