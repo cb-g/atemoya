@@ -900,6 +900,36 @@ def test_depreciation_reads_the_cash_flow_lines_before_the_notes() -> None:
         ("amortization_line", 22.5e6, "AdjustmentForAmortization")]
 
 
+def test_a_combined_line_below_the_depreciation_note_is_a_residual_and_the_note_pair_is_read() -> None:
+    """A total cannot be smaller than one of its parts: a filer whose other-depreciation line
+    is a residual beside a depreciation note and an intangibles note (a seven million line
+    beside five and six hundred million) has its total in the notes."""
+    p = period({"OtherDepreciationAndAmortization": usd(fact("2025-12-31", 7e6, start="2025-01-01")),
+                "Depreciation": usd(fact("2025-12-31", 500e6, start="2025-01-01")),
+                "AmortizationOfIntangibleAssets": usd(fact("2025-12-31", 600e6, start="2025-01-01"))})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 500e6 + 600e6)
+    assert p.depreciation_amortization_row == "Depreciation + AmortizationOfIntangibleAssets"
+    assert p.depreciation_amortization_recipe is None
+    # at or above the note it is the total, as before
+    p = period({"OtherDepreciationAndAmortization": usd(fact("2025-12-31", 600e6, start="2025-01-01")),
+                "Depreciation": usd(fact("2025-12-31", 500e6, start="2025-01-01"))})
+    assert p.depreciation_amortization is not None and math.isclose(p.depreciation_amortization, 600e6)
+    assert p.depreciation_amortization_recipe == "cash_flow_lines"
+
+
+def test_capex_reads_the_other_property_tag_and_capital_improvements_after_the_usual_ones() -> None:
+    """A filer tags its plant spending PaymentsToAcquireOtherPropertyPlantAndEquipment; a
+    developer tags PaymentsForCapitalImprovements; both are the period's capex where the usual
+    tags are absent, and the usual one wins where both are filed."""
+    p = period({"PaymentsToAcquireOtherPropertyPlantAndEquipment": usd(fact("2025-12-31", 8e9, start="2025-01-01"))})
+    assert p.capex == 8e9 and p.capex_row == "PaymentsToAcquireOtherPropertyPlantAndEquipment"
+    p = period({"PaymentsForCapitalImprovements": usd(fact("2025-12-31", 40e6, start="2025-01-01"))})
+    assert p.capex == 40e6 and p.capex_row == "PaymentsForCapitalImprovements"
+    p = period({"PaymentsToAcquirePropertyPlantAndEquipment": usd(fact("2025-12-31", 1e9, start="2025-01-01")),
+                "PaymentsToAcquireOtherPropertyPlantAndEquipment": usd(fact("2025-12-31", 9e6, start="2025-01-01"))})
+    assert p.capex == 1e9 and p.capex_row == "PaymentsToAcquirePropertyPlantAndEquipment"
+
+
 def test_the_note_pair_needs_both_parts_or_a_filer_with_no_intangibles() -> None:
     """(62) Depreciation alone is a filer's whole D&A only where it has no intangibles to
     amortise. With a finite-lived intangibles balance filed and no amortisation tagged, the

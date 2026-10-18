@@ -570,6 +570,15 @@ def depreciation(facts: "Facts", selected: Selected, tags: reference.XbrlTags, d
     # displace a total.
     amortization_line = facts.first(d.amortization_line, end, instant=False)
     combined = facts.first(d.combined_line, end, instant=False)
+    # The combined line is the filer's total only where it is at least the depreciation the
+    # filer also notes: a total cannot be smaller than one of its parts, and a filer whose
+    # "other depreciation and amortisation" is a residual beside a depreciation note and an
+    # intangibles note (Accenture, 2026-10-18: a 6.6 million line beside 580 and 659 million)
+    # has its total in the notes, not there.
+    declared_fields = list(tags.depreciation_components)
+    noted_depreciation = value_of(selected, declared_fields[0], end)[0] if declared_fields else None
+    if combined is not None and noted_depreciation is not None and combined[0] < noted_depreciation:
+        combined = None
     if combined is not None:
         cash_flow = [boundary.Component(name="combined_line", value=combined[0], row=combined[1])]
         if amortization_line is not None:

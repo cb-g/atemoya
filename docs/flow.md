@@ -406,6 +406,11 @@ at all:
    AndAmortization` and `AdjustmentForAmortization`. So the combined line is read first,
    with the amortisation line added when it is filed separately, as `cash_flow_lines`;
    the note pair is below it, and the amortisation line is preferred inside the pair too.
+   **The combined line is the total only where it is at least the depreciation note**
+   (2026-10-18): a total cannot be smaller than one of its parts, and a filer whose
+   other-depreciation line is a residual beside a depreciation note and an intangibles note
+   (Accenture's 6.6 million beside 580 and 659 million) has its total in the notes, so the
+   pair is read there.
    **The note pair needs both parts.** Depreciation alone is a filer's whole D&A only when
    it has no intangibles to amortise, so the pair stands when both are filed and otherwise
    only when the filing carries no finite-lived intangibles balance at all; a filer with
@@ -850,6 +855,14 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- two definition corrections found by measuring capital spending against depreciation
+  across the universe: the combined depreciation line is the filer's total only where it is
+  at least the depreciation note, else the note pair is read (Accenture's D&A had read a
+  6.6 million residual for a 1.24 billion total, its fair value a tenth too low); and the
+  capex chain gains `PaymentsToAcquireOtherPropertyPlantAndEquipment` and
+  `PaymentsForCapitalImprovements` (Lilly's 7.8 billion of plant spending and a developer's
+  improvements had read as no capex at all). Data corrections: five records move, no
+  status or `Failed` string does.
 - readouts say what was measured about them: every readout block (quality, the growth and
   four-quarter shadows, base rate, stretch, insiders, earnings, build-out, runway) carries,
   last among its limits, one dated sentence from `ocaml/lib/measured.ml` saying what it was
