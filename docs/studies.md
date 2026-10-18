@@ -30,7 +30,7 @@ options store (62 names, daily from April 2025).
 
 ## What stays open
 
-The studies settled four things in the model: terminal growth is held to the risk-free rate
+The studies settled five things in the model: terminal growth is held to the risk-free rate
 (2026-10-04, below under [Why the anchor's level moves with rates](#why-the-anchors-level-moves-with-rates));
 the scope code `growth_without_reinvestment` names the six names whose fundamental
 estimate reads far below their history (2026-10-17); the fundamental estimate stays the
@@ -38,26 +38,15 @@ headline growth of a generic DCF record, with its lean stated on the record (202
 under [Growth on the rule panel](#growth-on-the-rule-panel-does-the-starting-growth-forecast-what-followed)
 and in `docs/run.md`, the growth shadow); and the industry beta stays in the cost of equity,
 held through the projection, with its caveat stated on the record (2026-10-18, below under
-[Betas on the rule panel](#betas-on-the-rule-panel-which-forecasts-and-the-fair-values-under-each)).
+[Betas on the rule panel](#betas-on-the-rule-panel-which-forecasts-and-the-fair-values-under-each));
+and above the kink the rate passes through in full, with the regime and its lean stated on
+the record (2026-10-18, below under
+[The discount rate on the rule panel](#the-discount-rate-on-the-rule-panel-how-much-of-a-rate-move-to-take-and-a-premium-that-moves)).
 The questions below were each measured
 and not settled, because the data cannot distinguish the options or because the choice is one
 of principle. They are held together and decided together, never on one study or one paper;
 each line says what was measured, why it did not settle the question, and what would.
 
-- **What the model does above the kink.** With terminal growth held to the risk-free rate the
-  model has two regimes: below the kink a point of rate moves a fair value about one per cent,
-  above it the full duration, 21 to 24 per cent (under
-  [The rule panel under shifted rates](#the-rule-panel-under-shifted-rates) and the duration
-  study's ratio of 0.85–0.98 above against 0.03–0.05 below). Measured under
-  [The discount rate on the rule panel](#the-discount-rate-on-the-rule-panel-how-much-of-a-rate-move-to-take-and-a-premium-that-moves):
-  a partial pass-through halves the level's swing with the rate and keeps its sign, a flat
-  rate the same, a premium built on the market's earnings yield reverses it; every reading
-  shifts the discount rate of every name alike, so no rank and no return sort moves. Not
-  settled because the readings decide a level, what the margin means in absolute terms, and
-  the market's return has not followed the margin in either stretch, so the data cannot
-  choose one. The options: the full pass-through as it is, a partial pass-through of the rate
-  into the WACC with the long-run mean as anchor, or a point-in-time premium that moves
-  against the rate.
 - **A four-quarter base beside the annual.** The recency readout says how far the filed
   quarters have moved on from the annual base the models read; a shadow valuation on the last
   four quarters, beside the annual headline as the growth shadow sits beside the growth, was
@@ -831,8 +820,9 @@ What this does not decide. The pass-through reading is a question, not a paramet
 paper gives the share for one country over one span and says the split of a given move
 cannot be read in real time without its survey panel. The kink is a property of the
 present rule, which was adopted for the low-rate years and does its work there; what the
-model should do above the kink, hold the full duration or part of it, is open, and the
-figures above are what the choice is worth.
+model should do above the kink, hold the full duration or part of it, was decided on
+2026-10-18 under the discount-rate study below, the full duration staying, and the figures
+above are what the choice is worth.
 
 ### The discount rate on the rule panel: how much of a rate move to take, and a premium that moves
 
@@ -878,14 +868,44 @@ pass-through and a premium anchored on the market's earnings yield each move the
 none moves a rank or a return sort on this panel; the beta half of C3 is the betas study
 above. What the readings decide between is what the margin of safety means in absolute
 terms, a level, and the data cannot choose a level: the market's return has not followed the
-margin in either stretch. That is the open question under *What the model does above the
-kink*, now with these figures beside it. Nothing moves on the valuation path.
+margin in either stretch. That was the open question *What the model does above the kink*,
+decided below with these figures beside it. Nothing moves on the valuation path.
 
 **Limits.** The rule study's: large US survivors under one lens with a beta of one, so a
 discount-rate reading cannot change a rank here that it could on a universe with declared
 betas and classes; thirteen formations; the aggregate earnings yield is the panel's own,
 not Shiller's CAPE, and net income is not inflation-adjusted; the premium is applied over the
 rate at the projection tenor where the paper's is over the short rate.
+
+**Decided (2026-10-18): above the kink the rate passes through in full, with the regime and
+its lean stated on the record.** The choice was weighed on this study, the shifted-rates study
+and the duration study, and made on the same ground as the growth headline and the beta: the
+rate is observed and declared, every damping of it is a share to be asserted, and the data
+cannot choose a level. It differs from those two in one respect, said plainly: there the rule
+as it stood was the middle of the readings, here it is the extreme, the model discounting the
+whole of a rate move where the market discounts the time-preference part. Weighed and not
+taken: a partial pass-through anchored on the long-run mean rate, the reading nearest the
+market's measured behaviour, which halves the swing and keeps its sign, at the price of a
+share and an anchor fitted on one country over one span, the paper itself finding the share
+not constant, about a third over 1990 to 2023 and near nothing after 2000, and not readable for
+a given move in real time, so that whatever share is set is asserted, and a fair value that
+would depend on the rate's history rather than the rate; a premium moving against the rate on
+the market's earnings yield, which reverses the swing and would import the market's pricing of
+the panel into every name's rate, a dear market making every name read less dear; a flat rate,
+the long-run mean on every date, which gives up the one observed input on the time value of
+money; and the hold both ways, terminal growth equal to the rate above the table's figure too,
+parameter-free and kink-free and blind to rates against the −19 per point the market shows to
+time preference. Each is a level shift above the kink and nothing below it; none moves a rank
+or a return sort. What moves on the record is one field, `rate_pass_through_limits` beside the
+rate: on a path with a terminal value, which regime the record is in, held to the rate or
+above the table's figure, what a point of rate does there, and that above the kink a fair
+value leans low after rates have risen and high after they have fallen, by an amount the data
+cannot fix; on the residual-income paths, which have no terminal value, the pass-through into
+the cost of equity alone. The kink stays a known artefact of two rules meeting, documented
+here; each alternative is one function and a declared pair of numbers away (`docs/run.md`,
+Terminal growth is held to the risk-free rate); and the stretch that would let the data choose
+a level is one in which the market's return follows the margin, which neither stretch here
+was.
 
 ### Why the anchor's level moves with rates
 

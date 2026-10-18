@@ -89,6 +89,12 @@ val cost_of_equity_limits : assumptions -> string list
     flat where names' own betas converge, or one for want of an industry; empty under a
     declaration, which carries no beta. *)
 
+val rate_pass_through_limits : terminal_value:bool -> assumptions -> string list
+(** How the fair value moves with the risk-free rate, for the record beside the rate: with a
+    terminal value, whether terminal growth is held to the rate (the projection years alone
+    move) or stands at the table's figure below it (the full duration), and how that leans;
+    without one, the pass-through into the cost of equity alone. One sentence. *)
+
 val missing_report : Boundary_t.financials -> Boundary_t.fiscal_period -> nwc_periods:int -> string
 (** "missing market data: ...; missing statement fields for fiscal period ending D: ...". *)
 

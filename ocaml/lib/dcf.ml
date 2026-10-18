@@ -77,6 +77,31 @@ let cost_of_equity_limits a =
   | None, `Default_no_industry ->
       [ "beta is one for want of the vendor's industry string in the declared table, a convention and not a reading of the name's risk, so the cost of equity is the market's (docs/studies.md, betas on the rule panel)" ]
 
+(* How the fair value moves with the risk-free rate, on the record beside the rate (decided
+   2026-10-18 on the rates and discount-rate studies, docs/studies.md). The rate passes into
+   the discount rate one for one on every path. With a terminal value the hold of terminal
+   growth to the rate (Params.hold_to_risk_free) decides what that does: held, the two move
+   together and a point of rate reaches the fair value through the projection years alone;
+   with the rate above the table's figure the hold ends and a point moves the full duration.
+   The full pass-through stays, and the sentence says how it leans. *)
+let rate_pass_through_limits ~terminal_value a =
+  let rf = a.risk_free_rate.value and terminal = a.terminal_growth_rate.value in
+  let market =
+    "on the market's own measure only the part of a rate move that is time preference is discounted by equity prices, about a third of the US move 1990 to 2023 and little of it after 2000, the rest read as news on growth or inflation"
+  in
+  if not terminal_value then
+    [ Printf.sprintf
+        "the risk-free rate passes into the cost of equity one for one and the path has no terminal value, the return on equity reverting toward its target over the projection, so a point of rate reaches the fair value through the projection years alone, the discount-rate step of the sensitivity block carrying the figure; %s (docs/studies.md, the discount rate on the rule panel)"
+        market ]
+  else if terminal >= rf then
+    [ Printf.sprintf
+        "terminal growth is held to the risk-free rate, which the table's figure is above, so a move in the rate moves the discount rate and the terminal growth together and reaches the fair value through the projection years alone, about a hundredth per point on the five hundred largest US filers 2013 to 2022; were the rate to pass the table's figure the hold would end and a point of rate would move the fair value by its full duration, about a fifth; %s (docs/studies.md, the rule panel under shifted rates)"
+        market ]
+  else
+    [ Printf.sprintf
+        "the risk-free rate passes into the discount rate one for one while the terminal growth stands at the table's figure, which the rate is above, so a point of rate moves the fair value by its full duration, about a fifth on the five hundred largest US filers 2023 to 2025, where below the table's figure the hold makes it about a hundredth; the model here prices the whole rate as the cost of waiting, and %s, so in this regime a fair value leans low after rates have risen and high after they have fallen, by an amount the data cannot fix; the full pass-through stays because the rate is the one observed input on the time value of money and any damping of it is a share to be asserted (docs/studies.md, the discount rate on the rule panel)"
+        market ]
+
 let latest_period fin =
   match Period.latest fin with
   | None -> Error "no fiscal periods in statements"

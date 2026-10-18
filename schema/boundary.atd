@@ -1384,6 +1384,7 @@ type valuation = {
   ?required_return_source : string option;   (* (34) capm | declared: class <name> | declared: name *)
   ?required_return_version : string option;  (* (34) as_of, a hash of the three fields, class or name; absent (null) under capm *)
   ~cost_of_equity_limits : string list;      (* what the CAPM rate's beta is and is not: the industry's from the declared table, held through the projection where names' own betas converge toward one, or one for want of an industry; empty under a declared required return, which carries no beta *)
+  ~rate_pass_through_limits : string list;   (* how the fair value moves with the risk-free rate, which passes into the discount rate one for one: with a terminal value, whether terminal growth is held to the rate (the projection years alone move, about a hundredth per point) or stands at the table's figure below it (the full duration, about a fifth) and how that leans against the market's own response; on the residual-income paths the pass-through alone; empty on the NAV path, which discounts nothing *)
   ?surplus_curve : surplus_point list option;   (* (35) the value surplus at 41 evenly spaced long-run growths from the belief's floor to its ceiling, everything else held; present iff the record has a belief *)
   ?surplus_curve_reason : string option;        (* (35) why there is none: no belief on the record *)
   ?market_implied : market_implied option;      (* (36) present on an Ok record when --options DIR holds a chain for the name and a usable expiry *)

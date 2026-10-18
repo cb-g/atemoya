@@ -2037,6 +2037,21 @@ let test_required_return_on_the_record_and_the_paths () =
   (match Dcf.cost_of_equity_limits { assumptions with beta_source = `Default_no_industry } with
   | [ s ] -> Alcotest.(check bool) "without an industry the record says beta is one by convention" true (String.starts_with ~prefix:"beta is one for want of" s)
   | l -> Alcotest.failf "default beta carries %d limits" (List.length l));
+  (* the rate caveat: on the test assumptions the rate (2 per cent) is above the terminal
+     growth (nought), so the generic record is in the full-duration regime; with the terminal
+     growth at the rate it is held; a path without a terminal value says so *)
+  (match capm.rate_pass_through_limits with
+  | [ s ] ->
+      Alcotest.(check bool) "above the table's figure the record says the full duration moves" true
+        (String.starts_with ~prefix:"the risk-free rate passes into the discount rate one for one while the terminal growth stands" s)
+  | l -> Alcotest.failf "capm record carries %d rate limits" (List.length l));
+  Alcotest.(check (list string)) "a declared return carries the same rate caveat" capm.rate_pass_through_limits v.rate_pass_through_limits;
+  (match Dcf.rate_pass_through_limits ~terminal_value:true { assumptions with terminal_growth_rate = param 0.02 } with
+  | [ s ] -> Alcotest.(check bool) "held to the rate the record says the projection years alone move" true (String.starts_with ~prefix:"terminal growth is held to the risk-free rate" s)
+  | l -> Alcotest.failf "held record carries %d rate limits" (List.length l));
+  (match Dcf.rate_pass_through_limits ~terminal_value:false assumptions with
+  | [ s ] -> Alcotest.(check bool) "without a terminal value the record says so" true (String.starts_with ~prefix:"the risk-free rate passes into the cost of equity one for one and the path has no terminal value" s)
+  | l -> Alcotest.failf "residual-income record carries %d rate limits" (List.length l));
   (* the engine by hand on the round assumptions *)
   let a = { assumptions with required_return = Some { Dcf.premium_over_rf = 0.05; source = "declared: name"; version = "v" } } in
   check_float "capm chain unchanged" 0.12 (Dcf.cost_of_equity_capm a);

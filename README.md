@@ -98,7 +98,10 @@ The tool tests its own outputs, and the results are kept whether or not they fla
   what it is and how it leans.
 - **The model's level moves with rates.** With a terminal growth that did not come down
   with the risk-free rate, most large companies read as worth double their price in the
-  low-rate years; the model now holds terminal growth to the risk-free rate.
+  low-rate years; the model now holds terminal growth to the risk-free rate. Above that
+  rate the hold ends and a point of rate moves a fair value by its full duration, where the
+  market discounts only the part of a move that is time preference; the full pass-through
+  stays, on principle, and the record says which regime it is in and how that leans.
 - **No starting parameter forecasts what followed.** On the same five hundred, no growth
   estimate the model starts from explains more than a few per cent of the growth the
   companies then reported, a name's own beta is forecastable but valuing at it sorts

@@ -5178,6 +5178,7 @@ class Valuation:
     required_return_source: Optional[str] = None
     required_return_version: Optional[str] = None
     cost_of_equity_limits: List[str] = field(default_factory=lambda: [])
+    rate_pass_through_limits: List[str] = field(default_factory=lambda: [])
     surplus_curve: Optional[List[SurplusPoint]] = None
     surplus_curve_reason: Optional[str] = None
     market_implied: Optional[MarketImplied] = None
@@ -5247,6 +5248,7 @@ class Valuation:
                 required_return_source=_atd_read_string(x['required_return_source']) if 'required_return_source' in x else None,
                 required_return_version=_atd_read_string(x['required_return_version']) if 'required_return_version' in x else None,
                 cost_of_equity_limits=_atd_read_list(_atd_read_string)(x['cost_of_equity_limits']) if 'cost_of_equity_limits' in x else [],
+                rate_pass_through_limits=_atd_read_list(_atd_read_string)(x['rate_pass_through_limits']) if 'rate_pass_through_limits' in x else [],
                 surplus_curve=_atd_read_list(SurplusPoint.from_json)(x['surplus_curve']) if 'surplus_curve' in x else None,
                 surplus_curve_reason=_atd_read_string(x['surplus_curve_reason']) if 'surplus_curve_reason' in x else None,
                 market_implied=MarketImplied.from_json(x['market_implied']) if 'market_implied' in x else None,
@@ -5334,6 +5336,7 @@ class Valuation:
         if self.required_return_version is not None:
             res['required_return_version'] = _atd_write_string(self.required_return_version)
         res['cost_of_equity_limits'] = _atd_write_list(_atd_write_string)(self.cost_of_equity_limits)
+        res['rate_pass_through_limits'] = _atd_write_list(_atd_write_string)(self.rate_pass_through_limits)
         if self.surplus_curve is not None:
             res['surplus_curve'] = _atd_write_list((lambda x: x.to_json()))(self.surplus_curve)
         if self.surplus_curve_reason is not None:

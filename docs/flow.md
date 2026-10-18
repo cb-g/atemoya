@@ -612,6 +612,17 @@ carry fails the record naming the field. A cross-currency name takes the row of 
 trading currency's country, not its domicile's, and so does a name whose statements and
 price are both in a currency that is not its domicile's own.
 
+The table's figure is held to the risk-free rate where the rate is below it
+(`Params.hold_to_risk_free`, 2026-10-04), which gives the model two regimes meeting at a
+kink: below the figure a point of rate moves a fair value through the projection years
+alone, about one per cent; above it by the full duration, a fifth to a quarter. Above the
+figure the full pass-through stays (decided 2026-10-18 on the rates and discount-rate
+studies, `docs/studies.md`, the alternatives weighed recorded there). `rate_pass_through_limits`
+on every Ok record that discounts says which regime the record is in, what a point of rate
+does there and how that leans against the market's own response, and on the residual-income
+paths, which have no terminal value, the pass-through into the cost of equity alone; the
+NAV path discounts nothing and carries none.
+
 ## Beliefs
 
 The belief parameter is terminal growth, fixed on the merits. This choice may be revisited
@@ -818,6 +829,16 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the rate above the kink decided: the risk-free rate passes into the discount rate in full
+  above the table's terminal growth, where the hold ends and a point of rate moves a fair
+  value by its full duration, the choice weighed on the shifted-rates, duration and
+  discount-rate studies and made on principle, the one observed input on the time value of
+  money taken at face value over a share or an anchor to be asserted, with the market's
+  measured response, the time-preference part of a move alone, stated beside it;
+  `rate_pass_through_limits` on every Ok record that discounts says which regime the record
+  is in, what a point of rate does there and how that leans, or on a residual-income path the
+  pass-through alone. One new field, carrying a sentence; no value, status or `Failed` string
+  moves.
 - the beta decided: the industry beta from the declared table stays in the CAPM cost of
   equity, held through the projection, the choice weighed on the beta, betas and duration
   studies and made on principle, a declared and citable number over one estimated from the

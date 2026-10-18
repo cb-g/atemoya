@@ -65,7 +65,12 @@ market's charges the far years more than the names kept and one below less; and 
 stays, which is that on the tool's own panel beta was paid and no beta in the fair value
 sorted returns better than one, while a name's own beta would read its risk from its price
 history. A name without an industry in the table is valued at one and the field says so;
-under a declared return the field is empty, a declared premium carrying no beta.
+under a declared return the field is empty, a declared premium carrying no beta. Beside
+both, `rate_pass_through_limits` says how the fair value moves with the risk-free rate,
+which passes into the discount rate one for one on every path: which regime the hold of
+terminal growth puts the record in, what a point of rate does there and how that leans
+(decided 2026-10-18; below under [Terminal growth is held to the risk-free
+rate](#terminal-growth-is-held-to-the-risk-free-rate)).
 
 A name whose statements and price are in different currencies is converted at one
 recorded FX rate (statement totals, never per-share fields) and valued in the trading
@@ -139,6 +144,55 @@ typical large company read as worth double its price through the low-rate years
 (`docs/studies.md`, Why the anchor's level moves with rates). With the
 dollar rate above the dollar figure the rule binds no dollar record today; it is there for
 the day it does.
+
+**Above the table's figure, the full pass-through stays (decided 2026-10-18).** The hold
+gives the model two regimes, meeting at a kink where the rate equals the table's figure.
+Below it terminal growth follows the rate, the gap between the discount rate and the growth
+does not move, and a point of rate moves a fair value by about one per cent, the projection
+years alone; above it the hold ends, the growth stands at the table's figure and a point of
+rate moves a fair value by its full duration, a fifth to a quarter (`docs/studies.md`, The
+rule panel under shifted rates). The dollar rate crossed the dollar figure between June 2022
+and June 2023, so every dollar record today is in the second regime. Against the market's
+own measure that regime overstates: only the part of a rate move that is time preference
+passes to equity prices, about a third of the US move 1990 to 2023 and little of it after
+2000, the rest read as news on growth or inflation and not discounted; the model discounts
+the whole move. It is decided that the full pass-through stays: the rate is the one observed
+input the model has on the time value of money, taken at face value as a bond takes it, and
+every damping of it is a share that would have to be asserted, the paper that measured the
+split finding it not constant and not readable for a given move in real time. What the
+choice is worth is a level, and the data cannot choose a level: under every reading the
+within-date rank of the margins is the run's at one, the return sort is unchanged, and the
+market's return has not followed the margin in either stretch. The record says which regime
+it is in and how that leans: `rate_pass_through_limits`, beside the rate, carries one
+sentence, held to the rate or above the table's figure, with what a point of rate does there;
+on the residual-income paths, which have no terminal value, the pass-through into the cost of
+equity alone; the NAV path discounts nothing and carries none.
+
+The alternatives weighed and not taken are on the studies page: a partial pass-through, the
+WACC taking the long-run mean rate plus a share of the day's distance from it, which halves
+the level's swing with the rate and keeps its sign, at the price of a share and an anchor
+fitted on one country over one span and a fair value that would depend on the rate's history
+rather than the rate; a premium that moves against the rate, built on the market's earnings
+yield, which reverses the swing by importing the market's pricing of the panel into every
+name's rate; a flat rate, the long-run mean on every date; and the hold both ways, terminal
+growth equal to the rate above the table's figure too, which has no parameter and no kink
+and makes equity values blind to rates against the market's measured response to time
+preference. Each is a level shift above the table's figure and nothing below it, so it would
+leave every stored record from 2023 incomparable with the next; none sorts returns
+differently.
+
+Should the philosophy change, each path is one place. The rate enters through
+`Params.resolve`'s `risk_free` and `Dcf.cost_of_equity`; a partial pass-through or a flat
+rate is a step after the curve is read, the rate moved toward a declared anchor by a declared
+share, both of which would have to be declared in `reference/`, since the panel's mean and
+the paper's share are measurements and not declarations; `python/rule_discount.py` already
+reruns the panel under any such reading. The hold both ways is `Params.hold_to_risk_free`
+with its comparison removed. A moving premium would replace the table's equity risk premium
+in `Dcf.cost_of_equity_capm` with a series per currency, an aggregate earnings yield over a
+declared universe, which the model does not have. `Dcf.rate_pass_through_limits` says on the
+record which regime a record is in and would change with any of them. Whatever the path,
+every stored record values under the present rule, so the panels are rebuilt and the studies
+rerun before the new fair values are compared with anything that came before.
 
 ## Readouts and diffs
 
