@@ -341,7 +341,7 @@ def spread_line(label: str, rows: list[Record], q: dict[tuple[str, str], int]) -
 
 def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_of: date, holdout_line: str,
            expected: dict[tuple[str, str], float] | None = None, shadow: dict[tuple[str, str], float] | None = None,
-           quality: dict[tuple[str, str], QualityRow] | None = None) -> str:
+           quality: dict[tuple[str, str], QualityRow] | None = None, four_quarter: dict[tuple[str, str], float] | None = None) -> str:
     dates = sorted({r.as_of for r in records})
     lines = [
         f"The naive baseline: {len(records)} panel rows, {len({r.ticker for r in records})} names, {len(dates)} quarter-ends {dates[0]} to {dates[-1]}, closes cut at {as_of.isoformat()}.",
@@ -397,6 +397,8 @@ def report(records: list[Record], measures: dict[tuple[str, str], Measures], as_
                       spread_line(name, rows, quintiles_within_date(both)),
                       spread_line("margin of safety", rows, quintiles_within_date([(r, cast(float, r.margin_of_safety)) for r in rows]))]
     lines += shadow_section(valued, shadow or {}, measures)
+    # (2026-10-19) the four-quarter shadow beside the headline, the same cut as the growth shadow's
+    lines += shadow_section(valued, four_quarter or {}, measures, label="four-quarter")
     lines += expected_return_section(records, expected or {}, measures)
     lines += quality_section(records, quality or {}, measures)
     return "\n".join(lines) + "\n"
@@ -424,7 +426,8 @@ def main(argv: list[str]) -> int:
                     **{m: measures[(r.ticker, r.as_of)].get(m) for m in MEASURES}, "measures_reason": measures[(r.ticker, r.as_of)].reason},
                    sort_keys=True) + "\n" for r in records))
     text = report(records, measures, as_of, holdout_line, load_expected_returns(records, panel.parent),
-                  load_shadow_margins(records, panel.parent), load_quality(records, panel.parent))
+                  load_shadow_margins(records, panel.parent), load_quality(records, panel.parent),
+                  four_quarter=load_shadow_margins(records, panel.parent, "four_quarter_shadow"))
     (out / "tables.txt").write_text(text)
     sys.stdout.write(text)
     return 0

@@ -112,6 +112,11 @@ The tool tests its own outputs, and the results are kept whether or not they fla
   returns no better than a beta of one, and the model's duration says nothing about next
   year's risk. The growth headline stays the statements' own reading, its lean stated on the
   record; the other decisions these bear on are listed as open, with the measurements.
+- **A fresher base is not a better sort.** Valued on the last four filed quarters instead of
+  the annual report, the same model's margin ranks with the headline's at 0.92, sorts the
+  returns that followed no better, and sits nearer where the headline goes next on two thirds
+  of name-years; heavy capital spending and the return on capital without goodwill sorted and
+  forecast nothing either. All three stay readouts beside the headline.
 - **A beat follows a beat, a little.** After a beat a name beats the Street 77 times in a
   hundred, after a miss 54; the next surprise carries a sixth of the last. Since 2022 the
   dearest fifth of the margin sort was beaten upward far more than the cheapest, which
@@ -220,7 +225,7 @@ Everything below hangs off the records and never moves them.
 | surprise study | whether a beat follows a beat, the return after a surprise, and which arm of the margin sort the Street was beaten on | `uv run python/surprise_study.py` |
 | bound study | the options-implied bound from the store's chains against what followed: its level, the strikes it ran over, delta, and each name's bound against its own history | `uv run python/bound_study.py` |
 | broad panel | every SEC filer with a ticker, each June since 2010: cheapness, quality, a peer-implied gap | `uv run python/broad_panel.py --retry-missing`, `broad_study.py` |
-| rule panel | the tool's own DCF on the five hundred largest filers each June since 2013, chosen by rule | `uv run python/rule_panel.py`, `rule_study.py`, `rule_alpha.py`, `rule_beta.py`, `rule_betas.py`, `rule_growth.py`, `rule_duration.py`, `rule_rates.py`, `rule_discount.py` |
+| rule panel | the tool's own DCF on the five hundred largest filers each June since 2013, chosen by rule | `uv run python/rule_panel.py`, `rule_study.py`, `rule_alpha.py`, `rule_beta.py`, `rule_betas.py`, `rule_growth.py`, `rule_duration.py`, `rule_rates.py`, `rule_discount.py`, `rule_shadow.py` |
 
 ## Rules
 

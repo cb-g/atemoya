@@ -14,7 +14,7 @@ let growth_shadow =
   "measured 2026-10-03 on the point-in-time panel: the shadow's margin of safety ranked names as the headline's did, a rank correlation of 0.97 within the date, and sorted the returns that followed no better, so it stays a shadow (docs/studies.md, The naive baseline)"
 
 let four_quarter_shadow =
-  "not yet measured against what followed: the point-in-time path writes the trailing period, so the panels carry the shadow once rebuilt, and the study of its margin beside the headline's is owed (docs/studies.md, What stays open)"
+  "measured 2026-10-18 on the rule panel and the point-in-time panel: the shadow's margin ranks with the headline's at 0.92 to 0.93 within the date, sorts the returns that followed no better, the cheapest fifth less the dearest within a few points of the headline's and both negative from 2022, and is nearer the next June's headline than the headline itself on two thirds of name-years, a quarter closer in log distance; a fresher base and not a better sort (docs/studies.md, The owed measurements on the rule panel)"
 
 let base_rate =
   "not measured against what followed: the share is a frequency from the reference class's own history, and no study on docs/studies.md reads it"
@@ -35,10 +35,10 @@ let runway =
   "not measured against what followed: cash against the burn as this tool reads it, and no study on docs/studies.md reads it"
 
 let capital_intensity =
-  "not measured against what followed: the latest period's capital spending against its depreciation, from the statements, and no study on docs/studies.md reads it; whether the capital is a build-out and what it will earn is the universe entry's judgment, which the build-out readout maps where it is declared"
+  "measured 2026-10-18 on the rule panel: fifths of capex over depreciation did not sort the twelve-month excess, the heaviest fifth less the lightest within a point pooled, three points behind before 2022 and five ahead from it, names at twice their depreciation or more ran about three points behind the rest on two hundred rows, and the margin at maintenance capex sorted the returns that followed worse than the headline's; the figures describe the spending and say nothing about what it will earn, which stays the universe entry's judgment (docs/studies.md, The owed measurements on the rule panel)"
 
 let goodwill =
-  "not measured against what followed: the return on capital with and without acquired goodwill, from the statements, and no study on docs/studies.md reads it yet; the growth study can ask whether the fundamental estimate on the return without goodwill forecasts better once the panel carries it"
+  "measured 2026-10-18 on the rule panel: the fundamental growth estimate on the return without goodwill forecast realised revenue and operating income growth no better than the headline's and slightly worse at three and five years, both with a negative R-squared as they stand and none fitted, on about thirteen hundred rows; the return without goodwill reads higher by half a point at the median and the headline keeps the one with it (docs/studies.md, The owed measurements on the rule panel)"
 
 let all =
   [ ("quality", quality); ("growth_shadow", growth_shadow); ("four_quarter_shadow", four_quarter_shadow);

@@ -866,6 +866,15 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the owed measurements: both panels rebuilt with the trailing period and goodwill on every
+  point-in-time record, and `python/rule_shadow.py` asks the rule panel what the four-quarter
+  shadow and the two capital readouts preceded, the point-in-time panel's four-quarter line
+  joining the naive baseline; found: the shadow ranks with the headline at 0.92 to 0.93, sorts
+  the returns that followed no better and is nearer the next June's headline on two thirds of
+  name-years; capex over depreciation sorted nothing and the maintenance margin sorted worse;
+  the return without goodwill forecast growth no better. The three blocks' measured sentences
+  now say so; the panel rows carry the new fields; the manual gains a glossary. A study and
+  three sentences: no value, status or `Failed` string moves.
 - capital intensity and goodwill: `capital_intensity` on every record whose latest period
   carries capex and depreciation, spending against depreciation and the growth share by the
   build-out readout's split rule, with the free cash flow at maintenance capex on a generic

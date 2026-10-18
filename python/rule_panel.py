@@ -206,11 +206,26 @@ def run_year(year: int, rows: list[Json], top: int, sec: fetch.SecContext, held_
         if b is None:
             continue
         shadow, quality = v.get("growth_shadow"), v.get("quality")
+        four_quarter, intensity, goodwill = v.get("four_quarter_shadow"), v.get("capital_intensity"), v.get("goodwill")
         cap, income = cast(float, b["market_cap"]), b.get("net_income")
+
+        def block(x: object) -> Json:
+            return cast(Json, x) if isinstance(x, dict) else {}
+
         result.append({
             "ticker": v["ticker"], "date": d.isoformat(), "status": v["status"], "fair_value": v.get("fair_value"), "price": v.get("price"),
             "margin_of_safety": v.get("margin_of_safety"), "failed_reason": v.get("failed_reason"),
             "shadow_margin": cast(Json, shadow).get("margin_of_safety") if isinstance(shadow, dict) else None,
+            # the owed measurements (2026-10-19): the four-quarter shadow and the two capital readouts, beside the headline
+            "four_quarter_margin": block(four_quarter).get("margin_of_safety"),
+            "four_quarter_fair_value": block(four_quarter).get("fair_value"),
+            "four_quarter_reason": v.get("four_quarter_shadow_reason"),
+            "capex_over_depreciation": block(intensity).get("capex_over_depreciation"),
+            "growth_capex": block(intensity).get("growth_capex"),
+            "fcff_maintenance": block(intensity).get("fcff_maintenance"),
+            "goodwill_share": block(goodwill).get("goodwill_share"),
+            "roic": block(goodwill).get("roic"),
+            "roic_ex_goodwill": block(goodwill).get("roic_ex_goodwill"),
             "f_score": cast(Json, quality).get("f_score") if isinstance(quality, dict) else None,
             "market_cap": cap, "earnings_yield": (income / cap) if isinstance(income, float) else None,
             "forward_12m": b.get("forward_12m"), "spy_12m": b.get("spy_12m")})

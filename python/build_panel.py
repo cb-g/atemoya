@@ -160,6 +160,16 @@ def panel_row(v: dict[str, object], d: date, forward: float | None, *, with_opti
         "anachronistic_inputs": block.get("anachronistic_inputs", []),
         "price_date": block.get("price_date"),
         "forward_12m_return": forward,
+        # the owed measurements (2026-10-19): the four-quarter shadow and the two capital readouts beside the headline
+        "four_quarter_margin": as_dict(v.get("four_quarter_shadow")).get("margin_of_safety"),
+        "four_quarter_fair_value": as_dict(v.get("four_quarter_shadow")).get("fair_value"),
+        "four_quarter_reason": v.get("four_quarter_shadow_reason"),
+        "capex_over_depreciation": as_dict(v.get("capital_intensity")).get("capex_over_depreciation"),
+        "growth_capex": as_dict(v.get("capital_intensity")).get("growth_capex"),
+        "fcff_maintenance": as_dict(v.get("capital_intensity")).get("fcff_maintenance"),
+        "goodwill_share": as_dict(v.get("goodwill")).get("goodwill_share"),
+        "roic": as_dict(v.get("goodwill")).get("roic"),
+        "roic_ex_goodwill": as_dict(v.get("goodwill")).get("roic_ex_goodwill"),
     }
     if with_options:
         row.update(market_fields(v))

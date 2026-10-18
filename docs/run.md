@@ -21,6 +21,89 @@ uv run python/baseline_study.py --as-of 2026-09-30  # the same rows sorted by ea
 uv run python/consensus.py                     # (82) today's consensus bar for every name, the release history, output/consensus/; at each sitting or daily
 ```
 
+## The words
+
+The tool's vocabulary, one line each, grouped by layer; each term is explained in full where
+the pointer says.
+
+**The record and its anchor.**
+- *record* — one JSON line per name: `Ok` with a fair value or `Failed` with a reason, plus
+  inputs, readouts and provenance ([The record](#the-record)).
+- *anchor*, *fair value*, *margin of safety*, *signal* — the model's value per share, its
+  distance from the price, and Buy/Hold/Sell at declared thresholds; "the anchor" is the
+  fair value as the thing the readouts stand beside and never move.
+- *class*, *lens*, *model*, *admissibility* — the kind of business a person declares for a
+  name (OperatingCompany, Cyclical, Bank, …), the one way that kind is read, the model that
+  does it, and the table saying which model a class admits; a class without one is refused
+  with the lens named (`docs/flow.md`).
+- *Failed reason* — the exact string a refusal carries; every one is a terminal node of the
+  flow chart and a test holds the code to that list (`docs/flow.md`).
+- *provenance* — `model_version` (the commit), the provider of every figure, the definition
+  and tags behind it, the version of every declaration read.
+
+**What goes in.**
+- *statements*, *periods*, *base* — the filed annual periods a model reads; the *annual base*
+  is the latest, the one the base cash flow and growth history start from.
+- *trailing period* — the last four filed quarters as one period beside the annual ones, read
+  by the four-quarter shadow and nothing else ([The four-quarter shadow](#the-four-quarter-shadow)).
+- *snapshot* — one dated fetch of the universe under `data/snapshots/<date>/`; `data/financials`
+  points at the latest.
+- *reference vs data* — `reference/` holds what a person declares (universe, parameters,
+  tables); `data/` and `output/` hold what was fetched or produced, never tracked
+  ([Inputs and declarations](#inputs-and-declarations)).
+- *declaration* — a value a person sets, dated, with a why: a class, a scope limit, a belief, a
+  required return, a build-out's return and lag, a parameter table. Revised by a new dated
+  declaration, never because of what a number looks like.
+- *universe entry* — a name's declaration in `reference/universe.json`: ticker, class, why,
+  scope limits and codes, and any per-name declarations.
+- *scope limit*, *scope code* — what the model cannot see for a name, in prose and as a stable
+  code a reader can act on by rule ([Scope limit codes](#scope-limit-codes)).
+- *parameter*, *vintage* — a rate, premium or growth figure with its source, date and age; a
+  table's vintage is the edition transcribed, and a stale one fails the record.
+- *required return*, *cost of equity*, *CAPM* — the discount rate's equity side: CAPM (rate plus
+  beta times premium) unless a premium is declared (`docs/required-return.md`).
+
+**What stands beside the anchor.**
+- *readout* — a block that describes the statements, the tape or the filings and never moves
+  a value: quality, recency, stretch, insiders, base rate, build-out, runway, capital intensity,
+  goodwill, earnings ([Readouts and diffs](#readouts-and-diffs)).
+- *shadow* — the same model run once more under one changed thing, beside the headline: the
+  *growth shadow* on the other growth estimate, the *four-quarter shadow* on the trailing
+  period ([The growth shadow](#the-growth-shadow), [The four-quarter shadow](#the-four-quarter-shadow)).
+- *headline* — the record's own value and inputs, as against a shadow's.
+- *limits*, *measured sentence* — every block's `scope_limits` say what it cannot see; the last
+  of them says what the block was measured against on `docs/studies.md` and what came of it,
+  or that no study reads it ([The record](#the-record)).
+- *implied readouts* — the growth the price needs, how long it must last, and how often
+  companies of that size grew that fast ([Readouts and diffs](#readouts-and-diffs)).
+- *belief*, *belief map*, *probability overpaid* — a declared view on growth, the surface of
+  value over growth and years, and the probability the price exceeds the value under the
+  belief (`docs/beliefs.md`).
+- *market-implied block*, *options store* — the risk-neutral distribution and expected return
+  from the name's option chains, read as the market's risk pricing and not a forecast
+  (`docs/market-implied.md`).
+- *recency*, *base_limits* — how far the filed quarters have moved on from the annual base,
+  and the sentence saying what that costs the fair value ([Recency](#recency)).
+- *build-out*, *contour* — capital spending on capacity not yet earning, declared on the entry;
+  the readout maps the return the price requires per lag ([The build-out readout](#the-build-out-readout)).
+
+**How the tool is tested on itself.**
+- *panel* — one row per name per date valued from what was known then, with what followed;
+  three of them: *point-in-time* (the universe, quarter-ends since 2022), *broad* (every SEC
+  filer, each June since 2010, no model), *rule* (the five hundred largest each June since 2013
+  under the generic DCF) (`docs/studies.md`, The panels).
+- *study* — a script reading a panel and printing descriptive tables: medians, counts, fifths
+  within the date, a rank correlation where a date carries enough rows, no statistic the sample
+  cannot carry (`docs/studies.md`).
+- *holdout* — the names and dates no study reads until the rule is fixed, declared in
+  `reference/holdout.json`.
+- *point-in-time (pit)* — a fetch cut at a date: facts filed by then, the close and rates
+  observed by then ([Share counts and point-in-time](#share-counts-and-point-in-time)).
+- *kink* — where the terminal-growth hold meets the rate: below the table's figure a point of
+  rate moves a fair value about one per cent, above it the full duration
+  ([Terminal growth is held to the risk-free rate](#terminal-growth-is-held-to-the-risk-free-rate)).
+- *tried* — what was built, measured and taken out again (`docs/tried.md`).
+
 ## Inputs and declarations
 
 `dune exec atemoya` reads declared parameters from `reference/` (`--reference DIR` to
@@ -448,8 +531,12 @@ point-in-time path, which now writes the trailing period cut at the date, so the
 carry the shadow once rebuilt, and a study putting the shadow's margin beside the headline's
 as `baseline_study.py` does for the growth shadow: whether it sorts the returns that followed
 differently, whether it anticipates the next annual headline, how often the two disagree on
-direction. That study is owed and not yet run; until it is, the shadow is what the statements
-say and not a finding. The residual-income, REIT and mid-cycle paths read annual periods and
+direction. That study was run the next day on both panels rebuilt (`docs/studies.md`, The
+owed measurements on the rule panel): the shadow's margin ranks with the headline's at 0.92
+to 0.93 within the date, sorts the returns that followed no better, and is nearer the next
+June's headline than the headline itself on two thirds of name-years, a quarter closer in log
+distance; a fresher base and not a better sort, so it stays what the statements say, beside
+the headline, and the block's last limit says so. The residual-income, REIT and mid-cycle paths read annual periods and
 have no shadow: a trailing base for them is a declared recipe each (book equity at the
 quarter end with trailing income and payouts; trailing FFO; a window that cannot be
 trailing), none written.
@@ -488,7 +575,12 @@ valued records whose headline free cash flow is after that spending with nothing
 record saying so, since the build-out readout appears only on refusals. So the condition is
 now measured on every record and the code stays what it was, a judgment. Goodwill was a code
 on seven names and the figure was not fetched; now it is, and the claim the code makes is a
-number a reader can see and a study can test once the panel carries it. The measurement found
+number a reader can see; measured the next day on the rule panel rebuilt (`docs/studies.md`,
+The owed measurements on the rule panel), capex over depreciation sorted the returns that
+followed by nothing, the margin at maintenance capex sorted worse than the headline's, and the
+fundamental estimate on the return without goodwill forecast realised growth no better and a
+shade worse at three and five years, so the headline keeps both its base and its return and
+each block's last limit says what was found. The measurement of the code found
 two definition defects on the way, Accenture's depreciation and Lilly's capex, corrected in
 the commit before this one. The other two of the four stay declared: a rebound, trough or
 one-off year inside the growth window, whose remedies are a year in the universe entry

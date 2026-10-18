@@ -42,12 +42,13 @@ held through the projection, with its caveat stated on the record (2026-10-18, b
 and above the kink the rate passes through in full, with the regime and its lean stated on
 the record (2026-10-18, below under
 [The discount rate on the rule panel](#the-discount-rate-on-the-rule-panel-how-much-of-a-rate-move-to-take-and-a-premium-that-moves)).
-A sixth was decided and built but not yet measured: a four-quarter shadow stands beside the
+A sixth was decided, built and measured the next day: a four-quarter shadow stands beside the
 annual headline on every US filer's generic DCF record, the same model on the last four filed
 quarters, with a sentence on every valued record saying what the annual base costs
-(2026-10-18, `docs/run.md`, the four-quarter shadow); the point-in-time path writes the
-trailing period, so the panels carry the shadow once rebuilt, and the study of its margin
-against the headline's is owed. And a seventh, on principle: a readout that does not sort
+(2026-10-18, `docs/run.md`, the four-quarter shadow); on both panels rebuilt it ranks with
+the headline at 0.92 to 0.93, sorts the returns that followed no better, and is nearer the
+next June's headline on two thirds of name-years (below under
+[The owed measurements on the rule panel](#the-owed-measurements-on-the-rule-panel-the-four-quarter-shadow-and-the-capital-readouts-against-what-followed)). And a seventh, on principle: a readout that does not sort
 returns stays on the record, since a readout describes and need not predict, and every
 readout block now carries, last among its limits, a dated sentence saying what it was
 measured against here and what came of it, or that no study reads it (2026-10-18,
@@ -65,9 +66,11 @@ capital spending against depreciation is now measured on every record, since the
 reached ten names where forty spend at twice their depreciation and the largest were valued
 records with nothing on them saying so; goodwill is now fetched and the return on capital
 read with and without it; and the windows and the cliff stay declared, each remedy breaking a
-rule the tool keeps. Nothing on this list is open. What remains owed is measurement: the
-four-quarter shadow and the two capital readouts against what followed, once the panels
-carry them, and the holdout's one read when the rule is fixed.
+rule the tool keeps; the two readouts were measured the next day with the shadow (below under
+[The owed measurements on the rule panel](#the-owed-measurements-on-the-rule-panel-the-four-quarter-shadow-and-the-capital-readouts-against-what-followed)),
+capital intensity sorting nothing and the return without goodwill forecasting growth no
+better. Nothing on this list is open and nothing is owed but the holdout's one read, when the
+rule is fixed.
 
 What was built, measured and taken out again is on `docs/tried.md`.
 
@@ -105,7 +108,8 @@ since a margin of safety from one model does not rank against another's. It answ
 question the anchor study cannot: whether the anchor did anything a plain cheapness sort did
 not. Further sections read blocks from each date's own valuations file: quality, by the
 nine-signal score, the accruals ratio, gross profitability and the score against cheapness;
-the growth shadow's margin of safety beside the headline's on the generic DCF's rows; and
+the growth shadow's margin of safety beside the headline's on the generic DCF's rows, and the
+four-quarter shadow's on the same cut (2026-10-18); and
 the options-implied expected return in quintiles within the date on every row that carries one,
 with the earnings yield and the margin of safety on the same rows and its rank correlation
 with each. The options store begins in April 2025, so the second is a handful of
@@ -935,6 +939,72 @@ Saab, Sea and Teva), Roche with a discount rate of 3.4 per cent against a termin
 of 2.0. The decision was made the same day: the model now holds terminal growth to the
 risk-free rate (`docs/run.md`, Terminal growth is held to the risk-free rate), and those five
 are the records it moved.
+
+### The owed measurements on the rule panel: the four-quarter shadow and the capital readouts against what followed
+
+```sh
+uv run python/rule_shadow.py        # -> output/rule_shadow/tables.txt; seconds, after the panels are rebuilt
+```
+
+Three blocks were built on 2026-10-18 beside the headline and measured against nothing: the
+four-quarter shadow, capital intensity and the goodwill readout. Both panels were rebuilt the
+same day with the fetcher writing the trailing period and goodwill on every point-in-time
+record, so every row carries the blocks as the valuer would have written them on the date.
+This asks the rule panel what each preceded, descriptively: the twelve-month excess over SPY,
+fifths within the date, a rank correlation where a date carries enough rows, and the growth
+study's own scoring for a growth estimate. The point-in-time panel's four-quarter line is the
+naive baseline's, the same cut as the growth shadow's.
+
+**What it found (2026-10-18), on 3,034 valued generic-DCF rows over thirteen Junes.**
+
+- **The four-quarter shadow is a fresher base, not a better sort.** 2,108 rows on 435 names
+  carry one; on a June date a December filer has one quarter filed, so the shadow here is a
+  quarter ahead of the base. Its margin ranks with the headline's at +0.92 within the date
+  (0.87 to 0.96); 193 rows disagree on direction; the shadow reads higher by +0.024 at the
+  median and on 61 per cent of rows. The cheapest fifth less the dearest of the excess that
+  followed: by the headline's margin −0.009 pooled, +0.030 before 2022 and −0.106 from it; by
+  the shadow's +0.006, +0.026 and −0.086. The one thing the shadow does that the headline does
+  not: against the *next* June's headline fair value, on 1,603 name-years valued at both, the
+  shadow is nearer on 66 per cent, a median log distance of 0.197 against the headline's 0.261.
+  It anticipates where the headline is going by about a quarter of the gap, which is what a
+  base one quarter fresher should do, and sorts the returns that followed no better. On the
+  point-in-time panel, 388 rows on 41 names with two or three quarters filed: rank +0.93
+  (lowest 0.83), 109 rows changing quintile, the sort by the shadow's margin +0.052, −0.001
+  and −0.076 at 63, 126 and 252 trading days against the headline's +0.102, +0.055 and −0.002
+  on the same rows. Nothing here argues for promoting the shadow; it stays what the
+  statements say, beside the headline.
+- **Capital intensity did not sort returns.** Every row carries capex over depreciation,
+  median 0.87, two hundred rows at twice or more. By fifths within the date the excess runs
+  −0.037, −0.028, −0.015, −0.029, −0.043 from the lightest spenders to the heaviest, the
+  heaviest less the lightest −0.006 pooled, −0.028 before 2022 and +0.047 from it; names at
+  twice their depreciation or more ran −0.055 against −0.029 for the rest. The margin at
+  maintenance capex, the headline's fair value scaled by the free cash flow with maintenance
+  capex over the base (a linear proxy), ranks with the headline's at +0.95 and sorts worse:
+  −0.037 pooled against −0.012, −0.039 before 2022 against +0.015, −0.081 from it against
+  −0.091. Adding the growth spending back to the base does not find the names the market then
+  paid for.
+- **The return without goodwill forecasts growth no better.** 1,362 rows carry both returns
+  with a positive reinvestment; the estimate without goodwill reads higher on every one, by
+  +0.006 at the median, since the rule panel's largest filers carry less goodwill against their
+  capital than the universe's acquirers. Scored as the growth study scores an estimate, on the
+  same rows: realised revenue growth, R² as it is −10.6 / −15.1 / −21.7 per cent with goodwill
+  at one, three and five years against −10.4 / −16.7 / −24.5 without, fitted R² nil for both;
+  realised operating income growth −4.0 / −7.0 / −11.6 against −3.8 / −7.2 / −13.0, the fitted
+  slope negative for both. Neither forecasts, and the one without goodwill is a shade worse at
+  the far horizons. The headline keeps the return with goodwill, and the readout shows the
+  other.
+
+**What this closes.** The measurement owed by the three blocks, the day after they were built.
+None moves a headline: the shadow and the two readouts stay descriptions, each now carrying on
+the record what it was measured against and what came of it, by the rule of 2026-10-18.
+
+**Limits.** The rule study's: large US survivors under one lens with a beta of one, thirteen
+formations, no vendor cross-check. The shadow on June dates is one quarter ahead of its base,
+the weakest form of the test; the point-in-time panel's two or three quarters are the stronger
+one and its 41 names the thinner sample. The maintenance margin is a linear proxy, not a
+rerun. The anticipation test compares fair values a year apart on a price that moved between
+them and asks only which is nearer, not whether either was right. Realised growth is from the
+SEC frames as the growth study reads them.
 
 ### What the quality score is made of
 
