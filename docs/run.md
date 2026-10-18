@@ -174,8 +174,9 @@ untested one and a finding from a description. Weighed and not taken: prediction
 for a readout, which applied evenly would remove the anchor, since the fair value did not sort
 returns among large companies either; and reshaping or pruning the quality block to the three
 signals that sorted, a per-field change fitted on one panel of survivors. The upkeep is a
-rule, in `docs/studies.md`: a study that measures a readout owes its block the sentence in the same
-commit, and a test holds every sentence that names a heading to a heading that exists.
+rule, stated at the top of `docs/studies.md`: a study that measures a readout owes its block
+the sentence in the same commit, as a `Failed` string owes the flow chart, and a test holds
+every sentence that names a heading to a heading that exists.
 
 A name whose statements and price are in different currencies is converted at one
 recorded FX rate (statement totals, never per-share fields) and valued in the trading

@@ -7,7 +7,12 @@ a sample cannot carry. The names on one date move together with the market, so a
 thousands of rows is a few dozen formations and nothing here is a test in the statistical
 sense. A cell under ten rows prints its count alone. Nothing a study finds feeds a model, a
 belief or a signal: a finding is weighed by a person and the change, where there is one, is
-made in the open and cited. `reference/holdout.json` declares what no study reads; see
+made in the open and cited. Every readout block on the record carries, last among its limits,
+a dated sentence saying what it was measured against on this page and what came of it, or
+that no study reads it (`ocaml/lib/measured.ml`); **a study that measures a readout owes its
+block that sentence in the same commit**, as a `Failed` string owes the flow chart, and a
+test holds every sentence that names a heading here to a heading that exists.
+`reference/holdout.json` declares what no study reads; see
 [The holdout](#the-holdout). `docs/run.md` is the manual for the tool itself; this page is
 what the tool found when turned on its own work, and the questions that stayed open after
 it.
@@ -52,8 +57,8 @@ next June's headline on two thirds of name-years (below under
 returns stays on the record, since a readout describes and need not predict, and every
 readout block now carries, last among its limits, a dated sentence saying what it was
 measured against here and what came of it, or that no study reads it (2026-10-18,
-`ocaml/lib/measured.ml`; the rule that a study owes its block the sentence is in
-`docs/studies.md`). The quality block's two measurements, the levels and the share count sorting
+`ocaml/lib/measured.ml`; the rule that a study owes its block the sentence is stated at the top
+of this page). The quality block's two measurements, the levels and the share count sorting
 and the comparisons and the accruals ratio not (under
 [What the quality score is made of](#what-the-quality-score-is-made-of)), are the first such
 sentence; weighed and not taken were prediction as the test for a readout, which would
