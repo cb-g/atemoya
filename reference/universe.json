@@ -392,7 +392,17 @@
       "scope_limit_codes": [
         "build_out"
       ],
-      "map_cik": "0001341439"
+      "map_cik": "0001341439",
+      "build_out_return": {
+        "value": 0.13,
+        "why": "the after-tax return on capital the new capacity earns once earning, after depreciation; the record's own return on opening capital is 0.144 for FY2026, 0.146 for FY2025 and 0.132 for FY2024, and this sits a shade under the latest because the capital being spent is data-centre shell, power and accelerators written off over six years or less, bought into a shortage and much of it against a few customers' contracted backlog, where the base that earned the latest return is software and support built over decades",
+        "as_of": "2026-10-19"
+      },
+      "build_out_lag_years": {
+        "value": 2,
+        "why": "a data-centre campus is sited, powered and populated over roughly eighteen months to two years from the first dollar, and a shell without power earns nothing; two whole years from spend to first earning covers the build and the ramp",
+        "as_of": "2026-10-19"
+      }
     },
     {
       "ticker": "CSCO",
@@ -1180,7 +1190,17 @@
       "scope_limit_codes": [
         "build_out"
       ],
-      "map_cik": "0000002969"
+      "map_cik": "0000002969",
+      "build_out_return": {
+        "value": 0.1,
+        "why": "the after-tax return on capital the new plants earn once earning, after depreciation; the record's own return on opening capital is 0.092 for FY2022, 0.100 for FY2023, 0.236 for FY2024 and -0.039 for FY2025, the last carrying the write-downs of cancelled projects and the 2024 figure not a run-rate, so the claim is the decade's tenth: industrial-gas megaprojects under long take-or-pay contracts earn about a tenth on capital over their lives",
+        "as_of": "2026-10-19"
+      },
+      "build_out_lag_years": {
+        "value": 4,
+        "why": "a large hydrogen or air-separation complex runs three to five years from the investment decision to on-stream and the recent ones slipped; four whole years from spend to first earning is the schedule the projects themselves kept",
+        "as_of": "2026-10-19"
+      }
     },
     {
       "ticker": "EXC",
@@ -1368,7 +1388,17 @@
         "build_out",
         "ownership_structure"
       ],
-      "map_cik": "0001866581"
+      "map_cik": "0001866581",
+      "build_out_return": {
+        "value": 0.18,
+        "why": "the after-tax return on capital a new shop earns once earning, after depreciation; the record's own return on opening capital is 0.160 for FY2023, 0.181 for FY2024 and 0.180 for FY2025, and this is set at it because the capital being spent is more of the same shops at the same unit economics, shop-level returns above the company's with overheads below",
+        "as_of": "2026-10-19"
+      },
+      "build_out_lag_years": {
+        "value": 1,
+        "why": "a shop opens within a year of the spend, from lease to first sale; one whole year from spend to first earning",
+        "as_of": "2026-10-19"
+      }
     },
     {
       "ticker": "BAM",
@@ -1562,7 +1592,17 @@
         "build_out",
         "concentration"
       ],
-      "map_cik": "0000059478"
+      "map_cik": "0000059478",
+      "build_out_return": {
+        "value": 0.25,
+        "why": "the after-tax return on capital the new plants earn once earning, after depreciation; the record's own return on opening capital is 0.205 for FY2023, 0.309 for FY2024 and 0.446 for FY2025, and this sits well under the latest because that return is pricing power on an old base while the capital being spent is incretin manufacturing capacity earning the drug's margin on far more capital; the 2022 to 2023 level is the honest claim for a new plant",
+        "as_of": "2026-10-19"
+      },
+      "build_out_lag_years": {
+        "value": 4,
+        "why": "a pharmaceutical plant is built in two to three years and validated for a year or more before it ships; four whole years from spend to first earning covers the build and the regulatory validation",
+        "as_of": "2026-10-19"
+      }
     },
     {
       "ticker": "MXT.AX",
@@ -1712,7 +1752,17 @@
         "mixed_business",
         "build_out"
       ],
-      "map_cik": "0000895728"
+      "map_cik": "0000895728",
+      "build_out_return": {
+        "value": 0.07,
+        "why": "the after-tax return on capital the new pipeline and utility assets earn once earning, after depreciation; the record's own return on opening capital is 0.025 for 2022, 0.047 for 2023, 0.119 for 2024 and 0.052 for 2025, the base reset by the 2024 acquisitions, and this is set at the allowed return regulated pipelines and gas utilities earn on rate base, about seven per cent after tax, which is what the capital is contracted or regulated to earn",
+        "as_of": "2026-10-19"
+      },
+      "build_out_lag_years": {
+        "value": 3,
+        "why": "a pipeline or utility project runs two to four years from approval to service; three whole years from spend to first earning is the middle of that schedule",
+        "as_of": "2026-10-19"
+      }
     },
     {
       "ticker": "MP",
@@ -1802,7 +1852,17 @@
       "scope_limit_codes": [
         "build_out"
       ],
-      "lei": "549300ZHO4JCQQI13M69"
+      "lei": "549300ZHO4JCQQI13M69",
+      "build_out_return": {
+        "value": 0.12,
+        "why": "the after-tax return on capital the new production capacity earns once earning, after depreciation; the record's own return on opening capital over the last three years, read from the vendor's statements, rose to a little above this, and the declaration sits under the latest because the capital being spent is factories for munitions and aircraft against government orders at contracted margins, where the latest return carries a demand surge the capacity is built to meet",
+        "as_of": "2026-10-19"
+      },
+      "build_out_lag_years": {
+        "value": 2,
+        "why": "a defence production facility is built and tooled in eighteen to thirty months; two whole years from spend to first earning",
+        "as_of": "2026-10-19"
+      }
     },
     {
       "ticker": "WIT",
@@ -2168,7 +2228,17 @@
         "build_out",
         "carve_out_history",
         "acquired_history"
-      ]
+      ],
+      "build_out_return": {
+        "value": 0.09,
+        "why": "the after-tax return on capital the new plants earn once earning, after depreciation; the record's own return on opening capital over the last three years, read from the vendor's statements, ran a little below this, and the declaration sits a little above the latest because the capital being spent is contracted biologics capacity that earns about a tenth once ramped, where the base carries plants still filling and a divested business's remains",
+        "as_of": "2026-10-19"
+      },
+      "build_out_lag_years": {
+        "value": 4,
+        "why": "a biologics manufacturing site is built in two to three years and validated for a year or more before it earns; four whole years from spend to first earning covers the build and the validation",
+        "as_of": "2026-10-19"
+      }
     },
     {
       "ticker": "STMN.SW",

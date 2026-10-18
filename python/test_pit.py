@@ -282,18 +282,25 @@ def test_universe_loader_takes_both_build_out_declarations_or_neither() -> None:
             load(ret, '"build_out_lag_years": {"value": ' + bad + ', "why": "cited", "as_of": "2026-09-23"}')
 
 
-def test_the_tracked_universe_carries_the_two_drafted_build_outs() -> None:
-    """(60, 63) AMZN and VG are the two names the readout is about; their declarations were
-    drafts until brief 63, where the user confirmed them restated after depreciation."""
+def test_the_tracked_universe_carries_the_declared_build_outs() -> None:
+    """(60, 63) AMZN and VG were the two names the readout was about, confirmed in brief 63
+    restated after depreciation; on 2026-10-19 the user confirmed the other coded build-outs
+    but SPCX, which is loss-making on vendor statements and cannot carry the readout. Every
+    coded build-out but that one declares both figures, dated, with a why."""
     import universe
 
     u = universe.load(Path(__file__).resolve().parent.parent / "reference" / "universe.json")
     declared = {e.ticker: e for e in u.tickers if e.build_out_return is not None}
-    assert sorted(declared) == ["AMZN", "VG"]
+    assert sorted(declared) == ["AMZN", "APD", "BROS", "ENB", "LLY", "LONN.SW", "ORCL", "SAAB-B.ST", "VG"]
+    coded = {e.ticker for e in u.tickers if "build_out" in (e.scope_limit_codes or [])}
+    assert coded - set(declared) == {"SPCX"}
     for entry in declared.values():
         assert entry.build_out_lag_years is not None
         for d in (entry.build_out_return, entry.build_out_lag_years):
-            assert d is not None and d.why.strip() and "DRAFT" not in d.why and d.as_of == "2026-09-23"
+            assert d is not None and d.why.strip() and "DRAFT" not in d.why and d.as_of in ("2026-09-23", "2026-10-19")
+    for t in ("ORCL", "APD", "BROS", "LLY", "ENB", "SAAB-B.ST", "LONN.SW"):
+        r = declared[t].build_out_return
+        assert r is not None and r.as_of == "2026-10-19"
     assert declared["AMZN"].build_out_lag_years is not None and declared["AMZN"].build_out_lag_years.value == 2
     assert declared["VG"].build_out_lag_years is not None and declared["VG"].build_out_lag_years.value == 4
     # (63) confirmed by the user and restated as accounting returns, after depreciation
