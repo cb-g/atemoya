@@ -1,8 +1,11 @@
 """Minimal stub for the yfinance surface fetch.py uses; yfinance ships no types.
 
 Keep this to what is actually called. Adding a member here is the moment to
-re-verify its behaviour against the installed version (CLAUDE.md, yfinance
-landmines)."""
+re-verify its behaviour against the installed version: prices are split-adjusted
+even with auto_adjust=False (that flag disables only the dividend adjustment), and
+.info returns empty fields rather than erroring under concurrent load, so nothing
+here may route or select on it alone. Confirmed on yfinance 1.7.0 for the split
+behaviour; re-verify the rest before relying on it."""
 
 import pandas as pd
 
