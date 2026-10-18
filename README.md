@@ -33,7 +33,8 @@ One line of JSON per name, `Ok` with a fair value or `Failed` with a reason.
   and an options-implied expected return, read as the market's risk pricing and not as a
   forecast.
 - **Readouts.** Quality signals from the statements alone, a growth shadow, how far the
-  filed quarters have moved on from the annual base, price stretch
+  filed quarters have moved on from the annual base and what that costs the fair value, a
+  four-quarter shadow that values the same model on the last four quarters, price stretch
   against the name's own history, insider transactions with each trader told routine from
   opportunistic by their own timing, the Street's consensus and the name's surprise history.
 - **Provenance.** The provider of every figure, the definition and the tags summed, and
@@ -191,7 +192,8 @@ Everything below hangs off the records and never moves them.
 | run diff and stability | this run against a previous one, every moved input classified | `... --baseline prev/valuations.jsonl --baseline-snapshot data/snapshots/<old>` |
 | watch | what changed between two runs, one line a name | `uv run python/watch.py` |
 | market-implied block | the risk-neutral price distribution and an options-implied expected return beside the anchor | `... --options data/options` |
-| quality, growth shadow, base rate, stretch, recency | readouts on every record from the statements and the name's own history; recency says how far the filed quarters have moved on from the annual base the models read | the same run, fields on the record |
+| quality, growth shadow, base rate, stretch, recency | readouts on every record from the statements and the name's own history; recency says how far the filed quarters have moved on from the annual base the models read, and `base_limits` what that costs the fair value | the same run, fields on the record |
+| four-quarter shadow | the generic DCF once more on the last four filed quarters as one period, beside the headline with its complete inputs; US filers only, never the headline | the same run, `four_quarter_shadow` on the record |
 | consensus and earnings reactions | the Street's dated bar, each name's surprise history, the move across each release | `uv run python/consensus.py`, `earnings_reactions.py` |
 | implied cost of capital | what the price and the Street's two fiscal-year forecasts imply together | `uv run python/implied_cost.py` |
 

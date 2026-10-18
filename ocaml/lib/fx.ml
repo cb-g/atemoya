@@ -132,5 +132,7 @@ let convert ~rate (fin : financials) =
   {
     fin with
     periods = List.map period fin.periods;
+    (* the trailing period is money in the same statement currency and converts alike *)
+    trailing_period = Option.map period fin.trailing_period;
     currency = fin.trading_currency;
   }

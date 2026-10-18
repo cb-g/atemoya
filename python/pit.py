@@ -35,6 +35,7 @@ import fetch_sec
 import reference
 import quality
 import recency
+import trailing
 import refresh_fx
 import refresh_rates as rr
 
@@ -425,7 +426,12 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
     base = periods[0] if why is None and periods else None
     recency_block, recency_reason = recency.of_record(
         facts if why is None else None, decision.taxonomy if decision is not None else "", filing_currency if why is None else None, sec.tags,
-        None if base is None else base.period_end, None if base is None else base.total_revenue, recency.divergence_of(fetch_sec.load_params()), as_of=d)
+        None if base is None else base.period_end, None if base is None else base.total_revenue, recency.divergence_of(fetch_sec.load_params()),
+        annual_row=None if base is None else base.total_revenue_row, as_of=d)
+    # the trailing period, from the same facts cut at the date, for the four-quarter shadow
+    trailing_period, trailing_basis, trailing_reason = trailing.of_record(
+        facts if why is None else None, decision.taxonomy if decision is not None else "", filing_currency if why is None else None, sec.tags,
+        sec.definitions, fetch_sec.load_params(), periods if why is None else [], as_of=d)
     return boundary.Financials(
         ticker=symbol, as_of=f"{d.isoformat()}T00:00:00+00:00",
         currency=currency, financial_currency=filing_currency if why is None else (quote.financial_currency if quote else None),
@@ -440,6 +446,7 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         latest_filing=fetch_sec.latest_filing(periods) if why is None else None,
         cross_check=check, quality_lines=quality_lines, quality_lines_reason=quality_reason,
         recency=recency_block, recency_reason=recency_reason,
+        trailing_period=trailing_period, trailing_basis=trailing_basis, trailing_period_reason=trailing_reason,
         submissions_latest_annual=submission, point_in_time=pit,
         stretch=stretch_block, stretch_reason=stretch_reason,
         insiders=insiders_block, insiders_reason=insiders_reason,

@@ -70,7 +70,10 @@ both, `rate_pass_through_limits` says how the fair value moves with the risk-fre
 which passes into the discount rate one for one on every path: which regime the hold of
 terminal growth puts the record in, what a point of rate does there and how that leans
 (decided 2026-10-18; below under [Terminal growth is held to the risk-free
-rate](#terminal-growth-is-held-to-the-risk-free-rate)).
+rate](#terminal-growth-is-held-to-the-risk-free-rate)). `base_limits` says which annual
+period the models read and what the quarters filed since cost the fair value, and
+`four_quarter_shadow` values the generic DCF once more on the last four quarters, beside the
+headline (below under [The four-quarter shadow](#the-four-quarter-shadow)).
 
 A name whose statements and price are in different currencies is converted at one
 recorded FX rate (statement totals, never per-share fields) and valued in the trading
@@ -285,9 +288,14 @@ a name on the vendor's statements. On the point-in-time path the filings are cut
 date. The summary lists the names whose base is stale, with the trailing figure over the
 base.
 
-Nothing reads the block: the models keep the annual base. Whether a four-quarter base should
-stand beside the annual one, as the growth shadow stands beside the headline growth, is a
-model question held with the others of its kind.
+Nothing reads the block: the models keep the annual base. What the annual base costs the fair
+value is said beside it in `base_limits`, and the four-quarter shadow below values the same
+model on the last four quarters, beside the headline (decided 2026-10-18, under [The
+four-quarter shadow](#the-four-quarter-shadow)). The quarters compared are those of the
+element the annual base's revenue was read from; a filer tagging a wider total and a
+narrower contract revenue has quarters on both, and a ratio across the two measures the gap
+between the elements and not the quarters' distance from the base (corrected 2026-10-18:
+MercadoLibre read as a collapse of fifteen per cent where its quarters ran a fifth ahead).
 
 ## The growth shadow
 
@@ -352,6 +360,80 @@ It moves levels, a third of the valued names by a fifth to two fifths, and not t
 So it is not promoted: a rule that only ever raises values, with no evidence it sorts
 better, does not replace the headline. It stays on the record because it shows how much a
 name's value rests on the growth rule. The holdout was not opened for it.
+
+## The four-quarter shadow
+
+The models read the last annual period, and nothing filed after the annual report reaches
+a fair value; the recency block above says how far behind that is, on revenue alone.
+`four_quarter_shadow`, on every record whose generic DCF completed and whose statements
+carry a trailing period, is the same DCF run once more with the last four filed quarters as
+its base. The fetcher reads that period beside the annual ones (`trailing_period` on the
+financials, `trailing_basis` naming the filings and spans): each duration is the fiscal
+year-to-date figure plus the prior year's annual figure less the prior year's year-to-date
+figure, the two year-to-date figures from the quarterly filing's own accession where it
+carries both, each balance the quarter end's, and every line is read by the same recipes as
+an annual period's (`python/trailing.py`). A recipe that sums components reads what is
+present, and on a trailing period a line the 10-K tags may have no 10-Q facts, so a line is
+kept only where the trailing recipe is whole against the annual base's: for debt a filer
+total or a complete pair, else every row the annual read, and zero by absence only where the
+annual was zero; for cash every role the annual assembled unless the quarter reads the
+inclusive total; for the working-capital change the aggregate or every row; a line that is
+not whole is null and the basis notes name the row, never a partial sum (Crocs's trailing
+working capital read the asset side alone before this rule). The valuer puts the trailing period in front of
+the annual ones and runs `Dcf.value` unchanged (`ocaml/lib/four_quarter_shadow.ml`). The
+block carries the shadow's `fair_value` and `margin_of_safety`, the headline's fair value
+beside them, the trailing revenue over the annual base's, and the shadow's complete `inputs`,
+so a reader has the second valuation whole. The record's `fair_value`, `margin_of_safety`
+and `signal` are the headline's and are never moved by it. Where there is none,
+`four_quarter_shadow_reason` says why: no trailing period in the statements (a 20-F filer
+reports half-years companyfacts does not carry, a name on vendor statements has no facts, the
+latest quarter end is not after the annual base, or no quarter end carries both a
+year-to-date net income and a book equity), a derived ebit on the trailing period (the
+headline's policy checks a derived ebit against the vendor's annual figure, and nothing
+checks a trailing one), or the DCF's own refusal on the trailing base, prefixed.
+
+`base_limits`, on every Ok record with a recency block, is one sentence saying what the
+annual base costs: which period the models read, how many quarters have been filed since,
+how far the last four quarters' revenue has moved from it against the declared divergence,
+which way the fair value leans for it if margins held, and whether a shadow stands beside it;
+on the mid-cycle, residual-income, REIT and NAV paths, that no model here reads the quarters.
+
+**Decided (2026-10-18): built as a shadow beside the annual headline, to be measured; the
+annual base stays the headline.** When the recency block was built the four-quarter base
+was weighed and held back on three grounds, each still standing and now on the shadow's
+limits: only US filers report quarterly, so a four-quarter headline would be two bases in
+one universe; the quarters are reviewed and not audited and a quarter's one-off lands in a
+trailing base in full; and a base on the latest quarters moves when the quarters move, as
+the price already has, so on a surging or collapsing name it capitalises the latest
+run-rate. On the run of 2026-10-18, 146 of 250 names carried a recency block and 46 of them
+read stale beyond a tenth, twenty of ninety valued records among them, the largest by a
+fifth to two fifths; the headline on those names describes a business up to a year old and
+takes the whole year's change in one step when the next annual report lands, and a reader
+comparing what the price implies with what was observed is misread on exactly those names.
+The shadow answers "what does the business as currently filed support" beside the headline's
+"what do the audited statements support", and the two bracket what a year of lag is worth;
+neither is the other's correction, which is why neither replaces the other until measured.
+Weighed and not taken: promoting the four-quarter base to the headline on US filers, which
+is the three grounds above and every stored US record incomparable with the next, unmeasured;
+scaling the annual flows by the recency ratio, which invents cash flows from a revenue ratio
+on the assumption every margin held, the plausible default the module contract forbids; and
+leaving the annual base with its staleness on the block alone, which says the figure and not
+what it does to the fair value. The sentence and the shadow together are the record saying
+both.
+
+Should the philosophy change, each path is one place. Promotion is the valuer reading the
+trailing period as the latest: one line in `Valuation.run` placing `trailing_period` in
+front of `periods` before the models run, after which every stored record values on another
+base and the panels are rebuilt before anything is compared. The measurement is the
+point-in-time path, which now writes the trailing period cut at the date, so the panels
+carry the shadow once rebuilt, and a study putting the shadow's margin beside the headline's
+as `baseline_study.py` does for the growth shadow: whether it sorts the returns that followed
+differently, whether it anticipates the next annual headline, how often the two disagree on
+direction. That study is owed and not yet run; until it is, the shadow is what the statements
+say and not a finding. The residual-income, REIT and mid-cycle paths read annual periods and
+have no shadow: a trailing base for them is a declared recipe each (book equity at the
+quarter end with trailing income and payouts; trailing FFO; a window that cannot be
+trailing), none written.
 
 ## Scope limit codes
 

@@ -74,3 +74,19 @@ def test_the_reasons_name_what_is_missing() -> None:
     moved["facts"]["us-gaap"]["Revenues"] = facts(QUARTERS[:2])["facts"]["us-gaap"]["Revenues"]  # type: ignore[index]
     block, _ = recency.of_record(moved, "us-gaap", "USD", TAGS, "2025-12-31", 100.0, 0.1)
     assert block is not None and block.tag == "Revenues" and block.latest_quarter_end == "2025-06-30"
+
+
+def test_the_quarters_are_read_from_the_element_the_annual_base_was_read_from() -> None:
+    # a filer tags a wider total and a narrower contract revenue, quarters on both running to
+    # the same date: the base's element is the one compared, whichever has more quarters
+    narrow = [entry(e["start"], e["end"], float(e["val"]) * 0.7, str(e["form"]), str(e["fp"]), str(e["filed"])) for e in QUARTERS]  # type: ignore[arg-type]
+    both = facts(QUARTERS, "Revenues")
+    both["facts"]["us-gaap"]["RevenueFromContractWithCustomerExcludingAssessedTax"] = facts(narrow)["facts"]["us-gaap"]["Revenues"]  # type: ignore[index]
+    wide, _ = recency.of_record(both, "us-gaap", "USD", TAGS, "2025-12-31", 100.0, 0.10, annual_row="Revenues")
+    assert wide is not None and wide.tag == "Revenues" and wide.trailing_four_quarters_revenue == 145.0
+    contract, _ = recency.of_record(both, "us-gaap", "USD", TAGS, "2025-12-31", 70.0, 0.10, annual_row="RevenueFromContractWithCustomerExcludingAssessedTax")
+    assert contract is not None and contract.tag == "RevenueFromContractWithCustomerExcludingAssessedTax"
+    assert contract.trailing_four_quarters_revenue is not None and abs(contract.trailing_four_quarters_revenue - 145.0 * 0.7) < 1e-6
+    # a base element without quarters falls back to the element whose quarters run latest
+    fallback, _ = recency.of_record(both, "us-gaap", "USD", TAGS, "2025-12-31", 100.0, 0.10, annual_row="SalesRevenueNet")
+    assert fallback is not None and fallback.tag in ("Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax")

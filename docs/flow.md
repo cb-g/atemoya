@@ -500,6 +500,27 @@ the statement's structure — and it is exactly the identity a period assembled 
 filings breaks. The fetch run tallies how many of those periods reconcile and names the
 filers that do not. It gates nothing.
 
+### The trailing period beside the annual ones
+
+The models read `periods`, the annual ones. A US filer's statements also carry
+`trailing_period`, the last four filed quarters as one period: for each duration the fiscal
+year-to-date figure ending at the latest quarter plus the prior fiscal year's annual figure
+less the prior year's year-to-date figure ending about a year earlier, the two year-to-date
+figures from the quarterly filing's own accession where it carries both; for each balance
+the figure at that quarter end; every line by the same recipes as an annual period's,
+a line missing any of its facts null and never scaled, and a derived line kept only where
+the trailing recipe is whole against the annual base's (for debt a filer total or a complete
+pair, else every row the annual read; for cash every role; for the working-capital change the
+aggregate or every row), else null with the row named in the basis notes. The period anchors on the latest
+quarter end carrying both a year-to-date net income and a book equity, and exists only where
+that end is after the annual base and the annual period before its fiscal year is among the
+periods read; `trailing_basis` names the filings and spans, `trailing_period_reason` says
+why there is none (a 20-F filer, vendor statements, no anchor, a quarter not after the
+base). Nothing on the valuation path reads it but the four-quarter shadow, which runs the
+generic DCF on it beside the headline (`docs/run.md`, the four-quarter shadow); a derived
+ebit on the trailing period stops the shadow, since the headline's cross-check is against
+the vendor's annual figure and nothing checks a trailing one.
+
 ### Statements from ESEF
 
 A name with no SEC filer whose universe entry declares an `lei` (73) reads its ESEF
@@ -829,6 +850,16 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the four-quarter shadow: the fetcher reads the last four filed quarters as one period
+  beside the annual ones (`trailing_period`, `trailing_basis`, or the reason), each duration
+  the fiscal year-to-date figure plus the prior year's annual less the prior year's
+  year-to-date, each balance the quarter end's, by the annual recipes; the valuer runs the
+  generic DCF once more on it and carries the result as `four_quarter_shadow` beside the
+  headline, with its complete inputs, or `four_quarter_shadow_reason`; `base_limits` on every
+  Ok record with a recency block says what the annual base costs the fair value. Decided
+  2026-10-18 as a shadow to be measured, the annual base staying the headline; the recency
+  block's quarters are now read from the element the annual base was read from, a
+  correction. A shadow and a sentence: no value, status or `Failed` string moves.
 - the rate above the kink decided: the risk-free rate passes into the discount rate in full
   above the table's terminal growth, where the hold ends and a point of rate moves a fair
   value by its full duration, the choice weighed on the shifted-rates, duration and

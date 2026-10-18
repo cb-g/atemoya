@@ -255,6 +255,9 @@ type financials = {
   ?quality_lines_reason : string option; (* why quality_lines is empty *)
   ?recency : recency option;             (* (84) the quarters filed since the annual base the models read, from the same facts; absent with the reason below *)
   ?recency_reason : string option;
+  ?trailing_period : fiscal_period option;   (* the last four filed quarters as one period, period_end the latest quarter end, every line read by the annual recipes from year-to-date plus prior year less prior year-to-date, the balance sheet at the quarter end; US filers only; absent with the reason below. The models read [periods]; the four-quarter shadow reads this *)
+  ?trailing_basis : trailing_basis option;   (* which filings and spans the trailing period was read from *)
+  ?trailing_period_reason : string option;
   ?identity_mismatch : string option; (* the ticker no longer names the filer the universe entry declared (map_cik); the record is refused before anything else *)
   ?latest_filing : string option;     (* ISO date of the newest annual filing the statements come from *)
   ?cross_check : cross_check option;  (* the vendor's statements compared with the filed ones *)
@@ -1262,6 +1265,39 @@ type growth_shadow = {
   scope_limits : string list;
 }
 
+(* The trailing period's provenance: the filings and spans each line was read from. A
+   duration is the fiscal year-to-date figure ending at quarter_end, plus the prior fiscal
+   year's annual figure, less the prior year's year-to-date figure ending at
+   prior_year_to_date_end; an instant is the balance at quarter_end. *)
+type trailing_basis = {
+  quarter_end : string;               (* the latest quarter end: the trailing period's period_end *)
+  year_to_date_start : string;        (* the fiscal year's first day, where the year-to-date durations start *)
+  prior_year_end : string;            (* the annual period that completes the trailing year: the models' base *)
+  prior_year_to_date_end : string;    (* the prior year's quarter end about a year before quarter_end *)
+  quarters_in_year_to_date : int;     (* 1 to 3: how many quarters the fiscal year-to-date spans *)
+  filed : string;                     (* the quarterly filing's date *)
+  accession : string;
+  ~notes : string list;
+}
+
+(* The four-quarter shadow: the generic DCF on the trailing period, the annual periods
+   behind it as history, everything but the base period the headline's own. Beside the
+   headline, never the headline: fair_value, margin_of_safety and signal on the record are
+   untouched by it. [inputs] is the shadow's complete inputs record, so a reader has the
+   second valuation whole. *)
+type four_quarter_shadow = {
+  rule : string;
+  period_end : string;                (* the trailing period's end: the latest quarter end *)
+  annual_base_end : string;           (* the headline's period *)
+  quarters_in_year_to_date : int;
+  headline_fair_value : float;        (* the DCF's own value on the annual base, before any gate *)
+  fair_value : float;                 (* the same DCF on the trailing period *)
+  margin_of_safety : float;           (* (fair_value - price) / price, the shadow's *)
+  revenue_over_annual : float nullable;   (* the trailing period's revenue over the annual base's, less one *)
+  inputs : inputs;                    (* the shadow's inputs, complete *)
+  scope_limits : string list;
+}
+
 (* One fiscal year's lines for the quality block, as filed; a line the filer does not file is absent. *)
 (* (84) Recency: how far the filed quarters have moved on from the annual base the models
    read. Every model's base and growth history start from the last annual period, so a
@@ -1407,6 +1443,9 @@ type valuation = {
   ?recency : recency option;                    (* (84) copied from the financials: the latest quarter against a year earlier and the trailing four quarters against the annual base *)
   ?recency_reason : string option;
   ?growth_shadow : growth_shadow option;        (* on a record whose generic DCF completed: the value on the higher of the two growth estimates, beside the headline and never replacing it *)
+  ?four_quarter_shadow : four_quarter_shadow option;   (* on a record whose generic DCF completed and whose statements carry a trailing period: the same DCF on the last four quarters, beside the headline and never replacing it *)
+  ?four_quarter_shadow_reason : string option;         (* on a record whose generic DCF completed without one: why *)
+  ~base_limits : string list;                   (* on every Ok record with a recency block: which annual period the models read, how far the filed quarters have moved on from it and which way the fair value leans for it, and whether a four-quarter shadow stands beside it *)
   ?base_rate : base_rate option;                (* on a dollar record valued by a DCF-shaped model: how often companies of this size grew as fast as the record assumes and as the price needs *)
   ?base_rate_reason : string option;            (* present instead on such a record: why there is none *)
 }

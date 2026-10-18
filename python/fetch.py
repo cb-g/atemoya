@@ -49,6 +49,7 @@ import fetch_esef
 import fetch_sec
 import quality
 import recency
+import trailing
 import reference
 import earnings
 import universe as universe_file
@@ -1060,7 +1061,12 @@ def main(argv: list[str]) -> int:
         base = financials.periods[0] if financials.periods else None
         financials.recency, financials.recency_reason = recency.of_record(
             filed_facts, financials.taxonomy, financials.financial_currency, sec.tags,
-            None if base is None else base.period_end, None if base is None else base.total_revenue, recency.divergence_of(sec.params))
+            None if base is None else base.period_end, None if base is None else base.total_revenue, recency.divergence_of(sec.params),
+            annual_row=None if base is None else base.total_revenue_row)
+        # the trailing period: the last four quarters as one period beside the annual ones, from
+        # the same facts, for the four-quarter shadow; the models read the annual periods
+        financials.trailing_period, financials.trailing_basis, financials.trailing_period_reason = trailing.of_record(
+            filed_facts, financials.taxonomy, financials.financial_currency, sec.tags, sec.definitions, sec.params, financials.periods)
         # allow_nan=False: a NaN that slipped through is a bug here, not invalid JSON
         # for the other side to choke on.
         text = financials.to_json_string(indent=2, allow_nan=False)

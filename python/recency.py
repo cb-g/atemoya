@@ -94,22 +94,31 @@ def with_fourth_quarters(quarters: dict[str, float], years: dict[str, tuple[str,
 
 def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | None, tags: reference.XbrlTags,
               annual_end: str | None, annual_revenue: float | None, divergence: float | None,
-              *, as_of: date | None = None) -> tuple[boundary.Recency | None, str | None]:
-    """The block, or None with the reason."""
+              *, annual_row: str | None = None, as_of: date | None = None) -> tuple[boundary.Recency | None, str | None]:
+    """The block, or None with the reason. [annual_row] is the element the annual base's
+    revenue was read from: its quarters are the ones compared, since a filer that tags a
+    wider total and a narrower contract revenue has quarters on both and a ratio across the
+    two elements measures the gap between them, not the quarters' distance from the base
+    (MercadoLibre, 2026-10-18: contract revenue quarters against a total-revenue base read
+    as a 15 per cent collapse where the quarters ran 22 per cent ahead)."""
     if facts is None or not taxonomy or unit is None:
         return None, NO_FACTS
     table = dict(tags.ifrs_full_fields if taxonomy == "ifrs-full" else tags.fields)
     chain = table["total_revenue"].tags if "total_revenue" in table else []
     gaap = fetch_sec._as_dict(fetch_sec._as_dict(facts.get("facts")).get(taxonomy))  # pyright: ignore[reportPrivateUsage]
-    # the element whose quarters run latest; among those, the one with the most of them. A
-    # filer that moved from one revenue element to another years ago has many old quarters
-    # on the first and the current ones on the second, and the current ones are the question.
+    # the base's own element where it has quarters; else the element whose quarters run
+    # latest and, among those, the one with the most of them. A filer that moved from one
+    # revenue element to another years ago has many old quarters on the first and the
+    # current ones on the second, and the current ones are the question.
     best: tuple[str, dict[str, tuple[float, bool]]] | None = None
     for tag in chain:
         quarters, years = quarters_of(fetch_sec._entries(gaap.get(tag), unit), as_of=as_of)  # pyright: ignore[reportPrivateUsage]
         if not quarters:
             continue
         series = with_fourth_quarters(quarters, years)
+        if tag == annual_row:
+            best = (tag, series)
+            break
         if best is None or (max(series), len(series)) > (max(best[1]), len(best[1])):
             best = (tag, series)
     if best is None:

@@ -42,19 +42,17 @@ held through the projection, with its caveat stated on the record (2026-10-18, b
 and above the kink the rate passes through in full, with the regime and its lean stated on
 the record (2026-10-18, below under
 [The discount rate on the rule panel](#the-discount-rate-on-the-rule-panel-how-much-of-a-rate-move-to-take-and-a-premium-that-moves)).
+A sixth was decided and built but not yet measured: a four-quarter shadow stands beside the
+annual headline on every US filer's generic DCF record, the same model on the last four filed
+quarters, with a sentence on every valued record saying what the annual base costs
+(2026-10-18, `docs/run.md`, the four-quarter shadow); the point-in-time path writes the
+trailing period, so the panels carry the shadow once rebuilt, and the study of its margin
+against the headline's is owed.
 The questions below were each measured
 and not settled, because the data cannot distinguish the options or because the choice is one
 of principle. They are held together and decided together, never on one study or one paper;
 each line says what was measured, why it did not settle the question, and what would.
 
-- **A four-quarter base beside the annual.** The recency readout says how far the filed
-  quarters have moved on from the annual base the models read; a shadow valuation on the last
-  four quarters, beside the annual headline as the growth shadow sits beside the growth, was
-  asked for and not built. Not built because only US filers report quarterly, so it would be
-  two bases in one universe; the quarters are thinner and unaudited and the fourth a
-  difference; and a base on the latest quarters follows the price on the very names in
-  question. Open: whether to build it as a shadow and measure it against the annual base
-  before either replaces the other.
 - **Whether a readout that does not sort returns stays on the record.** The quality block's
   nine-signal score and accruals ratio were measured twice ([The naive baseline](#the-naive-baseline),
   [What the quality score is made of](#what-the-quality-score-is-made-of)): the levels and the

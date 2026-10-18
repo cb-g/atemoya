@@ -3736,6 +3736,62 @@ class GrowthShadow:
 
 
 @dataclass
+class FourQuarterShadow:
+    """Original type: four_quarter_shadow = { ... }
+    """
+
+    rule: str
+    period_end: str
+    annual_base_end: str
+    quarters_in_year_to_date: int
+    headline_fair_value: float
+    fair_value: float
+    margin_of_safety: float
+    revenue_over_annual: Optional[float]
+    inputs: Inputs
+    scope_limits: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'FourQuarterShadow':
+        if isinstance(x, dict):
+            return cls(
+                rule=_atd_read_string(x['rule']) if 'rule' in x else _atd_missing_json_field('FourQuarterShadow', 'rule'),
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('FourQuarterShadow', 'period_end'),
+                annual_base_end=_atd_read_string(x['annual_base_end']) if 'annual_base_end' in x else _atd_missing_json_field('FourQuarterShadow', 'annual_base_end'),
+                quarters_in_year_to_date=_atd_read_int(x['quarters_in_year_to_date']) if 'quarters_in_year_to_date' in x else _atd_missing_json_field('FourQuarterShadow', 'quarters_in_year_to_date'),
+                headline_fair_value=_atd_read_float(x['headline_fair_value']) if 'headline_fair_value' in x else _atd_missing_json_field('FourQuarterShadow', 'headline_fair_value'),
+                fair_value=_atd_read_float(x['fair_value']) if 'fair_value' in x else _atd_missing_json_field('FourQuarterShadow', 'fair_value'),
+                margin_of_safety=_atd_read_float(x['margin_of_safety']) if 'margin_of_safety' in x else _atd_missing_json_field('FourQuarterShadow', 'margin_of_safety'),
+                revenue_over_annual=_atd_read_nullable(_atd_read_float)(x['revenue_over_annual']) if 'revenue_over_annual' in x else _atd_missing_json_field('FourQuarterShadow', 'revenue_over_annual'),
+                inputs=Inputs.from_json(x['inputs']) if 'inputs' in x else _atd_missing_json_field('FourQuarterShadow', 'inputs'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('FourQuarterShadow', 'scope_limits'),
+            )
+        else:
+            _atd_bad_json('FourQuarterShadow', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['rule'] = _atd_write_string(self.rule)
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['annual_base_end'] = _atd_write_string(self.annual_base_end)
+        res['quarters_in_year_to_date'] = _atd_write_int(self.quarters_in_year_to_date)
+        res['headline_fair_value'] = _atd_write_float(self.headline_fair_value)
+        res['fair_value'] = _atd_write_float(self.fair_value)
+        res['margin_of_safety'] = _atd_write_float(self.margin_of_safety)
+        res['revenue_over_annual'] = _atd_write_nullable(_atd_write_float)(self.revenue_over_annual)
+        res['inputs'] = (lambda x: x.to_json())(self.inputs)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'FourQuarterShadow':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Floor:
     """Original type: floor = { ... }
     """
@@ -5201,6 +5257,9 @@ class Valuation:
     recency: Optional[Recency] = None
     recency_reason: Optional[str] = None
     growth_shadow: Optional[GrowthShadow] = None
+    four_quarter_shadow: Optional[FourQuarterShadow] = None
+    four_quarter_shadow_reason: Optional[str] = None
+    base_limits: List[str] = field(default_factory=lambda: [])
     base_rate: Optional[BaseRate] = None
     base_rate_reason: Optional[str] = None
 
@@ -5271,6 +5330,9 @@ class Valuation:
                 recency=Recency.from_json(x['recency']) if 'recency' in x else None,
                 recency_reason=_atd_read_string(x['recency_reason']) if 'recency_reason' in x else None,
                 growth_shadow=GrowthShadow.from_json(x['growth_shadow']) if 'growth_shadow' in x else None,
+                four_quarter_shadow=FourQuarterShadow.from_json(x['four_quarter_shadow']) if 'four_quarter_shadow' in x else None,
+                four_quarter_shadow_reason=_atd_read_string(x['four_quarter_shadow_reason']) if 'four_quarter_shadow_reason' in x else None,
+                base_limits=_atd_read_list(_atd_read_string)(x['base_limits']) if 'base_limits' in x else [],
                 base_rate=BaseRate.from_json(x['base_rate']) if 'base_rate' in x else None,
                 base_rate_reason=_atd_read_string(x['base_rate_reason']) if 'base_rate_reason' in x else None,
             )
@@ -5381,6 +5443,11 @@ class Valuation:
             res['recency_reason'] = _atd_write_string(self.recency_reason)
         if self.growth_shadow is not None:
             res['growth_shadow'] = (lambda x: x.to_json())(self.growth_shadow)
+        if self.four_quarter_shadow is not None:
+            res['four_quarter_shadow'] = (lambda x: x.to_json())(self.four_quarter_shadow)
+        if self.four_quarter_shadow_reason is not None:
+            res['four_quarter_shadow_reason'] = _atd_write_string(self.four_quarter_shadow_reason)
+        res['base_limits'] = _atd_write_list(_atd_write_string)(self.base_limits)
         if self.base_rate is not None:
             res['base_rate'] = (lambda x: x.to_json())(self.base_rate)
         if self.base_rate_reason is not None:
@@ -5389,6 +5456,56 @@ class Valuation:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'Valuation':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class TrailingBasis:
+    """Original type: trailing_basis = { ... }
+    """
+
+    quarter_end: str
+    year_to_date_start: str
+    prior_year_end: str
+    prior_year_to_date_end: str
+    quarters_in_year_to_date: int
+    filed: str
+    accession: str
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'TrailingBasis':
+        if isinstance(x, dict):
+            return cls(
+                quarter_end=_atd_read_string(x['quarter_end']) if 'quarter_end' in x else _atd_missing_json_field('TrailingBasis', 'quarter_end'),
+                year_to_date_start=_atd_read_string(x['year_to_date_start']) if 'year_to_date_start' in x else _atd_missing_json_field('TrailingBasis', 'year_to_date_start'),
+                prior_year_end=_atd_read_string(x['prior_year_end']) if 'prior_year_end' in x else _atd_missing_json_field('TrailingBasis', 'prior_year_end'),
+                prior_year_to_date_end=_atd_read_string(x['prior_year_to_date_end']) if 'prior_year_to_date_end' in x else _atd_missing_json_field('TrailingBasis', 'prior_year_to_date_end'),
+                quarters_in_year_to_date=_atd_read_int(x['quarters_in_year_to_date']) if 'quarters_in_year_to_date' in x else _atd_missing_json_field('TrailingBasis', 'quarters_in_year_to_date'),
+                filed=_atd_read_string(x['filed']) if 'filed' in x else _atd_missing_json_field('TrailingBasis', 'filed'),
+                accession=_atd_read_string(x['accession']) if 'accession' in x else _atd_missing_json_field('TrailingBasis', 'accession'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('TrailingBasis', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['quarter_end'] = _atd_write_string(self.quarter_end)
+        res['year_to_date_start'] = _atd_write_string(self.year_to_date_start)
+        res['prior_year_end'] = _atd_write_string(self.prior_year_end)
+        res['prior_year_to_date_end'] = _atd_write_string(self.prior_year_to_date_end)
+        res['quarters_in_year_to_date'] = _atd_write_int(self.quarters_in_year_to_date)
+        res['filed'] = _atd_write_string(self.filed)
+        res['accession'] = _atd_write_string(self.accession)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'TrailingBasis':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -5995,6 +6112,9 @@ class Financials:
     quality_lines_reason: Optional[str] = None
     recency: Optional[Recency] = None
     recency_reason: Optional[str] = None
+    trailing_period: Optional[FiscalPeriod] = None
+    trailing_basis: Optional[TrailingBasis] = None
+    trailing_period_reason: Optional[str] = None
     identity_mismatch: Optional[str] = None
     latest_filing: Optional[str] = None
     cross_check: Optional[CrossCheck] = None
@@ -6040,6 +6160,9 @@ class Financials:
                 quality_lines_reason=_atd_read_string(x['quality_lines_reason']) if 'quality_lines_reason' in x else None,
                 recency=Recency.from_json(x['recency']) if 'recency' in x else None,
                 recency_reason=_atd_read_string(x['recency_reason']) if 'recency_reason' in x else None,
+                trailing_period=FiscalPeriod.from_json(x['trailing_period']) if 'trailing_period' in x else None,
+                trailing_basis=TrailingBasis.from_json(x['trailing_basis']) if 'trailing_basis' in x else None,
+                trailing_period_reason=_atd_read_string(x['trailing_period_reason']) if 'trailing_period_reason' in x else None,
                 identity_mismatch=_atd_read_string(x['identity_mismatch']) if 'identity_mismatch' in x else None,
                 latest_filing=_atd_read_string(x['latest_filing']) if 'latest_filing' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
@@ -6090,6 +6213,12 @@ class Financials:
             res['recency'] = (lambda x: x.to_json())(self.recency)
         if self.recency_reason is not None:
             res['recency_reason'] = _atd_write_string(self.recency_reason)
+        if self.trailing_period is not None:
+            res['trailing_period'] = (lambda x: x.to_json())(self.trailing_period)
+        if self.trailing_basis is not None:
+            res['trailing_basis'] = (lambda x: x.to_json())(self.trailing_basis)
+        if self.trailing_period_reason is not None:
+            res['trailing_period_reason'] = _atd_write_string(self.trailing_period_reason)
         if self.identity_mismatch is not None:
             res['identity_mismatch'] = _atd_write_string(self.identity_mismatch)
         if self.latest_filing is not None:

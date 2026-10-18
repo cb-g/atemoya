@@ -121,7 +121,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     ?(market_cap = Some 5000.) ?(country = Some "United States")
     ?(industry = Some "Consumer Electronics") ?(provider = "yfinance")
     ?(statements_unavailable = "") ?latest_filing ?cross_check ?(taxonomy = "")
-    ?vendor_financial_currency ?cover_page_shares ?cover_page_split_factor periods : Boundary_t.financials =
+    ?vendor_financial_currency ?cover_page_shares ?cover_page_split_factor ?trailing_period ?trailing_basis
+    ?trailing_period_reason periods : Boundary_t.financials =
   {
     ticker = "TEST";
     as_of = "2026-09-10T00:00:00+00:00";
@@ -163,6 +164,9 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     quality_lines_reason = None;
     recency = None;
     recency_reason = None;
+    trailing_period;
+    trailing_basis;
+    trailing_period_reason;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -2000,6 +2004,64 @@ let test_required_return_loader_and_resolution () =
 (* Under a declaration the cost of equity is rf + premium; on the fixture rf 0.02 and a 5-point
    premium, 0.07 against CAPM's 0.12; E = D = 5000, kd 0.04 after tax at 21%, so the WACC is
    0.5 x 0.07 + 0.5 x 0.0316 = 0.0508. *)
+(* The four-quarter shadow: the same DCF on the statements' trailing period, beside the
+   headline; the base sentence on the record; the reasons where there is none. *)
+let test_four_quarter_shadow_and_the_base_sentence () =
+  let trailing = full_period ~period_end:"2026-03-31" ~ebit:2000. ~pretax_income:2000. () in
+  let basis : Boundary_t.trailing_basis =
+    { quarter_end = "2026-03-31"; year_to_date_start = "2025-10-01"; prior_year_end = "2025-09-30";
+      prior_year_to_date_end = "2025-03-31"; quarters_in_year_to_date = 2; filed = "2026-05-01"; accession = "q"; notes = [] }
+  in
+  let fin = financials ~trailing_period:trailing ~trailing_basis:basis (history ()) in
+  let v = run fin in
+  Alcotest.check status "the headline values" `Ok v.status;
+  (match (v.four_quarter_shadow, v.inputs) with
+  | Some s, Some (`Dcf i) ->
+      Alcotest.(check string) "on the trailing period" "2026-03-31" s.period_end;
+      Alcotest.(check string) "against the annual base" "2025-09-30" s.annual_base_end;
+      Alcotest.(check int) "two quarters into the year" 2 s.quarters_in_year_to_date;
+      check_float "the headline's value is recorded" (Option.get v.fair_value) s.headline_fair_value;
+      Alcotest.(check bool) "a doubled operating profit values higher" true (s.fair_value > s.headline_fair_value);
+      Alcotest.(check string) "the shadow's inputs are the trailing period's" "2026-03-31" s.inputs.fiscal_period_end;
+      check_float "the headline's inputs stay the annual period's" (Option.get v.fair_value) (Option.get v.fair_value);
+      Alcotest.(check string) "the headline reads the annual period" "2025-09-30" i.fiscal_period_end;
+      check_float "the shadow's margin is on the shadow's value" ((s.fair_value -. i.price) /. i.price) s.margin_of_safety;
+      Alcotest.(check bool) "revenue unchanged on the fixture" true (match s.revenue_over_annual with Some x -> Float.abs x < 1e-9 | None -> false);
+      Alcotest.(check bool) "the limits say it is a shadow" true (List.exists (fun l -> String.starts_with ~prefix:"a shadow:" l) s.scope_limits)
+  | _ -> Alcotest.fail "no four-quarter shadow on a generic record with a trailing period");
+  Alcotest.(check (option string)) "no reason beside a shadow" None v.four_quarter_shadow_reason;
+  (* without a trailing period the reason is the fetcher's, or the module's default *)
+  let plain = run (financials (history ())) in
+  Alcotest.(check (option string)) "no trailing period" (Some Four_quarter_shadow.no_trailing) plain.four_quarter_shadow_reason;
+  Alcotest.(check bool) "and no shadow" true (Option.is_none plain.four_quarter_shadow);
+  let said = run (financials ~trailing_period_reason:"the fetcher's reason" (history ())) in
+  Alcotest.(check (option string)) "the fetcher's reason is carried" (Some "the fetcher's reason") said.four_quarter_shadow_reason;
+  (* a derived ebit on the trailing period stops the shadow: nothing checks it *)
+  let derived = run (financials ~trailing_period:{ trailing with ebit_recipe = Some "pretax_plus_interest_less_nonoperating" } (history ())) in
+  (match derived.four_quarter_shadow_reason with
+  | Some r -> Alcotest.(check bool) "says the ebit is derived" true (String.starts_with ~prefix:"the trailing period's ebit is derived" r)
+  | None -> Alcotest.fail "a derived trailing ebit ran a shadow");
+  (* the base sentence: none without a recency block, else one, signed, with the shadow beside it *)
+  Alcotest.(check (list string)) "no recency block, no sentence" [] v.base_limits;
+  let recency ?(trailing_over_annual = Some 0.25) ?(trailing_reason = None) () : Boundary_t.recency =
+    { tag = "Revenues"; latest_quarter_end = "2026-03-31"; latest_quarter_revenue = 300.; year_earlier_quarter_revenue = Some 200.;
+      quarter_yoy = Some 0.5; quarters = []; trailing_four_quarters_revenue = Some 1250.; trailing_reason; annual_base_end = "2025-09-30";
+      annual_base_revenue = 1000.; trailing_over_annual; quarters_since_base = 2; divergence = Some 0.1; base_stale = true; notes = [] }
+  in
+  let one = function [ s ] -> s | l -> Alcotest.failf "%d base limits" (List.length l) in
+  let shadow = Option.map Result.ok v.four_quarter_shadow in
+  let ahead = one (Four_quarter_shadow.base_limits ~recency:(Some (recency ())) ~generic:true ~shadow) in
+  check_mentions "names the base, the gap, the lean and the shadow" ahead
+    [ "annual period ending 2025-09-30"; "2 quarters have been filed since"; "25.0 per cent above it"; "beyond the declared divergence of 10 per cent";
+      "leans low"; "the four-quarter shadow beside it" ];
+  let behind = one (Four_quarter_shadow.base_limits ~recency:(Some (recency ~trailing_over_annual:(Some (-0.05)) ())) ~generic:true ~shadow:(Some (Error "why"))) in
+  check_mentions "a collapse leans high, within the divergence, and the shadow's reason rides" behind
+    [ "5.0 per cent below it"; "within the declared divergence"; "leans high"; "there is no four-quarter shadow: why" ];
+  let current = one (Four_quarter_shadow.base_limits ~recency:(Some (recency ~trailing_over_annual:(Some 0.004) ())) ~generic:false ~shadow:None) in
+  check_mentions "a current base says so and the other paths read annual periods" current [ "the base is current"; "no model here reads the quarters" ];
+  let unchained = one (Four_quarter_shadow.base_limits ~recency:(Some (recency ~trailing_over_annual:None ~trailing_reason:(Some "gap") ())) ~generic:true ~shadow:None) in
+  check_mentions "no trailing figure: not measured" unchained [ "do not chain (gap)"; "not measured" ]
+
 let test_required_return_on_the_record_and_the_paths () =
   let table = get (Required_returns.load_classes_string (rr_json ())) in
   let declared = { params with required_returns = table } in
@@ -4593,5 +4655,6 @@ let () =
           case "the roe target is inert at the cost of equity; implied, ends and loader (58)" test_roe_target_is_inert_at_the_cost_of_equity;
           case "required return: loader, resolution, version (34)" test_required_return_loader_and_resolution;
           case "required return: record, paths, readouts (34)" test_required_return_on_the_record_and_the_paths;
+          case "the four-quarter shadow and the base sentence" test_four_quarter_shadow_and_the_base_sentence;
         ] );
     ]

@@ -380,6 +380,9 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       base_rate = None;
       base_rate_reason = None;
       growth_shadow = None;
+      four_quarter_shadow = None;
+      four_quarter_shadow_reason = None;
+      base_limits = [];
       quality = fst quality;
       quality_reason = snd quality;
       recency = original.recency;
@@ -589,6 +592,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
             | `Residual_income _ | `Residual_income_insurer _ ->
                 Dcf.rate_pass_through_limits ~terminal_value:false assumptions
             | `Bdc_nav _ -> []);
+          (* the generic-DCF branch overrides this with the shadow's result beside it *)
+          base_limits = Four_quarter_shadow.base_limits ~recency:original.recency ~generic:false ~shadow:None;
           market_implied =
             (* (68) marked, never reselected: the expiry is the one the readout already chose *)
             mark_earnings
@@ -670,9 +675,21 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
             | Error reason -> failed_with_build_out reason
             | Ok (inputs, fair_value) ->
                 (* The growth shadow rides beside whatever the headline concludes, a gate's
-                   refusal included: it reads the same inputs and moves nothing. *)
-                { (finish ~price:inputs.price (`Dcf inputs) fair_value) with
-                  growth_shadow = Some (Growth_shadow.of_inputs inputs ~fair_value) }))
+                   refusal included: it reads the same inputs and moves nothing. The
+                   four-quarter shadow rides the same way, on the statements' trailing period;
+                   the base sentence says what the annual base costs and is on Ok records only. *)
+                let record = finish ~price:inputs.price (`Dcf inputs) fair_value in
+                let shadow = Four_quarter_shadow.value ~declared:class_name assumptions ~country fin ~fair_value in
+                {
+                  record with
+                  growth_shadow = Some (Growth_shadow.of_inputs inputs ~fair_value);
+                  four_quarter_shadow = Result.to_option shadow;
+                  four_quarter_shadow_reason = (match shadow with Error reason -> Some reason | Ok _ -> None);
+                  base_limits =
+                    (if record.status = `Ok then
+                       Four_quarter_shadow.base_limits ~recency:original.recency ~generic:true ~shadow:(Some shadow)
+                     else []);
+                }))
     | `Residual_income -> (
         match Residual_income.value assumptions ~country fin with
         | Error reason -> failed reason
