@@ -4,6 +4,7 @@
  (deps
   (source_tree ../../reference)
   ../../docs/flow.md
+  ../../docs/studies.md
   ../../docs/flow.mmd
   ../../docs/flow.svg))
 

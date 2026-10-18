@@ -15,7 +15,8 @@ let scope_limits =
     "the working-capital change is the mean over the trailing period and the annual periods behind it, which overlap by up to three quarters, and the revenue history mixes the trailing period with annual ones; the growth estimates are read from the trailing base as the headline reads them from the annual";
     "a base on the latest quarters moves when the quarters move, as the price already has; on a surging or collapsing name it capitalises the latest run-rate, which the annual base does not, so the two values bracket what a year of lag is worth and neither is the other's correction (docs/run.md, the four-quarter shadow)";
     "a line the quarterly filings cannot carry whole is null on the trailing period rather than a partial sum (the basis notes name the row), and a null working-capital change there leaves the mean to the annual periods, which the shadow's delta_nwc_periods show";
-    "only a filer of quarterly reports has one; a 20-F filer and a name on vendor statements carry the reason instead" ]
+    "only a filer of quarterly reports has one; a 20-F filer and a name on vendor statements carry the reason instead";
+    Measured.four_quarter_shadow ]
 
 let value ?(declared = "") a ~country (fin : financials) ~fair_value =
   match fin.trailing_period with

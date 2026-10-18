@@ -505,6 +505,7 @@ class Stretch:
     stretch_high: int
     thresholds_version: str
     history_days: int
+    scope_limits: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'Stretch':
@@ -523,6 +524,7 @@ class Stretch:
                 stretch_high=_atd_read_int(x['stretch_high']) if 'stretch_high' in x else _atd_missing_json_field('Stretch', 'stretch_high'),
                 thresholds_version=_atd_read_string(x['thresholds_version']) if 'thresholds_version' in x else _atd_missing_json_field('Stretch', 'thresholds_version'),
                 history_days=_atd_read_int(x['history_days']) if 'history_days' in x else _atd_missing_json_field('Stretch', 'history_days'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
             )
         else:
             _atd_bad_json('Stretch', x)
@@ -542,6 +544,7 @@ class Stretch:
         res['stretch_high'] = _atd_write_int(self.stretch_high)
         res['thresholds_version'] = _atd_write_string(self.thresholds_version)
         res['history_days'] = _atd_write_int(self.history_days)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
         return res
 
     @classmethod
@@ -887,6 +890,7 @@ class Runway:
     cadence_days: Optional[float] = None
     releases_within_runway: Optional[int] = None
     calendar_reason: Optional[str] = None
+    scope_limits: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'Runway':
@@ -906,6 +910,7 @@ class Runway:
                 cadence_days=_atd_read_float(x['cadence_days']) if 'cadence_days' in x else None,
                 releases_within_runway=_atd_read_int(x['releases_within_runway']) if 'releases_within_runway' in x else None,
                 calendar_reason=_atd_read_string(x['calendar_reason']) if 'calendar_reason' in x else None,
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
             )
         else:
             _atd_bad_json('Runway', x)
@@ -932,6 +937,7 @@ class Runway:
             res['releases_within_runway'] = _atd_write_int(self.releases_within_runway)
         if self.calendar_reason is not None:
             res['calendar_reason'] = _atd_write_string(self.calendar_reason)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
         return res
 
     @classmethod
@@ -4425,6 +4431,7 @@ class Earnings:
     implied: Optional[EarningsImplied] = None
     implied_reason: Optional[str] = None
     implied_over_realised: Optional[float] = None
+    scope_limits: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'Earnings':
@@ -4435,6 +4442,7 @@ class Earnings:
                 implied=EarningsImplied.from_json(x['implied']) if 'implied' in x else None,
                 implied_reason=_atd_read_string(x['implied_reason']) if 'implied_reason' in x else None,
                 implied_over_realised=_atd_read_float(x['implied_over_realised']) if 'implied_over_realised' in x else None,
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else [],
             )
         else:
             _atd_bad_json('Earnings', x)
@@ -4449,6 +4457,7 @@ class Earnings:
             res['implied_reason'] = _atd_write_string(self.implied_reason)
         if self.implied_over_realised is not None:
             res['implied_over_realised'] = _atd_write_float(self.implied_over_realised)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
         return res
 
     @classmethod

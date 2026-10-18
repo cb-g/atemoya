@@ -37,6 +37,8 @@ One line of JSON per name, `Ok` with a fair value or `Failed` with a reason.
   four-quarter shadow that values the same model on the last four quarters, price stretch
   against the name's own history, insider transactions with each trader told routine from
   opportunistic by their own timing, the Street's consensus and the name's surprise history.
+  Each readout block ends with a dated sentence saying what it was measured against in the
+  studies and what came of it, or that no study reads it.
 - **Provenance.** The provider of every figure, the definition and the tags summed, and
   the version of the code and of every declaration it read.
 

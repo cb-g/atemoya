@@ -238,7 +238,7 @@ let of_record ~(declared_return : Reference_t.declared_build_out)
                     returns;
                     surface;
                     price_contour;
-                    scope_limits = scope_limits @ scope_limits_of_readout;
+                    scope_limits = scope_limits @ scope_limits_of_readout @ [ Measured.build_out ];
                   }
       | None, _, _, _ -> Error "the latest fiscal period carries no operating income"
       | _, None, _, _ -> Error "the latest fiscal period carries no depreciation"

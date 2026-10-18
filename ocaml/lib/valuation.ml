@@ -365,15 +365,17 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       market_implied = None;
       market_implied_reason = None;
       receipt_check = receipt;
-      stretch = original.stretch;
+      (* each readout block carries, last among its limits, what it was measured against and
+         what came of it (Measured); the Python-built blocks get theirs here *)
+      stretch = Option.map (fun (s : stretch) -> { s with scope_limits = [ Measured.stretch ] }) original.stretch;
       stretch_reason = original.stretch_reason;
-      insiders = original.insiders;
+      insiders = Option.map (fun (i : insiders) -> { i with scope_limits = i.scope_limits @ [ Measured.insiders ] }) original.insiders;
       insiders_reason = original.insiders_reason;
       build_out;
       build_out_reason;
-      earnings = fst (earnings_of inputs);
+      earnings = Option.map (fun (e : earnings) -> { e with scope_limits = [ Measured.earnings ] }) (fst (earnings_of inputs));
       earnings_reason = snd (earnings_of inputs);
-      runway;
+      runway = Option.map (fun (r : runway) -> { r with scope_limits = [ Measured.runway ] }) runway;
       runway_reason;
       options_expected_return = None;
       options_expected_return_reason = None;

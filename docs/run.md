@@ -75,6 +75,22 @@ period the models read and what the quarters filed since cost the fair value, an
 `four_quarter_shadow` values the generic DCF once more on the last four quarters, beside the
 headline (below under [The four-quarter shadow](#the-four-quarter-shadow)).
 
+**Every readout says what was measured about it (decided 2026-10-18).** A readout, the quality
+block, the two shadows, the base rate, stretch, insiders, earnings, the build-out and the
+runway, describes the statements, the tape or the filings and need not predict; that is the
+tool's standing principle and it stays. Two studies had measured the quality block and found
+the composite score sorting nothing before 2022 while the levels and the share count sorted,
+and the question was whether a readout that does not sort returns stays. It stays, and the
+record now says so honestly: the last of every readout block's limits is one dated sentence
+(`ocaml/lib/measured.ml`) saying what the block was measured against on `docs/studies.md` and
+what came of it, or that no study reads it, so a reader can tell a tested readout from an
+untested one and a finding from a description. Weighed and not taken: prediction as the test
+for a readout, which applied evenly would remove the anchor, since the fair value did not sort
+returns among large companies either; and reshaping or pruning the quality block to the three
+signals that sorted, a per-field change fitted on one panel of survivors. The upkeep is a
+rule, in `docs/studies.md`: a study that measures a readout owes its block the sentence in the same
+commit, and a test holds every sentence that names a heading to a heading that exists.
+
 A name whose statements and price are in different currencies is converted at one
 recorded FX rate (statement totals, never per-share fields) and valued in the trading
 currency with that currency's country's rates plus the domicile's country risk premium;

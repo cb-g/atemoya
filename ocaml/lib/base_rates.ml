@@ -30,7 +30,8 @@ let scope_limits =
     "survivors only: companies that filed no revenue at the end of a window are left out, so the class grew faster than everything that started in it";
     "the windows overlap and share the years since 2009, so the share is a frequency from one stretch of history and carries no error bar";
     "the size classes are nominal dollars, the same bounds in every year";
-    "the outside view beside the declared belief: no fair value, margin of safety or signal reads it" ]
+    "the outside view beside the declared belief: no fair value, margin of safety or signal reads it";
+    Measured.base_rate ]
 
 let of_inputs (table : Reference_t.base_rates option) ~currency ~revenue ~(inputs : inputs) ~implied =
   let reason r = (None, Some r) in

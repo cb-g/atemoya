@@ -47,19 +47,22 @@ annual headline on every US filer's generic DCF record, the same model on the la
 quarters, with a sentence on every valued record saying what the annual base costs
 (2026-10-18, `docs/run.md`, the four-quarter shadow); the point-in-time path writes the
 trailing period, so the panels carry the shadow once rebuilt, and the study of its margin
-against the headline's is owed.
+against the headline's is owed. And a seventh, on principle: a readout that does not sort
+returns stays on the record, since a readout describes and need not predict, and every
+readout block now carries, last among its limits, a dated sentence saying what it was
+measured against here and what came of it, or that no study reads it (2026-10-18,
+`ocaml/lib/measured.ml`; the rule that a study owes its block the sentence is in
+`docs/studies.md`). The quality block's two measurements, the levels and the share count sorting
+and the comparisons and the accruals ratio not (under
+[What the quality score is made of](#what-the-quality-score-is-made-of)), are the first such
+sentence; weighed and not taken were prediction as the test for a readout, which would
+remove the anchor itself, and reshaping or pruning the quality block on one panel of
+survivors, a per-field change on a fitted reading.
 The questions below were each measured
 and not settled, because the data cannot distinguish the options or because the choice is one
 of principle. They are held together and decided together, never on one study or one paper;
 each line says what was measured, why it did not settle the question, and what would.
 
-- **Whether a readout that does not sort returns stays on the record.** The quality block's
-  nine-signal score and accruals ratio were measured twice ([The naive baseline](#the-naive-baseline),
-  [What the quality score is made of](#what-the-quality-score-is-made-of)): the levels and the
-  share count sort, the year-on-year comparisons do not, the accruals ratio ran the wrong way
-  since 2022. The block stays by the tool's standing principle that a readout describes the
-  statements and need not predict. Open as a whole-tool decision, not a per-field one: if
-  prediction were the test for a readout, several would go together.
 - **Build-outs, rebound windows, goodwill, and the growth rule's cliff at zero
   reinvestment.** Named on the universe entries as scope limits and on the records as
   readouts; each is a model question the tool declares rather than answers today, and none has

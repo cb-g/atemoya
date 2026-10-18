@@ -61,6 +61,7 @@ let of_record ~entity_class ~periods ~(calendar : earnings_calendar option) ~cal
                     basis =
                       "cash and short-term investments over the burn of the latest fiscal period, the burn being the cash-flow statement's net cash \
                        from operating activities less capital spending, both as filed, in the statement currency; a state, not a forecast";
+                    scope_limits = [];   (* the valuer sets the measured sentence *)
                   },
                 None )))
   | _ -> (None, None)

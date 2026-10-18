@@ -2194,7 +2194,7 @@ let test_receipt_ratio_check () =
 let stretch_fixture ~low ~high : Boundary_t.stretch =
   let m v p = { Boundary_t.value = v; percentile = p } in
   { as_of = "2026-06-25"; dd_120 = m (-0.41) 1.; above_120_low = m 0. 0.; vs_ma50 = m (-0.217) 2.; vs_ma200 = m (-0.326) 1.; rsi_14 = m 27.4 4.;
-    rv_20 = m 0.70 88.; rv_ratio = m 1.4 90.; vol_5_60 = m 1.21 70.; stretch_low = low; stretch_high = high; thresholds_version = "2026-09-22"; history_days = 500 }
+    rv_20 = m 0.70 88.; rv_ratio = m 1.4 90.; vol_5_60 = m 1.21 70.; stretch_low = low; stretch_high = high; thresholds_version = "2026-09-22"; history_days = 500; scope_limits = [] }
 
 let test_stretch_alert_rule () =
   let with_block low high (fin : Boundary_t.financials) = { fin with stretch = Some (stretch_fixture ~low ~high) } in
@@ -2255,7 +2255,8 @@ let test_base_rate () =
           Alcotest.(check bool) "the price needs less than the record assumes" true (g < own);
           check_float "and its share is read off the same table" (Base_rates.share_at_or_above uniform g) share
       | _ -> Alcotest.failf "no implied side: %s" (Option.value b.implied_reason ~default:""));
-      Alcotest.(check int) "the limits ride on the block" 6 (List.length b.scope_limits)
+      Alcotest.(check int) "the limits ride on the block" 7 (List.length b.scope_limits);
+      Alcotest.(check string) "the last says no study reads it" Measured.base_rate (List.nth b.scope_limits 6)
   | None -> Alcotest.failf "no block: %s" (Option.value v.base_rate_reason ~default:""));
   Alcotest.(check (option string)) "no table fetched" (Some "base rates not fetched: run python/base_rates.py") plain.base_rate_reason;
   let small = run_with (Some { rates with tables = [ table 1e9 None ] }) (financials (history ())) in
@@ -2335,6 +2336,34 @@ let test_quality () =
       "operating cash flow not positive, banks, insurers and lenders left out (1): LOSS";
       "more shares than the year before (2), by more than 2% (1): WEAK +5%" ];
   Alcotest.(check bool) "no lines without a block" false (contains (Batch.summary [ run (financials (history ())) ]) "quality, from the filed statements")
+
+(* Every readout block says what was measured about it: the sentence is the last of its
+   limits, and a sentence that names a studies heading names one that exists. *)
+let test_every_readout_says_what_was_measured () =
+  let studies = In_channel.with_open_bin "../../docs/studies.md" In_channel.input_all in
+  List.iter
+    (fun (block, sentence) ->
+      Alcotest.(check bool) (block ^ " says measured or not measured") true
+        (String.starts_with ~prefix:"measured" sentence || String.starts_with ~prefix:"not measured" sentence
+        || String.starts_with ~prefix:"not yet measured" sentence);
+      match Measured.heading sentence with
+      | Some h ->
+          if not (contains studies ("# " ^ h)) then Alcotest.failf "%s points at a docs/studies.md heading that does not exist: %S" block h
+      | None -> Alcotest.(check bool) (block ^ " without a heading says no study reads it") true (contains sentence "no study on docs/studies.md reads it"))
+    Measured.all;
+  Alcotest.(check int) "nine blocks" 9 (List.length Measured.all);
+  let last l = List.nth l (List.length l - 1) in
+  let v = run (financials (history ())) in
+  Alcotest.(check string) "the quality block ends with its measurement" Measured.quality (last Quality.scope_limits);
+  (match v.growth_shadow with
+  | Some g -> Alcotest.(check string) "the growth shadow ends with its measurement" Measured.growth_shadow (last g.scope_limits)
+  | None -> Alcotest.fail "no growth shadow");
+  let trailing = full_period ~period_end:"2026-03-31" () in
+  (match (run (financials ~trailing_period:trailing (history ()))).four_quarter_shadow with
+  | Some s -> Alcotest.(check string) "the four-quarter shadow says it is not yet measured" Measured.four_quarter_shadow (last s.scope_limits)
+  | None -> Alcotest.fail "no four-quarter shadow");
+  Alcotest.(check bool) "the heading parser reads the pointer" true (Measured.heading Measured.quality = Some "What the quality score is made of");
+  Alcotest.(check (option string)) "and none where there is none" None (Measured.heading Measured.base_rate)
 
 let test_flow_chart_names_every_reason () =
   let chart =
@@ -4505,6 +4534,7 @@ let () =
           case "table and variant agree, universe declares known classes" test_table_and_variant_agree;
           case "batch summary" test_batch_summary;
           case "flow chart names every failure reason" test_flow_chart_names_every_reason;
+          case "every readout says what was measured about it" test_every_readout_says_what_was_measured;
           case "depositary receipt ratio: the check, its flags, the loader" test_receipt_ratio_check;
           case "stretch: copied through, the summary lines, no thesis anywhere" test_stretch_alert_rule;
           case "market-implied smile: fit, butterfly, density, quantiles" test_market_implied_smile;

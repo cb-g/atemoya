@@ -74,4 +74,4 @@ let block_of ~(calendar : earnings_calendar) ~valued_on ~implied =
     | Some i, Some realised when realised > 0. -> Some (i.implied_move /. realised)
     | _ -> None
   in
-  { calendar; days_to_next; implied = implied_block; implied_reason; implied_over_realised }
+  { calendar; days_to_next; implied = implied_block; implied_reason; implied_over_realised; scope_limits = [] (* the valuer sets the measured sentence *) }

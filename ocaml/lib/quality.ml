@@ -5,7 +5,8 @@ let scope_limits =
     "assets are each year's own year-end figure, where the original reads the opening balance; leverage reads the record's financial debt, where the original reads long-term debt";
     "a share count that rose by more than a quarter is left null: a split and an issue cannot be told apart from the two counts";
     "a bank or an insurer files no current assets and no gross profit, so three signals are null there and the score is not formed";
-    "independent of every valuation here: no fair value, margin of safety or signal reads it" ]
+    "independent of every valuation here: no fair value, margin of safety or signal reads it";
+    Measured.quality ]
 
 let ratio a b = match (a, b) with Some x, Some y when y <> 0. -> Some (x /. y) | _ -> None
 

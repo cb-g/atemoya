@@ -921,6 +921,7 @@ type stretch = {
   stretch_high : int;                 (* of above_120_low, vs_ma50, vs_ma200, rsi_14 at or beyond the high threshold *)
   thresholds_version : string;        (* reference/stretch.json's as_of *)
   history_days : int;                 (* closes on or before as_of that fed it *)
+  ~scope_limits : string list;        (* set by the valuer: what the block was measured against and what came of it *)
 }
 
 (* Form 4 (66): what the people with the most information did about the price, filed,
@@ -1074,6 +1075,7 @@ type earnings = {
   ?implied : earnings_implied option;
   ?implied_reason : string option;            (* present instead: why there is no implied move *)
   ?implied_over_realised : float option;      (* the implied move over the realised median; present iff both are *)
+  ~scope_limits : string list;                (* set by the valuer: what the block was measured against and what came of it *)
 }
 
 type receipt_check = {
@@ -1377,6 +1379,7 @@ type runway = {
   ?releases_within_runway : int option;   (* releases the cadence puts inside the years of runway, counting the next; null with no burn or no calendar *)
   ?calendar_reason : string option;       (* present instead of the four above: why the calendar gives nothing *)
   basis : string;                         (* what was read, in words *)
+  ~scope_limits : string list;            (* set by the valuer: what the block was measured against and what came of it *)
 }
 
 type valuation = {

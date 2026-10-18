@@ -850,6 +850,14 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- readouts say what was measured about them: every readout block (quality, the growth and
+  four-quarter shadows, base rate, stretch, insiders, earnings, build-out, runway) carries,
+  last among its limits, one dated sentence from `ocaml/lib/measured.ml` saying what it was
+  measured against on `docs/studies.md` and what came of it, or that no study reads it;
+  `stretch` and `earnings` gain a `scope_limits` list to carry it, set by the valuer. Decided
+  2026-10-18 on principle, a readout describing and not predicting; a test holds each
+  sentence's heading to one that exists. Sentences only: no value, status or `Failed` string
+  moves.
 - the four-quarter shadow: the fetcher reads the last four filed quarters as one period
   beside the annual ones (`trailing_period`, `trailing_basis`, or the reason), each duration
   the fiscal year-to-date figure plus the prior year's annual less the prior year's
