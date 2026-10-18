@@ -17,7 +17,8 @@ let higher (i : inputs) =
   | None, None -> None
 
 let scope_limits =
-  [ "the higher of two estimates is a rule, not a forecast: it removes the switch at zero net reinvestment and says nothing about which estimate is right for a name";
+  [ "the headline is the statements' reading, not a forecast: the fundamental estimate projects what the return on capital and the reinvestment now being made can fund, and where neither is positive the record falls back to revenue history held to the return on capital, which extrapolates; on the five hundred largest US filers 2013 to 2025 no starting estimate forecast the growth that followed and the fundamental one read a median three points below it, so a fair value it heads leans low (docs/studies.md, growth on the rule panel)";
+    "the higher of two estimates is a rule, not a forecast: it removes the switch at zero net reinvestment and says nothing about which estimate is right for a name";
     "revenue history is held to the return on capital, as on the headline, and still reads a rebound or an acquisition as growth";
     "a shadow: the record's fair value, margin of safety and signal are the headline's and are not moved by this block" ]
 

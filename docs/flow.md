@@ -807,6 +807,13 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the growth headline decided: the fundamental estimate stays the starting growth of a
+  generic DCF record, the choice weighed on the growth study and made on what the headline
+  means, the statements' reading projected from here rather than the past carried forward;
+  the growth shadow block's first scope limit now says what the headline is, that the
+  fallback to held revenue history extrapolates, and that a fair value the fundamental
+  estimate heads leans low by about three points on the panel. One limit string on every
+  record whose generic DCF completed; no value, status or `Failed` string moves.
 - the discount rate on the rule panel: `python/rule_discount.py` reruns the binary on the
   rule panel's records with the United States curve moved to its mean plus a share of each
   date's distance from it, after Gormsen and Lazarus, "Interest Rates and Equity Valuations",

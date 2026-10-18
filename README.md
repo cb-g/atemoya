@@ -102,7 +102,8 @@ The tool tests its own outputs, and the results are kept whether or not they fla
   estimate the model starts from explains more than a few per cent of the growth the
   companies then reported, a name's own beta is forecastable but valuing at it sorts
   returns no better than a beta of one, and the model's duration says nothing about next
-  year's risk. The decisions these bear on are listed as open, with the measurements.
+  year's risk. The growth headline stays the statements' own reading, its lean stated on the
+  record; the other decisions these bear on are listed as open, with the measurements.
 - **A beat follows a beat, a little.** After a beat a name beats the Street 77 times in a
   hundred, after a miss 54; the next surprise carries a sixth of the last. Since 2022 the
   dearest fifth of the margin sort was beaten upward far more than the cheapest, which

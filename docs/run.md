@@ -243,8 +243,39 @@ picks the same estimate the shadow equals the headline. The record's `fair_value
 
 It is a shadow so that it can be measured before anything changes: `baseline_study.py` puts
 the shadow's margin of safety beside the headline's on the panel's rows. Its limits ride on
-the block: the higher of two estimates is a rule and not a forecast, and revenue history
-still reads a rebound or an acquisition as growth.
+the block: what the headline is and how it leans, that the higher of two estimates is a rule
+and not a forecast, and that revenue history still reads a rebound or an acquisition as growth.
+
+**The headline stays the fundamental estimate (decided 2026-10-18).** The growth study on the
+rule panel (`docs/studies.md`, growth on the rule panel) found that no starting estimate
+forecasts the growth that followed, the fundamental one least of all, and that it reads a
+median three points below what the names it heads then did. The data could not choose a
+headline, so the choice is what the headline means. It means the statements' reading: what
+the return on capital and the reinvestment now being made can fund, projected from here,
+rather than the past rate carried forward on the assumption that it continues, which is the
+one assumption a valuation should not make. Where the fundamental estimate cannot be read,
+because operating profit or net reinvestment is not positive, the record falls back to the
+revenue history held to the return on capital, and there it does extrapolate. Both facts, and
+the lean, are now the block's first limit, so a reader of the fair value knows which way it
+errs. The alternatives weighed and not taken are on the studies page: the historical estimate
+as headline, a shrunk estimate on the panel's fitted line, a faster fade, the terminal rate
+alone. Each is a level shift that would leave every stored record incomparable with the next;
+none sorts returns differently; and the fitted line would put a parameter estimated on one
+decade of one country's largest survivors on every record, which nothing else on the record is.
+
+Should the philosophy change, each path is one place. The headline's choice is
+`Growth.select` in `ocaml/lib/growth.ml`, the switch on positive operating profit and
+reinvestment: the historical estimate as headline is a reordering there, the terminal rate
+alone a constant there. The fade is `mean_reversion_lambda` in `reference/params.json`, a
+declared scalar: a faster fade is a larger value and no code. A shrunk estimate is a step after
+the selection, the chosen growth moved toward a target by a declared share, and its target
+and share would have to be declared in `reference/`, since the fitted line's intercept and
+slope are a panel's and not a declaration; `docs/studies.md` records the line, 5.7 per cent
+plus 0.38 of the path, as what that step would have fitted. The growth shadow's `rule` and
+`scope_limits` in `ocaml/lib/growth_shadow.ml` say on the record what the headline is and
+would change with it. Whatever the path, every stored record values under the old rule, so
+the panels are rebuilt and the studies rerun before the new fair values are compared with
+anything that came before.
 
 **Measured, and it stays a shadow (the user's decision, 2026-10-03).** On the panel, 644
 generic-DCF rows on 42 names over eighteen quarter-ends with the holdout unread, the

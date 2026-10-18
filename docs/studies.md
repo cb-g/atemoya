@@ -30,28 +30,17 @@ options store (62 names, daily from April 2025).
 
 ## What stays open
 
-The studies settled two things in the model: terminal growth is held to the risk-free rate
-(2026-10-04, below under [Why the anchor's level moves with rates](#why-the-anchors-level-moves-with-rates)),
-and the scope code `growth_without_reinvestment` names the six names whose fundamental
-estimate reads far below their history (2026-10-17). The questions below were each measured
+The studies settled three things in the model: terminal growth is held to the risk-free rate
+(2026-10-04, below under [Why the anchor's level moves with rates](#why-the-anchors-level-moves-with-rates));
+the scope code `growth_without_reinvestment` names the six names whose fundamental
+estimate reads far below their history (2026-10-17); and the fundamental estimate stays the
+headline growth of a generic DCF record, with its lean stated on the record (2026-10-18, below
+under [Growth on the rule panel](#growth-on-the-rule-panel-does-the-starting-growth-forecast-what-followed)
+and in `docs/run.md`, the growth shadow). The questions below were each measured
 and not settled, because the data cannot distinguish the options or because the choice is one
 of principle. They are held together and decided together, never on one study or one paper;
 each line says what was measured, why it did not settle the question, and what would.
 
-- **Which growth estimate heads a generic DCF record.** Today the fundamental estimate,
-  return on capital times the reinvestment rate, where both are positive, else the historical
-  revenue growth held to the return on capital; the shadow carries the other reading. Measured
-  under [Growth on the rule panel](#growth-on-the-rule-panel-does-the-starting-growth-forecast-what-followed):
-  no estimate explains more than 3.5 per cent of the growth that followed at any horizon; the
-  fundamental one carries none and reads 2.4 per cent where the names then grew 5.4 a year
-  for five years; the historical one carries a little (persistence 0.21); the faded path
-  forecasts about as its terminal constant; the fitted line of five-year realised growth on
-  the path is 0.057 + 0.38·path. Not settled because every estimate forecasts almost nothing,
-  so the choice is what the headline should *mean*, the statements' own reading with the
-  history beside it or the best of a poor set of forecasters, and the decision of 2026-10-03
-  that the shadow stays a shadow holds. The same measurement bears on whether the fade of a
-  quarter of the gap a year is too slow. The options on the table: the historical estimate
-  as headline, a shrunk estimate on the fitted line, a faster fade, or as it is.
 - **A beta in the cost of equity, and one beta on every projection year.** Today a declared
   industry beta from the reference table for the universe and one for the rule panel.
   Measured under [The rule panel sorted on beta](#the-rule-panel-sorted-on-beta),
@@ -649,11 +638,28 @@ the formations whose horizon has not yet closed). The frames carry each period's
 reported figure, so base and end are both as restated, while the estimates were computed
 from what was filed by the date. Operating income before tax stands for after-tax operating
 profit. The five-year horizon reaches the formations of 2013 to 2020 only. Nothing here moves
-a record or a parameter: which estimate heads the record is the decision of the third of
-October, held with the other model questions, and this is the measure it was to be weighed
-on; the fitted line of realised five-year growth on the path, 5.7 per cent plus 0.38 of the
-path, says what a shrinkage toward the panel's mean would have fitted, and is recorded for
-that weighing.
+a record or a parameter: this was the measure on which the headline question was to be
+weighed; the fitted line of realised five-year growth on the path, 5.7 per cent plus 0.38 of
+the path, says what a shrinkage toward the panel's mean would have fitted, and is recorded
+for that weighing.
+
+**Decided (2026-10-18): the fundamental estimate stays the headline, with its lean stated on
+the record.** The measurement above could not choose, since every estimate forecasts almost
+nothing, so the choice was what the headline should mean. It means the statements' reading:
+the return on capital and the reinvestment now being made, projected from here, rather than
+the past rate carried forward on the assumption that it continues. Where that estimate cannot
+be read the record falls back to revenue history held to the return on capital, and there it
+extrapolates; the growth shadow block's first limit now says so, and that a fair value the
+fundamental estimate heads leans low by about the three points found here. Weighed and not
+taken: the historical estimate as headline (the only one carrying anything, 3.4 per cent
+fitted, and the noisiest as it stands); a shrunk estimate on the fitted line (the best
+calibrated, and a parameter fitted on one decade of one country's largest survivors placed on
+every record, undefined for a name outside the panel); a faster fade (toward a terminal rate
+that already reads lowest of all, so it deepens the lean); the terminal rate alone (forecasts
+as well as any, and gives up the question). Each is a level shift that would make every
+stored record incomparable with the next, and none sorts returns differently, so the choice
+changes what the number means to a reader and not what the tool finds. Details in
+`docs/run.md`, the growth shadow.
 
 ### Betas on the rule panel: which forecasts, and the fair values under each
 
