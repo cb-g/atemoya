@@ -55,6 +55,18 @@ guessed number. Every record carries a `floor` (present, absent by definition, o
 assessable here, with its basis) that gates nothing, and `model_version` names the code
 that produced it (the git short hash, `-dirty` when the tree had uncommitted edits).
 
+The cost of equity is CAPM unless a required return is declared: the risk-free rate at the
+projection tenor plus the industry's beta from `reference/industry_betas.json` times the
+country's equity risk premium. Beside the rate, `cost_of_equity_limits` says what that beta
+is and is not (decided 2026-10-18 on the betas study, `docs/studies.md`): an industry's
+number keyed on the vendor's industry string, held flat through every projection year and
+the terminal value where the names' own betas converge toward one, so a rate above the
+market's charges the far years more than the names kept and one below less; and why it
+stays, which is that on the tool's own panel beta was paid and no beta in the fair value
+sorted returns better than one, while a name's own beta would read its risk from its price
+history. A name without an industry in the table is valued at one and the field says so;
+under a declared return the field is empty, a declared premium carrying no beta.
+
 A name whose statements and price are in different currencies is converted at one
 recorded FX rate (statement totals, never per-share fields) and valued in the trading
 currency with that currency's country's rates plus the domicile's country risk premium;

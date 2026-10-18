@@ -358,6 +358,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       cost_of_equity_used = None;
       required_return_source = None;
       required_return_version = None;
+      cost_of_equity_limits = [];
       surplus_curve = None;
       surplus_curve_reason = None;
       market_implied = None;
@@ -579,6 +580,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
           required_return_source =
             Some (match assumptions.required_return with Some r -> r.source | None -> "capm");
           required_return_version = Option.map (fun (r : Dcf.declared_return) -> r.version) assumptions.required_return;
+          cost_of_equity_limits = Dcf.cost_of_equity_limits assumptions;
           market_implied =
             (* (68) marked, never reselected: the expiry is the one the readout already chose *)
             mark_earnings

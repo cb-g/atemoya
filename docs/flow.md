@@ -296,6 +296,17 @@ further `--required-returns` file. The rules of use:
 7. **CAPM is the default and is never silently replaced.** Every Ok record carries
    `cost_of_equity_capm`, `cost_of_equity_used` and `required_return_source`, so the gap
    between the two rates is visible on every record a declaration touches.
+8. **The beta in the CAPM rate is an industry's, and the record says so.** It comes from
+   the declared table in `reference/industry_betas.json`, keyed on the vendor's industry
+   string, and is held through every projection year and the terminal value; a name without
+   an industry in the table is valued at one. `cost_of_equity_limits` carries the caveat
+   beside the rate: under an industry beta, whose it is, that it is held flat where the
+   names' own betas converge toward one (so a rate above the market's charges the far years
+   and the terminal more than the names kept, one below less), and why it stays, which is
+   that on the tool's own panel beta was paid and no beta in the fair value sorted returns
+   better than one; without an industry, that beta is one by convention; under a declared
+   return, nothing, since a declared premium carries no beta. Decided 2026-10-18 on the
+   betas study (`docs/studies.md`); the alternatives weighed are recorded there.
 
 ## Definition rules
 
@@ -807,6 +818,14 @@ states are written into its files, not into a record:
   after Gormsen and Lazarus, "Interest Rates and Equity Valuations", NBER Working Paper
   34814, February 2026, doi:10.3386/w34814. A side tool: no record on the valuation path
   moves and there is no new `Failed` string.
+- the beta decided: the industry beta from the declared table stays in the CAPM cost of
+  equity, held through the projection, the choice weighed on the beta, betas and duration
+  studies and made on principle, a declared and citable number over one estimated from the
+  name's own price history, with the data showing beta paid on the panel and no beta in the
+  fair value sorting returns better than one; `cost_of_equity_limits` on every Ok record
+  says whose beta it is, how holding it flat leans, and why it stays, or that beta is one
+  for want of an industry, and is empty under a declared return. One new field, carrying a
+  sentence; no value, status or `Failed` string moves.
 - the growth headline decided: the fundamental estimate stays the starting growth of a
   generic DCF record, the choice weighed on the growth study and made on what the headline
   means, the statements' reading projected from here rather than the past carried forward;

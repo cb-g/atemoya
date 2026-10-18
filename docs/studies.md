@@ -30,30 +30,20 @@ options store (62 names, daily from April 2025).
 
 ## What stays open
 
-The studies settled three things in the model: terminal growth is held to the risk-free rate
+The studies settled four things in the model: terminal growth is held to the risk-free rate
 (2026-10-04, below under [Why the anchor's level moves with rates](#why-the-anchors-level-moves-with-rates));
 the scope code `growth_without_reinvestment` names the six names whose fundamental
-estimate reads far below their history (2026-10-17); and the fundamental estimate stays the
+estimate reads far below their history (2026-10-17); the fundamental estimate stays the
 headline growth of a generic DCF record, with its lean stated on the record (2026-10-18, below
 under [Growth on the rule panel](#growth-on-the-rule-panel-does-the-starting-growth-forecast-what-followed)
-and in `docs/run.md`, the growth shadow). The questions below were each measured
+and in `docs/run.md`, the growth shadow); and the industry beta stays in the cost of equity,
+held through the projection, with its caveat stated on the record (2026-10-18, below under
+[Betas on the rule panel](#betas-on-the-rule-panel-which-forecasts-and-the-fair-values-under-each)).
+The questions below were each measured
 and not settled, because the data cannot distinguish the options or because the choice is one
 of principle. They are held together and decided together, never on one study or one paper;
 each line says what was measured, why it did not settle the question, and what would.
 
-- **A beta in the cost of equity, and one beta on every projection year.** Today a declared
-  industry beta from the reference table for the universe and one for the rule panel.
-  Measured under [The rule panel sorted on beta](#the-rule-panel-sorted-on-beta),
-  [Betas on the rule panel](#betas-on-the-rule-panel-which-forecasts-and-the-fair-values-under-each)
-  and [Duration on the rule panel](#duration-on-the-rule-panel-the-models-timing-against-a-published-measure):
-  the market paid for beta about in full 2013–2025; a name's own shrunk beta forecasts next
-  year's with an R-squared near a half and says half as much about the beta five years out;
-  the beta gap of a sort is more than half gone in five years; valuing the panel under the own
-  beta, faded or not, moves median fair values within a tenth and sorts returns no better than
-  one; no duration-implied beta is an alternative. Not settled because the data neither
-  condemn nor reward a beta in the fair value. The options: as it is; a per-name beta for the
-  rule panel and for names without an industry; a beta that fades toward one over the
-  projection, which the model does not take today.
 - **What the model does above the kink.** With terminal growth held to the risk-free rate the
   model has two regimes: below the kink a point of rate moves a fair value about one per cent,
   above it the full duration, 21 to 24 per cent (under
@@ -757,9 +747,33 @@ condemn a beta in the cost of equity nor reward one. Three limits: the forecast 
 over the largest five hundred on one market and its mean and dispersion are theirs; an
 industry here is a mean of own betas, not an industry portfolio's beta; and a faded beta
 is put on as one number, the deviation halved, where the question is a beta that falls
-year by year through the projection, which the model does not take. Whether to put a beta
-back into the rule panel, and whether to fade it, stay open decisions; nothing here moves
-a record or a parameter.
+year by year through the projection, which the model does not take. Nothing here moves a
+record or a parameter.
+
+**Decided (2026-10-18): the industry beta stays in the cost of equity, held through the
+projection, with its caveat stated on the record.** The question had come from the papers,
+not from the tool: four of them argue that high beta is not paid, that an industry beta
+forecasts a name's badly, or that beta gaps fade, each of which would make a flat industry
+beta systematically wrong. Tested here: two premises replicate (a name's own shrunk beta
+forecasts next year's with an R-squared near a half against the industry mean's fifth; the gap
+of a sort is half gone in five years), one does not (on these names beta was paid about in
+full, as the first paper's own largest-size decile also finds), and the step from a better
+beta to a better fair value did not follow: every beta tried moved levels within a tenth,
+reordered ranks moderately, and sorted the returns that followed no better than one. The
+declared table's middle span, 0.7 to 1.3 across the industries at the United States premium,
+is a spread of about 2.7 points in the cost of equity, inside the two to four Levi and Welch
+call justified. Weighed and not taken: a name's own shrunk beta, the best forecast and a
+fair value that reads its risk from the name's price history, with shrinkage parameters
+fitted on the panel; a beta faded toward one over the projection, the one change the data
+support in direction, which would cost a discount rate that varies by year through the
+engine, the sensitivity, the implied solver and the duration, for a few per cent of level,
+with a fade speed to be declared; one beta for all names, which the market disagreed with
+for thirteen years. What moves on the record is one field, `cost_of_equity_limits`, beside
+the rate: under CAPM with an industry beta it says whose beta it is, that it is held flat
+where the names' own converge, which way that leans, and why it stays; without an industry
+it says beta is one by convention; under a declared required return, which carries no beta,
+it is empty. The vendor's industry string and the six names at the default are a data item,
+not a model decision. Details in `docs/flow.md`, required return.
 
 ### The rule panel under shifted rates
 

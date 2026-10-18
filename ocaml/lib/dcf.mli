@@ -84,6 +84,11 @@ val cost_of_equity_capm : assumptions -> float
 val cost_of_equity : assumptions -> float
 (** The rate used: [risk_free_rate + premium_over_rf] under a declaration, else CAPM. *)
 
+val cost_of_equity_limits : assumptions -> string list
+(** What the CAPM rate's beta is and is not, for the record beside it: the industry's, held
+    flat where names' own betas converge, or one for want of an industry; empty under a
+    declaration, which carries no beta. *)
+
 val missing_report : Boundary_t.financials -> Boundary_t.fiscal_period -> nwc_periods:int -> string
 (** "missing market data: ...; missing statement fields for fiscal period ending D: ...". *)
 

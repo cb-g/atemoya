@@ -2029,6 +2029,14 @@ let test_required_return_on_the_record_and_the_paths () =
   Alcotest.(check (option string)) "capm source" (Some "capm") capm.required_return_source;
   Alcotest.(check (option string)) "no version under capm" None capm.required_return_version;
   Alcotest.(check (option approx)) "both rates equal under capm" capm.cost_of_equity_capm capm.cost_of_equity_used;
+  (* the beta caveat rides beside the CAPM rate and not beside a declared one *)
+  (match capm.cost_of_equity_limits with
+  | [ s ] -> Alcotest.(check bool) "under capm the record says whose beta it is" true (String.starts_with ~prefix:"beta is the industry's" s)
+  | l -> Alcotest.failf "capm record carries %d cost-of-equity limits" (List.length l));
+  Alcotest.(check (list string)) "a declared return carries no beta and no caveat" [] v.cost_of_equity_limits;
+  (match Dcf.cost_of_equity_limits { assumptions with beta_source = `Default_no_industry } with
+  | [ s ] -> Alcotest.(check bool) "without an industry the record says beta is one by convention" true (String.starts_with ~prefix:"beta is one for want of" s)
+  | l -> Alcotest.failf "default beta carries %d limits" (List.length l));
   (* the engine by hand on the round assumptions *)
   let a = { assumptions with required_return = Some { Dcf.premium_over_rf = 0.05; source = "declared: name"; version = "v" } } in
   check_float "capm chain unchanged" 0.12 (Dcf.cost_of_equity_capm a);

@@ -94,7 +94,8 @@ The tool tests its own outputs, and the results are kept whether or not they fla
   did not.
 - **Beta was paid.** Sorted on a one-year beta, the largest US companies earned the
   market's premium per unit of beta over 2013–2025, so the tool's own data give no ground
-  for taking beta out of its cost of equity.
+  for taking beta out of its cost of equity; the industry beta stays, and the record says
+  what it is and how it leans.
 - **The model's level moves with rates.** With a terminal growth that did not come down
   with the risk-free rate, most large companies read as worth double their price in the
   low-rate years; the model now holds terminal growth to the risk-free rate.

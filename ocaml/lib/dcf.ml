@@ -66,6 +66,17 @@ let cost_of_equity a =
   | Some r -> a.risk_free_rate.value +. r.premium_over_rf
   | None -> cost_of_equity_capm a
 
+(* What the beta in that rate is and is not, on the record beside it (decided 2026-10-18 on
+   the betas study, docs/studies.md): an industry's number held flat where the names' own
+   betas converge, or one for want of an industry. A declared return carries no beta. *)
+let cost_of_equity_limits a =
+  match (a.required_return, a.beta_source) with
+  | Some _, _ -> []
+  | None, `Industry_table ->
+      [ "beta is the industry's, from the declared table keyed on the vendor's industry string, and is held through every projection year and the terminal value; on the five hundred largest US filers 2013 to 2025 a name's own beta forecast its next year's far better than its industry's and the betas of a sort converged toward one, half the gap gone in five years, so a cost of equity above the market's charges the far years and the terminal more than the names kept and one below charges them less; the industry beta stays because on the same panel the market paid for beta about in full and no beta in the fair value sorted the returns that followed better than one, and a name's own would read its risk from its price history (docs/studies.md, betas on the rule panel)" ]
+  | None, `Default_no_industry ->
+      [ "beta is one for want of the vendor's industry string in the declared table, a convention and not a reading of the name's risk, so the cost of equity is the market's (docs/studies.md, betas on the rule panel)" ]
+
 let latest_period fin =
   match Period.latest fin with
   | None -> Error "no fiscal periods in statements"
