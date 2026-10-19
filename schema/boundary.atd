@@ -1433,6 +1433,7 @@ type declared_growth = {
   ?fiscal_year_ending : int option;   (* the calendar year the declared fiscal year ends in *)
   ?years_from_base : int option;      (* that year less the base period's: 1 to projection_years *)
   ?steady_fcff : float option;        (* the declared year's free cash flow with capex at a steady level: the years after it and the terminal value run on it *)
+  ?g_after : float option;           (* the declared growth of the first year after the declared one, a decimal fraction, fading to terminal at the headline's speed in place of the solved path's *)
   currency : string;                  (* of base_fcff and every flow here: the record's *)
   base_period_end : string;           (* the headline's base period *)
   base_fcff : float;                  (* the headline's base free cash flow, where the path starts *)

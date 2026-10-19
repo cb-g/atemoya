@@ -1539,6 +1539,7 @@ class GrowthDeclaration:
     currency: Optional[str] = None
     fiscal_year_ending: Optional[int] = None
     steady_fcff: Optional[float] = None
+    g_after: Optional[float] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'GrowthDeclaration':
@@ -1551,6 +1552,7 @@ class GrowthDeclaration:
                 currency=_atd_read_string(x['currency']) if 'currency' in x else None,
                 fiscal_year_ending=_atd_read_int(x['fiscal_year_ending']) if 'fiscal_year_ending' in x else None,
                 steady_fcff=_atd_read_float(x['steady_fcff']) if 'steady_fcff' in x else None,
+                g_after=_atd_read_float(x['g_after']) if 'g_after' in x else None,
             )
         else:
             _atd_bad_json('GrowthDeclaration', x)
@@ -1569,6 +1571,8 @@ class GrowthDeclaration:
             res['fiscal_year_ending'] = _atd_write_int(self.fiscal_year_ending)
         if self.steady_fcff is not None:
             res['steady_fcff'] = _atd_write_float(self.steady_fcff)
+        if self.g_after is not None:
+            res['g_after'] = _atd_write_float(self.g_after)
         return res
 
     @classmethod

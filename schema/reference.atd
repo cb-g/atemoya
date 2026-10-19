@@ -737,13 +737,16 @@ type name_required_returns = {
    a starting growth (g0, percentage points) or a free cash flow (fcff, in currency, its
    major unit) for the fiscal year ending in fiscal_year_ending, a year inside the
    projection; beside fcff, optionally the steady free cash flow the years after that one
-   run on. Dated, with a why. Never derived from anything by the tool. *)
+   run on and the growth of the first of them (g_after, percentage points), fading to
+   terminal at the headline's speed. Dated, with a why. Never derived from anything by the
+   tool. *)
 type growth_declaration = {
   ?g0 : float option;
   ?fcff : float option;
   ?currency : string option;
   ?fiscal_year_ending : int option;
   ?steady_fcff : float option;
+  ?g_after : float option;
   why : string;
   as_of : string;
 }

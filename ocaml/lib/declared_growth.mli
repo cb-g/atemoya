@@ -5,7 +5,7 @@
 
     An entry is exactly one of [g0] (percentage points) or [fcff] (in the record's currency,
     its major unit) with [currency] and [fiscal_year_ending], an optional [steady_fcff]
-    beside [fcff], and [why] and [as_of]. The loader is strict: an unknown or missing field,
+    and [g_after] (percentage points) beside [fcff], and [why] and [as_of]. The loader is strict: an unknown or missing field,
     both bases or neither, a non-positive free cash flow, a g0 at or below -100, an empty
     why or a malformed as_of is an [Error] naming the entry. Nothing here estimates a field.
 
@@ -19,7 +19,10 @@
     in that year, the flow there being strictly increasing in the starting growth; past
     either end is an [Error]. With [steady_fcff], every flow after the declared year and the
     terminal value are scaled by [steady_fcff / fcff]: the years after it grow along the
-    path from the steady figure. The discount rate, the fade, terminal growth, net debt and
+    path from the steady figure. With [g_after], the first year after the declared one
+    grows at it and the rest fade to terminal at the headline's speed, in place of the
+    solved path's growth; declared in the projection's last year it is an [Error], having no
+    year to apply to. The discount rate, the fade, terminal growth, net debt and
     shares are the headline's own. The record's fair value, margin of safety and signal are
     never moved by it. *)
 
@@ -29,9 +32,9 @@ val load_names : string -> (Reference_t.name_growth, string) result
 val version : Reference_t.growth_declaration -> string
 (** [as_of-<7 hex of the declared fields>-name]: changes when any field changes. *)
 
-val stepped_fair_value : Boundary_t.inputs -> g0:float -> step_after:int -> ratio:float -> float
-(** The fair value per share on the headline's arithmetic with every flow after year
-    [step_after], and the terminal value, scaled by [ratio]. *)
+val stepped_fair_value : Boundary_t.inputs -> growth_path:float list -> step_after:int -> ratio:float -> float
+(** The fair value per share on the headline's arithmetic along [growth_path] with every flow
+    after year [step_after], and the terminal value, scaled by [ratio]. *)
 
 val of_inputs :
   Reference_t.growth_declaration ->

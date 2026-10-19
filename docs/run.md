@@ -565,7 +565,7 @@ the reader gives for a year inside the projection. The record's `fair_value`,
   "notes": ["what these declarations rest on"],
   "tickers": {
     "TEST": {"fcff": 1200000000, "currency": "USD", "fiscal_year_ending": 2030,
-             "steady_fcff": 1500000000, "why": "...", "as_of": "2026-10-19"},
+             "steady_fcff": 1500000000, "g_after": 4, "why": "...", "as_of": "2026-10-19"},
     "GEN":  {"g0": 8, "why": "...", "as_of": "2026-10-19"}
   }
 }
@@ -595,6 +595,13 @@ malformed date stops the run naming the entry.
   alone. Without it, the declared year's capex is carried into every later year and the
   terminal value, and the record says so: a year still building out is valued as if it built
   out forever.
+- `g_after`, beside `fcff` only, in percentage points: the growth of the first year after the
+  declared one, the years after that fading to terminal growth at the headline's speed, in
+  place of the solved path's growth; set to the terminal rate it is a straight drop. Without
+  it the years after the declared one keep the solved path's growth, which on a high solved
+  starting growth is still well above terminal; with a declared year that is the
+  projection's last there are no years for it to apply to, and the record refuses it with the
+  reason.
 
 `declared_growth` carries the declaration and its version, the base period and free cash
 flow, the starting growth used beside the headline's, whether it lies outside the
@@ -602,9 +609,9 @@ headline's clamp or above the return on capital, the growth and the free cash fl
 projection year, and the shadow's `fair_value` and `margin_of_safety` beside the headline's
 fair value. Its limits say what the path is: the years before the declared one are the
 headline's path and not a forecast of their own, and the years after it keep the path's
-growth, which is still above terminal where the declared year comes early. On the mid-cycle
-path the base is the through-cycle free cash flow on today's capital, so a declared free
-cash flow is read as the through-cycle level in its year, and one for a peak or a trough
+growth, which is still above terminal where the declared year comes early, or grow from a
+declared `g_after`. On the mid-cycle path the base is the through-cycle free cash flow on
+today's capital, so a declared free cash flow is read as the through-cycle level in its year, and one for a peak or a trough
 year is carried as the normal level into the years after it; the block says so on every
 mid-cycle record. Where a declared name has no block, `declared_growth_reason` says why:
 the declaration's own refusal, a model with no free cash flow path (the residual-income,
@@ -616,13 +623,16 @@ headline's growth is the statements' reading and stays so (the growth shadow abo
 reader who holds a view of a name's cash flow had no way to put it beside the headline
 without editing the code. The declaration is the reader's, like a belief or a required
 return, so it is dated, carries a why, is never derived from anything here, and stays a
-shadow. Everything but the starting growth, and the step after the declared year, is the
-headline's own: the discount rate (a declared required return included), the fade, terminal
+shadow. Everything but the starting growth, and what the reader declares for the years after
+the declared one, is the headline's own: the discount rate (a declared required return included), the fade, terminal
 growth, net debt and shares. Weighed and not taken: a declared free cash flow for a year the
-statements carry, which is a restatement of the base and not a view; a declared starting
-growth and free cash flow together, which over-determines the path; and a path that drops
-to terminal growth after the declared year, which would be a second fade beside the
-headline's.
+statements carry, which is a restatement of the base and not a view; and a declared starting
+growth and free cash flow together, which over-determines the path. The growth after the
+declared year is the headline's path unless the reader declares `g_after`, added the same day
+when the same project found on its own cash flows that the growth left over from the solve
+carried a material part of the value on many names, most where build-out capex holds the
+base down and so lifts the solved starting growth: the years it did not declare are then
+something it can declare rather than a remainder of the solve.
 
 ## Capital intensity and goodwill
 

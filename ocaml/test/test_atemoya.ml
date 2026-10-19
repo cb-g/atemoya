@@ -3192,6 +3192,9 @@ let test_declared_growth_loader () =
   refused {|{"fcff": 1000, "fiscal_year_ending": 2030, "why": "a", "as_of": "2026-10-19"}|} "currency";
   refused {|{"fcff": 0, "currency": "USD", "fiscal_year_ending": 2030, "why": "a", "as_of": "2026-10-19"}|} "not positive";
   refused {|{"fcff": 1000, "currency": "USD", "fiscal_year_ending": 2030, "steady_fcff": -1, "why": "a", "as_of": "2026-10-19"}|} "steady_fcff -1 is not positive";
+  refused {|{"g0": 8, "g_after": 3, "why": "a", "as_of": "2026-10-19"}|} "a g0 entry carries no";
+  refused {|{"fcff": 1000, "currency": "USD", "fiscal_year_ending": 2030, "g_after": -100, "why": "a", "as_of": "2026-10-19"}|} "g_after -100 is not above -100";
+  refused {|{"fcff": 1000, "currency": "USD", "fiscal_year_ending": 2030, "g_after": "3", "why": "a", "as_of": "2026-10-19"}|} "g_after must be a number";
   refused {|{"g0": 8, "why": "a", "as_of": "2026-10-19", "mean": 3}|} "unknown field(s) mean";
   refused {|{"g0": 8, "as_of": "2026-10-19"}|} "lacks why";
   refused {|{"g0": 8, "why": " ", "as_of": "2026-10-19"}|} "why is empty";
@@ -3250,12 +3253,34 @@ let test_declared_growth () =
   check_float "the declared year unscaled" (List.nth b.fcff_path 2) (List.nth s.fcff_path 2);
   check_float "the year after it on the steady figure" (1.5 *. List.nth b.fcff_path 3) (List.nth s.fcff_path 3);
   check_float "the stepped arithmetic at ratio one is the headline's"
-    (Implied.dcf_fair_value i ~g0:0.08 ~lambda) (Declared_growth.stepped_fair_value i ~g0:0.08 ~step_after:3 ~ratio:1.);
+    (Implied.dcf_fair_value i ~g0:0.08 ~lambda) (Declared_growth.stepped_fair_value i ~growth_path:(Growth.path ~g0:0.08 ~terminal_growth_rate:i.terminal_growth_rate.value ~lambda ~projection_years:7) ~step_after:3 ~ratio:1.);
   let last = block (run_with {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2032, "why": "a", "as_of": "2026-10-19"}|}) in
   let last_steady = block (run_with {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2032, "steady_fcff": 500, "why": "a", "as_of": "2026-10-19"}|}) in
   let terminal = i.terminal_growth_rate.value in
   let extra = 100. *. (1. +. terminal) /. (i.wacc -. terminal) /. ((1. +. i.wacc) ** 7.) /. i.shares in
   Alcotest.(check (float 1e-6)) "declared in the last year, the step is the terminal value's alone" (last.fair_value +. extra) last_steady.fair_value;
+  (* a declared growth after the declared year replaces the path's there, and only there *)
+  let terminal_rate = i.terminal_growth_rate.value in
+  let on_spliced (b : Boundary_t.declared_growth) =
+    (Dcf.enterprise_value ~fcff:i.fcff ~wacc:i.wacc ~growth_path:b.growth_path ~terminal_growth_rate:terminal_rate -. i.net_debt) /. i.shares
+  in
+  let drop = block (run_with {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2028, "g_after": 2, "why": "a", "as_of": "2026-10-19"}|}) in
+  check_float "the same solved growth" b.g0 drop.g0;
+  Alcotest.(check (list approx)) "the years to the declared one are the path's" (List.filteri (fun k _ -> k < 3) b.growth_path) (List.filteri (fun k _ -> k < 3) drop.growth_path);
+  Alcotest.(check (float 1e-4)) "the declared year's flow is unmoved" 400. (List.nth drop.fcff_path 2);
+  Alcotest.(check (list approx)) "set to terminal, a straight drop" [ terminal_rate; terminal_rate; terminal_rate; terminal_rate ]
+    (List.filteri (fun k _ -> k >= 3) drop.growth_path);
+  check_float "valued on the spliced path by the headline's arithmetic" (on_spliced drop) drop.fair_value;
+  Alcotest.(check bool) "less than the path's growth after it" true (drop.fair_value < b.fair_value);
+  Alcotest.(check bool) "and said" true (List.exists (fun l -> contains l "grow at the declared 0.0200 in the first") drop.scope_limits);
+  let after = block (run_with {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2028, "g_after": 10, "why": "a", "as_of": "2026-10-19"}|}) in
+  check_float "the first year after grows at it" 0.10 (List.nth after.growth_path 3);
+  check_float "the next fades at the headline's speed" (terminal_rate +. ((0.10 -. terminal_rate) *. exp (-.lambda))) (List.nth after.growth_path 4);
+  check_float "valued on that path" (on_spliced after) after.fair_value;
+  Alcotest.(check (option approx)) "on the record as a fraction" (Some 0.10) after.g_after;
+  Alcotest.(check bool) "a new version" true (after.version <> b.version);
+  let both = block (run_with {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2028, "steady_fcff": 600, "g_after": 10, "why": "a", "as_of": "2026-10-19"}|}) in
+  Alcotest.(check (float 1e-3)) "with a steady figure, the year after is it grown at g_after" (600. *. 1.10) (List.nth both.fcff_path 3);
   (* refused with the reason *)
   let refused entry needle =
     let r = reason (run_with entry) in
@@ -3265,6 +3290,8 @@ let test_declared_growth () =
     "the declared year 2025 is not after the base, the fiscal year ending 2025-09-30: a declared free cash flow is for a year inside the projection, 2026 to 2032";
   refused {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2033, "why": "a", "as_of": "2026-10-19"}|}
     "the declared year 2033 is beyond the projection's last year, the fiscal year ending in 2032, 7 years from the base ending 2025-09-30";
+  refused {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2032, "g_after": 3, "why": "a", "as_of": "2026-10-19"}|}
+    "g_after is the growth of the years after the declared one inside the projection, and the declared year 2032 is the projection's last";
   refused {|{"fcff": 400, "currency": "EUR", "fiscal_year_ending": 2030, "why": "a", "as_of": "2026-10-19"}|}
     "the declared free cash flow is in EUR and the record's in USD";
   refused {|{"fcff": 1e12, "currency": "USD", "fiscal_year_ending": 2026, "why": "a", "as_of": "2026-10-19"}|}

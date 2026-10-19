@@ -772,6 +772,11 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- the growth after the declared year (2026-10-19): a declared free cash flow may carry
+  `g_after`, the growth of the first year after the declared one, the rest fading to terminal
+  at the headline's speed in place of the solved path's growth; refused with the reason where
+  the declared year is the projection's last. A shadow's option: no value, status or `Failed`
+  string moves, and a declaration without it keeps its block and its version.
 - the declared growth (2026-10-19): `--growth FILE` declares per name a starting growth, or
   a free cash flow for a fiscal year inside the projection with an optional steady free cash
   flow for the years after it; on a record whose generic or mid-cycle DCF completed,

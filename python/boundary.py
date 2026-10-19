@@ -4557,6 +4557,7 @@ class DeclaredGrowth:
     fiscal_year_ending: Optional[int] = None
     years_from_base: Optional[int] = None
     steady_fcff: Optional[float] = None
+    g_after: Optional[float] = None
     roic: Optional[float] = None
 
     @classmethod
@@ -4586,6 +4587,7 @@ class DeclaredGrowth:
                 fiscal_year_ending=_atd_read_int(x['fiscal_year_ending']) if 'fiscal_year_ending' in x else None,
                 years_from_base=_atd_read_int(x['years_from_base']) if 'years_from_base' in x else None,
                 steady_fcff=_atd_read_float(x['steady_fcff']) if 'steady_fcff' in x else None,
+                g_after=_atd_read_float(x['g_after']) if 'g_after' in x else None,
                 roic=_atd_read_float(x['roic']) if 'roic' in x else None,
             )
         else:
@@ -4621,6 +4623,8 @@ class DeclaredGrowth:
             res['years_from_base'] = _atd_write_int(self.years_from_base)
         if self.steady_fcff is not None:
             res['steady_fcff'] = _atd_write_float(self.steady_fcff)
+        if self.g_after is not None:
+            res['g_after'] = _atd_write_float(self.g_after)
         if self.roic is not None:
             res['roic'] = _atd_write_float(self.roic)
         return res
