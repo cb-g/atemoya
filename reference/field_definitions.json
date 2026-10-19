@@ -467,6 +467,84 @@
       "interest_expense, probed and refused (54): Robinhood tags no operating-income line and none of the four interest-expense tags, so the derived recipe cannot run and the record fails on ebit. InterestExpenseBorrowings, which it does tag, was tried and rejected: it is interest on borrowings only, so on a deposit-taking filer it is a component and not the line (PNC files it at about a third of its interest paid, Morgan Stanley at a hundred times its net non-operating interest), and a tag that is the whole line on one filer and a part of it on another cannot sit in a first-present list. It stays in total_debt's interest_evidence, where being a part is enough to say the filer owes something. Robinhood's is a filer limitation, like Chevron's, not a gap in the table."
     ]
   },
+  "equity_bridge": {
+    "name": "claims_between_enterprise_and_equity_value",
+    "why": "Net debt is the bridge's first line and not its only one. The enterprise value is what the cash flow supports, and the cash flow decides what else stands between it and the common equity the share count divides: an item is applied where that cash flow leaves it out and never where it already holds it. Minority interests are deducted, and associates and joint ventures added at book, where the cash flow starts from consolidated operating income, which carries the minority holders' share of consolidated subsidiaries and none of the investees' earnings; neither where it is built from net income attributable to the parent, which leaves the one out and holds the other already, as the mid-cycle path's bottom-up recipe is; and a share count declared to hold the minority's units already (an Up-C partnership, cited on the universe entry) is not divided twice. Lease liabilities outside the debt rows are deducted where the lease cost sits outside operating income, under IFRS and on the vendor's statements of a filer outside the United States: the right-of-use depreciation is added back with the rest and the principal is paid in financing, so the cash flow never pays it; a US GAAP operating lease's cost is inside operating income and its liability stays out, as total_debt's why says. Contingent consideration is deducted wherever filed: the deferred price of an acquisition, paid outside the capex and working-capital lines the cash flow reads. What went to shareholders between the annual balance sheet and the latest quarter, buybacks and common dividends less shares issued, from the quarterly filing's own fiscal year-to-date cash flow statement, is deducted where the valued period is that annual one: the share count is today's, and the cash those payments spent is still in the base's net debt. Where minority interests are deducted, what was paid since the base to buy minority interests out (PaymentsToMinorityShareholders, which excludes dividends) is deducted beside them, less the book the purchases removed where that is filed: the bridge carries the minority at its base-date book and the purchase settled it at a price, and the cash left after the base. Dividends to minority holders and contributions from them are not read: each moves the cash and the minority's own book alike, and the bridge reads neither since the base, so taking the cash without the book would count a contribution's cash without the claim that came with it. The latest quarter's balance sheet is not taken instead: on an annual base it would also bring in acquisitions paid since, whose cash flows the base does not hold, seasonal working capital, and the part of the first projected year already earned. Associates are at book value, not market; the record says so on the item.",
+    "xbrl": {
+      "minority_interest": [
+        "MinorityInterest"
+      ],
+      "minority_interest_totals": [
+        "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
+        "StockholdersEquity"
+      ],
+      "equity_method_investments": [
+        "EquityMethodInvestments"
+      ],
+      "contingent_consideration": [
+        "BusinessCombinationContingentConsiderationLiability"
+      ],
+      "contingent_consideration_parts": [
+        "BusinessCombinationContingentConsiderationLiabilityCurrent",
+        "BusinessCombinationContingentConsiderationLiabilityNoncurrent"
+      ],
+      "repurchases": [
+        "PaymentsForRepurchaseOfCommonStock",
+        "PaymentsForRepurchaseOfEquity"
+      ],
+      "dividends": [
+        "PaymentsOfDividendsCommonStock",
+        "PaymentsOfDividends",
+        "PaymentsOfOrdinaryDividends"
+      ],
+      "issuance": [
+        "ProceedsFromIssuanceOfCommonStock",
+        "ProceedsFromStockOptionsExercised"
+      ],
+      "minority_buyouts": [
+        "PaymentsToMinorityShareholders"
+      ],
+      "minority_buyouts_book": [
+        "MinorityInterestDecreaseFromRedemptions"
+      ]
+    },
+    "ifrs": {
+      "minority_interest": [
+        "NoncontrollingInterests"
+      ],
+      "equity_method_investments": [
+        "InvestmentsAccountedForUsingEquityMethod"
+      ],
+      "lease_liabilities": [
+        "LeaseLiabilities"
+      ],
+      "lease_liabilities_parts": [
+        "NoncurrentLeaseLiabilities",
+        "CurrentLeaseLiabilities"
+      ]
+    },
+    "vendor": {
+      "minority_interest": [
+        "Minority Interest"
+      ],
+      "equity_method_investments": [
+        "Long Term Equity Investment"
+      ],
+      "equity_method_investments_parts": [
+        "Investmentsin Associatesat Cost",
+        "Investmentsin Joint Venturesat Cost"
+      ],
+      "lease_liabilities_parts": [
+        "Long Term Capital Lease Obligation",
+        "Current Capital Lease Obligation"
+      ]
+    },
+    "notes": [
+      "(2026-10-19) Built after a survey of the 104 records valued by the generic and mid-cycle DCF, item by item against the equity value, and a downstream project's evidence on thirteen names read against the filings; items found immaterial across the run (preferred stock on this path, pension deficits, redeemable minority interests) are not read.",
+      "Not read: a vendor-statement or 20-F filer's distributions since the base, since no quarterly cash flow is filed in the sources read (the vendor's quarterly rows were missing or nil where the half-year reports print them); a captive finance arm's debt, a lender's loan book and customer deposits classified in financing, which no filer tags alike; dilution from options, units and warrants, since stock compensation is already a cost inside operating income.",
+      "(2026-10-19) PaymentsOfOrdinaryDividends is read after PaymentsOfDividends: Alphabet, Duke and Johnson & Johnson file their year-to-date dividends under it alone, and like PaymentsOfDividends it is every holder's, common, preferred and minority, so it stands third behind the common-only element."
+    ]
+  },
   "refinement_policy": {
     "max_refinements_per_field": 2,
     "on_miss": "operating income not filed; derived EBIT misses the cross-check"

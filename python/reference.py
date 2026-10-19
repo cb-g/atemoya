@@ -452,6 +452,7 @@ class UniverseEntry:
     adr_ratio: Optional[float] = None
     build_out_return: Optional[DeclaredBuildOut] = None
     build_out_lag_years: Optional[DeclaredBuildOut] = None
+    share_count_includes_minority: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'UniverseEntry':
@@ -468,6 +469,7 @@ class UniverseEntry:
                 adr_ratio=_atd_read_float(x['adr_ratio']) if 'adr_ratio' in x else None,
                 build_out_return=DeclaredBuildOut.from_json(x['build_out_return']) if 'build_out_return' in x else None,
                 build_out_lag_years=DeclaredBuildOut.from_json(x['build_out_lag_years']) if 'build_out_lag_years' in x else None,
+                share_count_includes_minority=_atd_read_string(x['share_count_includes_minority']) if 'share_count_includes_minority' in x else None,
             )
         else:
             _atd_bad_json('UniverseEntry', x)
@@ -491,6 +493,8 @@ class UniverseEntry:
             res['build_out_return'] = (lambda x: x.to_json())(self.build_out_return)
         if self.build_out_lag_years is not None:
             res['build_out_lag_years'] = (lambda x: x.to_json())(self.build_out_lag_years)
+        if self.share_count_includes_minority is not None:
+            res['share_count_includes_minority'] = _atd_write_string(self.share_count_includes_minority)
         return res
 
     @classmethod
@@ -2857,6 +2861,182 @@ class CashDefinition:
 
 
 @dataclass
+class BridgeXbrl:
+    """Original type: bridge_xbrl = { ... }
+    """
+
+    minority_interest: List[str]
+    minority_interest_totals: List[str]
+    equity_method_investments: List[str]
+    contingent_consideration: List[str]
+    contingent_consideration_parts: List[str]
+    repurchases: List[str]
+    dividends: List[str]
+    issuance: List[str]
+    minority_buyouts: List[str]
+    minority_buyouts_book: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BridgeXbrl':
+        if isinstance(x, dict):
+            return cls(
+                minority_interest=_atd_read_list(_atd_read_string)(x['minority_interest']) if 'minority_interest' in x else _atd_missing_json_field('BridgeXbrl', 'minority_interest'),
+                minority_interest_totals=_atd_read_list(_atd_read_string)(x['minority_interest_totals']) if 'minority_interest_totals' in x else _atd_missing_json_field('BridgeXbrl', 'minority_interest_totals'),
+                equity_method_investments=_atd_read_list(_atd_read_string)(x['equity_method_investments']) if 'equity_method_investments' in x else _atd_missing_json_field('BridgeXbrl', 'equity_method_investments'),
+                contingent_consideration=_atd_read_list(_atd_read_string)(x['contingent_consideration']) if 'contingent_consideration' in x else _atd_missing_json_field('BridgeXbrl', 'contingent_consideration'),
+                contingent_consideration_parts=_atd_read_list(_atd_read_string)(x['contingent_consideration_parts']) if 'contingent_consideration_parts' in x else _atd_missing_json_field('BridgeXbrl', 'contingent_consideration_parts'),
+                repurchases=_atd_read_list(_atd_read_string)(x['repurchases']) if 'repurchases' in x else _atd_missing_json_field('BridgeXbrl', 'repurchases'),
+                dividends=_atd_read_list(_atd_read_string)(x['dividends']) if 'dividends' in x else _atd_missing_json_field('BridgeXbrl', 'dividends'),
+                issuance=_atd_read_list(_atd_read_string)(x['issuance']) if 'issuance' in x else _atd_missing_json_field('BridgeXbrl', 'issuance'),
+                minority_buyouts=_atd_read_list(_atd_read_string)(x['minority_buyouts']) if 'minority_buyouts' in x else _atd_missing_json_field('BridgeXbrl', 'minority_buyouts'),
+                minority_buyouts_book=_atd_read_list(_atd_read_string)(x['minority_buyouts_book']) if 'minority_buyouts_book' in x else _atd_missing_json_field('BridgeXbrl', 'minority_buyouts_book'),
+            )
+        else:
+            _atd_bad_json('BridgeXbrl', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['minority_interest'] = _atd_write_list(_atd_write_string)(self.minority_interest)
+        res['minority_interest_totals'] = _atd_write_list(_atd_write_string)(self.minority_interest_totals)
+        res['equity_method_investments'] = _atd_write_list(_atd_write_string)(self.equity_method_investments)
+        res['contingent_consideration'] = _atd_write_list(_atd_write_string)(self.contingent_consideration)
+        res['contingent_consideration_parts'] = _atd_write_list(_atd_write_string)(self.contingent_consideration_parts)
+        res['repurchases'] = _atd_write_list(_atd_write_string)(self.repurchases)
+        res['dividends'] = _atd_write_list(_atd_write_string)(self.dividends)
+        res['issuance'] = _atd_write_list(_atd_write_string)(self.issuance)
+        res['minority_buyouts'] = _atd_write_list(_atd_write_string)(self.minority_buyouts)
+        res['minority_buyouts_book'] = _atd_write_list(_atd_write_string)(self.minority_buyouts_book)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BridgeXbrl':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BridgeVendor:
+    """Original type: bridge_vendor = { ... }
+    """
+
+    minority_interest: List[str]
+    equity_method_investments: List[str]
+    equity_method_investments_parts: List[str]
+    lease_liabilities_parts: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BridgeVendor':
+        if isinstance(x, dict):
+            return cls(
+                minority_interest=_atd_read_list(_atd_read_string)(x['minority_interest']) if 'minority_interest' in x else _atd_missing_json_field('BridgeVendor', 'minority_interest'),
+                equity_method_investments=_atd_read_list(_atd_read_string)(x['equity_method_investments']) if 'equity_method_investments' in x else _atd_missing_json_field('BridgeVendor', 'equity_method_investments'),
+                equity_method_investments_parts=_atd_read_list(_atd_read_string)(x['equity_method_investments_parts']) if 'equity_method_investments_parts' in x else _atd_missing_json_field('BridgeVendor', 'equity_method_investments_parts'),
+                lease_liabilities_parts=_atd_read_list(_atd_read_string)(x['lease_liabilities_parts']) if 'lease_liabilities_parts' in x else _atd_missing_json_field('BridgeVendor', 'lease_liabilities_parts'),
+            )
+        else:
+            _atd_bad_json('BridgeVendor', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['minority_interest'] = _atd_write_list(_atd_write_string)(self.minority_interest)
+        res['equity_method_investments'] = _atd_write_list(_atd_write_string)(self.equity_method_investments)
+        res['equity_method_investments_parts'] = _atd_write_list(_atd_write_string)(self.equity_method_investments_parts)
+        res['lease_liabilities_parts'] = _atd_write_list(_atd_write_string)(self.lease_liabilities_parts)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BridgeVendor':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BridgeIfrs:
+    """Original type: bridge_ifrs = { ... }
+    """
+
+    minority_interest: List[str]
+    equity_method_investments: List[str]
+    lease_liabilities: List[str]
+    lease_liabilities_parts: List[str]
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BridgeIfrs':
+        if isinstance(x, dict):
+            return cls(
+                minority_interest=_atd_read_list(_atd_read_string)(x['minority_interest']) if 'minority_interest' in x else _atd_missing_json_field('BridgeIfrs', 'minority_interest'),
+                equity_method_investments=_atd_read_list(_atd_read_string)(x['equity_method_investments']) if 'equity_method_investments' in x else _atd_missing_json_field('BridgeIfrs', 'equity_method_investments'),
+                lease_liabilities=_atd_read_list(_atd_read_string)(x['lease_liabilities']) if 'lease_liabilities' in x else _atd_missing_json_field('BridgeIfrs', 'lease_liabilities'),
+                lease_liabilities_parts=_atd_read_list(_atd_read_string)(x['lease_liabilities_parts']) if 'lease_liabilities_parts' in x else _atd_missing_json_field('BridgeIfrs', 'lease_liabilities_parts'),
+            )
+        else:
+            _atd_bad_json('BridgeIfrs', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['minority_interest'] = _atd_write_list(_atd_write_string)(self.minority_interest)
+        res['equity_method_investments'] = _atd_write_list(_atd_write_string)(self.equity_method_investments)
+        res['lease_liabilities'] = _atd_write_list(_atd_write_string)(self.lease_liabilities)
+        res['lease_liabilities_parts'] = _atd_write_list(_atd_write_string)(self.lease_liabilities_parts)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BridgeIfrs':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class BridgeDefinition:
+    """Original type: bridge_definition = { ... }
+    """
+
+    name: str
+    why: str
+    xbrl: BridgeXbrl
+    ifrs: BridgeIfrs
+    vendor: BridgeVendor
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BridgeDefinition':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('BridgeDefinition', 'name'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('BridgeDefinition', 'why'),
+                xbrl=BridgeXbrl.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('BridgeDefinition', 'xbrl'),
+                ifrs=BridgeIfrs.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('BridgeDefinition', 'ifrs'),
+                vendor=BridgeVendor.from_json(x['vendor']) if 'vendor' in x else _atd_missing_json_field('BridgeDefinition', 'vendor'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('BridgeDefinition', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['why'] = _atd_write_string(self.why)
+        res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['ifrs'] = (lambda x: x.to_json())(self.ifrs)
+        res['vendor'] = (lambda x: x.to_json())(self.vendor)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BridgeDefinition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class BdcTags:
     """Original type: bdc_tags = { ... }
     """
@@ -3038,6 +3218,7 @@ class FieldDefinitions:
     interest_expense: Optional[InterestDefinition] = None
     required_on_latest_period: Optional[RequiredOnLatestPeriod] = None
     bdc: Optional[BdcDefinition] = None
+    equity_bridge: Optional[BridgeDefinition] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'FieldDefinitions':
@@ -3059,6 +3240,7 @@ class FieldDefinitions:
                 interest_expense=InterestDefinition.from_json(x['interest_expense']) if 'interest_expense' in x else None,
                 required_on_latest_period=RequiredOnLatestPeriod.from_json(x['required_on_latest_period']) if 'required_on_latest_period' in x else None,
                 bdc=BdcDefinition.from_json(x['bdc']) if 'bdc' in x else None,
+                equity_bridge=BridgeDefinition.from_json(x['equity_bridge']) if 'equity_bridge' in x else None,
             )
         else:
             _atd_bad_json('FieldDefinitions', x)
@@ -3086,6 +3268,8 @@ class FieldDefinitions:
             res['required_on_latest_period'] = (lambda x: x.to_json())(self.required_on_latest_period)
         if self.bdc is not None:
             res['bdc'] = (lambda x: x.to_json())(self.bdc)
+        if self.equity_bridge is not None:
+            res['equity_bridge'] = (lambda x: x.to_json())(self.equity_bridge)
         return res
 
     @classmethod

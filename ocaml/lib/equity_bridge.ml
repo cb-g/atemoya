@@ -1,0 +1,110 @@
+open Boundary_t
+
+let definition = "claims_between_enterprise_and_equity_value"
+
+type cash_flow = Consolidated_operating_income | Parent_net_income
+
+let united_states = "United States"
+
+let leases_outside_debt (fin : financials) =
+  fin.taxonomy = "ifrs-full" || (fin.taxonomy = "" && fin.country <> Some united_states)
+
+(* [sign] is +1 for a claim deducted, -1 for an asset added. *)
+let item ~name ~value ~row ~applied ~sign ~why =
+  let deduction = match (applied, value) with true, Some v -> sign *. v | _ -> 0. in
+  { name; value; row; applied = applied && Option.is_some value; deduction; why }
+
+let not_filed = "not filed at the period end"
+
+let minority (p : fiscal_period) ~cash_flow ~share_count_includes_minority =
+  let applied, why =
+    match (p.minority_interest, share_count_includes_minority, cash_flow) with
+    | None, _, _ -> (false, not_filed)
+    | Some _, Some declared, _ ->
+        (false, "not deducted: the share count already holds the units the minority interest stands for (declared: " ^ declared ^ ")")
+    | Some _, None, Parent_net_income ->
+        (false, "not deducted: the cash flow is built from net income attributable to the parent, which leaves the minority holders' share out already")
+    | Some _, None, Consolidated_operating_income ->
+        (true, "deducted: the cash flow starts from consolidated operating income, which carries the minority holders' share of consolidated subsidiaries")
+  in
+  item ~name:"minority_interest" ~value:p.minority_interest ~row:p.minority_interest_row ~applied ~sign:1. ~why
+
+let investees (p : fiscal_period) ~cash_flow =
+  let applied, why =
+    match (p.equity_method_investments, cash_flow) with
+    | None, _ -> (false, not_filed)
+    | Some _, Parent_net_income -> (false, "not added: net income holds the investees' earnings already")
+    | Some _, Consolidated_operating_income ->
+        (true, "added at book value, not market: operating income leaves the investees' earnings out")
+  in
+  item ~name:"equity_method_investments" ~value:p.equity_method_investments ~row:p.equity_method_investments_row ~applied
+    ~sign:(-1.) ~why
+
+let leases (fin : financials) (p : fiscal_period) =
+  let applied, why =
+    match (p.lease_liabilities, leases_outside_debt fin) with
+    | None, true -> (false, not_filed)
+    | None, false -> (false, "not read: under US GAAP an operating lease's cost is inside operating income")
+    | Some _, false -> (false, "not deducted: under US GAAP an operating lease's cost is inside operating income")
+    | Some _, true ->
+        ( true,
+          "deducted: under IFRS, and on the vendor's statements of a filer outside the United States, the lease cost is depreciation, added back with the rest, and interest, and the principal is paid in financing, so the cash flow never pays it" )
+  in
+  item ~name:"lease_liabilities" ~value:p.lease_liabilities ~row:p.lease_liabilities_row ~applied ~sign:1. ~why
+
+let contingent (p : fiscal_period) =
+  let applied, why =
+    match p.contingent_consideration with
+    | None -> (false, not_filed)
+    | Some _ -> (true, "deducted: an acquisition's deferred price, paid outside the capex and working-capital lines the cash flow reads")
+  in
+  item ~name:"contingent_consideration" ~value:p.contingent_consideration ~row:p.contingent_consideration_row ~applied ~sign:1.
+    ~why
+
+let distributions (fin : financials) (p : fiscal_period) =
+  match fin.distributions_since_base with
+  | Some d when d.since = p.period_end ->
+      let rows = List.filter_map Fun.id [ d.repurchases_row; d.dividends_row; d.issuance_row ] in
+      item ~name:"distributions_since_base" ~value:(Some d.net)
+        ~row:(if rows = [] then None else Some (String.concat " + " rows))
+        ~applied:true ~sign:1.
+        ~why:
+          (Printf.sprintf
+             "deducted: buybacks and common dividends less shares issued from %s to %s, from the quarterly filing's year-to-date cash flow statement (%s): the share count is today's and the base's net debt still holds that cash; buybacks after %s are in the share count and not here"
+             d.since d.through d.accession d.through)
+  | Some d ->
+      item ~name:"distributions_since_base" ~value:None ~row:None ~applied:false ~sign:1.
+        ~why:(Printf.sprintf "not deducted: the valued period's balance sheet is not the base the year-to-date figures run from (%s)" d.since)
+  | None ->
+      item ~name:"distributions_since_base" ~value:None ~row:None ~applied:false ~sign:1.
+        ~why:("not read: " ^ Option.value fin.distributions_reason ~default:"no quarterly filing after the base was read")
+
+(* Paid to buy minority interests out since the base, above the book they removed: only where
+   the minority interest itself is deducted, at its base-date book, and only from the base. *)
+let buyouts (fin : financials) (p : fiscal_period) ~(minority : bridge_item) =
+  let name = "minority_buyouts_since_base" in
+  match fin.distributions_since_base with
+  | Some d when d.since = p.period_end -> (
+      match d.minority_net with
+      | None -> item ~name ~value:None ~row:None ~applied:false ~sign:1. ~why:"not filed: no payment to minority holders in the year-to-date cash flow statement"
+      | Some net when not minority.applied ->
+          item ~name ~value:(Some net) ~row:d.minority_buyouts_row ~applied:false ~sign:1.
+            ~why:"not deducted: the minority interest itself is not deducted on this record"
+      | Some net ->
+          let rows = List.filter_map Fun.id [ d.minority_buyouts_row; Option.map (fun r -> "- " ^ r) d.minority_buyouts_book_row ] in
+          item ~name ~value:(Some net) ~row:(if rows = [] then None else Some (String.concat " " rows)) ~applied:true ~sign:1.
+            ~why:
+              (Printf.sprintf
+                 "deducted: paid from %s to %s to buy minority interests out, less the book they removed where filed: the minority above is at its base-date book and the purchase settled it at a price, while the base's net debt still holds the cash; dividends to minority holders and contributions from them move the cash and the minority's book alike and are not read"
+                 d.since d.through))
+  | _ -> item ~name ~value:None ~row:None ~applied:false ~sign:1. ~why:"not read: the year-to-date figures do not run from the valued period"
+
+let of_period ~cash_flow ?share_count_includes_minority (fin : financials) (p : fiscal_period) =
+  let minority_item = minority p ~cash_flow ~share_count_includes_minority in
+  let items =
+    [ minority_item; buyouts fin p ~minority:minority_item; investees p ~cash_flow; leases fin p; contingent p;
+      distributions fin p ]
+  in
+  { definition; items; total = List.fold_left (fun acc (i : bridge_item) -> acc +. i.deduction) 0. items }
+
+let total (i : inputs) = match i.equity_bridge with Some b -> b.total | None -> 0.

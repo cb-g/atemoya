@@ -22,6 +22,7 @@ type declaration = {
   adr_ratio : float option;
   build_out_return : Reference_t.declared_build_out option;
   build_out_lag_years : Reference_t.declared_build_out option;
+  share_count_includes_minority : string option;
 }
 
 let receipt_tolerance = 0.03
@@ -224,6 +225,7 @@ let point_in_time_gates (fin : financials) =
 let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns ?name_growth ?options (params : Params.t) ~today
     ~model_version ~declaration (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
+  let share_count_includes_minority = Option.bind declaration (fun d -> d.share_count_includes_minority) in
   let receipt = receipt_check ~declared:(Option.bind declaration (fun d -> d.adr_ratio)) original in
   let hold_vintage = Option.is_some original.point_in_time in
   (* Age of the newest filing the statements come from, when they are filed ones. *)
@@ -695,7 +697,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         | Error reason -> failed reason
         | Ok fin -> (
             let class_name = match declared with Some c -> Admissibility.class_name c | None -> "" in
-            match Dcf.value ~declared:class_name assumptions ~country fin with
+            match Dcf.value ~declared:class_name ?share_count_includes_minority assumptions ~country fin with
             | Error reason -> failed_with_build_out reason
             | Ok (inputs, fair_value) ->
                 (* The growth shadow rides beside whatever the headline concludes, a gate's
@@ -703,7 +705,9 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                    four-quarter shadow rides the same way, on the statements' trailing period;
                    the base sentence says what the annual base costs and is on Ok records only. *)
                 let record = finish ~price:inputs.price (`Dcf inputs) fair_value in
-                let shadow = Four_quarter_shadow.value ~declared:class_name assumptions ~country fin ~fair_value in
+                let shadow =
+                  Four_quarter_shadow.value ~declared:class_name ?share_count_includes_minority assumptions ~country fin ~fair_value
+                in
                 (* on the converted period, with the headline's free cash flow for the maintenance figure *)
                 let intensity = Capital.intensity (Period.latest fin) ~fcff:(Some inputs.fcff) in
                 let goodwill = Capital.goodwill (Period.latest fin) inputs in
@@ -748,7 +752,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         with
         | None -> failed "field_definitions.json carries no required_on_latest_period for dcf_midcycle"
         | Some required -> (
-            match Dcf_midcycle.value assumptions ~country ~required fin with
+            match Dcf_midcycle.value ?share_count_includes_minority assumptions ~country ~required fin with
             | Error reason -> failed_with_build_out reason
             | Ok (inputs, fair_value) ->
                 let record = finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value in

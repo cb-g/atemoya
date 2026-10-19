@@ -1,5 +1,5 @@
 let allowed_fields =
-  [ "ticker"; "entity_class"; "why"; "scope_limits"; "scope_limit_codes"; "cik"; "map_cik"; "lei"; "adr_ratio"; "build_out_return"; "build_out_lag_years" ]
+  [ "ticker"; "entity_class"; "why"; "scope_limits"; "scope_limit_codes"; "cik"; "map_cik"; "lei"; "adr_ratio"; "build_out_return"; "build_out_lag_years"; "share_count_includes_minority" ]
 
 (* (60) A build-out declaration is exactly a value, the evidence for it and a date: a number
    with no why is not a declaration, and one of the two without the other says nothing. *)
@@ -88,7 +88,15 @@ let check_entry vocabulary index (entry : Yojson.Safe.t) =
               | Some (`Int n) -> n > 0
               | Some _ -> false
             in
+            let minority_ok =
+              match List.assoc_opt "share_count_includes_minority" fields with
+              | None -> true
+              | Some (`String s) -> String.trim s <> ""
+              | Some _ -> false
+            in
             if not ratio_ok then Error (Printf.sprintf "universe entry %s: adr_ratio must be a positive number (ordinary shares per receipt)" name)
+            else if not minority_ok then
+              Error (Printf.sprintf "universe entry %s: share_count_includes_minority must be the why, a non-empty string citing the filing" name)
             else
               let build_out =
                 List.map (fun k -> (k, List.assoc_opt k fields)) [ "build_out_return"; "build_out_lag_years" ]

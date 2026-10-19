@@ -160,6 +160,7 @@ let declarations (universe : Reference_t.universe option) cli_class =
                 adr_ratio = e.adr_ratio;
                 build_out_return = e.build_out_return;
                 build_out_lag_years = e.build_out_lag_years;
+                share_count_includes_minority = e.share_count_includes_minority;
               } ))
           u.tickers
   in
@@ -173,6 +174,7 @@ let declarations (universe : Reference_t.universe option) cli_class =
           adr_ratio = None;
           build_out_return = None;
           build_out_lag_years = None;
+          share_count_includes_minority = None;
         })
       cli_class
   in

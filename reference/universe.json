@@ -1502,6 +1502,7 @@
       "ticker": "BX",
       "entity_class": "OperatingCompany",
       "why": "Blackstone, an alternative asset manager earning management fees on capital it manages for others and performance revenue on what that capital earns; positive free cash flow; an operating company, as the other alternative asset managers here are.",
+      "share_count_includes_minority": "Blackstone's 10-K for 2025 (accession 0001193125-26-082531), in its schedule of shares eligible for dividends and distributions, counts 748,688,068 shares of common stock, 34,494,942 unvested participating shares and 445,586,312 participating Blackstone Holdings partnership units at 2025-12-31; the market capitalisation the record divides by is on the common and the units together, and the minority interest in Blackstone Holdings is the units' claim, so the bridge does not deduct it again; the minority interests in consolidated funds sit in the same total and are left with it, and the distributions on the units since the base are not read",
       "scope_limits": [
         "performance revenue is carried interest accrued on the funds' unrealised marks, so it moves with markets and reverses when the marks fall, and a single year mixes a fee business with a market position",
         "some of the funds it manages are consolidated, and their own borrowings are not the manager's"

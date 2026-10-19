@@ -118,7 +118,7 @@ let stepped_fair_value (i : inputs) ~growth_path ~step_after ~ratio =
   let last = match List.rev stepped with cf :: _ -> cf | [] -> i.fcff *. ratio in
   let terminal = last *. (if years = step_after then ratio else 1.) *. (1. +. terminal_growth_rate) /. (i.wacc -. terminal_growth_rate) in
   let enterprise_value = pv_explicit +. (terminal /. discount years) in
-  (enterprise_value -. i.net_debt) /. i.shares
+  (enterprise_value -. i.net_debt -. Equity_bridge.total i) /. i.shares
 
 let year_of date = int_of_string_opt (String.sub date 0 (min 4 (String.length date)))
 

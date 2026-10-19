@@ -128,12 +128,22 @@ let convert ~rate (fin : financials) =
       cash_composition = scale_composition rate p.cash_composition;
       total_debt_composition = scale_composition rate p.total_debt_composition;
       delta_nwc_composition = scale_composition rate p.delta_nwc_composition;
+      minority_interest = scale rate p.minority_interest;
+      equity_method_investments = scale rate p.equity_method_investments;
+      contingent_consideration = scale rate p.contingent_consideration;
+      lease_liabilities = scale rate p.lease_liabilities;
     }
+  in
+  let distributions (d : distributions) =
+    { d with
+      repurchases = scale rate d.repurchases; dividends = scale rate d.dividends; issuance = scale rate d.issuance;
+      net = d.net *. rate }
   in
   {
     fin with
     periods = List.map period fin.periods;
     (* the trailing period is money in the same statement currency and converts alike *)
     trailing_period = Option.map period fin.trailing_period;
+    distributions_since_base = Option.map distributions fin.distributions_since_base;
     currency = fin.trading_currency;
   }

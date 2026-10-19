@@ -311,3 +311,14 @@ def test_every_table_country_declares_its_own_currency() -> None:
     # a currency's rate country reports in that currency, so it stays on its own curve
     for code, country in fx.currency_countries:
         assert own[country] == code, (code, country)
+
+
+def test_a_share_count_holding_the_minority_is_declared_with_its_why() -> None:
+    """(2026-10-19) The equity bridge's one per-name declaration: a non-empty why or nothing."""
+    entry = {"ticker": "TEST", "entity_class": "OperatingCompany", "why": "an invented manager",
+             "share_count_includes_minority": "the filing counts the partnership units beside the common stock"}
+    loaded = universe.load_text(json.dumps({"tickers": [entry]}))
+    assert loaded.tickers[0].share_count_includes_minority == entry["share_count_includes_minority"]
+    for bad in ("", "  ", 1):
+        with pytest.raises(universe.UniverseError, match="share_count_includes_minority must be the why"):
+            universe.load_text(json.dumps({"tickers": [{**entry, "share_count_includes_minority": bad}]}))

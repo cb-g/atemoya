@@ -1372,3 +1372,41 @@ def test_the_amortisation_of_capitalised_contract_costs_is_netted_against_their_
         alone = period({"IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", 300e6, **Y)),
                         element: usd(fact("2025-12-31", 600e6, **Y))})
         assert alone.delta_nwc == 300e6
+
+
+def test_bridge_lines_are_read_as_filed_with_their_fallbacks() -> None:
+    """(2026-10-19) The equity bridge's balance-sheet lines, every figure invented: a minority
+    interest as tagged, else the equity including it less the parent's; contingent
+    consideration as a total, else its parts summed; under IFRS the minority, the investees
+    and the lease liabilities, a total else its parts. A US GAAP lease is never read: its cost
+    is inside operating income. The valuer decides which apply; nothing here nets them."""
+    tagged = fetch_sec.Facts({"MinorityInterest": usd(fact("2025-12-31", 300.0)),
+                              "EquityMethodInvestments": usd(fact("2025-12-31", 500.0)),
+                              "BusinessCombinationContingentConsiderationLiabilityCurrent": usd(fact("2025-12-31", 40.0)),
+                              "BusinessCombinationContingentConsiderationLiabilityNoncurrent": usd(fact("2025-12-31", 60.0)),
+                              "OperatingLeaseLiability": usd(fact("2025-12-31", 70.0))}, TAGS, [])
+    lines = fetch_sec.bridge_lines(tagged, DEFS, END, taxonomy="us-gaap")
+    assert lines["minority_interest"] == (300.0, "MinorityInterest")
+    assert lines["equity_method_investments"] == (500.0, "EquityMethodInvestments")
+    assert lines["contingent_consideration"] == (100.0, "BusinessCombinationContingentConsiderationLiabilityCurrent + BusinessCombinationContingentConsiderationLiabilityNoncurrent")
+    assert lines["lease_liabilities"] == (None, None)
+    total = fetch_sec.Facts({"BusinessCombinationContingentConsiderationLiability": usd(fact("2025-12-31", 90.0)),
+                             "BusinessCombinationContingentConsiderationLiabilityCurrent": usd(fact("2025-12-31", 40.0))}, TAGS, [])
+    assert fetch_sec.bridge_lines(total, DEFS, END, taxonomy="us-gaap")["contingent_consideration"] == (90.0, "BusinessCombinationContingentConsiderationLiability")
+    totals = fetch_sec.Facts({"StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest": usd(fact("2025-12-31", 1200.0)),
+                              "StockholdersEquity": usd(fact("2025-12-31", 1000.0))}, TAGS, [])
+    assert fetch_sec.bridge_lines(totals, DEFS, END, taxonomy="us-gaap")["minority_interest"] == (
+        200.0, "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest - StockholdersEquity")
+    assert fetch_sec.bridge_lines(fetch_sec.Facts({}, TAGS, []), DEFS, END, taxonomy="us-gaap") == {f: (None, None) for f in fetch_sec.BRIDGE_FIELDS}
+    ifrs = fetch_sec.Facts({"NoncontrollingInterests": in_unit("EUR", twenty_f("2025-12-31", 80.0)),
+                            "InvestmentsAccountedForUsingEquityMethod": in_unit("EUR", twenty_f("2025-12-31", 120.0)),
+                            "NoncurrentLeaseLiabilities": in_unit("EUR", twenty_f("2025-12-31", 150.0)),
+                            "CurrentLeaseLiabilities": in_unit("EUR", twenty_f("2025-12-31", 30.0))}, TAGS, [], unit="EUR")
+    lines = fetch_sec.bridge_lines(ifrs, DEFS, END, taxonomy="ifrs-full")
+    assert lines["minority_interest"] == (80.0, "NoncontrollingInterests")
+    assert lines["equity_method_investments"] == (120.0, "InvestmentsAccountedForUsingEquityMethod")
+    assert lines["lease_liabilities"] == (180.0, "NoncurrentLeaseLiabilities + CurrentLeaseLiabilities")
+    assert lines["contingent_consideration"] == (None, None)
+    # and onto the filed period
+    p = period({"MinorityInterest": usd(fact("2025-12-31", 300.0)), "EquityMethodInvestments": usd(fact("2025-12-31", 500.0))})
+    assert (p.minority_interest, p.minority_interest_row, p.equity_method_investments) == (300.0, "MinorityInterest", 500.0)

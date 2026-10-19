@@ -22,10 +22,10 @@ let fair_value ~base ~rate ~terminal ~net_debt ~shares ~growth ~years =
    shares (0 and 1 on a per-share base), and the observed start. *)
 let parameters (m : model_inputs) =
   match m with
-  | `Dcf i -> Ok ("fcff", i.fcff, "wacc", i.wacc, i.terminal_growth_rate.value, i.net_debt, i.shares, i.g0)
+  | `Dcf i -> Ok ("fcff", i.fcff, "wacc", i.wacc, i.terminal_growth_rate.value, i.net_debt +. Equity_bridge.total i, i.shares, i.g0)
   | `Dcf_midcycle mc ->
       let i = mc.dcf in
-      Ok ("fcff_mid", i.fcff, "wacc", i.wacc, i.terminal_growth_rate.value, i.net_debt, i.shares, i.g0)
+      Ok ("fcff_mid", i.fcff, "wacc", i.wacc, i.terminal_growth_rate.value, i.net_debt +. Equity_bridge.total i, i.shares, i.g0)
   | `Reit_ffo_dividend i ->
       Ok ("dividend_per_share", i.dividend_per_share, "cost_of_equity", i.cost_of_equity, i.terminal_growth_rate.value, 0., 1., i.g0)
   | `Residual_income _ | `Residual_income_insurer _ ->

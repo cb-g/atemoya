@@ -2,7 +2,9 @@
 optionally scope_limits with scope_limit_codes (one code per limit, in order, each from the
 file's own scope_codes vocabulary), cik, lei (73, the Legal Entity Identifier whose ESEF reports are
 the statements, twenty characters), adr_ratio (42, ordinary shares per depositary
-receipt, a positive number) and the two build-out declarations (60); anything else is an
+receipt, a positive number), the two build-out declarations (60) and share_count_includes_minority
+(the why, a non-empty string, where the share count already holds the units a minority
+interest stands for, so the equity bridge does not deduct it again); anything else is an
 error, so nothing that remembers an outcome or a finding can creep back into a declaration."""
 
 from __future__ import annotations
@@ -16,7 +18,7 @@ from typing import Any, cast
 import reference
 
 ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "scope_limit_codes", "cik", "map_cik", "lei", "adr_ratio",
-           "build_out_return", "build_out_lag_years")
+           "build_out_return", "build_out_lag_years", "share_count_includes_minority")
 REQUIRED = ("ticker", "entity_class", "why")
 # (60) A build-out declaration is exactly a value, the evidence for it and a date. A number
 # with no why is not a declaration, which is the whole point of the readout being declared.
@@ -52,6 +54,9 @@ def _check_entry(index: int, entry: object, vocabulary: frozenset[str] = frozens
     ratio = fields.get("adr_ratio")
     if ratio is not None and (isinstance(ratio, bool) or not isinstance(ratio, (int, float)) or ratio <= 0):
         raise UniverseError(f"universe entry {name}: adr_ratio must be a positive number (ordinary shares per receipt)")
+    minority = fields.get("share_count_includes_minority")
+    if minority is not None and (not isinstance(minority, str) or not minority.strip()):
+        raise UniverseError(f"universe entry {name}: share_count_includes_minority must be the why, a non-empty string citing the filing")
     codes = fields.get("scope_limit_codes")
     if codes:
         limits = fields.get("scope_limits")

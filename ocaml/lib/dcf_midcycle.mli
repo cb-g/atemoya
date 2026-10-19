@@ -48,6 +48,7 @@ val invested_capital : Boundary_t.fiscal_period -> float option
 (** [book_equity + total_debt - cash] when all three are present. *)
 
 val value :
+  ?share_count_includes_minority:string ->
   Dcf.assumptions ->
   country:string ->
   required:string list ->

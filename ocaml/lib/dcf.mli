@@ -100,6 +100,7 @@ val missing_report : Boundary_t.financials -> Boundary_t.fiscal_period -> nwc_pe
 
 val value :
   ?declared:string ->
+  ?share_count_includes_minority:string ->
   assumptions ->
   country:string ->
   Boundary_t.financials ->
@@ -107,4 +108,7 @@ val value :
 (** Values the most recent fiscal period. [country] is the fetched string,
     recorded in [inputs] as is; [declared] names the class in the non-positive
     free-cash-flow refusal (31): a base FCFF at or below zero is an [Error], since
-    the DCF is meaningless on it, not conservative. See the module contract. *)
+    the DCF is meaningless on it, not conservative. The equity value is the enterprise value
+    less net debt and the [Equity_bridge] on the period, the cash flow being consolidated
+    operating income; [share_count_includes_minority] is the universe entry's declaration.
+    See the module contract. *)

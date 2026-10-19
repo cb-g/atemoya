@@ -296,6 +296,7 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
     preferred_value, preferred_row = fetch_sec.preferred_equity_of(v["preferred_equity"], r["preferred_equity"])
     common_dividends, common_dividends_row = fetch_sec.common_dividends_of(
         v["common_dividends_paid"], r["common_dividends_paid"], v["dividends_paid"], v["preferred_dividends"])
+    bridge = fetch_sec.bridge_lines(t, defs, end, taxonomy=taxonomy)
     # Completeness: a recipe that sums components, or takes the largest of several totals,
     # reads what is present, and on an annual period what is present is what the filer
     # tags that year. On a trailing period a line the 10-K tags may have no 10-Q facts (a
@@ -323,6 +324,10 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
         total_debt=debt, total_debt_source=debt_row,
         book_equity=v["book_equity"], net_income=v["net_income"],
         goodwill=v["goodwill"], goodwill_row=r["goodwill"],
+        minority_interest=bridge["minority_interest"][0], minority_interest_row=bridge["minority_interest"][1],
+        equity_method_investments=bridge["equity_method_investments"][0], equity_method_investments_row=bridge["equity_method_investments"][1],
+        contingent_consideration=bridge["contingent_consideration"][0], contingent_consideration_row=bridge["contingent_consideration"][1],
+        lease_liabilities=bridge["lease_liabilities"][0], lease_liabilities_row=bridge["lease_liabilities"][1],
         dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
         operating_cash_flow=v["operating_cash_flow"], operating_cash_flow_row=r["operating_cash_flow"],
         net_income_to_common=v["net_income_to_common"], net_income_to_common_row=r["net_income_to_common"],
@@ -363,3 +368,52 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
         quarters_in_year_to_date=anchor.quarters, filed=anchor.filed.isoformat(), accession=anchor.accession,
         notes=NOTES + notes)
     return period, basis, None
+
+
+NO_BRIDGE_DEFINITION = "reference/field_definitions.json carries no equity_bridge definition"
+
+
+def distributions_of(facts: Mapping[str, object] | None, taxonomy: str, unit: str | None, tags: reference.XbrlTags,
+                     defs: reference.FieldDefinitions, annual_periods: list[boundary.FiscalPeriod],
+                     *, as_of: date | None = None) -> tuple[boundary.Distributions | None, str | None]:
+    """What went to shareholders between the annual base and the latest quarter: each line the
+    quarterly filing's fiscal year-to-date figure from the day after the base to the quarter
+    end the trailing period anchors on, first present by the equity bridge's tag lists, an
+    absent line nil in the sum; or None with the reason. The same quarter end as the trailing
+    period, so a filer with no trailing period has no figures here either."""
+    if facts is None or not taxonomy or unit is None:
+        return None, NO_FACTS
+    if taxonomy == "ifrs-full":
+        return None, NO_QUARTERLY_IFRS
+    if defs.equity_bridge is None:
+        return None, NO_BRIDGE_DEFINITION
+    gaap = fetch_sec._as_dict(fetch_sec._as_dict(facts.get("facts")).get(taxonomy))  # pyright: ignore[reportPrivateUsage]
+    anchor, reason = anchor_of(gaap, tags, unit, annual_periods, as_of)
+    if anchor is None:
+        return None, reason
+
+    def year_to_date(candidates: Iterable[str]) -> tuple[float | None, str | None]:
+        for tag in candidates:
+            facts_ = _validated(fetch_sec._entries(gaap.get(tag), unit), as_of)  # pyright: ignore[reportPrivateUsage]
+            hit = _latest([f for f in facts_ if f.form in QUARTERLY_FORMS and f.start == anchor.year_start and f.end == anchor.quarter_end],
+                          prefer_accession=anchor.accession)
+            if hit is not None:
+                return hit.val, tag
+        return None, None
+
+    d = defs.equity_bridge.xbrl
+    repurchases, repurchases_row = year_to_date(d.repurchases)
+    dividends, dividends_row = year_to_date(d.dividends)
+    issuance, issuance_row = year_to_date(d.issuance)
+    buyouts, buyouts_row = year_to_date(d.minority_buyouts)
+    buyouts_book, buyouts_book_row = year_to_date(d.minority_buyouts_book) if buyouts is not None else (None, None)
+    return boundary.Distributions(
+        since=anchor.prior_year_end.isoformat(), through=anchor.quarter_end.isoformat(),
+        repurchases=repurchases, repurchases_row=repurchases_row,
+        dividends=dividends, dividends_row=dividends_row,
+        issuance=issuance, issuance_row=issuance_row,
+        net=(repurchases or 0.0) + (dividends or 0.0) - (issuance or 0.0),
+        minority_buyouts=buyouts, minority_buyouts_row=buyouts_row,
+        minority_buyouts_book=buyouts_book, minority_buyouts_book_row=buyouts_book_row,
+        minority_net=None if buyouts is None else max(0.0, buyouts - (buyouts_book or 0.0)),
+        filed=anchor.filed.isoformat(), accession=anchor.accession), None

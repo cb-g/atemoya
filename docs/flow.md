@@ -508,6 +508,35 @@ at all:
    in, recorded as `net_nonoperating_interest` or `interest_paid_stands_in` on the period
    and on every observation; the DCF path's EBIT policy never reads a stand-in.
 
+### The equity bridge
+
+Net debt is the bridge's first line and not its only one. `equity_bridge` on the generic and
+mid-cycle DCF inputs carries six more items, each read where it is filed and applied only where
+the cash flow it pairs with leaves it out, every one on the block with its value, row, whether
+it applied and why; `equity_value` is the enterprise value less net debt less the block's
+total, and the implied readouts, the shadows, the sensitivity and the belief map value on the
+same claims.
+
+| item | read from | applied where |
+|---|---|---|
+| minority interests | `MinorityInterest`, else equity including them less the parent's; `NoncontrollingInterests`; the vendor's row | the cash flow starts from consolidated operating income and the universe entry does not declare the share count to hold the minority's units |
+| minority buyouts since the base | the latest 10-Q's year-to-date `PaymentsToMinorityShareholders`, less `MinorityInterestDecreaseFromRedemptions` where filed | beside the minority interests, where they apply and the year-to-date figures run from the valued base |
+| associates and joint ventures, at book | `EquityMethodInvestments`; `InvestmentsAccountedForUsingEquityMethod`; the vendor's aggregate row, else its two | the cash flow starts from consolidated operating income, which leaves their earnings out |
+| lease liabilities | `LeaseLiabilities`, else its parts; the vendor's two lease rows | IFRS statements, and the vendor's statements of a filer outside the United States: the cost is depreciation, added back, and interest, and the principal is paid in financing |
+| contingent consideration | `BusinessCombinationContingentConsiderationLiability`, else its parts | wherever filed |
+| distributions since the base | the latest 10-Q's year-to-date buybacks and common dividends less shares issued | the valued period is the annual base the figures run from: the share count is today's |
+
+Not applied, by the same rule: minority interests and associates on the mid-cycle path built
+from the parent's net income, which leaves the one out and holds the other already; a US GAAP
+operating lease, whose cost is inside operating income. Not read: a 20-F or vendor-statement
+filer's distributions since the base, which no quarterly cash flow in the sources read carries;
+dividends to minority holders and contributions from them, which move the cash and the
+minority's own book alike; a captive finance arm, a lender's loan book and customer deposits
+in financing, which no filer tags alike; dilution from options, units and warrants. The
+latest quarter's balance sheet is not taken for the date line, since on an annual base it would
+also bring in acquisitions paid since, seasonal working capital and the part of the first
+projected year already earned.
+
 ### A period's statement comes from one filing
 
 A filer's companyfacts carry every filing that ever reported a fiscal year, and the same
@@ -772,6 +801,13 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- the equity bridge (2026-10-19): beside net debt, minority interests, minority buyouts since
+  the base, associates and joint ventures at book, lease liabilities outside the debt rows,
+  contingent consideration and what went to shareholders since the annual base, each applied
+  where its cash flow leaves it out and shown on `equity_bridge` with why; the fetcher reads
+  the lines on every filed and vendor period and `distributions_since_base` from the latest
+  10-Q, and a universe entry may declare `share_count_includes_minority`. A definition change:
+  fair values move, no status or `Failed` string does.
 - the growth after the declared year (2026-10-19): a declared free cash flow may carry
   `g_after`, the growth of the first year after the declared one, the rest fading to terminal
   at the headline's speed in place of the solved path's growth; refused with the reason where

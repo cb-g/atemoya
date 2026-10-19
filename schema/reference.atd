@@ -234,6 +234,7 @@ type universe_entry = {
   ?adr_ratio : float option;            (* (42) ordinary shares per depositary receipt, positive, from the 20-F's deposit-agreement disclosure cited in why; absent means 1 *)
   ?build_out_return : declared_build_out option;      (* (60) the after-tax return the new capital earns once earning, a decimal *)
   ?build_out_lag_years : declared_build_out option;   (* (60) whole years from spend to first earning *)
+  ?share_count_includes_minority : string option;   (* the share count the price is quoted on already holds the units the minority interest stands for, so the equity bridge does not deduct it again; the why, citing the filing *)
 }
 
 
@@ -645,6 +646,46 @@ type bdc_definition = {
   ~notes : string list;
 }
 
+(* The equity bridge: what stands between the enterprise value a cash flow supports and the
+   common equity a share count divides, beyond net debt. Each item is read where it is filed
+   and applied only where the cash flow it pairs with leaves it out; the rule for each is the
+   definition's why. *)
+type bridge_xbrl = {
+  minority_interest : string list;
+  minority_interest_totals : string list;       (* equity including minority interests, then the parent's: their difference where no minority tag is filed *)
+  equity_method_investments : string list;
+  contingent_consideration : string list;
+  contingent_consideration_parts : string list; (* current and noncurrent, summed where no total is filed *)
+  repurchases : string list;                    (* fiscal year-to-date cash flows at the latest quarter, first present per line *)
+  dividends : string list;
+  issuance : string list;
+  minority_buyouts : string list;               (* paid to reduce minority interests, dividends excluded *)
+  minority_buyouts_book : string list;          (* the minority interests' book those payments removed *)
+}
+
+type bridge_ifrs = {
+  minority_interest : string list;
+  equity_method_investments : string list;
+  lease_liabilities : string list;
+  lease_liabilities_parts : string list;        (* noncurrent and current, summed where no total is filed *)
+}
+
+type bridge_vendor = {
+  minority_interest : string list;
+  equity_method_investments : string list;
+  equity_method_investments_parts : string list;   (* associates and joint ventures, summed where the aggregate row is absent *)
+  lease_liabilities_parts : string list;
+}
+
+type bridge_definition = {
+  name : string;
+  why : string;
+  ~notes : string list;
+  xbrl : bridge_xbrl;
+  ifrs : bridge_ifrs;
+  vendor : bridge_vendor;
+}
+
 type field_definitions = {
   source : string;
   as_of : string;
@@ -654,6 +695,7 @@ type field_definitions = {
   ?interest_expense : interest_definition option;       (* (31) *)
   ?required_on_latest_period : required_on_latest_period option;   (* (27) *)
   ?bdc : bdc_definition option;                         (* (59) *)
+  ?equity_bridge : bridge_definition option;
   cash : cash_definition;
   total_debt : debt_definition;
   delta_nwc : nwc_definition;

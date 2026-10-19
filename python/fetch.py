@@ -33,7 +33,7 @@ import argparse
 import dataclasses
 import math
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import fields
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -219,6 +219,12 @@ class BalanceSheet(Statement):
     book_equity: float | None
     net_loans: float | None
     net_loans_row: str | None
+    minority_interest: float | None = None
+    minority_interest_row: str | None = None
+    equity_method_investments: float | None = None
+    equity_method_investments_row: str | None = None
+    lease_liabilities: float | None = None
+    lease_liabilities_row: str | None = None
 
 
 # --- yfinance specifics -------------------------------------------------------------
@@ -435,6 +441,30 @@ def _balance_values(rows: Mapping[str, object], defs: reference.FieldDefinitions
     out["cash"], out["cash_row"], out["cash_composition"] = _cash(rows, defs)
     out["total_debt"], out["total_debt_source"], out["total_debt_composition"] = _total_debt(rows, defs)
     out["net_loans"], out["net_loans_row"] = _first_present(rows, NET_LOAN_ROWS)
+    out.update(_bridge_rows(rows, defs))
+    return out
+
+
+def _rows_summed(rows: Mapping[str, object], labels: Iterable[str]) -> tuple[float | None, str | None]:
+    hits = [(v, label) for label in labels for v, _ in [_first_present(rows, (label,))] if v is not None]
+    if not hits:
+        return None, None
+    return sum(v for v, _ in hits), " + ".join(label for _, label in hits)
+
+
+def _bridge_rows(rows: Mapping[str, object], defs: reference.FieldDefinitions) -> dict[str, object]:
+    """The equity bridge's balance-sheet rows as the vendor prints them; the valuer decides
+    which apply."""
+    out: dict[str, object] = {}
+    d = defs.equity_bridge
+    if d is None:
+        return out
+    v = d.vendor
+    out["minority_interest"], out["minority_interest_row"] = _first_present(rows, tuple(v.minority_interest))
+    investees = _first_present(rows, tuple(v.equity_method_investments))
+    out["equity_method_investments"], out["equity_method_investments_row"] = (
+        investees if investees[0] is not None else _rows_summed(rows, v.equity_method_investments_parts))
+    out["lease_liabilities"], out["lease_liabilities_row"] = _rows_summed(rows, v.lease_liabilities_parts)
     return out
 
 
@@ -606,6 +636,12 @@ def _period(
         provision_for_credit_losses_row=income.provision_for_credit_losses_row if income else None,
         net_loans=balance.net_loans if balance else None,
         net_loans_row=balance.net_loans_row if balance else None,
+        minority_interest=balance.minority_interest if balance else None,
+        minority_interest_row=balance.minority_interest_row if balance else None,
+        equity_method_investments=balance.equity_method_investments if balance else None,
+        equity_method_investments_row=balance.equity_method_investments_row if balance else None,
+        lease_liabilities=balance.lease_liabilities if balance else None,
+        lease_liabilities_row=balance.lease_liabilities_row if balance else None,
     )
 
 
@@ -620,6 +656,10 @@ def _is_empty(period: boundary.FiscalPeriod) -> bool:
         "net_loans_row",
         "ebit_row", "ebit_recipe", "ebit_composition", "delta_nwc_row", "delta_nwc_composition",
         "cash_row", "cash_composition", "total_debt_composition",
+        # the equity bridge's rows sit on the vendor's oldest balance-sheet column with nothing
+        # else; they never make a period that has no statement of its own
+        "minority_interest", "minority_interest_row", "equity_method_investments", "equity_method_investments_row",
+        "lease_liabilities", "lease_liabilities_row",
     }
 
     def empty(name: str) -> bool:
@@ -1071,6 +1111,9 @@ def main(argv: list[str]) -> int:
         # the same facts, for the four-quarter shadow; the models read the annual periods
         financials.trailing_period, financials.trailing_basis, financials.trailing_period_reason = trailing.of_record(
             filed_facts, financials.taxonomy, financials.financial_currency, sec.tags, sec.definitions, sec.params, financials.periods)
+        # what went to shareholders since the annual base, from the same quarterly filing, for the equity bridge
+        financials.distributions_since_base, financials.distributions_reason = trailing.distributions_of(
+            filed_facts, financials.taxonomy, financials.financial_currency, sec.tags, sec.definitions, financials.periods)
         # allow_nan=False: a NaN that slipped through is a bug here, not invalid JSON
         # for the other side to choke on.
         text = financials.to_json_string(indent=2, allow_nan=False)

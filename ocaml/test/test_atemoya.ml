@@ -20,7 +20,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?weighted_shares_tag ?interest_expense ?interest_expense_row ?depreciation_amortization_candidates ?aoci_recipe ?aoci_composition
     ?interest_recipe ?depreciation_amortization_recipe ?depreciation_amortization_composition
     ?net_income_to_common ?preferred_equity ?preferred_dividends ?preferred_outside_equity
-    ?common_dividends_paid ?operating_cash_flow ?operating_cash_flow_row ?goodwill ?goodwill_row () : Boundary_t.fiscal_period =
+    ?common_dividends_paid ?operating_cash_flow ?operating_cash_flow_row ?goodwill ?goodwill_row
+    ?minority_interest ?equity_method_investments ?contingent_consideration ?lease_liabilities () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -116,6 +117,14 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     common_dividends_paid_row = None;
     ebit_alternative = None;
     ebit_alternative_composition = None;
+    minority_interest;
+    minority_interest_row = Option.map (fun _ -> "MinorityInterest") minority_interest;
+    equity_method_investments;
+    equity_method_investments_row = Option.map (fun _ -> "EquityMethodInvestments") equity_method_investments;
+    contingent_consideration;
+    contingent_consideration_row = Option.map (fun _ -> "BusinessCombinationContingentConsiderationLiability") contingent_consideration;
+    lease_liabilities;
+    lease_liabilities_row = Option.map (fun _ -> "LeaseLiabilities") lease_liabilities;
   }
 
 let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
@@ -124,7 +133,7 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     ?(industry = Some "Consumer Electronics") ?(provider = "yfinance")
     ?(statements_unavailable = "") ?latest_filing ?cross_check ?(taxonomy = "")
     ?vendor_financial_currency ?cover_page_shares ?cover_page_split_factor ?trailing_period ?trailing_basis
-    ?trailing_period_reason periods : Boundary_t.financials =
+    ?trailing_period_reason ?distributions_since_base ?distributions_reason periods : Boundary_t.financials =
   {
     ticker = "TEST";
     as_of = "2026-09-10T00:00:00+00:00";
@@ -169,6 +178,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     trailing_period;
     trailing_basis;
     trailing_period_reason;
+    distributions_since_base;
+    distributions_reason;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -335,8 +346,10 @@ let params : Params.t =
     base_rates = None;
   }
 
-let declaration ?(scope_limits = []) ?(scope_limit_codes = []) ?adr_ratio ?build_out_return ?build_out_lag_years entity_class =
-  { Valuation.entity_class; scope_limits; scope_limit_codes; adr_ratio; build_out_return; build_out_lag_years }
+let declaration ?(scope_limits = []) ?(scope_limit_codes = []) ?adr_ratio ?build_out_return ?build_out_lag_years
+    ?share_count_includes_minority entity_class =
+  { Valuation.entity_class; scope_limits; scope_limit_codes; adr_ratio; build_out_return; build_out_lag_years;
+    share_count_includes_minority }
 
 (* Most valuation tests declare an operating company; the class tests declare otherwise. *)
 let run ?(declared = Some (declaration `OperatingCompany)) fin =
@@ -2193,7 +2206,10 @@ let test_receipt_ratio_check () =
   let u = get (Universe.load_string {|{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": 5}]}|}) in
   Alcotest.(check (option approx)) "loaded" (Some 5.) (List.hd u.tickers).adr_ratio;
   check_error "zero" (Universe.load_string {|{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": 0}]}|}) [ "adr_ratio must be a positive number" ];
-  check_error "a string" (Universe.load_string {|{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": "5"}]}|}) [ "adr_ratio must be a positive number" ]
+  check_error "a string" (Universe.load_string {|{"tickers": [{"ticker": "TSM", "entity_class": "OperatingCompany", "why": "a foundry", "adr_ratio": "5"}]}|}) [ "adr_ratio must be a positive number" ];
+  (* the equity bridge's declaration: a non-empty why *)
+  ignore (get (Universe.load_string {|{"tickers": [{"ticker": "TEST", "entity_class": "OperatingCompany", "why": "a manager", "share_count_includes_minority": "the units are counted"}]}|}));
+  check_error "an empty why" (Universe.load_string {|{"tickers": [{"ticker": "TEST", "entity_class": "OperatingCompany", "why": "a manager", "share_count_includes_minority": " "}]}|}) [ "share_count_includes_minority must be the why" ]
 
 (* --- stretch (52): the block copied through, the alert rule, the loader --- *)
 
@@ -3168,6 +3184,89 @@ let test_growth_shadow () =
   (* a record that is not a completed generic DCF carries none *)
   let wrapper = run ~declared:(Some (declaration `Wrapper)) (financials (growing ())) in
   Alcotest.(check bool) "none off the generic DCF" true (Option.is_none wrapper.growth_shadow)
+
+(* The equity bridge, every figure invented. The growing fixture's latest period carries a
+   minority interest of 300, investees of 500, contingent consideration of 100 and lease
+   liabilities of 200; since its base 150 went to shareholders and 50 to buy minority
+   interests out above book. Each item applies only where its cash flow leaves it out. *)
+let test_equity_bridge () =
+  let with_lines ?(minority = Some 300.) periods =
+    match periods with
+    | (latest : Boundary_t.fiscal_period) :: rest ->
+        { latest with minority_interest = minority; minority_interest_row = Option.map (fun _ -> "MinorityInterest") minority;
+          equity_method_investments = Some 500.; equity_method_investments_row = Some "EquityMethodInvestments";
+          contingent_consideration = Some 100.; contingent_consideration_row = Some "BusinessCombinationContingentConsiderationLiability";
+          lease_liabilities = Some 200.; lease_liabilities_row = Some "LeaseLiabilities" }
+        :: rest
+    | [] -> []
+  in
+  let paid since : Boundary_t.distributions =
+    { since; through = "2026-03-31"; repurchases = Some 120.; repurchases_row = Some "PaymentsForRepurchaseOfCommonStock";
+      dividends = Some 40.; dividends_row = Some "PaymentsOfDividendsCommonStock"; issuance = Some 10.;
+      issuance_row = Some "ProceedsFromIssuanceOfCommonStock"; net = 150.; minority_buyouts = Some 60.;
+      minority_buyouts_row = Some "PaymentsToMinorityShareholders"; minority_buyouts_book = Some 10.;
+      minority_buyouts_book_row = Some "MinorityInterestDecreaseFromRedemptions"; minority_net = Some 50.;
+      filed = "2026-05-01"; accession = "q1-2026" }
+  in
+  let plain = run (financials (growing ())) in
+  let base = match plain.inputs with Some (`Dcf i) -> i | _ -> Alcotest.fail "not a dcf" in
+  let bridged ?declared ?(taxonomy = "") ?(since = "2025-09-30") () =
+    run ?declared (financials ~taxonomy ~distributions_since_base:(paid since) (with_lines (growing ())))
+  in
+  let inputs (v : Boundary_t.valuation) = match v.inputs with Some (`Dcf i) -> i | _ -> Alcotest.fail "not a dcf" in
+  let block (i : Boundary_t.inputs) = match i.equity_bridge with Some b -> b | None -> Alcotest.fail "no bridge" in
+  let applied b name = (List.find (fun (x : Boundary_t.bridge_item) -> x.name = name) b.Boundary_t.items).applied in
+  (* nothing filed: every item on the block, none applied, the value the record had *)
+  let empty = block base in
+  Alcotest.(check int) "six items" 6 (List.length empty.items);
+  check_float "nothing filed, nothing taken" 0. empty.total;
+  Alcotest.(check bool) "each says why" true (List.for_all (fun (x : Boundary_t.bridge_item) -> x.why <> "") empty.items);
+  Alcotest.(check string) "the definition the reference names"
+    (match Yojson.Safe.from_file "../../reference/field_definitions.json" with
+    | `Assoc top -> (match List.assoc "equity_bridge" top with `Assoc d -> (match List.assoc "name" d with `String n -> n | _ -> "") | _ -> "")
+    | _ -> "")
+    Equity_bridge.definition;
+  (* a US filer on operating income: the minority and the buyouts deducted, the investees
+     added, the contingent price and the distributions deducted, the operating lease not *)
+  let us = inputs (bridged ()) in
+  let b = block us in
+  check_float "300 + 50 - 500 + 100 + 150" 100. b.total;
+  Alcotest.(check bool) "no US GAAP lease" false (applied b "lease_liabilities");
+  check_float "equity value is enterprise value less net debt less the bridge" (us.enterprise_value -. us.net_debt -. 100.) us.equity_value;
+  check_float "the engine reproduces it at the recorded growth" ((us.equity_value) /. us.shares)
+    (Implied.dcf_fair_value us ~g0:us.g0 ~lambda:us.mean_reversion_lambda.value);
+  (* IFRS: the lease too *)
+  check_float "and 200 of leases under IFRS" 300. (block (inputs (bridged ~taxonomy:"ifrs-full" ()))).total;
+  let abroad = financials ~country:(Some "Sweden") ~distributions_since_base:(paid "2025-09-30") (with_lines (growing ())) in
+  check_float "and on the vendor's statements of a filer abroad" 300.
+    (Equity_bridge.of_period ~cash_flow:Equity_bridge.Consolidated_operating_income abroad (List.hd abroad.periods)).total;
+  Alcotest.(check bool) "but not on a US filer's" false (Equity_bridge.leases_outside_debt (financials (growing ())));
+  (* the share count declared to hold the minority's units: neither the minority nor its buyouts *)
+  let declared = block (inputs (bridged ~declared:(Some (declaration ~share_count_includes_minority:"units in the count" `OperatingCompany)) ())) in
+  Alcotest.(check bool) "the declared minority is not divided twice" false (applied declared "minority_interest" || applied declared "minority_buyouts_since_base");
+  check_float "the rest still applies" (-500. +. 100. +. 150.) declared.total;
+  (* the year-to-date figures run from another period: not applied *)
+  let elsewhere = block (inputs (bridged ~since:"2024-09-30" ())) in
+  Alcotest.(check bool) "distributions only from the valued base" false (applied elsewhere "distributions_since_base");
+  check_float "nor the buyouts" (300. -. 500. +. 100.) elsewhere.total;
+  (* the mid-cycle path built from the parent's net income: neither minority nor investees *)
+  let cyc = run ~declared:(Some (declaration `Cyclical))
+      (financials ~distributions_since_base:(paid "2025-12-31") (with_lines (midcycle_periods ()))) in
+  (match cyc.inputs with
+  | Some (`Dcf_midcycle m) ->
+      let b = block m.dcf in
+      Alcotest.(check string) "bottom-up recipe" "nopat_bottom_up" m.nopat_recipe;
+      Alcotest.(check bool) "neither the minority nor the investees" false (applied b "minority_interest" || applied b "equity_method_investments");
+      check_float "the contingent price and the distributions" (100. +. 150.) b.total;
+      check_float "on its equity value" (m.dcf.enterprise_value -. m.dcf.net_debt -. 250.) m.dcf.equity_value
+  | _ -> Alcotest.failf "not a mid-cycle record: %s" (Option.value cyc.failed_reason ~default:""));
+  (* the currency conversion scales every line *)
+  let converted = Fx.convert ~rate:2. (financials ~distributions_since_base:(paid "2025-09-30") (with_lines (growing ()))) in
+  (match converted.periods with
+  | p :: _ -> Alcotest.(check (option approx)) "minority in the trading currency" (Some 600.) p.minority_interest
+  | [] -> Alcotest.fail "no periods");
+  Alcotest.(check (option approx)) "distributions too" (Some 300.)
+    (Option.map (fun (d : Boundary_t.distributions) -> d.net) converted.distributions_since_base)
 
 (* The declared growth (--growth FILE). The loader is strict: exactly one basis, the fields
    each basis needs and nothing else, dated, with a why. *)
@@ -4846,6 +4945,7 @@ let () =
           Alcotest.test_case "mid-cycle on filed operating income" `Quick test_midcycle_operating_income;
           Alcotest.test_case "the base rate beside the growth" `Quick test_base_rate;
           Alcotest.test_case "the growth shadow" `Quick test_growth_shadow;
+          Alcotest.test_case "the equity bridge" `Quick test_equity_bridge;
           Alcotest.test_case "the declared growth: the loader" `Quick test_declared_growth_loader;
           Alcotest.test_case "the declared growth" `Quick test_declared_growth;
           Alcotest.test_case "quality: the nine signals, the ratios, the reasons" `Quick test_quality;

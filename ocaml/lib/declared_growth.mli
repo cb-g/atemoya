@@ -22,8 +22,8 @@
     path from the steady figure. With [g_after], the first year after the declared one
     grows at it and the rest fade to terminal at the headline's speed, in place of the
     solved path's growth; declared in the projection's last year it is an [Error], having no
-    year to apply to. The discount rate, the fade, terminal growth, net debt and
-    shares are the headline's own. The record's fair value, margin of safety and signal are
+    year to apply to. The discount rate, the fade, terminal growth, net debt, the equity
+    bridge and shares are the headline's own. The record's fair value, margin of safety and signal are
     never moved by it. *)
 
 val load_names_string : string -> (Reference_t.name_growth, string) result

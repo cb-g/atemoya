@@ -245,3 +245,33 @@ def test_a_nil_debt_from_the_subtraction_needs_the_cash_flows_and_the_interest_t
     # and it does not touch the plain rows or the rows taken whole
     assert debt({"Long Term Debt": 0.0}, quiet | {"Issuance Of Debt": 12.0}, 16.0) == 0.0
     assert debt({lt: 40.0, cur: 10.0}, quiet | {"Issuance Of Debt": 12.0}, 16.0) == 50.0
+
+
+def test_vendor_bridge_rows() -> None:
+    """(2026-10-19) The equity bridge's rows on the vendor's balance sheet, every figure
+    invented: the minority interest, the investees as the aggregate row else associates and
+    joint ventures summed, and the two lease rows summed; the valuer decides which apply."""
+    rows = {"Minority Interest": 3.0, "Investmentsin Associatesat Cost": 4.0, "Investmentsin Joint Venturesat Cost": 1.0,
+            "Long Term Capital Lease Obligation": 2.0, "Current Capital Lease Obligation": 0.5, "Stockholders Equity": 10.0}
+    out = fetch._balance_values(rows)  # pyright: ignore[reportPrivateUsage]
+    assert (out["minority_interest"], out["minority_interest_row"]) == (3.0, "Minority Interest")
+    assert (out["equity_method_investments"], out["equity_method_investments_row"]) == (5.0, "Investmentsin Associatesat Cost + Investmentsin Joint Venturesat Cost")
+    assert (out["lease_liabilities"], out["lease_liabilities_row"]) == (2.5, "Long Term Capital Lease Obligation + Current Capital Lease Obligation")
+    aggregate = fetch._balance_values({**rows, "Long Term Equity Investment": 7.0})  # pyright: ignore[reportPrivateUsage]
+    assert (aggregate["equity_method_investments"], aggregate["equity_method_investments_row"]) == (7.0, "Long Term Equity Investment")
+    none = fetch._balance_values({"Stockholders Equity": 10.0})  # pyright: ignore[reportPrivateUsage]
+    assert none["minority_interest"] is None and none["equity_method_investments"] is None and none["lease_liabilities"] is None
+
+
+def test_bridge_rows_alone_make_no_vendor_period() -> None:
+    """(2026-10-19) The vendor's oldest balance-sheet column can carry a minority-interest or
+    lease row and nothing else; that column was omitted as empty before the equity bridge read
+    those rows, and it still is. Every figure invented."""
+    end = date(2021, 12, 31)
+    only_bridge = fetch.BalanceSheet.model_validate(
+        {"period_end": end, **fetch._balance_values({"Minority Interest": 3.0, "Long Term Capital Lease Obligation": 2.0})})  # pyright: ignore[reportPrivateUsage]
+    period = fetch._period(end, None, None, only_bridge)  # pyright: ignore[reportPrivateUsage]
+    assert period.minority_interest == 3.0 and fetch._is_empty(period)  # pyright: ignore[reportPrivateUsage]
+    with_equity = fetch.BalanceSheet.model_validate(
+        {"period_end": end, **fetch._balance_values({"Minority Interest": 3.0, "Stockholders Equity": 10.0})})  # pyright: ignore[reportPrivateUsage]
+    assert not fetch._is_empty(fetch._period(end, None, None, with_equity))  # pyright: ignore[reportPrivateUsage]

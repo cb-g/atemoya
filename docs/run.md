@@ -239,6 +239,86 @@ the record as `revenues_less_costs_and_expenses` when used. It is a fallback and
 first choice. The refinement policy in that file allows two refinements of a recipe and
 names the `Failed` reason for a miss.
 
+## The equity bridge
+
+A DCF values the business; the share count divides the common equity. Between the two stand
+net debt and every other claim the cash flow does not already settle, and every asset it does
+not already earn on. `equity_bridge`, on the inputs of every generic and mid-cycle DCF record,
+carries those items one by one: the value as read, the row, whether it applied and why, and
+the total, so `equity_value` is the enterprise value less net debt less that total
+(`ocaml/lib/equity_bridge.ml`, `reference/field_definitions.json` equity_bridge). The implied
+readouts, the shadows, the sensitivity and the belief map value on the same claims.
+
+The rule for every item is that it pairs with the cash flow. An item is applied where the cash
+flow leaves it out and never where it already holds it:
+
+- **Minority interests** are deducted where the cash flow starts from consolidated operating
+  income, which carries the minority holders' share of the subsidiaries it consolidates, and
+  not on the mid-cycle path built from net income attributable to the parent, which leaves it
+  out already. A universe entry may declare `share_count_includes_minority`, with the filing
+  cited, where the share count the price is quoted on already holds the units the minority
+  interest stands for: Blackstone's 10-K counts 748,688,068 shares of common stock beside
+  445,586,312 participating Blackstone Holdings partnership units at 2025-12-31, and the
+  minority interest in Blackstone Holdings is those units' claim, so deducting it as well
+  would divide it twice.
+- **Minority buyouts since the base** are deducted beside them: what the latest 10-Q's
+  year-to-date cash flow statement shows paid to buy minority interests out, less the book the
+  purchases removed where filed. The minority interest is carried at its base-date book, and a
+  purchase settles it at a price, which the base's net debt still holds as cash; Intel's 10-Q
+  for the quarter to 2026-06-27 files 14,339 million of `PaymentsToMinorityShareholders` for
+  the half-year after its base. Dividends to minority holders and contributions
+  from them are not read: each moves the cash and the minority's own book alike, and since the
+  bridge reads neither after the base, taking the cash alone would count a contribution's cash
+  without the claim that came with it.
+- **Associates and joint ventures** are added at book where the cash flow starts from operating
+  income, which leaves their earnings out, and not where it is built from net income, which
+  holds them already. Book is not market, and the item says so: a listed stake can be worth
+  several times its carrying amount.
+- **Lease liabilities** outside the debt rows are deducted on IFRS statements and on the
+  vendor's statements of a filer outside the United States. There the lease cost is
+  depreciation, added back with the rest, and interest, and the principal is paid in financing,
+  so the cash flow never pays it. A US GAAP operating lease's cost is inside operating income,
+  and its liability stays out, as `total_debt`'s why has always said.
+- **Contingent consideration** is deducted wherever filed: an acquisition's deferred price,
+  paid outside the capex and working-capital lines the cash flow reads.
+- **Distributions since the base** are deducted where the valued period is the annual base the
+  figures run from: buybacks and common dividends less shares issued, from the latest 10-Q's
+  year-to-date cash flow statement (`distributions_since_base` on the financials). The share
+  count is today's, and the base's net debt still holds the cash those payments spent; before
+  this a name buying back stock was valued on its pre-buyback cash divided by its post-buyback
+  share count. Buybacks after the quarter end are in the share count and not here, a quarter's
+  residue at most. Shares issued since the base add their cash back, the new shares being in
+  today's count; Alphabet's 10-Q for the half to 2026-06-30 files 30,499 million of common stock
+  issued and no buybacks. A preferred issue since the base is not read: its cash came with a
+  senior claim of the same size, and the bridge reads neither.
+
+**Decided (2026-10-19), after a survey and a downstream project's evidence.** The record's
+bridge was net debt alone. A survey of every item between enterprise and equity value across
+the 104 records the generic and mid-cycle DCF valued on the run of 2026-10-19 found most items
+negligible on most names and the six above material on some, and a downstream project that
+runs a clone sent the filing lines for thirteen names, which agreed with the survey wherever
+both measured the same thing. Weighed and not taken: the latest quarter's balance sheet with
+the share count of its date, in place of the distributions line, which on an annual base also
+brings in acquisitions paid since, whose cash flows the base does not hold, seasonal working
+capital, and the part of the first projected year already earned; the textbook bridge applied
+whole, which would have added associates whose earnings a net-income recipe already holds and
+deducted a minority interest whose units the share count already divides; and diluted shares,
+since stock compensation is already a cost inside operating income and the shares for awards
+already granted need a rule that does not count the cost twice.
+
+Not read, each a stated limit: the distributions of a filer whose quarterly cash flow is not in
+the sources read (a 20-F filer's half-years, and every name on vendor statements, where the
+vendor's quarterly rows were missing or nil where the half-year reports print the payments);
+the distributions on units the share count holds by declaration; a captive finance arm's debt,
+a lender's loan book and customer deposits classified in financing, which no filer tags alike
+and which need a declaration per name; long-term marketable securities, which the cash
+definition leaves out and is open; preferred stock, pension deficits and redeemable minority
+interests, negligible across the run, though Alphabet's 10-Q files 19,063 million of
+convertible preferred issued in the same half, which will stand on its next annual balance
+sheet and is then the item to add. The four-quarter shadow reads the bridge's lines at the
+quarter end where the 10-Q files them, and no distributions, its balance sheet being the
+quarter's own.
+
 ## Terminal growth is held to the risk-free rate
 
 A country's terminal growth comes from `reference/params.json`, one figure per country.
@@ -625,7 +705,7 @@ without editing the code. The declaration is the reader's, like a belief or a re
 return, so it is dated, carries a why, is never derived from anything here, and stays a
 shadow. Everything but the starting growth, and what the reader declares for the years after
 the declared one, is the headline's own: the discount rate (a declared required return included), the fade, terminal
-growth, net debt and shares. Weighed and not taken: a declared free cash flow for a year the
+growth, net debt, the equity bridge and shares. Weighed and not taken: a declared free cash flow for a year the
 statements carry, which is a restatement of the base and not a view; and a declared starting
 growth and free cash flow together, which over-determines the path. The growth after the
 declared year is the headline's path unless the reader declares `g_after`, added the same day

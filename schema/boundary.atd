@@ -120,6 +120,14 @@ type fiscal_period = {
   ?book_equity_row : string option;
   ?goodwill : float option;                   (* acquired goodwill at period end, as filed; >= 0; read by the goodwill readout alone *)
   ?goodwill_row : string option;
+  ?minority_interest : float option;          (* the equity the minority holders of consolidated subsidiaries own, as filed at period end; read by the equity bridge alone *)
+  ?minority_interest_row : string option;
+  ?equity_method_investments : float option;  (* associates and joint ventures at book, as filed at period end *)
+  ?equity_method_investments_row : string option;
+  ?contingent_consideration : float option;   (* acquisitions' deferred, contingent price at fair value, as filed at period end *)
+  ?contingent_consideration_row : string option;
+  ?lease_liabilities : float option;          (* lease liabilities outside the debt rows, IFRS and vendor statements only *)
+  ?lease_liabilities_row : string option;
   ?net_income_row : string option;
   ?net_interest_income_row : string option;
   (* The definition each composed field follows and the components summed (11). *)
@@ -260,6 +268,8 @@ type financials = {
   ?trailing_period : fiscal_period option;   (* the last four filed quarters as one period, period_end the latest quarter end, every line read by the annual recipes from year-to-date plus prior year less prior year-to-date, the balance sheet at the quarter end; US filers only; absent with the reason below. The models read [periods]; the four-quarter shadow reads this *)
   ?trailing_basis : trailing_basis option;   (* which filings and spans the trailing period was read from *)
   ?trailing_period_reason : string option;
+  ?distributions_since_base : distributions option;   (* what went to shareholders since the annual base, from the latest 10-Q; US filers only; absent with the reason below *)
+  ?distributions_reason : string option;
   ?identity_mismatch : string option; (* the ticker no longer names the filer the universe entry declared (map_cik); the record is refused before anything else *)
   ?latest_filing : string option;     (* ISO date of the newest annual filing the statements come from *)
   ?cross_check : cross_check option;  (* the vendor's statements compared with the filed ones *)
@@ -277,6 +287,28 @@ type financials = {
   ?stretch_reason : string option;                  (* (52) why not: price history shorter than 250 trading days *)
   ?earnings_calendar : earnings_calendar option;    (* (68) the filed or vendor release calendar; the implied half needs the options store and is added at the valuation *)
   ?earnings_calendar_reason : string option;        (* (68) present instead: why there is no calendar *)
+}
+
+(* What went to shareholders between the annual balance sheet the models read and the
+   latest quarter, from the quarterly filing's fiscal year-to-date cash flow statement: the
+   share count is today's, so the equity bridge takes it from the base date's equity. *)
+type distributions = {
+  since : string;                     (* the annual period end the year-to-date figures run from: the base *)
+  through : string;                   (* the latest quarter end they run to *)
+  repurchases : float nullable;       (* paid for the company's own shares, positive; null where no line is filed *)
+  ?repurchases_row : string option;
+  dividends : float nullable;         (* paid to common holders, positive *)
+  ?dividends_row : string option;
+  issuance : float nullable;          (* received for shares issued, positive *)
+  ?issuance_row : string option;
+  net : float;                        (* repurchases + dividends - issuance, the absent lines as nil *)
+  ?minority_buyouts : float option;   (* paid to reduce minority interests, positive; dividends to them excluded *)
+  ?minority_buyouts_row : string option;
+  ?minority_buyouts_book : float option;   (* the minority interests' book those payments removed, where filed *)
+  ?minority_buyouts_book_row : string option;
+  ?minority_net : float option;       (* buyouts less the book they removed, at least nil: the price paid above the book the bridge carries *)
+  filed : string;
+  accession : string;
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -404,6 +436,23 @@ type floor = {
    [valuation.currency]; rates are decimal fractions per year. Growth is derived from the
    statements and never a constant: [g0] is the selected starting growth after the clamp,
    [growth_path] the yearly rates that mean-revert from it toward [terminal_growth_rate]. *)
+(* One item of the equity bridge: read, and applied or not by the pairing rule, with why. *)
+type bridge_item = {
+  name : string;                      (* minority_interest | minority_buyouts_since_base | equity_method_investments | lease_liabilities | contingent_consideration | distributions_since_base *)
+  value : float nullable;             (* as read, in the record's currency; null where not read *)
+  ?row : string option;
+  applied : bool;
+  deduction : float;                  (* taken from the equity value: positive deducts, negative adds; 0 where not applied *)
+  why : string;
+}
+
+(* The equity bridge beside net debt: equity_value = enterprise_value - net_debt - total. *)
+type equity_bridge = {
+  definition : string;
+  items : bridge_item list;
+  total : float;                      (* the sum of the deductions *)
+}
+
 type inputs = {
   fiscal_period_end : string;
   country : string;                   (* as fetched; each parameter's key is the canonical form *)
@@ -459,7 +508,8 @@ type inputs = {
   terminal_growth_rate : parameter;
   projection_years : int_parameter;
   enterprise_value : float;
-  equity_value : float;               (* enterprise_value - net_debt *)
+  equity_value : float;               (* enterprise_value - net_debt - equity_bridge.total *)
+  ?equity_bridge : equity_bridge option;   (* what else stands between enterprise and equity value, item by item; absent on records written before it *)
 }
 
 (* Every value the residual-income model used, plus the intermediates. Fair equity value
@@ -754,7 +804,7 @@ type belief_map = {
   rate_name : string;                 (* wacc | cost_of_equity *)
   rate : float;
   terminal_growth_rate : float;
-  net_debt : float;                   (* 0 on a per-share base *)
+  net_debt : float;                   (* net debt and the equity bridge's total; 0 on a per-share base *)
   shares : float;                     (* 1 on a per-share base *)
   observed_growth : float;            (* the record's g0 *)
   growth_domain : float list;         (* [0; 0.5] *)

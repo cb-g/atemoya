@@ -40,7 +40,7 @@ let dcf_fair_value ?projection_years ?fcff ?wacc ?terminal_growth_rate (i : inpu
   let fcff = Option.value fcff ~default:i.fcff and wacc = Option.value wacc ~default:i.wacc in
   let growth_path = Growth.path ~g0 ~terminal_growth_rate ~lambda ~projection_years in
   let ev = Dcf.enterprise_value ~fcff ~wacc ~growth_path ~terminal_growth_rate in
-  (ev -. i.net_debt) /. i.shares
+  (ev -. i.net_debt -. Equity_bridge.total i) /. i.shares
 
 let residual_income_fair_value ?projection_years ?book_equity ?cost_of_equity ?roe_target (i : residual_income_inputs) ~roe_0 ~lambda =
   let projection_years = Option.value projection_years ~default:i.projection_years.value in

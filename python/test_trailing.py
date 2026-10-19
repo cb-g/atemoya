@@ -193,3 +193,50 @@ def test_the_reasons_name_what_is_missing() -> None:
     rows = [r for r in rows if not (r["start"] == "2025-01-01")]
     period, _, _ = trailing.of_record(facts(lines + [(tag, rows)]), "us-gaap", "USD", TAGS, DEFS, PARAMS, ANNUAL)
     assert period is not None and period.total_revenue is None
+
+
+def year_to_date(tag: str, ytd_q2_2025: float, ytd_q2_2024: float | None = None) -> tuple[str, list[dict[str, object]]]:
+    """A cash-flow line in the 2025 Q2 10-Q, with the prior year's comparative beside it."""
+    rows = [entry("2025-01-01", "2025-06-30", ytd_q2_2025, "10-Q", "Q2", "2025-08-01", "q2-2025")]
+    if ytd_q2_2024 is not None:
+        rows.append(entry("2024-01-01", "2024-06-30", ytd_q2_2024, "10-Q", "Q2", "2025-08-01", "q2-2025"))
+    return tag, rows
+
+
+def test_distributions_since_the_base_are_the_quarterly_filings_year_to_date_lines() -> None:
+    """(2026-10-19) The equity bridge's date line, every figure invented: buybacks and common
+    dividends less shares issued, each the 2025 Q2 10-Q's year-to-date figure from the day
+    after the base, an absent line nil; payments to buy minority interests out less the book
+    they removed, at least nil; the reasons where no quarterly filing is read."""
+    lines = LINES + [year_to_date("PaymentsForRepurchaseOfCommonStock", 70.0, ytd_q2_2024=999.0),
+                     year_to_date("PaymentsOfDividendsCommonStock", 30.0),
+                     year_to_date("ProceedsFromIssuanceOfCommonStock", 5.0),
+                     year_to_date("PaymentsToMinorityShareholders", 40.0),
+                     year_to_date("MinorityInterestDecreaseFromRedemptions", 15.0)]
+    d, reason = trailing.distributions_of(facts(lines), "us-gaap", "USD", TAGS, DEFS, ANNUAL)
+    assert reason is None and d is not None
+    assert (d.since, d.through, d.accession) == ("2024-12-31", "2025-06-30", "q2-2025")
+    assert (d.repurchases, d.repurchases_row) == (70.0, "PaymentsForRepurchaseOfCommonStock")
+    assert d.net == 70.0 + 30.0 - 5.0
+    assert (d.minority_buyouts, d.minority_buyouts_book, d.minority_net) == (40.0, 15.0, 25.0)
+    # the fallback tag, the absent lines nil, and a book above the payment adding nothing
+    sparse = LINES + [year_to_date("PaymentsOfDividends", 12.0), year_to_date("PaymentsToMinorityShareholders", 10.0),
+                      year_to_date("MinorityInterestDecreaseFromRedemptions", 15.0)]
+    d, _ = trailing.distributions_of(facts(sparse), "us-gaap", "USD", TAGS, DEFS, ANNUAL)
+    assert d is not None and (d.repurchases, d.issuance, d.dividends_row, d.net, d.minority_net) == (None, None, "PaymentsOfDividends", 12.0, 0.0)
+    ordinary = LINES + [year_to_date("PaymentsOfOrdinaryDividends", 9.0)]
+    d, _ = trailing.distributions_of(facts(ordinary), "us-gaap", "USD", TAGS, DEFS, ANNUAL)
+    assert d is not None and (d.dividends, d.dividends_row) == (9.0, "PaymentsOfOrdinaryDividends")
+    d, _ = trailing.distributions_of(facts(LINES), "us-gaap", "USD", TAGS, DEFS, ANNUAL)
+    assert d is not None and (d.net, d.minority_buyouts, d.minority_net) == (0.0, None, None)
+    assert trailing.distributions_of(None, "", None, TAGS, DEFS, ANNUAL) == (None, trailing.NO_FACTS)
+    assert trailing.distributions_of(facts(LINES), "ifrs-full", "EUR", TAGS, DEFS, ANNUAL) == (None, trailing.NO_QUARTERLY_IFRS)
+    # the filing date cut: a 10-Q filed after the date is not read
+    assert trailing.distributions_of(facts(lines), "us-gaap", "USD", TAGS, DEFS, ANNUAL, as_of=date(2025, 7, 1))[0] is None
+
+
+def test_the_trailing_period_carries_the_bridge_lines_at_the_quarter_end() -> None:
+    lines = LINES + [instant("MinorityInterest", at_2024=60.0, at_q2_2025=65.0)]
+    period, _, reason = trailing.of_record(facts(lines), "us-gaap", "USD", TAGS, DEFS, PARAMS, ANNUAL)
+    assert reason is None and period is not None
+    assert (period.minority_interest, period.minority_interest_row) == (65.0, "MinorityInterest")

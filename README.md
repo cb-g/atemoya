@@ -23,7 +23,10 @@ One line of JSON per name, `Ok` with a fair value or `Failed` with a reason.
   DCF for an operating company, a mid-cycle DCF for a cyclical, a residual-income model for
   a bank or an insurer, an FFO-covered dividend for a REIT. A class without an admissible
   model is refused with the right lens named, so the reader learns what the measurement
-  should have been.
+  should have been. Between the business's value and the shares stand net debt and an equity
+  bridge, minority interests, associates, leases outside debt, contingent consideration and
+  what went to shareholders since the annual report, each applied only where the cash flow
+  leaves it out and shown item by item.
 - **What the price needs.** The growth the market price implies, how long it must last,
   and how often companies of that size have grown that fast, from filed history.
 - **A belief beside the anchor, never inside it.** A declared belief on growth gives a

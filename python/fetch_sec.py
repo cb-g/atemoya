@@ -552,6 +552,54 @@ TOTAL_PLUS_AMORTIZATION = "total_plus_intangible_amortization"
 UNSECURED_LONG_TERM_DEBT = "UnsecuredLongTermDebt"   # the unsecured part of noncurrent_by_collateral
 
 
+Line = tuple[float | None, str | None]
+BRIDGE_FIELDS = ("minority_interest", "equity_method_investments", "contingent_consideration", "lease_liabilities")
+
+
+def _parts_summed(facts: "Facts", candidates: Iterable[str], end: date) -> Line:
+    """Every part present, summed, with the rows joined; None where no part is filed."""
+    hits = [(v, t) for t in candidates if (v := facts.at(t, end, instant=True)) is not None]
+    if not hits:
+        return None, None
+    return sum(v for v, _ in hits), " + ".join(t for _, t in hits)
+
+
+def _difference(facts: "Facts", candidates: list[str], end: date) -> Line:
+    """The first total less the second, where both are filed."""
+    if len(candidates) != 2:
+        return None, None
+    total, part = facts.at(candidates[0], end, instant=True), facts.at(candidates[1], end, instant=True)
+    if total is None or part is None:
+        return None, None
+    return total - part, f"{candidates[0]} - {candidates[1]}"
+
+
+def _first(facts: "Facts", candidates: Iterable[str], end: date) -> Line:
+    hit = facts.first(candidates, end, instant=True)
+    return (None, None) if hit is None else hit
+
+
+def bridge_lines(facts: "Facts", defs: reference.FieldDefinitions, end: date, *, taxonomy: str) -> dict[str, Line]:
+    """The equity bridge's balance-sheet lines at [end], by reference/field_definitions.json:
+    each as filed, or (None, None). The valuer decides which apply; nothing here nets them."""
+    out: dict[str, Line] = {f: (None, None) for f in BRIDGE_FIELDS}
+    d = defs.equity_bridge
+    if d is None:
+        return out
+    if taxonomy == "ifrs-full":
+        out["minority_interest"] = _first(facts, d.ifrs.minority_interest, end)
+        out["equity_method_investments"] = _first(facts, d.ifrs.equity_method_investments, end)
+        lease = _first(facts, d.ifrs.lease_liabilities, end)
+        out["lease_liabilities"] = lease if lease[0] is not None else _parts_summed(facts, d.ifrs.lease_liabilities_parts, end)
+    else:
+        minority = _first(facts, d.xbrl.minority_interest, end)
+        out["minority_interest"] = minority if minority[0] is not None else _difference(facts, d.xbrl.minority_interest_totals, end)
+        out["equity_method_investments"] = _first(facts, d.xbrl.equity_method_investments, end)
+        contingent = _first(facts, d.xbrl.contingent_consideration, end)
+        out["contingent_consideration"] = contingent if contingent[0] is not None else _parts_summed(facts, d.xbrl.contingent_consideration_parts, end)
+    return out
+
+
 def capex_with_software(facts: "Facts", tags: reference.XbrlTags, end: date, value: float | None, row: str | None) -> tuple[float | None, str | None]:
     """(2026-10-19) Capex with the capitalised internal-use software filed as its own
     investing line added to the tag taken; never to a tag whose definition already carries
@@ -1405,6 +1453,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         preferred_value, preferred_row = preferred_equity_of(v["preferred_equity"], r["preferred_equity"])
         common_dividends, common_dividends_row = common_dividends_of(
             v["common_dividends_paid"], r["common_dividends_paid"], v["dividends_paid"], v["preferred_dividends"])
+        bridge = bridge_lines(facts, defs, end, taxonomy=taxonomy)
         periods.append(
             boundary.FiscalPeriod(
                 period_end=end.isoformat(),
@@ -1417,6 +1466,10 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 total_debt=debt, total_debt_source=debt_row,
                 book_equity=v["book_equity"], net_income=v["net_income"],
                 goodwill=v["goodwill"], goodwill_row=r["goodwill"],
+                minority_interest=bridge["minority_interest"][0], minority_interest_row=bridge["minority_interest"][1],
+                equity_method_investments=bridge["equity_method_investments"][0], equity_method_investments_row=bridge["equity_method_investments"][1],
+                contingent_consideration=bridge["contingent_consideration"][0], contingent_consideration_row=bridge["contingent_consideration"][1],
+                lease_liabilities=bridge["lease_liabilities"][0], lease_liabilities_row=bridge["lease_liabilities"][1],
                 dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
                 operating_cash_flow=v["operating_cash_flow"], operating_cash_flow_row=r["operating_cash_flow"],
                 # (69) the common-only side, read on every filed period and used by the

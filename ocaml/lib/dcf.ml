@@ -157,7 +157,7 @@ let missing_report (fin : financials) (p : fiscal_period) ~nwc_periods =
 
 let mean xs = List.fold_left ( +. ) 0. xs /. float_of_int (List.length xs)
 
-let value ?(declared = "") a ~country (fin : financials) =
+let value ?(declared = "") ?share_count_includes_minority a ~country (fin : financials) =
   let ( let* ) = Result.bind in
   let* p = latest_period fin in
   let nwc = series fin (fun q -> q.delta_nwc) in
@@ -246,7 +246,10 @@ let value ?(declared = "") a ~country (fin : financials) =
           in
           let shares = market_cap /. price in
           let net_debt = total_debt -. cash in
-          let equity_value = enterprise_value -. net_debt in
+          let bridge =
+            Equity_bridge.of_period ~cash_flow:Equity_bridge.Consolidated_operating_income ?share_count_includes_minority fin p
+          in
+          let equity_value = enterprise_value -. net_debt -. bridge.total in
           let fair_value = equity_value /. shares in
           if not (Float.is_finite fair_value) then
             Error
@@ -311,6 +314,7 @@ let value ?(declared = "") a ~country (fin : financials) =
                   projection_years = a.projection_years;
                   enterprise_value;
                   equity_value;
+                  equity_bridge = Some bridge;
                 },
                 fair_value )
   | _ -> Error (missing_report fin p ~nwc_periods:(List.length nwc))

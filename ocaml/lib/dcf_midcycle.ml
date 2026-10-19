@@ -19,7 +19,7 @@ let rec take n = function [] -> [] | x :: rest -> if n <= 0 then [] else x :: ta
 
 let minimum_reinvestment_periods = 8
 
-let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
+let value ?share_count_includes_minority (a : Dcf.assumptions) ~country ~required (fin : financials) =
   let ( let* ) = Result.bind in
   let* latest = match Period.latest fin with None -> Error "no fiscal periods in statements" | Some p -> Ok p in
   let sorted = List.sort (fun (p : fiscal_period) (q : fiscal_period) -> compare q.period_end p.period_end) fin.periods in
@@ -183,7 +183,16 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
                 in
                 let shares = market_cap /. price in
                 let net_debt = total_debt -. cash in
-                let equity_value = enterprise_value -. net_debt in
+                (* the bridge pairs with the recipe: filed operating income is consolidated,
+                   the bottom-up recipe is the parent's net income *)
+                let bridge =
+                  Equity_bridge.of_period ?share_count_includes_minority
+                    ~cash_flow:
+                      (if filed_operating_income then Equity_bridge.Consolidated_operating_income
+                       else Equity_bridge.Parent_net_income)
+                    fin latest
+                in
+                let equity_value = enterprise_value -. net_debt -. bridge.total in
                 let fair_value = equity_value /. shares in
                 (* The spot readout (27): the latest period's own fcff when it carries the flows. *)
                 let nopat_spot = nopat_of latest in
@@ -257,6 +266,7 @@ let value (a : Dcf.assumptions) ~country ~required (fin : financials) =
                       projection_years = a.projection_years;
                       enterprise_value;
                       equity_value;
+                      equity_bridge = Some bridge;
                     }
                   in
                   Ok

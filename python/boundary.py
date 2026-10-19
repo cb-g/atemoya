@@ -2269,6 +2269,86 @@ class GrowthSource:
 
 
 @dataclass
+class BridgeItem:
+    """Original type: bridge_item = { ... }
+    """
+
+    name: str
+    value: Optional[float]
+    applied: bool
+    deduction: float
+    why: str
+    row: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'BridgeItem':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('BridgeItem', 'name'),
+                value=_atd_read_nullable(_atd_read_float)(x['value']) if 'value' in x else _atd_missing_json_field('BridgeItem', 'value'),
+                applied=_atd_read_bool(x['applied']) if 'applied' in x else _atd_missing_json_field('BridgeItem', 'applied'),
+                deduction=_atd_read_float(x['deduction']) if 'deduction' in x else _atd_missing_json_field('BridgeItem', 'deduction'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('BridgeItem', 'why'),
+                row=_atd_read_string(x['row']) if 'row' in x else None,
+            )
+        else:
+            _atd_bad_json('BridgeItem', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['value'] = _atd_write_nullable(_atd_write_float)(self.value)
+        res['applied'] = _atd_write_bool(self.applied)
+        res['deduction'] = _atd_write_float(self.deduction)
+        res['why'] = _atd_write_string(self.why)
+        if self.row is not None:
+            res['row'] = _atd_write_string(self.row)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'BridgeItem':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class EquityBridge:
+    """Original type: equity_bridge = { ... }
+    """
+
+    definition: str
+    items: List[BridgeItem]
+    total: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'EquityBridge':
+        if isinstance(x, dict):
+            return cls(
+                definition=_atd_read_string(x['definition']) if 'definition' in x else _atd_missing_json_field('EquityBridge', 'definition'),
+                items=_atd_read_list(BridgeItem.from_json)(x['items']) if 'items' in x else _atd_missing_json_field('EquityBridge', 'items'),
+                total=_atd_read_float(x['total']) if 'total' in x else _atd_missing_json_field('EquityBridge', 'total'),
+            )
+        else:
+            _atd_bad_json('EquityBridge', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['definition'] = _atd_write_string(self.definition)
+        res['items'] = _atd_write_list((lambda x: x.to_json()))(self.items)
+        res['total'] = _atd_write_float(self.total)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'EquityBridge':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Inputs:
     """Original type: inputs = { ... }
     """
@@ -2328,6 +2408,7 @@ class Inputs:
     total_debt_composition: Optional[Composition] = None
     country_risk_premium: Optional[Parameter] = None
     conversion: Optional[Conversion] = None
+    equity_bridge: Optional[EquityBridge] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'Inputs':
@@ -2388,6 +2469,7 @@ class Inputs:
                 total_debt_composition=Composition.from_json(x['total_debt_composition']) if 'total_debt_composition' in x else None,
                 country_risk_premium=Parameter.from_json(x['country_risk_premium']) if 'country_risk_premium' in x else None,
                 conversion=Conversion.from_json(x['conversion']) if 'conversion' in x else None,
+                equity_bridge=EquityBridge.from_json(x['equity_bridge']) if 'equity_bridge' in x else None,
             )
         else:
             _atd_bad_json('Inputs', x)
@@ -2455,6 +2537,8 @@ class Inputs:
             res['country_risk_premium'] = (lambda x: x.to_json())(self.country_risk_premium)
         if self.conversion is not None:
             res['conversion'] = (lambda x: x.to_json())(self.conversion)
+        if self.equity_bridge is not None:
+            res['equity_bridge'] = (lambda x: x.to_json())(self.equity_bridge)
         return res
 
     @classmethod
@@ -6031,6 +6115,14 @@ class FiscalPeriod:
     book_equity_row: Optional[str] = None
     goodwill: Optional[float] = None
     goodwill_row: Optional[str] = None
+    minority_interest: Optional[float] = None
+    minority_interest_row: Optional[str] = None
+    equity_method_investments: Optional[float] = None
+    equity_method_investments_row: Optional[str] = None
+    contingent_consideration: Optional[float] = None
+    contingent_consideration_row: Optional[str] = None
+    lease_liabilities: Optional[float] = None
+    lease_liabilities_row: Optional[str] = None
     net_income_row: Optional[str] = None
     net_interest_income_row: Optional[str] = None
     ffo: Optional[float] = None
@@ -6130,6 +6222,14 @@ class FiscalPeriod:
                 book_equity_row=_atd_read_string(x['book_equity_row']) if 'book_equity_row' in x else None,
                 goodwill=_atd_read_float(x['goodwill']) if 'goodwill' in x else None,
                 goodwill_row=_atd_read_string(x['goodwill_row']) if 'goodwill_row' in x else None,
+                minority_interest=_atd_read_float(x['minority_interest']) if 'minority_interest' in x else None,
+                minority_interest_row=_atd_read_string(x['minority_interest_row']) if 'minority_interest_row' in x else None,
+                equity_method_investments=_atd_read_float(x['equity_method_investments']) if 'equity_method_investments' in x else None,
+                equity_method_investments_row=_atd_read_string(x['equity_method_investments_row']) if 'equity_method_investments_row' in x else None,
+                contingent_consideration=_atd_read_float(x['contingent_consideration']) if 'contingent_consideration' in x else None,
+                contingent_consideration_row=_atd_read_string(x['contingent_consideration_row']) if 'contingent_consideration_row' in x else None,
+                lease_liabilities=_atd_read_float(x['lease_liabilities']) if 'lease_liabilities' in x else None,
+                lease_liabilities_row=_atd_read_string(x['lease_liabilities_row']) if 'lease_liabilities_row' in x else None,
                 net_income_row=_atd_read_string(x['net_income_row']) if 'net_income_row' in x else None,
                 net_interest_income_row=_atd_read_string(x['net_interest_income_row']) if 'net_interest_income_row' in x else None,
                 ffo=_atd_read_float(x['ffo']) if 'ffo' in x else None,
@@ -6264,6 +6364,22 @@ class FiscalPeriod:
             res['goodwill'] = _atd_write_float(self.goodwill)
         if self.goodwill_row is not None:
             res['goodwill_row'] = _atd_write_string(self.goodwill_row)
+        if self.minority_interest is not None:
+            res['minority_interest'] = _atd_write_float(self.minority_interest)
+        if self.minority_interest_row is not None:
+            res['minority_interest_row'] = _atd_write_string(self.minority_interest_row)
+        if self.equity_method_investments is not None:
+            res['equity_method_investments'] = _atd_write_float(self.equity_method_investments)
+        if self.equity_method_investments_row is not None:
+            res['equity_method_investments_row'] = _atd_write_string(self.equity_method_investments_row)
+        if self.contingent_consideration is not None:
+            res['contingent_consideration'] = _atd_write_float(self.contingent_consideration)
+        if self.contingent_consideration_row is not None:
+            res['contingent_consideration_row'] = _atd_write_string(self.contingent_consideration_row)
+        if self.lease_liabilities is not None:
+            res['lease_liabilities'] = _atd_write_float(self.lease_liabilities)
+        if self.lease_liabilities_row is not None:
+            res['lease_liabilities_row'] = _atd_write_string(self.lease_liabilities_row)
         if self.net_income_row is not None:
             res['net_income_row'] = _atd_write_string(self.net_income_row)
         if self.net_interest_income_row is not None:
@@ -6347,6 +6463,88 @@ class FiscalPeriod:
 
 
 @dataclass
+class Distributions:
+    """Original type: distributions = { ... }
+    """
+
+    since: str
+    through: str
+    repurchases: Optional[float]
+    dividends: Optional[float]
+    issuance: Optional[float]
+    net: float
+    filed: str
+    accession: str
+    repurchases_row: Optional[str] = None
+    dividends_row: Optional[str] = None
+    issuance_row: Optional[str] = None
+    minority_buyouts: Optional[float] = None
+    minority_buyouts_row: Optional[str] = None
+    minority_buyouts_book: Optional[float] = None
+    minority_buyouts_book_row: Optional[str] = None
+    minority_net: Optional[float] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Distributions':
+        if isinstance(x, dict):
+            return cls(
+                since=_atd_read_string(x['since']) if 'since' in x else _atd_missing_json_field('Distributions', 'since'),
+                through=_atd_read_string(x['through']) if 'through' in x else _atd_missing_json_field('Distributions', 'through'),
+                repurchases=_atd_read_nullable(_atd_read_float)(x['repurchases']) if 'repurchases' in x else _atd_missing_json_field('Distributions', 'repurchases'),
+                dividends=_atd_read_nullable(_atd_read_float)(x['dividends']) if 'dividends' in x else _atd_missing_json_field('Distributions', 'dividends'),
+                issuance=_atd_read_nullable(_atd_read_float)(x['issuance']) if 'issuance' in x else _atd_missing_json_field('Distributions', 'issuance'),
+                net=_atd_read_float(x['net']) if 'net' in x else _atd_missing_json_field('Distributions', 'net'),
+                filed=_atd_read_string(x['filed']) if 'filed' in x else _atd_missing_json_field('Distributions', 'filed'),
+                accession=_atd_read_string(x['accession']) if 'accession' in x else _atd_missing_json_field('Distributions', 'accession'),
+                repurchases_row=_atd_read_string(x['repurchases_row']) if 'repurchases_row' in x else None,
+                dividends_row=_atd_read_string(x['dividends_row']) if 'dividends_row' in x else None,
+                issuance_row=_atd_read_string(x['issuance_row']) if 'issuance_row' in x else None,
+                minority_buyouts=_atd_read_float(x['minority_buyouts']) if 'minority_buyouts' in x else None,
+                minority_buyouts_row=_atd_read_string(x['minority_buyouts_row']) if 'minority_buyouts_row' in x else None,
+                minority_buyouts_book=_atd_read_float(x['minority_buyouts_book']) if 'minority_buyouts_book' in x else None,
+                minority_buyouts_book_row=_atd_read_string(x['minority_buyouts_book_row']) if 'minority_buyouts_book_row' in x else None,
+                minority_net=_atd_read_float(x['minority_net']) if 'minority_net' in x else None,
+            )
+        else:
+            _atd_bad_json('Distributions', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['since'] = _atd_write_string(self.since)
+        res['through'] = _atd_write_string(self.through)
+        res['repurchases'] = _atd_write_nullable(_atd_write_float)(self.repurchases)
+        res['dividends'] = _atd_write_nullable(_atd_write_float)(self.dividends)
+        res['issuance'] = _atd_write_nullable(_atd_write_float)(self.issuance)
+        res['net'] = _atd_write_float(self.net)
+        res['filed'] = _atd_write_string(self.filed)
+        res['accession'] = _atd_write_string(self.accession)
+        if self.repurchases_row is not None:
+            res['repurchases_row'] = _atd_write_string(self.repurchases_row)
+        if self.dividends_row is not None:
+            res['dividends_row'] = _atd_write_string(self.dividends_row)
+        if self.issuance_row is not None:
+            res['issuance_row'] = _atd_write_string(self.issuance_row)
+        if self.minority_buyouts is not None:
+            res['minority_buyouts'] = _atd_write_float(self.minority_buyouts)
+        if self.minority_buyouts_row is not None:
+            res['minority_buyouts_row'] = _atd_write_string(self.minority_buyouts_row)
+        if self.minority_buyouts_book is not None:
+            res['minority_buyouts_book'] = _atd_write_float(self.minority_buyouts_book)
+        if self.minority_buyouts_book_row is not None:
+            res['minority_buyouts_book_row'] = _atd_write_string(self.minority_buyouts_book_row)
+        if self.minority_net is not None:
+            res['minority_net'] = _atd_write_float(self.minority_net)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Distributions':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Financials:
     """Original type: financials = { ... }
     """
@@ -6377,6 +6575,8 @@ class Financials:
     trailing_period: Optional[FiscalPeriod] = None
     trailing_basis: Optional[TrailingBasis] = None
     trailing_period_reason: Optional[str] = None
+    distributions_since_base: Optional[Distributions] = None
+    distributions_reason: Optional[str] = None
     identity_mismatch: Optional[str] = None
     latest_filing: Optional[str] = None
     cross_check: Optional[CrossCheck] = None
@@ -6425,6 +6625,8 @@ class Financials:
                 trailing_period=FiscalPeriod.from_json(x['trailing_period']) if 'trailing_period' in x else None,
                 trailing_basis=TrailingBasis.from_json(x['trailing_basis']) if 'trailing_basis' in x else None,
                 trailing_period_reason=_atd_read_string(x['trailing_period_reason']) if 'trailing_period_reason' in x else None,
+                distributions_since_base=Distributions.from_json(x['distributions_since_base']) if 'distributions_since_base' in x else None,
+                distributions_reason=_atd_read_string(x['distributions_reason']) if 'distributions_reason' in x else None,
                 identity_mismatch=_atd_read_string(x['identity_mismatch']) if 'identity_mismatch' in x else None,
                 latest_filing=_atd_read_string(x['latest_filing']) if 'latest_filing' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
@@ -6481,6 +6683,10 @@ class Financials:
             res['trailing_basis'] = (lambda x: x.to_json())(self.trailing_basis)
         if self.trailing_period_reason is not None:
             res['trailing_period_reason'] = _atd_write_string(self.trailing_period_reason)
+        if self.distributions_since_base is not None:
+            res['distributions_since_base'] = (lambda x: x.to_json())(self.distributions_since_base)
+        if self.distributions_reason is not None:
+            res['distributions_reason'] = _atd_write_string(self.distributions_reason)
         if self.identity_mismatch is not None:
             res['identity_mismatch'] = _atd_write_string(self.identity_mismatch)
         if self.latest_filing is not None:

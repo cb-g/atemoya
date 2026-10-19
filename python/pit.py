@@ -432,6 +432,9 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
     trailing_period, trailing_basis, trailing_reason = trailing.of_record(
         facts if why is None else None, decision.taxonomy if decision is not None else "", filing_currency if why is None else None, sec.tags,
         sec.definitions, fetch_sec.load_params(), periods if why is None else [], as_of=d)
+    distributions, distributions_reason = trailing.distributions_of(
+        facts if why is None else None, decision.taxonomy if decision is not None else "", filing_currency if why is None else None, sec.tags,
+        sec.definitions, periods if why is None else [], as_of=d)
     return boundary.Financials(
         ticker=symbol, as_of=f"{d.isoformat()}T00:00:00+00:00",
         currency=currency, financial_currency=filing_currency if why is None else (quote.financial_currency if quote else None),
@@ -447,6 +450,7 @@ def record(symbol: str, d: date, sec: SecLike, history: History, quote: fetch.Qu
         cross_check=check, quality_lines=quality_lines, quality_lines_reason=quality_reason,
         recency=recency_block, recency_reason=recency_reason,
         trailing_period=trailing_period, trailing_basis=trailing_basis, trailing_period_reason=trailing_reason,
+        distributions_since_base=distributions, distributions_reason=distributions_reason,
         submissions_latest_annual=submission, point_in_time=pit,
         stretch=stretch_block, stretch_reason=stretch_reason,
         insiders=insiders_block, insiders_reason=insiders_reason,
