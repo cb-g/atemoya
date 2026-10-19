@@ -355,7 +355,15 @@ at all:
    but is not working capital and is never summed. A tag in none of the four leaves the
    field null with a note naming it, never a partial number. Every tag was checked
    against its us-gaap definition and the vendor's working-capital line on a real year
-   before it entered the table.
+   before it entered the table. **Capitalised contract costs are netted** (2026-10-19).
+   Sales commissions reach the cash-flow statement twice, as paid among the operating
+   assets and as amortised among the noncash add-backs, and the component sum took the first
+   alone, charging them through EBIT and again through working capital. The amortisation is
+   a component of its own, `contract_cost_amortization`, with the sign that releases cash,
+   only where the capitalisation is among the components: a filer that files it under an
+   element of its own (Snowflake) lacks the outflow, and the add-back alone would release
+   cash never charged. Read against the cash-flow statements of the four filers it touches:
+   ServiceNow, Workday, Datadog, Okta.
 2. **Debt is zero only when the filing says so twice.** No debt tag for the period and no
    interest expense or interest paid for the period gives total debt 0, recorded as "no
    debt line filed and no interest expense filed; taken as 0". Either present without the
@@ -410,7 +418,14 @@ at all:
    (2026-10-18): a total cannot be smaller than one of its parts, and a filer whose
    other-depreciation line is a residual beside a depreciation note and an intangibles note
    (Accenture's 6.6 million beside 580 and 659 million) has its total in the notes, so the
-   pair is read there.
+   pair is read there. **A total smaller than the intangible amortisation cannot contain
+   it** (2026-10-19), for the same reason: where the largest total is below the filer's own
+   `AmortizationOfIntangibleAssets` for the period, the field is the two summed, recipe
+   `total_plus_intangible_amortization` (CME files 107.5 million beside 223.4 million on
+   separate cash-flow lines). Where the total exceeds the amortisation nothing is added, since
+   on 69 of the 96 us-gaap filers that tag both the total already carries it; a total that
+   excludes a smaller amortisation (Home Depot prints the word) is beyond what the elements
+   can say, and is recorded as a known residual.
    **The note pair needs both parts.** Depreciation alone is a filer's whole D&A only when
    it has no intangibles to amortise, so the pair stands when both are filed and otherwise
    only when the filing carries no finite-lived intangibles balance at all; a filer with
@@ -419,6 +434,15 @@ at all:
 6. **Debt components are summed when no aggregate or complete pair is filed.** A filer
    with fewer instruments is not missing data: one component per kind, recorded;
    absent-is-zero applies only when no component and no interest tag is present.
+   **The kinds read every element defined for them** (2026-10-19): where a filer files
+   neither a noncurrent tag nor a long-term debt total, `LongTermNotesAndLoans` is its
+   noncurrent debt (Teva), else `UnsecuredLongTermDebt` and `SecuredLongTermDebt`, each
+   excluding the current portion and disjoint, summed (CME, Sea), with a noncurrent
+   convertible tag added beside a split that has no unsecured part, convertible notes being
+   unsecured notes and so another instrument there (Sea's FY2023 and FY2024); beside a total
+   they are not read, since a filer may tag them as a sibling of its senior notes (Equinix).
+   `ConvertibleNotesPayableCurrent` is a current portion and `ShortTermBankLoansAndNotesPayable`
+   a short-term borrowing (Sea, Datadog); each is read after the tags before it.
    **Interest evidence has a sign and a size** (65). A trace of interest is not the filing
    saying a second time that the filer owes something. Interest counts as evidence only
    when it is an expense — a figure that is income never does, whatever its size — and when
@@ -466,8 +490,14 @@ at all:
    AndAmortization` is defined as D&A classified as other, so it is never a candidate
    under the largest-total rule and cannot displace a filed total; below the totals it is
    the filer's own combined line and is read there (62, rule 5 above). Capitalised
-   internal-use software is read as capex on the same footing, last in the tag order, so a
-   filer tagging purchases of property, plant and equipment is untouched. **An aggregate
+   internal-use software is capital spending on its own investing line: alone it is the
+   period's capex (Veeva), and beside a property-and-equipment tag it is added to it
+   (2026-10-19), never to `PaymentsToAcquireProductiveAssets`, whose definition already
+   carries software. **Current debt securities are short-term investments** (2026-10-19):
+   available-for-sale and held-to-maturity securities classified as current join the
+   investments list after the elements before them; an unclassified available-for-sale
+   total is not read, since one filer's sits inside cash equivalents and another's is a
+   decommissioning trust. **An aggregate
    that already carries what a component would add is read whole**: a filer presenting one
    balance-sheet line for cash, equivalents and short-term investments tags
    `CashCashEquivalentsAndShortTermInvestments`, which is searched after the two
@@ -741,6 +771,20 @@ states are written into its files, not into a record:
 | a summary | no pairs | no revenue bar was snapshotted before a release whose filed quarter is on disk |
 
 ## Changelog
+
+- inputs checked against the filings (2026-10-19): a downstream project that runs a clone
+  checked nineteen of its inputs against the filings, and the record's own vendor cross-check
+  already disagreed on most of them. Capex adds capitalised software beside property and
+  equipment; cash reads current available-for-sale and held-to-maturity securities; debt
+  reads notes and loans, the secured and unsecured split, current convertible notes and
+  short-term bank loans; D&A adds intangible amortisation to a total smaller than it; the
+  working-capital change nets the amortisation of capitalised contract costs; recency reads
+  an element whose quarters reach the base and that files the base's annual revenue, with
+  the new reason "the annual base's revenue element carries no quarter reaching the base, and
+  no other element of the revenue chain files the base's annual revenue with quarters that
+  do", and `facts_lag` where the filer's submissions list a later report than companyfacts
+  carries, which `base_limits` repeats; the class check carries the statements' currency.
+  No new `Failed` string.
 
 - entity class (05): declaration, class check, admissibility, floor.
 - bank model (06): the residual-income model for `Bank`, its guards and its inputs; the

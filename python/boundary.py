@@ -1745,6 +1745,7 @@ class Recency:
     trailing_reason: Optional[str] = None
     trailing_over_annual: Optional[float] = None
     divergence: Optional[float] = None
+    facts_lag: Optional[str] = None
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -1765,6 +1766,7 @@ class Recency:
                 trailing_reason=_atd_read_string(x['trailing_reason']) if 'trailing_reason' in x else None,
                 trailing_over_annual=_atd_read_float(x['trailing_over_annual']) if 'trailing_over_annual' in x else None,
                 divergence=_atd_read_float(x['divergence']) if 'divergence' in x else None,
+                facts_lag=_atd_read_string(x['facts_lag']) if 'facts_lag' in x else None,
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -1792,6 +1794,8 @@ class Recency:
             res['trailing_over_annual'] = _atd_write_float(self.trailing_over_annual)
         if self.divergence is not None:
             res['divergence'] = _atd_write_float(self.divergence)
+        if self.facts_lag is not None:
+            res['facts_lag'] = _atd_write_string(self.facts_lag)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 
@@ -4748,6 +4752,7 @@ class ClassCheck:
     bank_nii_ratio_threshold: Parameter
     premiums_earned: Optional[float]
     premiums_earned_row: Optional[str]
+    currency: Optional[str] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'ClassCheck':
@@ -4763,6 +4768,7 @@ class ClassCheck:
                 bank_nii_ratio_threshold=Parameter.from_json(x['bank_nii_ratio_threshold']) if 'bank_nii_ratio_threshold' in x else _atd_missing_json_field('ClassCheck', 'bank_nii_ratio_threshold'),
                 premiums_earned=_atd_read_nullable(_atd_read_float)(x['premiums_earned']) if 'premiums_earned' in x else _atd_missing_json_field('ClassCheck', 'premiums_earned'),
                 premiums_earned_row=_atd_read_nullable(_atd_read_string)(x['premiums_earned_row']) if 'premiums_earned_row' in x else _atd_missing_json_field('ClassCheck', 'premiums_earned_row'),
+                currency=_atd_read_string(x['currency']) if 'currency' in x else None,
             )
         else:
             _atd_bad_json('ClassCheck', x)
@@ -4779,6 +4785,8 @@ class ClassCheck:
         res['bank_nii_ratio_threshold'] = (lambda x: x.to_json())(self.bank_nii_ratio_threshold)
         res['premiums_earned'] = _atd_write_nullable(_atd_write_float)(self.premiums_earned)
         res['premiums_earned_row'] = _atd_write_nullable(_atd_write_string)(self.premiums_earned_row)
+        if self.currency is not None:
+            res['currency'] = _atd_write_string(self.currency)
         return res
 
     @classmethod

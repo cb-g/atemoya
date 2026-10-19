@@ -983,12 +983,13 @@ def test_the_cash_aggregate_that_already_carries_the_investments() -> None:
     assert p.cash_row == "CashAndCashEquivalentsAtCarryingValue + ShortTermInvestments"
 
 
-def test_capex_takes_capitalised_software_only_when_nothing_else_is_filed() -> None:
-    """(54) Veeva's only investing capital outflow is capitalised internal-use software."""
+def test_capex_takes_capitalised_software_alone_and_beside_property_and_equipment() -> None:
+    """(54) Veeva's only investing capital outflow is capitalised internal-use software; (2026-10-19)
+    where a filer files both lines, the software is added to the property-and-equipment tag."""
     assert period({"PaymentsForSoftware": usd(fact("2025-12-31", 29.131e6, start="2025-01-01"))}).capex == 29.131e6
     both = {"PaymentsForSoftware": usd(fact("2025-12-31", 29.131e6, start="2025-01-01")),
             "PaymentsToAcquirePropertyPlantAndEquipment": usd(fact("2025-12-31", 9.633e6, start="2025-01-01"))}
-    assert period(both).capex == 9.633e6
+    assert period(both).capex == 9.633e6 + 29.131e6
 
 
 def test_ffo_is_refused_when_the_filers_leases_are_financing_receivables() -> None:
@@ -1286,3 +1287,88 @@ def test_operating_cash_flow_is_read_as_filed_on_both_taxonomies() -> None:
             "CashFlowsFromUsedInOperatingActivities": usd(fact("2025-12-31", 3e9, start="2025-01-01"))}
     p = fetch_sec.periods_from_facts(ifrs, TAGS, DEFS, [], taxonomy="ifrs-full")[0]
     assert p.operating_cash_flow == 3e9 and p.operating_cash_flow_row == "CashFlowsFromUsedInOperatingActivities"
+
+
+# --- (2026-10-19) lines the recipes missed, on invented facts --------------------------------
+
+Y = {"start": "2025-01-01"}
+
+
+def test_capex_adds_the_software_line_except_where_the_tag_already_carries_it() -> None:
+    p = period({"PaymentsToAcquirePropertyPlantAndEquipment": usd(fact("2025-12-31", 300e6, **Y)),
+                "PaymentsToDevelopSoftware": usd(fact("2025-12-31", 200e6, **Y))})
+    assert p.capex == 500e6 and p.capex_row == "PaymentsToAcquirePropertyPlantAndEquipment + PaymentsToDevelopSoftware"
+    productive = period({"PaymentsToAcquireProductiveAssets": usd(fact("2025-12-31", 300e6, **Y)),
+                         "PaymentsForSoftware": usd(fact("2025-12-31", 200e6, **Y))})
+    assert productive.capex == 300e6 and productive.capex_row == "PaymentsToAcquireProductiveAssets"
+    alone = period({"PaymentsForSoftware": usd(fact("2025-12-31", 200e6, **Y))})
+    assert alone.capex == 200e6 and alone.capex_row == "PaymentsForSoftware"
+
+
+def test_a_total_smaller_than_the_intangible_amortisation_cannot_contain_it() -> None:
+    smaller = period({"DepreciationAndAmortization": usd(fact("2025-12-31", 100e6, **Y)),
+                      "AmortizationOfIntangibleAssets": usd(fact("2025-12-31", 250e6, **Y))})
+    assert smaller.depreciation_amortization == 350e6 and smaller.depreciation_amortization_recipe == fetch_sec.TOTAL_PLUS_AMORTIZATION
+    assert components(smaller.depreciation_amortization_composition) == [
+        ("total", 100e6, "DepreciationAndAmortization"), ("amortization", 250e6, "AmortizationOfIntangibleAssets")]
+    larger = period({"DepreciationAndAmortization": usd(fact("2025-12-31", 400e6, **Y)),
+                     "AmortizationOfIntangibleAssets": usd(fact("2025-12-31", 250e6, **Y))})
+    assert larger.depreciation_amortization == 400e6 and larger.depreciation_amortization_recipe is None
+
+
+def test_debt_filed_under_the_collateral_split_notes_and_loans_and_bank_loans() -> None:
+    unsecured = period({"UnsecuredLongTermDebt": usd(fact("2025-12-31", 3e9)), "ShortTermBorrowings": usd(fact("2025-12-31", 0.0))})
+    assert unsecured.total_debt == 3e9
+    split = period({"UnsecuredLongTermDebt": usd(fact("2025-12-31", 3e9)), "SecuredLongTermDebt": usd(fact("2025-12-31", 1e9)),
+                    "LongTermDebtCurrent": usd(fact("2025-12-31", 0.5e9))})
+    assert split.total_debt == 4.5e9
+    assert components(split.total_debt_composition) == [("noncurrent", 3e9, "UnsecuredLongTermDebt"), ("noncurrent", 1e9, "SecuredLongTermDebt"),
+                                                        ("current_long_term", 0.5e9, "LongTermDebtCurrent")]
+    notes_and_loans = period({"LongTermNotesAndLoans": usd(fact("2025-12-31", 15e9)), "DebtCurrent": usd(fact("2025-12-31", 2e9))})
+    assert notes_and_loans.total_debt == 17e9
+    convertible = period({"SecuredLongTermDebt": usd(fact("2025-12-31", 0.5e9)), "ConvertibleNotesPayableCurrent": usd(fact("2025-12-31", 1e9)),
+                          "ShortTermBankLoansAndNotesPayable": usd(fact("2025-12-31", 0.25e9)), "ConvertibleLongTermNotesPayable": usd(fact("2025-12-31", 0.0))})
+    assert convertible.total_debt == 1.75e9
+    # a noncurrent convertible beside a secured part alone is another instrument and is added
+    beside = period({"SecuredLongTermDebt": usd(fact("2025-12-31", 0.5e9)), "ConvertibleNotesPayableCurrent": usd(fact("2025-12-31", 1e9)),
+                     "ConvertibleLongTermNotesPayable": usd(fact("2025-12-31", 3e9))})
+    assert beside.total_debt == 4.5e9
+    # beside an unsecured part it may sit inside it, and is not
+    inside = period({"UnsecuredLongTermDebt": usd(fact("2025-12-31", 4e9)), "ConvertibleLongTermNotesPayable": usd(fact("2025-12-31", 3e9))})
+    assert inside.total_debt == 4e9
+    # a filed noncurrent tag wins over the collateral split, which is then not read
+    both = period({"LongTermDebtNoncurrent": usd(fact("2025-12-31", 6e9)), "UnsecuredLongTermDebt": usd(fact("2025-12-31", 5e9)),
+                   "LongTermDebtCurrent": usd(fact("2025-12-31", 1e9))})
+    assert both.total_debt == 7e9
+    # notes and loans beside a long-term debt total is a sibling of other notes, never read in the total's place
+    sibling = period({"LongTermDebt": usd(fact("2025-12-31", 15e9)), "LongTermNotesAndLoans": usd(fact("2025-12-31", 0.5e9)),
+                      "LongTermDebtCurrent": usd(fact("2025-12-31", 1e9))})
+    assert sibling.total_debt == 15e9 and sibling.total_debt_source == "LongTermDebt"
+
+
+def test_current_debt_securities_join_the_short_term_investments() -> None:
+    afs = period({"CashAndCashEquivalentsAtCarryingValue": usd(fact("2025-12-31", 4e9)),
+                  "DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent": usd(fact("2025-12-31", 2e9))})
+    assert afs.cash == 6e9
+    htm = period({"CashAndCashEquivalentsAtCarryingValue": usd(fact("2025-12-31", 1e9)),
+                  "HeldToMaturitySecuritiesCurrent": usd(fact("2025-12-31", 0.25e9))})
+    assert htm.cash == 1.25e9
+    # an unclassified total is not read: the element alone cannot say whether it is inside cash equivalents
+    plain = period({"CashAndCashEquivalentsAtCarryingValue": usd(fact("2025-12-31", 1e9)),
+                    "DebtSecuritiesAvailableForSaleExcludingAccruedInterest": usd(fact("2025-12-31", 3e9))})
+    assert plain.cash == 1e9
+
+
+def test_the_amortisation_of_capitalised_contract_costs_is_netted_against_their_capitalisation() -> None:
+    base = {"IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", 300e6, **Y)),
+            "IncreaseDecreaseInDeferredCharges": usd(fact("2025-12-31", 700e6, **Y))}
+    addback = period({**base, "AmortizationOfDeferredSalesCommissions": usd(fact("2025-12-31", 600e6, **Y))})
+    assert addback.delta_nwc == 400e6
+    assert components(addback.delta_nwc_composition)[-1] == ("contract_cost_amortization", -600e6, "AmortizationOfDeferredSalesCommissions")
+    paired = period({**base, "CapitalizedContractCostAmortization": usd(fact("2025-12-31", 600e6, **Y))})
+    assert paired.delta_nwc == 400e6
+    # with no capitalisation among the components neither element is netted: the outflow is missing too
+    for element in ("CapitalizedContractCostAmortization", "AmortizationOfDeferredSalesCommissions"):
+        alone = period({"IncreaseDecreaseInAccountsReceivable": usd(fact("2025-12-31", 300e6, **Y)),
+                        element: usd(fact("2025-12-31", 600e6, **Y))})
+        assert alone.delta_nwc == 300e6

@@ -1063,6 +1063,10 @@ def main(argv: list[str]) -> int:
             filed_facts, financials.taxonomy, financials.financial_currency, sec.tags,
             None if base is None else base.period_end, None if base is None else base.total_revenue, recency.divergence_of(sec.params),
             annual_row=None if base is None else base.total_revenue_row)
+        if financials.recency is not None and filed_facts is not None:
+            filer, _ = cik_of(symbol, sec.tickers, entry.cik if entry else None)
+            index = fetch_sec.submissions(filer, sec.user_agent) if filer else None
+            financials.recency.facts_lag = recency.facts_lag(index, financials.recency.latest_quarter_end, as_of.date())
         # the trailing period: the last four quarters as one period beside the annual ones, from
         # the same facts, for the four-quarter shadow; the models read the annual periods
         financials.trailing_period, financials.trailing_basis, financials.trailing_period_reason = trailing.of_record(

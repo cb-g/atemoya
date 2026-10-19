@@ -90,3 +90,35 @@ def test_the_quarters_are_read_from_the_element_the_annual_base_was_read_from() 
     # a base element without quarters falls back to the element whose quarters run latest
     fallback, _ = recency.of_record(both, "us-gaap", "USD", TAGS, "2025-12-31", 100.0, 0.10, annual_row="SalesRevenueNet")
     assert fallback is not None and fallback.tag in ("Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax")
+
+
+def test_a_base_element_whose_quarters_stopped_years_ago_gives_way_to_one_that_files_the_same_year() -> None:
+    # the base's element carries the annual figure and quarters that stopped long before it;
+    # the current quarters sit on another element that files the same annual figure: those are read
+    old = [entry("2018-01-01", "2018-03-31", 7.0, "10-Q", "Q1", "2018-05-01"),
+           entry("2018-04-01", "2018-06-30", 8.0, "10-Q", "Q2", "2018-08-01"),
+           entry("2025-01-01", "2025-12-31", 100.0, "10-K", "FY", "2026-02-15")]
+    both = facts(old, "Revenues")
+    both["facts"]["us-gaap"]["RevenueFromContractWithCustomerExcludingAssessedTax"] = facts(QUARTERS)["facts"]["us-gaap"]["Revenues"]  # type: ignore[index]
+    block, _ = recency.of_record(both, "us-gaap", "USD", TAGS, "2025-12-31", 100.0, 0.10, annual_row="Revenues")
+    assert block is not None and block.tag == "RevenueFromContractWithCustomerExcludingAssessedTax"
+    assert block.latest_quarter_end == "2026-06-30" and block.trailing_four_quarters_revenue == 145.0
+    # a narrower element whose year is smaller is never taken in the base's place
+    narrow = [entry(str(e["start"]), str(e["end"]), float(e["val"]) * 0.7, str(e["form"]), str(e["fp"]), str(e["filed"])) for e in QUARTERS]  # type: ignore[arg-type]
+    other = facts(old, "Revenues")
+    other["facts"]["us-gaap"]["RevenueFromContractWithCustomerExcludingAssessedTax"] = facts(narrow)["facts"]["us-gaap"]["Revenues"]  # type: ignore[index]
+    none, reason = recency.of_record(other, "us-gaap", "USD", TAGS, "2025-12-31", 100.0, 0.10, annual_row="Revenues")
+    assert none is None and reason == recency.NO_CURRENT_QUARTERS
+
+
+def test_the_facts_lag_names_a_later_report_than_the_facts_carry() -> None:
+    def index(rows: list[tuple[str, str, str, str]]) -> dict[str, object]:
+        return {"filings": {"recent": {"form": [r[0] for r in rows], "filingDate": [r[1] for r in rows],
+                                       "accessionNumber": [r[2] for r in rows], "reportDate": [r[3] for r in rows]}}}
+    rows = [("10-Q", "2026-07-29", "0000000001-26-000032", "2026-07-05"), ("8-K", "2026-07-29", "x", "2026-07-29"),
+            ("10-Q", "2026-04-29", "0000000001-26-000012", "2026-04-05")]
+    lag = recency.facts_lag(index(rows), "2026-04-05", date(2026, 10, 19))
+    assert lag is not None and "10-Q filed 2026-07-29 for the period ending 2026-07-05 (0000000001-26-000032)" in lag and lag.endswith("end 2026-04-05")
+    assert recency.facts_lag(index(rows), "2026-07-05", date(2026, 10, 19)) is None       # the facts are current
+    assert recency.facts_lag(index(rows), "2026-04-05", date(2026, 7, 1)) is None         # filed after the fetch date
+    assert recency.facts_lag(None, "2026-04-05", date(2026, 10, 19)) is None

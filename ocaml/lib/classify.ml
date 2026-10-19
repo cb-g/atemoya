@@ -9,6 +9,7 @@ type signature = {
   threshold : parameter;
   premiums_earned : float option;
   premiums_earned_row : string option;
+  currency : string option;
 }
 
 type verdict = Proceed of class_check | Refuse of string * class_check
@@ -39,6 +40,9 @@ let signature ~(threshold : parameter) (fin : financials) =
     threshold;
     premiums_earned;
     premiums_earned_row;
+    (* the amounts are the statements', read before any conversion: their currency rides
+       with them so a converted record does not label them in its own *)
+    currency = fin.financial_currency;
   }
 
 (* How the statements made their case, for the reason text. *)
@@ -60,6 +64,7 @@ let evidence ~declared s outcome : class_check =
     bank_nii_ratio_threshold = s.threshold;
     premiums_earned = s.premiums_earned;
     premiums_earned_row = s.premiums_earned_row;
+    currency = s.currency;
   }
 
 let check ~declared s =

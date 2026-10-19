@@ -548,6 +548,22 @@ def depreciation_ifrs(facts: "Facts", defs: reference.FieldDefinitions, end: dat
     return None, None, None, None, None
 
 
+TOTAL_PLUS_AMORTIZATION = "total_plus_intangible_amortization"
+UNSECURED_LONG_TERM_DEBT = "UnsecuredLongTermDebt"   # the unsecured part of noncurrent_by_collateral
+
+
+def capex_with_software(facts: "Facts", tags: reference.XbrlTags, end: date, value: float | None, row: str | None) -> tuple[float | None, str | None]:
+    """(2026-10-19) Capex with the capitalised internal-use software filed as its own
+    investing line added to the tag taken; never to a tag whose definition already carries
+    software, and never when the software line is itself the tag taken."""
+    if value is None or row is None or row in tags.capex_includes_software or row in tags.capex_software:
+        return value, row
+    software = facts.first(tags.capex_software, end, instant=False)
+    if software is None:
+        return value, row
+    return value + software[0], f"{row} + {software[1]}"
+
+
 def depreciation(facts: "Facts", selected: Selected, tags: reference.XbrlTags, defs: reference.FieldDefinitions, end: date, *, taxonomy: str = "us-gaap") -> DnaResult:
     """D&A per the definition (27): every total tag present for the period is a candidate and
     the field is the largest, candidates recorded; under IFRS the recipe excludes impairment
@@ -563,6 +579,17 @@ def depreciation(facts: "Facts", selected: Selected, tags: reference.XbrlTags, d
     candidates = [boundary.Component(name="total", value=v, row=tag) for tag in d.totals if (v := facts.at(tag, end, instant=False)) is not None]
     if candidates:
         taken = max(candidates, key=lambda c: c.value)
+        # (2026-10-19) a total smaller than the filer's own amortisation of intangibles for
+        # the period cannot contain it, by the rule the largest total rests on: a total is
+        # never smaller than one of its parts (CME files 107.5m of D&A beside 223.4m of
+        # intangible amortisation on separate cash-flow lines). The two are summed.
+        if d.excludes_amortization_when_smaller:
+            declared = list(tags.depreciation_components)
+            amortization, amortization_row = value_of(selected, declared[1], end) if len(declared) > 1 else (None, None)
+            if amortization is not None and amortization > taken.value:
+                parts = [boundary.Component(name="total", value=taken.value, row=taken.row),
+                         boundary.Component(name="amortization", value=amortization, row=amortization_row or declared[1])]
+                return sum(p.value for p in parts), _label(parts), candidates, TOTAL_PLUS_AMORTIZATION, _composition(definition.name, parts)
         return taken.value, taken.row, candidates, None, None
     # (62) with no total filed, the filer's own cash-flow reconciliation before its notes:
     # the combined depreciation-and-amortisation line, with the amortisation line beside it
@@ -658,7 +685,7 @@ def _composition(definition: str, parts: list[boundary.Component]) -> boundary.C
     return boundary.Composition(definition=definition, components=parts)
 
 
-SUBTRACTED = frozenset({"restricted_cash", "liability_components", "interest_income", "other_nonoperating", "equity_method", "cash_flow_signed_components", "gain_on_property_sales"})  # components summed with their sign flipped
+SUBTRACTED = frozenset({"restricted_cash", "liability_components", "contract_cost_amortization", "interest_income", "other_nonoperating", "equity_method", "cash_flow_signed_components", "gain_on_property_sales"})  # components summed with their sign flipped
 
 
 def _label(parts: list[boundary.Component]) -> str:
@@ -922,13 +949,44 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, params: reference
     aggregate = facts.first(d.aggregate, end, instant=True)
     convertible = facts.first(d.convertible, end, instant=True)
     noncurrent = facts.first(d.noncurrent, end, instant=True)
+    # (2026-10-19) noncurrent debt filed as its secured and unsecured parts, each excluding
+    # the current portion and disjoint by definition: summed, and read only where no
+    # noncurrent tag is filed (CME files its senior notes as UnsecuredLongTermDebt alone)
     current_total = facts.first(d.current_total, end, instant=True)
     current_long_term = facts.first(d.current_long_term, end, instant=True)
     short_term = facts.first(d.short_term_borrowings, end, instant=True)
     total_including_current = facts.first(d.total_including_current, end, instant=True)
+    # (2026-10-19) noncurrent debt under elements a filer may also use for a sibling of its
+    # senior notes, read only where neither a noncurrent tag nor a long-term debt total is
+    # filed (Equinix tags LongTermNotesAndLoans beside its LongTermDebt total; Teva files it
+    # with no total): notes and loans first, else the secured and unsecured parts, each
+    # excluding the current portion and disjoint by definition, summed (CME files its senior
+    # notes as UnsecuredLongTermDebt alone)
+    by_collateral: list[tuple[float, str]] = []
+    if noncurrent is None and total_including_current is None:
+        noncurrent = facts.first(d.noncurrent_without_total, end, instant=True)
+        if noncurrent is None:
+            by_collateral = [(v, t) for t in d.noncurrent_by_collateral if (v := facts.at(t, end, instant=True)) is not None]
+            if by_collateral:
+                noncurrent = (sum(v for v, _ in by_collateral), " + ".join(t for _, t in by_collateral))
 
     def part(name: str, hit: tuple[float, str]) -> boundary.Component:
         return boundary.Component(name=name, value=hit[0], row=hit[1])
+
+    # convertible notes are unsecured notes: beside a split that files only its secured part
+    # they are another instrument, and are added to it (Sea, FY2023: 0.119bn secured beside
+    # 2.950bn of noncurrent convertible notes); beside an unsecured part they may sit inside it
+    convertible_beside_secured = bool(by_collateral) and convertible is not None \
+        and not any(t == UNSECURED_LONG_TERM_DEBT for _, t in by_collateral)
+
+    def noncurrent_parts(hit: tuple[float, str]) -> list[boundary.Component]:
+        # the collateral split is recorded as its parts, each with its own row
+        if by_collateral:
+            parts_ = [boundary.Component(name="noncurrent", value=v, row=t) for v, t in by_collateral]
+            if convertible_beside_secured and convertible is not None:
+                parts_.append(part("convertible", convertible))
+            return parts_
+        return [part("noncurrent", hit)]
 
     parts: list[boundary.Component]
     if aggregate is not None:
@@ -937,9 +995,9 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, params: reference
         if convertible is not None:
             parts.append(part("convertible", convertible))
     elif noncurrent is not None and current_total is not None:
-        parts = [part("noncurrent", noncurrent), part("current_total", current_total)]
+        parts = noncurrent_parts(noncurrent) + [part("current_total", current_total)]
     elif noncurrent is not None and current_long_term is not None:
-        parts = [part("noncurrent", noncurrent), part("current_long_term", current_long_term)]
+        parts = noncurrent_parts(noncurrent) + [part("current_long_term", current_long_term)]
         if short_term is not None:
             parts.append(part("short_term_borrowings", short_term))
     elif total_including_current is not None:
@@ -949,8 +1007,9 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, params: reference
     elif any(x is not None for x in (noncurrent, current_long_term, short_term, convertible)):
         # (4) component sum (31): no aggregate and no complete pair, so every component the
         # filer tags, one per kind; a filer with fewer instruments is not missing data
-        parts = [part(name, hit) for name, hit in (("noncurrent", noncurrent), ("current_long_term", current_long_term),
-                                                   ("short_term_borrowings", short_term), ("convertible", convertible)) if hit is not None]
+        parts = (noncurrent_parts(noncurrent) if noncurrent is not None else []) + [
+            part(name, hit) for name, hit in (("current_long_term", current_long_term), ("short_term_borrowings", short_term),
+                                              ("convertible", None if by_collateral else convertible)) if hit is not None]
     elif all(x is None for x in (current_total, total_including_current)):
         # absent is zero only when the filing says so twice (25): no debt line, and no
         # interest that is evidence of one (65).
@@ -993,7 +1052,22 @@ def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: 
             parts.append(boundary.Component(name="net_components", value=value, row=tag))
     if not parts:
         return None, None, None
+    parts.extend(contract_cost_amortization(facts, d, end, parts))
     return sum(p.value for p in parts), _label(parts), _composition(defs.delta_nwc.name, parts)
+
+
+def contract_cost_amortization(facts: "Facts", d: reference.NwcXbrl, end: date, parts: list[boundary.Component]) -> list[boundary.Component]:
+    """(2026-10-19) The amortisation of capitalised contract costs, a noncash expense inside
+    operating income that the cash-flow statement adds back, as a component that releases
+    cash, only where the capitalisation itself is among the components: without it the
+    outflow is missing too (Snowflake files it under an element of its own), and netting the
+    add-back alone would release cash that was never charged."""
+    if not any(p.row in d.contract_cost_capitalisation for p in parts):
+        return []
+    addback = facts.first(d.contract_cost_amortization, end, instant=False)
+    if addback is None:
+        return []
+    return [boundary.Component(name="contract_cost_amortization", value=-addback[0], row=addback[1])]
 
 
 ALTERNATIVE_RECIPE = "revenues_less_costs_and_expenses"
@@ -1299,6 +1373,8 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         for field, _ in taxonomy_fields(tags, taxonomy):
             v[field], r[field] = value_of(selected, field, end)
         dna, dna_row, dna_candidates, dna_recipe, dna_composition = depreciation(facts, selected, tags, defs, end, taxonomy=taxonomy)
+        if not ifrs:
+            v["capex"], r["capex"] = capex_with_software(facts, tags, end, v["capex"], r["capex"])
         if ifrs:
             cash_value, cash_row, cash_composition = cash_ifrs(facts, defs, end)
             debt, debt_row, debt_composition = total_debt_ifrs(facts, defs, end)

@@ -376,9 +376,14 @@ behind it is.
 It reads revenue alone, the one line every quarterly filing carries on the same element as
 the annual one, from the same companyfacts the statements come from: the quarterly filings'
 revenue (Form 10-Q, the first three fiscal quarters, a duration of about a quarter) and the
-annual filings' (Form 10-K), under the revenue chain's elements, one element throughout, the
-one with the most quarters; the fourth quarter of each fiscal year is the year less its
-three filed quarters, marked `derived`. Then: `latest_quarter_end` and its revenue against
+annual filings' (Form 10-K), under the revenue chain's elements, one element throughout:
+the element the annual base was read from where its quarters reach the base, else another
+that files the base's own annual revenue and whose quarters do (a filer that moved its
+quarters to another element years ago, as General Dynamics did, is read on the current
+one; a narrower element files a smaller year and is never taken), and where the base's
+element has quarters that stop short and no other qualifies, no block, with the reason;
+the fourth quarter of each fiscal year is the year less its three filed quarters, marked
+`derived`. Then: `latest_quarter_end` and its revenue against
 `year_earlier_quarter_revenue`, giving `quarter_yoy`; the four latest consecutive quarters
 summed as `trailing_four_quarters_revenue` against `annual_base_revenue` at
 `annual_base_end`, giving `trailing_over_annual`; `quarters_since_base`, the filed quarters
@@ -387,7 +392,10 @@ declared `divergence` (`reference/params.json`, `recency_divergence`, a tenth) e
 since a collapse is as much a stale base as a surge. Where the quarters do not chain the
 trailing figure is absent with `trailing_reason`; a 20-F filer reports half-years on Form
 6-K, which companyfacts does not carry, and has `recency_reason` instead of a block, as does
-a name on the vendor's statements. On the point-in-time path the filings are cut at the
+a name on the vendor's statements. companyfacts can lag the filings by months: where the
+filer's submissions list a 10-Q or 10-K, filed by the fetch date, for a period after the
+latest quarter the block reads, `facts_lag` names it, and `base_limits` repeats it, since
+the four-quarter shadow then stops short of the filings too. On the point-in-time path the filings are cut at the
 date. The summary lists the names whose base is stale, with the trailing figure over the
 base.
 

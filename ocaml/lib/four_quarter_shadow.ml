@@ -98,4 +98,7 @@ let base_limits ~(recency : recency option) ~generic ~(shadow : (four_quarter_sh
               (if x > 0. then "smaller" else "larger")
               (if x > 0. then "low" else "high")
       in
-      [ head ^ body ^ "; " ^ beside ]
+      (* the filer has filed a later report than companyfacts carries: the quarters here,
+         and the shadow on them, stop short of the filings (2026-10-19, General Dynamics) *)
+      let lag = match r.facts_lag with Some l -> "; " ^ l | None -> "" in
+      [ head ^ body ^ lag ^ "; " ^ beside ]

@@ -29,7 +29,7 @@ signal."""
 from __future__ import annotations
 
 from datetime import date
-from typing import Mapping
+from typing import Mapping, cast
 
 import boundary
 import fetch_sec
@@ -43,6 +43,9 @@ NO_FACTS = "no filed facts: the statements come from another provider"
 NO_QUARTERS_IFRS = "no quarterly revenue in the filed facts: a 20-F filer reports half-years on Form 6-K, which companyfacts does not carry"
 NO_QUARTERS = "no quarterly revenue in the filed facts under the revenue chain's elements"
 NO_BASE = "the statements carry no annual revenue to measure the quarters against"
+NO_CURRENT_QUARTERS = ("the annual base's revenue element carries no quarter reaching the base, and no other element "
+                       "of the revenue chain files the base's annual revenue with quarters that do")
+SAME_ANNUAL = 0.001           # relative: another element files the base's own annual revenue
 
 
 def _facts(entry: object) -> tuple[str, str, float, str, str, str] | None:
@@ -106,26 +109,47 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
     table = dict(tags.ifrs_full_fields if taxonomy == "ifrs-full" else tags.fields)
     chain = table["total_revenue"].tags if "total_revenue" in table else []
     gaap = fetch_sec._as_dict(fetch_sec._as_dict(facts.get("facts")).get(taxonomy))  # pyright: ignore[reportPrivateUsage]
-    # the base's own element where it has quarters; else the element whose quarters run
-    # latest and, among those, the one with the most of them. A filer that moved from one
-    # revenue element to another years ago has many old quarters on the first and the
-    # current ones on the second, and the current ones are the question.
-    best: tuple[str, dict[str, tuple[float, bool]]] | None = None
+    # the base's own element where its quarters reach the base; else another element that
+    # files the base's own annual revenue and whose quarters reach it, the latest-running
+    # first; else, where the base names no element with quarters, the element whose
+    # quarters run latest and, among those, the one with the most of them. A filer that
+    # moved from one revenue element to another years ago has many old quarters on the
+    # first and the current ones on the second, and the current ones are the question
+    # (2026-10-19: General Dynamics' base element carries quarters to mid-2018 and its
+    # current quarters sit on contract revenue, which files the same FY2025 total;
+    # Lumentum's FY2026 quarters moved to the element including assessed tax, which its
+    # 10-K tags at the same annual figure as the base's). The same annual figure is the
+    # test that keeps the MercadoLibre case out: a narrower element files a smaller year.
+    candidates: list[tuple[str, dict[str, tuple[float, bool]], dict[str, tuple[str, float]]]] = []
     for tag in chain:
         quarters, years = quarters_of(fetch_sec._entries(gaap.get(tag), unit), as_of=as_of)  # pyright: ignore[reportPrivateUsage]
-        if not quarters:
-            continue
-        series = with_fourth_quarters(quarters, years)
-        if tag == annual_row:
-            best = (tag, series)
-            break
-        if best is None or (max(series), len(series)) > (max(best[1]), len(best[1])):
-            best = (tag, series)
-    if best is None:
+        if quarters:
+            candidates.append((tag, with_fourth_quarters(quarters, years), years))
+    if not candidates:
         return None, NO_QUARTERS_IFRS if taxonomy == "ifrs-full" else NO_QUARTERS
     if annual_end is None or annual_revenue is None or annual_revenue <= 0:
         return None, NO_BASE
-    tag, series = best
+    base_end, base_revenue = annual_end, annual_revenue
+
+    def reaches_base(series: dict[str, tuple[float, bool]]) -> bool:
+        return max(series) >= base_end
+
+    def files_base(years: dict[str, tuple[str, float]]) -> bool:
+        return base_end in years and abs(years[base_end][1] - base_revenue) <= SAME_ANNUAL * base_revenue
+
+    def latest_most(c: tuple[str, dict[str, tuple[float, bool]], dict[str, tuple[str, float]]]) -> tuple[str, int]:
+        return max(c[1]), len(c[1])
+
+    own = next((c for c in candidates if c[0] == annual_row), None)
+    same = [c for c in candidates if c[0] != annual_row and reaches_base(c[1]) and files_base(c[2])]
+    if own is not None and reaches_base(own[1]):
+        tag, series = own[0], own[1]
+    elif same:
+        tag, series = max(same, key=latest_most)[:2]
+    elif own is not None:
+        return None, NO_CURRENT_QUARTERS
+    else:
+        tag, series = max(candidates, key=latest_most)[:2]
     ends = sorted(series)
     latest = ends[-1]
     latest_revenue = series[latest][0]
@@ -155,6 +179,38 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
         trailing_four_quarters_revenue=trailing, trailing_reason=trailing_reason,
         annual_base_end=annual_end, annual_base_revenue=annual_revenue, trailing_over_annual=trailing_over_annual,
         quarters_since_base=since, divergence=divergence, base_stale=stale, notes=notes), None
+
+
+PERIODIC_FORMS = ("10-Q", "10-Q/A", "10-K", "10-K/A")
+
+
+def facts_lag(index: Mapping[str, object] | None, latest_quarter_end: str, as_of: date) -> str | None:
+    """(2026-10-19) The sentence when the filer's submissions list a quarterly or annual report,
+    filed on or before the fetch date, for a period after the latest quarter the facts carry:
+    companyfacts can lag the filings by months (General Dynamics' 10-Q filed 2026-07-29 was
+    absent from its facts on 2026-10-19), and the quarters read here then stop short of them.
+    None when the facts are current or the index carries no usable rows."""
+    if index is None:
+        return None
+    recent = fetch_sec._as_dict(fetch_sec._as_dict(index.get("filings")).get("recent"))  # pyright: ignore[reportPrivateUsage]
+    columns = [recent.get(n) for n in ("form", "filingDate", "accessionNumber", "reportDate")]
+    if not all(isinstance(c, list) for c in columns):
+        return None
+    forms, filed, accessions, reports = (cast(list[object], c) for c in columns)
+    newest: tuple[str, str, str, str] | None = None
+    for form, f, a, r in zip(forms, filed, accessions, reports):
+        try:
+            on, period = date.fromisoformat(str(f)), str(r)
+            _ = date.fromisoformat(period)
+        except ValueError:
+            continue
+        if str(form) in PERIODIC_FORMS and on <= as_of and period > latest_quarter_end and (newest is None or period > newest[3]):
+            newest = (str(form), str(f), str(a), period)
+    if newest is None:
+        return None
+    form, f, a, period = newest
+    return (f"companyfacts lags submissions: the {form} filed {f} for the period ending {period} ({a}) is not yet in the "
+            f"facts, so the latest quarter read here, and the four-quarter figures on it, end {latest_quarter_end}")
 
 
 def divergence_of(params: reference.Params) -> float | None:

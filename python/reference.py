@@ -344,6 +344,8 @@ class XbrlTags:
     financing_section: List[str] = field(default_factory=lambda: [])
     preferred_dividend_evidence: List[str] = field(default_factory=lambda: [])
     redeemable_preferred_evidence: List[str] = field(default_factory=lambda: [])
+    capex_software: List[str] = field(default_factory=lambda: [])
+    capex_includes_software: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'XbrlTags':
@@ -364,6 +366,8 @@ class XbrlTags:
                 financing_section=_atd_read_list(_atd_read_string)(x['financing_section']) if 'financing_section' in x else [],
                 preferred_dividend_evidence=_atd_read_list(_atd_read_string)(x['preferred_dividend_evidence']) if 'preferred_dividend_evidence' in x else [],
                 redeemable_preferred_evidence=_atd_read_list(_atd_read_string)(x['redeemable_preferred_evidence']) if 'redeemable_preferred_evidence' in x else [],
+                capex_software=_atd_read_list(_atd_read_string)(x['capex_software']) if 'capex_software' in x else [],
+                capex_includes_software=_atd_read_list(_atd_read_string)(x['capex_includes_software']) if 'capex_includes_software' in x else [],
             )
         else:
             _atd_bad_json('XbrlTags', x)
@@ -385,6 +389,8 @@ class XbrlTags:
         res['financing_section'] = _atd_write_list(_atd_write_string)(self.financing_section)
         res['preferred_dividend_evidence'] = _atd_write_list(_atd_write_string)(self.preferred_dividend_evidence)
         res['redeemable_preferred_evidence'] = _atd_write_list(_atd_write_string)(self.redeemable_preferred_evidence)
+        res['capex_software'] = _atd_write_list(_atd_write_string)(self.capex_software)
+        res['capex_includes_software'] = _atd_write_list(_atd_write_string)(self.capex_includes_software)
         return res
 
     @classmethod
@@ -1329,6 +1335,8 @@ class NwcXbrl:
     liability_components: List[str]
     excluded: List[str]
     net_components: List[str] = field(default_factory=lambda: [])
+    contract_cost_amortization: List[str] = field(default_factory=lambda: [])
+    contract_cost_capitalisation: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
 
     @classmethod
@@ -1340,6 +1348,8 @@ class NwcXbrl:
                 liability_components=_atd_read_list(_atd_read_string)(x['liability_components']) if 'liability_components' in x else _atd_missing_json_field('NwcXbrl', 'liability_components'),
                 excluded=_atd_read_list(_atd_read_string)(x['excluded']) if 'excluded' in x else _atd_missing_json_field('NwcXbrl', 'excluded'),
                 net_components=_atd_read_list(_atd_read_string)(x['net_components']) if 'net_components' in x else [],
+                contract_cost_amortization=_atd_read_list(_atd_read_string)(x['contract_cost_amortization']) if 'contract_cost_amortization' in x else [],
+                contract_cost_capitalisation=_atd_read_list(_atd_read_string)(x['contract_cost_capitalisation']) if 'contract_cost_capitalisation' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
             )
         else:
@@ -1352,6 +1362,8 @@ class NwcXbrl:
         res['liability_components'] = _atd_write_list(_atd_write_string)(self.liability_components)
         res['excluded'] = _atd_write_list(_atd_write_string)(self.excluded)
         res['net_components'] = _atd_write_list(_atd_write_string)(self.net_components)
+        res['contract_cost_amortization'] = _atd_write_list(_atd_write_string)(self.contract_cost_amortization)
+        res['contract_cost_capitalisation'] = _atd_write_list(_atd_write_string)(self.contract_cost_capitalisation)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         return res
 
@@ -2248,6 +2260,7 @@ class DnaTotals:
     combined_line: List[str] = field(default_factory=lambda: [])
     amortization_line: List[str] = field(default_factory=lambda: [])
     finite_lived_intangibles: List[str] = field(default_factory=lambda: [])
+    excludes_amortization_when_smaller: bool = field(default_factory=lambda: False)
 
     @classmethod
     def from_json(cls, x: Any) -> 'DnaTotals':
@@ -2257,6 +2270,7 @@ class DnaTotals:
                 combined_line=_atd_read_list(_atd_read_string)(x['combined_line']) if 'combined_line' in x else [],
                 amortization_line=_atd_read_list(_atd_read_string)(x['amortization_line']) if 'amortization_line' in x else [],
                 finite_lived_intangibles=_atd_read_list(_atd_read_string)(x['finite_lived_intangibles']) if 'finite_lived_intangibles' in x else [],
+                excludes_amortization_when_smaller=_atd_read_bool(x['excludes_amortization_when_smaller']) if 'excludes_amortization_when_smaller' in x else False,
             )
         else:
             _atd_bad_json('DnaTotals', x)
@@ -2267,6 +2281,7 @@ class DnaTotals:
         res['combined_line'] = _atd_write_list(_atd_write_string)(self.combined_line)
         res['amortization_line'] = _atd_write_list(_atd_write_string)(self.amortization_line)
         res['finite_lived_intangibles'] = _atd_write_list(_atd_write_string)(self.finite_lived_intangibles)
+        res['excludes_amortization_when_smaller'] = _atd_write_bool(self.excludes_amortization_when_smaller)
         return res
 
     @classmethod
@@ -2390,6 +2405,8 @@ class DebtXbrl:
     excluded: List[str]
     aggregate: List[str] = field(default_factory=lambda: [])
     convertible: List[str] = field(default_factory=lambda: [])
+    noncurrent_without_total: List[str] = field(default_factory=lambda: [])
+    noncurrent_by_collateral: List[str] = field(default_factory=lambda: [])
     interest_evidence: List[str] = field(default_factory=lambda: [])
     debt_evidence: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
@@ -2406,6 +2423,8 @@ class DebtXbrl:
                 excluded=_atd_read_list(_atd_read_string)(x['excluded']) if 'excluded' in x else _atd_missing_json_field('DebtXbrl', 'excluded'),
                 aggregate=_atd_read_list(_atd_read_string)(x['aggregate']) if 'aggregate' in x else [],
                 convertible=_atd_read_list(_atd_read_string)(x['convertible']) if 'convertible' in x else [],
+                noncurrent_without_total=_atd_read_list(_atd_read_string)(x['noncurrent_without_total']) if 'noncurrent_without_total' in x else [],
+                noncurrent_by_collateral=_atd_read_list(_atd_read_string)(x['noncurrent_by_collateral']) if 'noncurrent_by_collateral' in x else [],
                 interest_evidence=_atd_read_list(_atd_read_string)(x['interest_evidence']) if 'interest_evidence' in x else [],
                 debt_evidence=_atd_read_list(_atd_read_string)(x['debt_evidence']) if 'debt_evidence' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
@@ -2423,6 +2442,8 @@ class DebtXbrl:
         res['excluded'] = _atd_write_list(_atd_write_string)(self.excluded)
         res['aggregate'] = _atd_write_list(_atd_write_string)(self.aggregate)
         res['convertible'] = _atd_write_list(_atd_write_string)(self.convertible)
+        res['noncurrent_without_total'] = _atd_write_list(_atd_write_string)(self.noncurrent_without_total)
+        res['noncurrent_by_collateral'] = _atd_write_list(_atd_write_string)(self.noncurrent_by_collateral)
         res['interest_evidence'] = _atd_write_list(_atd_write_string)(self.interest_evidence)
         res['debt_evidence'] = _atd_write_list(_atd_write_string)(self.debt_evidence)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)

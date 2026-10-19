@@ -2045,10 +2045,10 @@ let test_four_quarter_shadow_and_the_base_sentence () =
   | None -> Alcotest.fail "a derived trailing ebit ran a shadow");
   (* the base sentence: none without a recency block, else one, signed, with the shadow beside it *)
   Alcotest.(check (list string)) "no recency block, no sentence" [] v.base_limits;
-  let recency ?(trailing_over_annual = Some 0.25) ?(trailing_reason = None) () : Boundary_t.recency =
+  let recency ?(trailing_over_annual = Some 0.25) ?(trailing_reason = None) ?(facts_lag = None) () : Boundary_t.recency =
     { tag = "Revenues"; latest_quarter_end = "2026-03-31"; latest_quarter_revenue = 300.; year_earlier_quarter_revenue = Some 200.;
       quarter_yoy = Some 0.5; quarters = []; trailing_four_quarters_revenue = Some 1250.; trailing_reason; annual_base_end = "2025-09-30";
-      annual_base_revenue = 1000.; trailing_over_annual; quarters_since_base = 2; divergence = Some 0.1; base_stale = true; notes = [] }
+      annual_base_revenue = 1000.; trailing_over_annual; quarters_since_base = 2; divergence = Some 0.1; base_stale = true; facts_lag; notes = [] }
   in
   let one = function [ s ] -> s | l -> Alcotest.failf "%d base limits" (List.length l) in
   let shadow = Option.map Result.ok v.four_quarter_shadow in
@@ -2062,7 +2062,11 @@ let test_four_quarter_shadow_and_the_base_sentence () =
   let current = one (Four_quarter_shadow.base_limits ~recency:(Some (recency ~trailing_over_annual:(Some 0.004) ())) ~generic:false ~shadow:None) in
   check_mentions "a current base says so and the other paths read annual periods" current [ "the base is current"; "no model here reads the quarters" ];
   let unchained = one (Four_quarter_shadow.base_limits ~recency:(Some (recency ~trailing_over_annual:None ~trailing_reason:(Some "gap") ())) ~generic:true ~shadow:None) in
-  check_mentions "no trailing figure: not measured" unchained [ "do not chain (gap)"; "not measured" ]
+  check_mentions "no trailing figure: not measured" unchained [ "do not chain (gap)"; "not measured" ];
+  (* the filer has filed a later report than the facts carry: the sentence says so before the shadow *)
+  let lagging = one (Four_quarter_shadow.base_limits ~recency:(Some (recency ~facts_lag:(Some "companyfacts lags submissions: a later report") ())) ~generic:true ~shadow) in
+  check_mentions "the lag rides in the base sentence" lagging [ "lands; companyfacts lags submissions: a later report; the four-quarter shadow beside it" ];
+  Alcotest.(check bool) "and only there" false (contains ahead "companyfacts lags")
 
 let test_required_return_on_the_record_and_the_paths () =
   let table = get (Required_returns.load_classes_string (rr_json ())) in

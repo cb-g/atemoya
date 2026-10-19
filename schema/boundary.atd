@@ -390,6 +390,7 @@ type class_check = {
   bank_nii_ratio_threshold : parameter;   (* the statements indicate Bank iff nii_ratio >= this *)
   premiums_earned : float nullable;       (* the statements indicate Insurer iff > 0, unless Bank *)
   premiums_earned_row : string nullable;
+  ?currency : string option;              (* the currency the amounts above are stated in: the statements', which on a converted record is not the record's (2026-10-19) *)
 }
 
 (* Whether there is something under the price, and on what basis. Never gates anything
@@ -1360,6 +1361,7 @@ type recency = {
   quarters_since_base : int;          (* filed quarters ending after the annual base *)
   ?divergence : float option;         (* the declared threshold, reference/params.json recency_divergence *)
   base_stale : bool;                  (* always written: trailing_over_annual beyond the divergence either way; false without a trailing figure or a declared divergence *)
+  ?facts_lag : string option;         (* the filer's submissions list a quarterly or annual report, filed by the fetch date, for a period after the latest quarter here, which companyfacts does not yet carry *)
   ~notes : string list;
 }
 

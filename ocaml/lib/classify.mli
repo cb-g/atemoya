@@ -20,6 +20,7 @@ type signature = {
   threshold : Boundary_t.parameter;
   premiums_earned : float option;
   premiums_earned_row : string option;
+  currency : string option;  (** the statements' currency the amounts are in, read before any conversion *)
 }
 
 val signature :

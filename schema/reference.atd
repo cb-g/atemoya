@@ -326,6 +326,8 @@ type xbrl_tags = {
   ~financing_section : string list;         (* (65) the cash-flow statement's financing subtotal: filed, it makes the absence of a dividend element mean none rather than not filed *)
   ~preferred_dividend_evidence : string list;   (* (69) the elements moved out of dividend_evidence: a preferred dividend goes to a claim senior to common, so its presence must not make the retention rule read a filer as distributing to common holders *)
   ~redeemable_preferred_evidence : string list; (* (69) redeemable preferred is mezzanine equity and never sits inside stockholders' equity, so a filer that tags one of these needs no book deduction and taking one would double-count *)
+  ~capex_software : string list;            (* capitalised internal-use software, its own investing line: added to the capex tag taken, first present *)
+  ~capex_includes_software : string list;   (* capex tags whose definition already carries software: nothing is added to them *)
 }
 
 (* One definition per statement field, applied identically to filed statements (us-gaap
@@ -375,6 +377,8 @@ type debt_xbrl = {
   current_long_term : string list;          (* the current portion of long-term debt; recipe 2 with noncurrent *)
   short_term_borrowings : string list;      (* optional in recipes 2 and 3 *)
   total_including_current : string list;    (* long-term debt filed with its current portion; recipe 3 *)
+  ~noncurrent_without_total : string list;  (* noncurrent debt read only where neither a noncurrent tag nor a long-term debt total is filed: a filer may tag it as a sibling of its senior notes rather than their parent *)
+  ~noncurrent_by_collateral : string list;  (* noncurrent debt filed as its secured and unsecured parts, disjoint by definition: summed, and read under the same condition, after noncurrent_without_total *)
   excluded : string list;                   (* operating lease liabilities: never summed *)
   ~interest_evidence : string list;         (* interest tags whose presence says the filer owes something; with no debt tag and none of these, debt is 0 (25) *)
   ~debt_evidence : string list;             (* (72) balance-sheet tags whose presence says the filer owes something (interest payable); read after interest_evidence, under the same sign and size test *)
@@ -426,6 +430,8 @@ type nwc_xbrl = {
   liability_components : string list;       (* positive = the liability grew = cash released: subtracted *)
   ~net_components : string list;            (* a balance of assets less liabilities; positive = the net asset grew = cash absorbed: added, asset-signed (25) *)
   excluded : string list;                   (* recognised as outside working capital, never summed *)
+  ~contract_cost_amortization : string list;  (* amortisation of capitalised contract costs, first present: netted against the components only where a capitalisation tag is among them *)
+  ~contract_cost_capitalisation : string list;  (* the component tags that carry the capitalised contract costs' change *)
   ~notes : string list;
 }
 
@@ -546,6 +552,7 @@ type dna_totals = {
   ~combined_line : string list;         (* (62) the filer's own depreciation-and-amortisation line in the cash-flow reconciliation, taken with amortization_line beside it *)
   ~amortization_line : string list;     (* (62) the amortisation line in the same reconciliation, preferred over the note element in the component pair *)
   ~finite_lived_intangibles : string list;  (* (62) an instant: with none of these filed, a filer that tags no intangible amortisation has none to tag, and depreciation alone is the period's total *)
+  ~excludes_amortization_when_smaller : bool;  (* a total smaller than the filer's own intangible amortisation cannot contain it: the two are summed, recipe total_plus_intangible_amortization *)
 }
 
 (* IFRS (32): depreciation and amortisation excluding impairment. The pure tag first; where
