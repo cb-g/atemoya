@@ -4530,6 +4530,110 @@ class Earnings:
 
 
 @dataclass
+class DeclaredGrowth:
+    """Original type: declared_growth = { ... }
+    """
+
+    version: str
+    why: str
+    as_of: str
+    basis: str
+    currency: str
+    base_period_end: str
+    base_fcff: float
+    projection_years: int
+    g0: float
+    headline_g0: float
+    outside_clamp: bool
+    above_roic: bool
+    growth_path: List[float]
+    fcff_path: List[float]
+    headline_fair_value: float
+    fair_value: float
+    margin_of_safety: float
+    scope_limits: List[str]
+    declared_g0: Optional[float] = None
+    declared_fcff: Optional[float] = None
+    fiscal_year_ending: Optional[int] = None
+    years_from_base: Optional[int] = None
+    steady_fcff: Optional[float] = None
+    roic: Optional[float] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DeclaredGrowth':
+        if isinstance(x, dict):
+            return cls(
+                version=_atd_read_string(x['version']) if 'version' in x else _atd_missing_json_field('DeclaredGrowth', 'version'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('DeclaredGrowth', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('DeclaredGrowth', 'as_of'),
+                basis=_atd_read_string(x['basis']) if 'basis' in x else _atd_missing_json_field('DeclaredGrowth', 'basis'),
+                currency=_atd_read_string(x['currency']) if 'currency' in x else _atd_missing_json_field('DeclaredGrowth', 'currency'),
+                base_period_end=_atd_read_string(x['base_period_end']) if 'base_period_end' in x else _atd_missing_json_field('DeclaredGrowth', 'base_period_end'),
+                base_fcff=_atd_read_float(x['base_fcff']) if 'base_fcff' in x else _atd_missing_json_field('DeclaredGrowth', 'base_fcff'),
+                projection_years=_atd_read_int(x['projection_years']) if 'projection_years' in x else _atd_missing_json_field('DeclaredGrowth', 'projection_years'),
+                g0=_atd_read_float(x['g0']) if 'g0' in x else _atd_missing_json_field('DeclaredGrowth', 'g0'),
+                headline_g0=_atd_read_float(x['headline_g0']) if 'headline_g0' in x else _atd_missing_json_field('DeclaredGrowth', 'headline_g0'),
+                outside_clamp=_atd_read_bool(x['outside_clamp']) if 'outside_clamp' in x else _atd_missing_json_field('DeclaredGrowth', 'outside_clamp'),
+                above_roic=_atd_read_bool(x['above_roic']) if 'above_roic' in x else _atd_missing_json_field('DeclaredGrowth', 'above_roic'),
+                growth_path=_atd_read_list(_atd_read_float)(x['growth_path']) if 'growth_path' in x else _atd_missing_json_field('DeclaredGrowth', 'growth_path'),
+                fcff_path=_atd_read_list(_atd_read_float)(x['fcff_path']) if 'fcff_path' in x else _atd_missing_json_field('DeclaredGrowth', 'fcff_path'),
+                headline_fair_value=_atd_read_float(x['headline_fair_value']) if 'headline_fair_value' in x else _atd_missing_json_field('DeclaredGrowth', 'headline_fair_value'),
+                fair_value=_atd_read_float(x['fair_value']) if 'fair_value' in x else _atd_missing_json_field('DeclaredGrowth', 'fair_value'),
+                margin_of_safety=_atd_read_float(x['margin_of_safety']) if 'margin_of_safety' in x else _atd_missing_json_field('DeclaredGrowth', 'margin_of_safety'),
+                scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('DeclaredGrowth', 'scope_limits'),
+                declared_g0=_atd_read_float(x['declared_g0']) if 'declared_g0' in x else None,
+                declared_fcff=_atd_read_float(x['declared_fcff']) if 'declared_fcff' in x else None,
+                fiscal_year_ending=_atd_read_int(x['fiscal_year_ending']) if 'fiscal_year_ending' in x else None,
+                years_from_base=_atd_read_int(x['years_from_base']) if 'years_from_base' in x else None,
+                steady_fcff=_atd_read_float(x['steady_fcff']) if 'steady_fcff' in x else None,
+                roic=_atd_read_float(x['roic']) if 'roic' in x else None,
+            )
+        else:
+            _atd_bad_json('DeclaredGrowth', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['version'] = _atd_write_string(self.version)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['basis'] = _atd_write_string(self.basis)
+        res['currency'] = _atd_write_string(self.currency)
+        res['base_period_end'] = _atd_write_string(self.base_period_end)
+        res['base_fcff'] = _atd_write_float(self.base_fcff)
+        res['projection_years'] = _atd_write_int(self.projection_years)
+        res['g0'] = _atd_write_float(self.g0)
+        res['headline_g0'] = _atd_write_float(self.headline_g0)
+        res['outside_clamp'] = _atd_write_bool(self.outside_clamp)
+        res['above_roic'] = _atd_write_bool(self.above_roic)
+        res['growth_path'] = _atd_write_list(_atd_write_float)(self.growth_path)
+        res['fcff_path'] = _atd_write_list(_atd_write_float)(self.fcff_path)
+        res['headline_fair_value'] = _atd_write_float(self.headline_fair_value)
+        res['fair_value'] = _atd_write_float(self.fair_value)
+        res['margin_of_safety'] = _atd_write_float(self.margin_of_safety)
+        res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        if self.declared_g0 is not None:
+            res['declared_g0'] = _atd_write_float(self.declared_g0)
+        if self.declared_fcff is not None:
+            res['declared_fcff'] = _atd_write_float(self.declared_fcff)
+        if self.fiscal_year_ending is not None:
+            res['fiscal_year_ending'] = _atd_write_int(self.fiscal_year_ending)
+        if self.years_from_base is not None:
+            res['years_from_base'] = _atd_write_int(self.years_from_base)
+        if self.steady_fcff is not None:
+            res['steady_fcff'] = _atd_write_float(self.steady_fcff)
+        if self.roic is not None:
+            res['roic'] = _atd_write_float(self.roic)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DeclaredGrowth':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class CrossCheck:
     """Original type: cross_check = { ... }
     """
@@ -5381,6 +5485,8 @@ class Valuation:
     growth_shadow: Optional[GrowthShadow] = None
     four_quarter_shadow: Optional[FourQuarterShadow] = None
     four_quarter_shadow_reason: Optional[str] = None
+    declared_growth: Optional[DeclaredGrowth] = None
+    declared_growth_reason: Optional[str] = None
     capital_intensity: Optional[CapitalIntensity] = None
     capital_intensity_reason: Optional[str] = None
     goodwill: Optional[GoodwillReadout] = None
@@ -5458,6 +5564,8 @@ class Valuation:
                 growth_shadow=GrowthShadow.from_json(x['growth_shadow']) if 'growth_shadow' in x else None,
                 four_quarter_shadow=FourQuarterShadow.from_json(x['four_quarter_shadow']) if 'four_quarter_shadow' in x else None,
                 four_quarter_shadow_reason=_atd_read_string(x['four_quarter_shadow_reason']) if 'four_quarter_shadow_reason' in x else None,
+                declared_growth=DeclaredGrowth.from_json(x['declared_growth']) if 'declared_growth' in x else None,
+                declared_growth_reason=_atd_read_string(x['declared_growth_reason']) if 'declared_growth_reason' in x else None,
                 capital_intensity=CapitalIntensity.from_json(x['capital_intensity']) if 'capital_intensity' in x else None,
                 capital_intensity_reason=_atd_read_string(x['capital_intensity_reason']) if 'capital_intensity_reason' in x else None,
                 goodwill=GoodwillReadout.from_json(x['goodwill']) if 'goodwill' in x else None,
@@ -5577,6 +5685,10 @@ class Valuation:
             res['four_quarter_shadow'] = (lambda x: x.to_json())(self.four_quarter_shadow)
         if self.four_quarter_shadow_reason is not None:
             res['four_quarter_shadow_reason'] = _atd_write_string(self.four_quarter_shadow_reason)
+        if self.declared_growth is not None:
+            res['declared_growth'] = (lambda x: x.to_json())(self.declared_growth)
+        if self.declared_growth_reason is not None:
+            res['declared_growth_reason'] = _atd_write_string(self.declared_growth_reason)
         if self.capital_intensity is not None:
             res['capital_intensity'] = (lambda x: x.to_json())(self.capital_intensity)
         if self.capital_intensity_reason is not None:

@@ -69,7 +69,9 @@ the pointer says.
   goodwill, earnings ([Readouts and diffs](#readouts-and-diffs)).
 - *shadow* — the same model run once more under one changed thing, beside the headline: the
   *growth shadow* on the other growth estimate, the *four-quarter shadow* on the trailing
-  period ([The growth shadow](#the-growth-shadow), [The four-quarter shadow](#the-four-quarter-shadow)).
+  period, the *declared growth* on a reader's own growth or future free cash flow
+  ([The growth shadow](#the-growth-shadow), [The four-quarter shadow](#the-four-quarter-shadow),
+  [The declared growth](#the-declared-growth)).
 - *headline* — the record's own value and inputs, as against a shadow's.
 - *limits*, *measured sentence* — every block's `scope_limits` say what it cannot see; the last
   of them says what the block was measured against on `docs/studies.md` and what came of it,
@@ -549,6 +551,78 @@ the headline, and the block's last limit says so. The residual-income, REIT and 
 have no shadow: a trailing base for them is a declared recipe each (book equity at the
 quarter end with trailing income and payouts; trailing FFO; a window that cannot be
 trailing), none written.
+
+## The declared growth
+
+`--growth FILE` puts a reader's own view of growth beside the headline of each name the file
+declares: the generic or mid-cycle DCF valued once more with a starting growth the reader
+gives, or with the starting growth at which the headline's own path reaches a free cash flow
+the reader gives for a year inside the projection. The record's `fair_value`,
+`margin_of_safety` and `signal` are the headline's and are never moved by it.
+
+```json
+{
+  "notes": ["what these declarations rest on"],
+  "tickers": {
+    "TEST": {"fcff": 1200000000, "currency": "USD", "fiscal_year_ending": 2030,
+             "steady_fcff": 1500000000, "why": "...", "as_of": "2026-10-19"},
+    "GEN":  {"g0": 8, "why": "...", "as_of": "2026-10-19"}
+  }
+}
+```
+
+Each entry is exactly one of two declarations, loaded strictly like `--beliefs`: an unknown
+or missing field, both or neither, a non-positive free cash flow, an empty why or a
+malformed date stops the run naming the entry.
+
+- `g0`, the starting growth in percentage points. It decays to terminal growth at the
+  headline's speed and runs through the headline's arithmetic as declared, not held to the
+  clamp the headline's own estimate is held to.
+- `fcff`, a free cash flow for the fiscal year ending in `fiscal_year_ending`, in
+  `currency`, its major unit. The year is the calendar year the fiscal year ends in, read
+  against the record's `fiscal_period_end`, and must lie from the base year plus one to the
+  projection's last year, the base year plus `projection_years`; a year the statements
+  already carry, or one past the projection, is refused with the reason. The currency must
+  be the record's, the one its price and `inputs.fcff` are in, which on a converted record
+  is the trading currency and not the statements'. The starting growth is then solved by
+  bisection over the implied block's domain, -50% to 300%, so the headline's path from its
+  base free cash flow reaches the declared one in that year; the flow there rises with the
+  starting growth, so the answer is unique, and past either end the record says which.
+- `steady_fcff`, beside `fcff` only: what the declared year's free cash flow would be with
+  capex back at a steady level. Every flow after the declared year and the terminal value are
+  then scaled by `steady_fcff / fcff`, so the years after it grow along the path from the
+  steady figure; declared in the projection's last year, the step is the terminal value's
+  alone. Without it, the declared year's capex is carried into every later year and the
+  terminal value, and the record says so: a year still building out is valued as if it built
+  out forever.
+
+`declared_growth` carries the declaration and its version, the base period and free cash
+flow, the starting growth used beside the headline's, whether it lies outside the
+headline's clamp or above the return on capital, the growth and the free cash flow in each
+projection year, and the shadow's `fair_value` and `margin_of_safety` beside the headline's
+fair value. Its limits say what the path is: the years before the declared one are the
+headline's path and not a forecast of their own, and the years after it keep the path's
+growth, which is still above terminal where the declared year comes early. On the mid-cycle
+path the base is the through-cycle free cash flow on today's capital, so a declared free
+cash flow is read as the through-cycle level in its year, and one for a peak or a trough
+year is carried as the normal level into the years after it; the block says so on every
+mid-cycle record. Where a declared name has no block, `declared_growth_reason` says why:
+the declaration's own refusal, a model with no free cash flow path (the residual-income,
+REIT and NAV paths), or a model that did not complete. An undeclared name's record carries
+neither field and is the record without the flag.
+
+**Decided (2026-10-19), on a request from a downstream project that runs a clone.** The
+headline's growth is the statements' reading and stays so (the growth shadow above); a
+reader who holds a view of a name's cash flow had no way to put it beside the headline
+without editing the code. The declaration is the reader's, like a belief or a required
+return, so it is dated, carries a why, is never derived from anything here, and stays a
+shadow. Everything but the starting growth, and the step after the declared year, is the
+headline's own: the discount rate (a declared required return included), the fade, terminal
+growth, net debt and shares. Weighed and not taken: a declared free cash flow for a year the
+statements carry, which is a restatement of the base and not a view; a declared starting
+growth and free cash flow together, which over-determines the path; and a path that drops
+to terminal growth after the declared year, which would be a second fade beside the
+headline's.
 
 ## Capital intensity and goodwill
 

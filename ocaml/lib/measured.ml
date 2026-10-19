@@ -40,10 +40,14 @@ let capital_intensity =
 let goodwill =
   "measured 2026-10-18 on the rule panel: the fundamental growth estimate on the return without goodwill forecast realised revenue and operating income growth no better than the headline's and slightly worse at three and five years, both with a negative R-squared as they stand and none fitted, on about thirteen hundred rows; the return without goodwill reads higher by half a point at the median and the headline keeps the one with it (docs/studies.md, The owed measurements on the rule panel)"
 
+let declared_growth =
+  "not measured against what followed: the value on a reader's own declaration of growth or of a future free cash flow, and no study on docs/studies.md reads it"
+
 let all =
   [ ("quality", quality); ("growth_shadow", growth_shadow); ("four_quarter_shadow", four_quarter_shadow);
     ("base_rate", base_rate); ("stretch", stretch); ("insiders", insiders); ("earnings", earnings);
-    ("build_out", build_out); ("runway", runway); ("capital_intensity", capital_intensity); ("goodwill", goodwill) ]
+    ("build_out", build_out); ("runway", runway); ("capital_intensity", capital_intensity); ("goodwill", goodwill);
+    ("declared_growth", declared_growth) ]
 
 (* The heading a sentence points at, "(docs/studies.md, <heading>)", or None where it says
    no study reads the block. *)

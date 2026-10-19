@@ -20,6 +20,11 @@
    per-name beliefs on long-run growth (24) overrides the entries in <reference>/beliefs.json;
    --required-returns FILE likewise for declared required returns (34) over
    <reference>/required_returns.json, CAPM being the default on every name without one.
+   With --growth FILE, a file of per-name declarations, each exactly one of a starting growth
+   or a free cash flow for a fiscal year inside the projection, puts beside the headline of
+   each declared name valued by the generic or mid-cycle DCF the value on that growth, or on
+   the starting growth at which the headline's own path reaches that cash flow, or the reason
+   there is none; an undeclared name's record carries neither field.
    With --options DIR (the store python/fetch_options.py writes, DIR/<date>/<TICKER>.json), every
    Ok record carries the market-implied readout (36) from the name's chain on the latest
    snapshot date at or before the valuation date, or the reason it has none; with
@@ -31,7 +36,7 @@ open Atemoya
 
 let usage =
   "usage: atemoya [--reference DIR] [--fetched DIR] [--today YYYY-MM-DD] [--out DIR] [--universe FILE] \
-   [--entity-class CLASS] [--baseline valuations.jsonl] [--baseline-snapshot DIR] [--beliefs FILE] [--required-returns FILE] [--options DIR] [--options-max-age N] \
+   [--entity-class CLASS] [--baseline valuations.jsonl] [--baseline-snapshot DIR] [--beliefs FILE] [--required-returns FILE] [--growth FILE] [--options DIR] [--options-max-age N] \
    <financials.json | directory>...\n"
 
 type options = {
@@ -45,6 +50,7 @@ type options = {
   baseline_snapshot : string option;
   beliefs : string option;
   required_returns : string option;
+  growth : string option;
   options : string option;
   options_max_age : int option;
 }
@@ -69,12 +75,13 @@ let rec parse o paths = function
   | "--baseline-snapshot" :: v :: rest -> parse { o with baseline_snapshot = Some v } paths rest
   | "--beliefs" :: v :: rest -> parse { o with beliefs = Some v } paths rest
   | "--required-returns" :: v :: rest -> parse { o with required_returns = Some v } paths rest
+  | "--growth" :: v :: rest -> parse { o with growth = Some v } paths rest
   | "--options" :: v :: rest -> parse { o with options = Some v } paths rest
   | "--options-max-age" :: v :: rest -> (
       match int_of_string_opt v with
       | Some n when n >= 0 -> parse { o with options_max_age = Some n } paths rest
       | _ -> usage_exit ())
-  | [ ("--reference" | "--fetched" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline" | "--baseline-snapshot" | "--beliefs" | "--required-returns" | "--options" | "--options-max-age") ] ->
+  | [ ("--reference" | "--fetched" | "--today" | "--out" | "--universe" | "--entity-class" | "--baseline" | "--baseline-snapshot" | "--beliefs" | "--required-returns" | "--growth" | "--options" | "--options-max-age") ] ->
       usage_exit ()
   | p :: rest -> parse o (p :: paths) rest
 
@@ -186,6 +193,7 @@ let () =
         baseline_snapshot = None;
         beliefs = None;
         required_returns = None;
+        growth = None;
         options = None;
         options_max_age = None;
       }
@@ -244,6 +252,16 @@ let () =
             exit 2)
       o.required_returns
   in
+  let name_growth =
+    Option.map
+      (fun p ->
+        match Declared_growth.load_names p with
+        | Ok g -> g
+        | Error msg ->
+            Printf.eprintf "%s\n%!" msg;
+            exit 2)
+      o.growth
+  in
   (* The options store (36, 37): a name's chain on the latest snapshot date at or before
      the valuation date, within --options-max-age when given. *)
   let options =
@@ -260,7 +278,7 @@ let () =
       (fun path ->
         Option.map
           (fun (fin : Boundary_t.financials) ->
-            let value = Valuation.run ?name_beliefs ?name_required_returns ?options params ~today:o.today ~model_version ~declaration:(declaration fin.ticker) in
+            let value = Valuation.run ?name_beliefs ?name_required_returns ?name_growth ?options params ~today:o.today ~model_version ~declaration:(declaration fin.ticker) in
             let shadow_path =
               Filename.concat (Filename.dirname path) (fin.ticker ^ ".shadow-yfinance.json")
             in

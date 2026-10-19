@@ -732,3 +732,23 @@ type name_required_returns = {
   ~notes : string list;
   tickers : (string * required_return) list <json repr="object">;
 }
+
+(* A declared growth for the DCF shadow, given as --growth FILE: per ticker exactly one of
+   a starting growth (g0, percentage points) or a free cash flow (fcff, in currency, its
+   major unit) for the fiscal year ending in fiscal_year_ending, a year inside the
+   projection; beside fcff, optionally the steady free cash flow the years after that one
+   run on. Dated, with a why. Never derived from anything by the tool. *)
+type growth_declaration = {
+  ?g0 : float option;
+  ?fcff : float option;
+  ?currency : string option;
+  ?fiscal_year_ending : int option;
+  ?steady_fcff : float option;
+  why : string;
+  as_of : string;
+}
+
+type name_growth = {
+  ~notes : string list;
+  tickers : (string * growth_declaration) list <json repr="object">;
+}

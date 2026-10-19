@@ -2357,7 +2357,7 @@ let test_every_readout_says_what_was_measured () =
           if not (contains studies ("# " ^ h)) then Alcotest.failf "%s points at a docs/studies.md heading that does not exist: %S" block h
       | None -> Alcotest.(check bool) (block ^ " without a heading says no study reads it") true (contains sentence "no study on docs/studies.md reads it"))
     Measured.all;
-  Alcotest.(check int) "eleven blocks" 11 (List.length Measured.all);
+  Alcotest.(check int) "twelve blocks" 12 (List.length Measured.all);
   let last l = List.nth l (List.length l - 1) in
   let v = run (financials (history ())) in
   Alcotest.(check string) "the quality block ends with its measurement" Measured.quality (last Quality.scope_limits);
@@ -3168,6 +3168,125 @@ let test_growth_shadow () =
   (* a record that is not a completed generic DCF carries none *)
   let wrapper = run ~declared:(Some (declaration `Wrapper)) (financials (growing ())) in
   Alcotest.(check bool) "none off the generic DCF" true (Option.is_none wrapper.growth_shadow)
+
+(* The declared growth (--growth FILE). The loader is strict: exactly one basis, the fields
+   each basis needs and nothing else, dated, with a why. *)
+let test_declared_growth_loader () =
+  let load entry = Declared_growth.load_names_string (Printf.sprintf {|{"tickers": {"TEST": %s}}|} entry) in
+  let refused entry needle =
+    match load entry with
+    | Ok _ -> Alcotest.failf "loaded %s" entry
+    | Error e -> if not (contains e needle) then Alcotest.failf "%S does not say %S" e needle
+  in
+  (match load {|{"g0": 8, "why": "a reason", "as_of": "2026-10-19"}|} with
+  | Ok g -> Alcotest.(check (option (float 1e-12))) "g0 read in percentage points" (Some 8.) (List.assoc "TEST" g.tickers).g0
+  | Error e -> Alcotest.fail e);
+  (match load {|{"fcff": 1000, "currency": "USD", "fiscal_year_ending": 2030, "steady_fcff": 1500, "why": "a reason", "as_of": "2026-10-19"}|} with
+  | Ok g -> Alcotest.(check (option int)) "the year" (Some 2030) (List.assoc "TEST" g.tickers).fiscal_year_ending
+  | Error e -> Alcotest.fail e);
+  refused {|{"g0": 8, "fcff": 1000, "currency": "USD", "fiscal_year_ending": 2030, "why": "a", "as_of": "2026-10-19"}|} "exactly one";
+  refused {|{"why": "a", "as_of": "2026-10-19"}|} "neither g0 nor fcff";
+  refused {|{"g0": 8, "fiscal_year_ending": 2030, "why": "a", "as_of": "2026-10-19"}|} "a g0 entry carries no";
+  refused {|{"g0": -100, "why": "a", "as_of": "2026-10-19"}|} "not above -100";
+  refused {|{"fcff": 1000, "currency": "USD", "why": "a", "as_of": "2026-10-19"}|} "fiscal_year_ending";
+  refused {|{"fcff": 1000, "fiscal_year_ending": 2030, "why": "a", "as_of": "2026-10-19"}|} "currency";
+  refused {|{"fcff": 0, "currency": "USD", "fiscal_year_ending": 2030, "why": "a", "as_of": "2026-10-19"}|} "not positive";
+  refused {|{"fcff": 1000, "currency": "USD", "fiscal_year_ending": 2030, "steady_fcff": -1, "why": "a", "as_of": "2026-10-19"}|} "steady_fcff -1 is not positive";
+  refused {|{"g0": 8, "why": "a", "as_of": "2026-10-19", "mean": 3}|} "unknown field(s) mean";
+  refused {|{"g0": 8, "as_of": "2026-10-19"}|} "lacks why";
+  refused {|{"g0": 8, "why": " ", "as_of": "2026-10-19"}|} "why is empty";
+  refused {|{"g0": 8, "why": "a", "as_of": "19 October"}|} "as_of";
+  (match Declared_growth.load_names_string {|{"names": {}}|} with
+  | Error e -> Alcotest.(check string) "no tickers object" "growth: no tickers object" e
+  | Ok _ -> Alcotest.fail "loaded a file with no tickers")
+
+(* The growing fixture: base 2025-09-30, fcff 1200 x 0.5 + 200 - 400 - 100 = 300, the
+   headline's g0 0.03, a seven-year path. *)
+let test_declared_growth () =
+  let declared entry =
+    match Declared_growth.load_names_string (Printf.sprintf {|{"tickers": {"TEST": %s}}|} entry) with
+    | Ok g -> g
+    | Error e -> Alcotest.fail e
+  in
+  let run_with ?(cls = `OperatingCompany) ?(fin = financials (growing ())) entry =
+    Valuation.run ~name_growth:(declared entry) params ~today ~model_version:"test" ~declaration:(Some (declaration cls)) fin
+  in
+  let plain = run (financials (growing ())) in
+  let i = match plain.inputs with Some (`Dcf i) -> i | _ -> Alcotest.fail "not a dcf" in
+  let lambda = i.mean_reversion_lambda.value in
+  Alcotest.(check bool) "no flag, neither field" true
+    (Option.is_none plain.declared_growth && Option.is_none plain.declared_growth_reason);
+  let other = Valuation.run ~name_growth:(declared {|{"g0": 8, "why": "a", "as_of": "2026-10-19"}|} |> fun g -> { g with tickers = [ ("OTHER", List.assoc "TEST" g.tickers) ] })
+      params ~today ~model_version:"test" ~declaration:(Some (declaration `OperatingCompany)) (financials (growing ())) in
+  Alcotest.(check string) "an undeclared name's record is the record without the flag"
+    (Boundary_j.string_of_valuation plain) (Boundary_j.string_of_valuation other);
+  let block (v : Boundary_t.valuation) = match v.declared_growth with Some b -> b | None -> Alcotest.failf "no block: %s" (Option.value v.declared_growth_reason ~default:"") in
+  let reason (v : Boundary_t.valuation) = match v.declared_growth_reason with Some r -> r | None -> Alcotest.fail "no reason" in
+  (* a declared starting growth runs as declared on the headline's engine *)
+  let v = run_with {|{"g0": 8, "why": "a", "as_of": "2026-10-19"}|} in
+  let b = block v in
+  check_float "g0 in percentage points, as a fraction" 0.08 b.g0;
+  Alcotest.(check string) "basis" "g0" b.basis;
+  check_float "valued by the headline's own engine" (Implied.dcf_fair_value i ~g0:0.08 ~lambda) b.fair_value;
+  check_float "the headline is the record's own" (Option.get plain.fair_value) b.headline_fair_value;
+  Alcotest.(check (option (float 1e-9))) "and the record's fair value does not move" plain.fair_value v.fair_value;
+  Alcotest.(check bool) "above the 0.06 return on capital, and said" true
+    (b.above_roic && List.exists (fun l -> contains l "above the return on capital 0.0600") b.scope_limits);
+  Alcotest.(check string) "its last limit is the measurement" Measured.declared_growth (List.nth b.scope_limits (List.length b.scope_limits - 1));
+  check_float "the shadow's margin on the record's price" ((b.fair_value -. i.price) /. i.price) b.margin_of_safety;
+  (* a declared free cash flow three years out: the path reaches it there *)
+  let v = run_with {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2028, "why": "a", "as_of": "2026-10-19"}|} in
+  let b = block v in
+  Alcotest.(check (option int)) "three years from the base" (Some 3) b.years_from_base;
+  Alcotest.(check (float 1e-4)) "the path's flow in 2028 is the declared one" 400. (List.nth b.fcff_path 2);
+  check_float "the base is the headline's" i.fcff b.base_fcff;
+  check_float "valued by the headline's own engine at the solved growth" (Implied.dcf_fair_value i ~g0:b.g0 ~lambda) b.fair_value;
+  Alcotest.(check bool) "more cash in 2028 than the headline's path, more growth" true (b.g0 > i.g0 && b.fair_value > b.headline_fair_value);
+  Alcotest.(check bool) "without a steady figure the record says the capex is carried on" true
+    (List.exists (fun l -> contains l "as if it built out forever") b.scope_limits);
+  (* the steady free cash flow scales every year after the declared one and the terminal *)
+  let s = block (run_with {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2028, "steady_fcff": 600, "why": "a", "as_of": "2026-10-19"}|}) in
+  check_float "the same solved growth" b.g0 s.g0;
+  check_float "the declared year unscaled" (List.nth b.fcff_path 2) (List.nth s.fcff_path 2);
+  check_float "the year after it on the steady figure" (1.5 *. List.nth b.fcff_path 3) (List.nth s.fcff_path 3);
+  check_float "the stepped arithmetic at ratio one is the headline's"
+    (Implied.dcf_fair_value i ~g0:0.08 ~lambda) (Declared_growth.stepped_fair_value i ~g0:0.08 ~step_after:3 ~ratio:1.);
+  let last = block (run_with {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2032, "why": "a", "as_of": "2026-10-19"}|}) in
+  let last_steady = block (run_with {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2032, "steady_fcff": 500, "why": "a", "as_of": "2026-10-19"}|}) in
+  let terminal = i.terminal_growth_rate.value in
+  let extra = 100. *. (1. +. terminal) /. (i.wacc -. terminal) /. ((1. +. i.wacc) ** 7.) /. i.shares in
+  Alcotest.(check (float 1e-6)) "declared in the last year, the step is the terminal value's alone" (last.fair_value +. extra) last_steady.fair_value;
+  (* refused with the reason *)
+  let refused entry needle =
+    let r = reason (run_with entry) in
+    if not (contains r needle) then Alcotest.failf "%S does not say %S" r needle
+  in
+  refused {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2025, "why": "a", "as_of": "2026-10-19"}|}
+    "the declared year 2025 is not after the base, the fiscal year ending 2025-09-30: a declared free cash flow is for a year inside the projection, 2026 to 2032";
+  refused {|{"fcff": 400, "currency": "USD", "fiscal_year_ending": 2033, "why": "a", "as_of": "2026-10-19"}|}
+    "the declared year 2033 is beyond the projection's last year, the fiscal year ending in 2032, 7 years from the base ending 2025-09-30";
+  refused {|{"fcff": 400, "currency": "EUR", "fiscal_year_ending": 2030, "why": "a", "as_of": "2026-10-19"}|}
+    "the declared free cash flow is in EUR and the record's in USD";
+  refused {|{"fcff": 1e12, "currency": "USD", "fiscal_year_ending": 2026, "why": "a", "as_of": "2026-10-19"}|}
+    "needs a starting growth above 3.00";
+  (* the mid-cycle path: the same arithmetic on the through-cycle base, and it says so *)
+  let cyc = run_with ~cls:`Cyclical ~fin:(financials (midcycle_periods ())) {|{"fcff": 2000, "currency": "USD", "fiscal_year_ending": 2030, "why": "a", "as_of": "2026-10-19"}|} in
+  let m = match cyc.inputs with Some (`Dcf_midcycle m) -> m | _ -> Alcotest.fail "not mid-cycle" in
+  let c = block cyc in
+  check_float "the base is the through-cycle flow" m.fcff_mid c.base_fcff;
+  Alcotest.(check (float 1e-4)) "reached in 2030" 2000. (List.nth c.fcff_path 4);
+  Alcotest.(check bool) "read as the through-cycle level" true
+    (List.exists (fun l -> contains l "read as the through-cycle level in its year") c.scope_limits);
+  (* a declared name whose record has no such path *)
+  Alcotest.(check string) "another model"
+    "the declared growth runs on the generic and mid-cycle DCF paths only, and this record is valued by residual_income, which has no free cash flow path"
+    (Declared_growth.not_run ~model:(Some `Residual_income));
+  let wrapper = run_with ~cls:`Wrapper {|{"g0": 8, "why": "a", "as_of": "2026-10-19"}|} in
+  Alcotest.(check (option string)) "no model ran" (Some (Declared_growth.not_run ~model:None)) wrapper.declared_growth_reason;
+  let negative = run_with ~fin:(financials (history ~capex:2000. ())) {|{"g0": 8, "why": "a", "as_of": "2026-10-19"}|} in
+  Alcotest.(check (option string)) "the generic DCF refused" (Some (Declared_growth.not_run ~model:(Some `Dcf))) negative.declared_growth_reason;
+  let again = Boundary_j.valuation_of_string (Boundary_j.string_of_valuation v) in
+  Alcotest.(check string) "json round trip" (Boundary_j.string_of_valuation v) (Boundary_j.string_of_valuation again)
 
 (* The block for the same inputs at another price: what the solver sees on a record is
    exactly this (price enters the record's wacc through market cap, so a repriced record
@@ -4700,6 +4819,8 @@ let () =
           Alcotest.test_case "mid-cycle on filed operating income" `Quick test_midcycle_operating_income;
           Alcotest.test_case "the base rate beside the growth" `Quick test_base_rate;
           Alcotest.test_case "the growth shadow" `Quick test_growth_shadow;
+          Alcotest.test_case "the declared growth: the loader" `Quick test_declared_growth_loader;
+          Alcotest.test_case "the declared growth" `Quick test_declared_growth;
           Alcotest.test_case "quality: the nine signals, the ratios, the reasons" `Quick test_quality;
           Alcotest.test_case "the options-implied expected return" `Quick test_expected_return;
         ] );

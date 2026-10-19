@@ -32,7 +32,11 @@
     --options DIR, looks a ticker's option chain up ([Options_store.lookup], with the
     no-lookahead window on the point-in-time panel (37)); every Ok record then carries the
     market-implied readout ([Market_implied]) (36) or the reason it has none, the lookup's
-    when it found no chain; without it neither field exists. *)
+    when it found no chain; without it neither field exists. [name_growth], given only under
+    --growth FILE, declares per name a starting growth or a future free cash flow; a declared
+    name's record whose generic or mid-cycle DCF completed carries the [Declared_growth]
+    shadow or the reason it has none, and every other declared name's record the reason;
+    an undeclared name's record carries neither field. *)
 
 type thresholds = {
   buy_above : float;  (** margin of safety at or above which the signal is [`Buy] *)
@@ -90,6 +94,7 @@ val run :
   ?thresholds:thresholds ->
   ?name_beliefs:Reference_t.name_beliefs ->
   ?name_required_returns:Reference_t.name_required_returns ->
+  ?name_growth:Reference_t.name_growth ->
   ?options:(string -> (Boundary_t.option_chain, string) result) ->
   Params.t ->
   today:string ->

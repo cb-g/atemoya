@@ -221,8 +221,8 @@ let point_in_time_gates (fin : financials) =
       | None, None, Some currency -> Error ("rate source has no history for " ^ currency)
       | None, None, None -> Ok ())
 
-let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns ?options (params : Params.t) ~today ~model_version
-    ~declaration (original : financials) : valuation =
+let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns ?name_growth ?options (params : Params.t) ~today
+    ~model_version ~declaration (original : financials) : valuation =
   let declared = Option.map (fun d -> d.entity_class) declaration in
   let receipt = receipt_check ~declared:(Option.bind declaration (fun d -> d.adr_ratio)) original in
   let hold_vintage = Option.is_some original.point_in_time in
@@ -387,6 +387,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       growth_shadow = None;
       four_quarter_shadow = None;
       four_quarter_shadow_reason = None;
+      declared_growth = None;
+      declared_growth_reason = None;
       base_limits = [];
       capital_intensity = Result.to_option capital_intensity;
       capital_intensity_reason = (match capital_intensity with Error r -> Some r | Ok _ -> None);
@@ -405,6 +407,19 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     { a with
       required_return =
         Required_returns.resolve params.required_returns ?names:name_required_returns ~ticker:original.ticker ~entity_class () }
+  in
+  (* The declared growth (--growth FILE), per name: a shadow beside the generic or mid-cycle
+     DCF's headline on the reader's own starting growth or future free cash flow. *)
+  let growth_declaration =
+    Option.bind name_growth (fun (n : Reference_t.name_growth) -> List.assoc_opt original.ticker n.tickers)
+  in
+  let declared_growth_of ~midcycle ~(record : valuation) (inputs : Boundary_t.inputs) ~fair_value =
+    match growth_declaration with
+    | None -> (None, None)
+    | Some d -> (
+        match Declared_growth.of_inputs d ~midcycle ~currency:record.currency inputs ~fair_value with
+        | Ok b -> (Some b, None)
+        | Error reason -> (None, Some reason))
   in
   (* The declared belief (24): the fourth readout and the probability of overpaying under
      it. On a growth-then-terminal path the parameter is long-run growth, anchored on the
@@ -692,8 +707,13 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                 (* on the converted period, with the headline's free cash flow for the maintenance figure *)
                 let intensity = Capital.intensity (Period.latest fin) ~fcff:(Some inputs.fcff) in
                 let goodwill = Capital.goodwill (Period.latest fin) inputs in
+                let declared_growth, declared_growth_reason =
+                  declared_growth_of ~midcycle:false ~record inputs ~fair_value
+                in
                 {
                   record with
+                  declared_growth;
+                  declared_growth_reason;
                   growth_shadow = Some (Growth_shadow.of_inputs inputs ~fair_value);
                   capital_intensity = Result.to_option intensity;
                   capital_intensity_reason = (match intensity with Error r -> Some r | Ok _ -> None);
@@ -730,7 +750,12 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         | Some required -> (
             match Dcf_midcycle.value assumptions ~country ~required fin with
             | Error reason -> failed_with_build_out reason
-            | Ok (inputs, fair_value) -> finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value))
+            | Ok (inputs, fair_value) ->
+                let record = finish ~price:inputs.dcf.price (`Dcf_midcycle inputs) fair_value in
+                let declared_growth, declared_growth_reason =
+                  declared_growth_of ~midcycle:true ~record inputs.dcf ~fair_value
+                in
+                { record with declared_growth; declared_growth_reason }))
     | `Bdc_nav -> (
         (* (59) No EBIT policy and no parameter: the anchor is the filed mark. *)
         match Bdc.value assumptions ~country fin with
@@ -825,6 +850,14 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   in
   (* Before anything else: a ticker that no longer names the declared filer is another
      company's data under this entry's class and scope limits, and nothing below is safe. *)
+  (* A declared name whose record gave no generic or mid-cycle DCF inputs says why. *)
+  let with_growth_reason (v : valuation) =
+    match growth_declaration with
+    | Some _ when Option.is_none v.declared_growth && Option.is_none v.declared_growth_reason ->
+        { v with declared_growth_reason = Some (Declared_growth.not_run ~model:v.model) }
+    | _ -> v
+  in
+  with_growth_reason @@
   match original.identity_mismatch with
   | Some why -> failed ~floor:(floor_default ()) ("ticker identity: " ^ why)
   | None -> (

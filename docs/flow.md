@@ -772,6 +772,14 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- the declared growth (2026-10-19): `--growth FILE` declares per name a starting growth, or
+  a free cash flow for a fiscal year inside the projection with an optional steady free cash
+  flow for the years after it; on a record whose generic or mid-cycle DCF completed,
+  `declared_growth` carries the value on that growth, or on the starting growth at which the
+  headline's path reaches that cash flow, beside the headline, or `declared_growth_reason`
+  says why there is none. A shadow on a reader's declaration: no value, status or `Failed`
+  string moves, and a record of a name the file does not declare is the record without the
+  flag.
 - inputs checked against the filings (2026-10-19): a downstream project that runs a clone
   checked nineteen of its inputs against the filings, and the record's own vendor cross-check
   already disagreed on most of them. Capex adds capitalised software beside property and

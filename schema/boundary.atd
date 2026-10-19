@@ -1417,6 +1417,39 @@ type runway = {
   ~scope_limits : string list;            (* set by the valuer: what the block was measured against and what came of it *)
 }
 
+(* The declared growth (--growth FILE): the generic or mid-cycle DCF on a reader's own
+   starting growth, or on the starting growth at which the headline's own fading path
+   reaches a free cash flow the reader declares for a year inside the projection. Beside the
+   headline, never the headline: fair_value, margin_of_safety and signal on the record are
+   untouched by it. Everything but the starting growth, and with a steady free cash flow the
+   step after the declared year, is the headline's own. *)
+type declared_growth = {
+  version : string;                   (* as_of, a hash of the declared fields, name *)
+  why : string;
+  as_of : string;
+  basis : string;                     (* g0 | fcff: what was declared *)
+  ?declared_g0 : float option;        (* the declared starting growth, a decimal fraction *)
+  ?declared_fcff : float option;      (* the declared free cash flow, in currency *)
+  ?fiscal_year_ending : int option;   (* the calendar year the declared fiscal year ends in *)
+  ?years_from_base : int option;      (* that year less the base period's: 1 to projection_years *)
+  ?steady_fcff : float option;        (* the declared year's free cash flow with capex at a steady level: the years after it and the terminal value run on it *)
+  currency : string;                  (* of base_fcff and every flow here: the record's *)
+  base_period_end : string;           (* the headline's base period *)
+  base_fcff : float;                  (* the headline's base free cash flow, where the path starts *)
+  projection_years : int;
+  g0 : float;                         (* the starting growth the shadow runs on: declared, or solved *)
+  headline_g0 : float;
+  outside_clamp : bool;               (* g0 outside the clamp the headline's estimate is held to; a declaration is not held to it *)
+  ?roic : float option;               (* the headline's return on capital *)
+  above_roic : bool;                  (* g0 above it *)
+  growth_path : float list;           (* the shadow's growth, years 1 to projection_years *)
+  fcff_path : float list;             (* the shadow's free cash flow in those years, the step applied *)
+  headline_fair_value : float;        (* the model's own value, before any gate *)
+  fair_value : float;                 (* the same model on the shadow's starting growth *)
+  margin_of_safety : float;           (* (fair_value - price) / price, the shadow's *)
+  scope_limits : string list;
+}
+
 type valuation = {
   ticker : string;
   as_of : string;                     (* the fetch timestamp, from financials *)
@@ -1483,6 +1516,8 @@ type valuation = {
   ?growth_shadow : growth_shadow option;        (* on a record whose generic DCF completed: the value on the higher of the two growth estimates, beside the headline and never replacing it *)
   ?four_quarter_shadow : four_quarter_shadow option;   (* on a record whose generic DCF completed and whose statements carry a trailing period: the same DCF on the last four quarters, beside the headline and never replacing it *)
   ?four_quarter_shadow_reason : string option;         (* on a record whose generic DCF completed without one: why *)
+  ?declared_growth : declared_growth option;           (* under --growth, on a declared name whose generic or mid-cycle DCF completed: the value on the declared starting growth or free cash flow, beside the headline and never replacing it *)
+  ?declared_growth_reason : string option;             (* present instead under --growth on a declared name: why there is none *)
   ?capital_intensity : capital_intensity option;       (* on every record whose latest period carries capex and depreciation: spending against depreciation, the growth share, and on a generic DCF record the free cash flow with maintenance capex *)
   ?capital_intensity_reason : string option;           (* present instead: why there is none *)
   ?goodwill : goodwill_readout option;                 (* on a record whose generic DCF completed and whose latest period files goodwill: the return on capital with and without it *)

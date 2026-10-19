@@ -1528,6 +1528,90 @@ class NameRequiredReturns:
 
 
 @dataclass
+class GrowthDeclaration:
+    """Original type: growth_declaration = { ... }
+    """
+
+    why: str
+    as_of: str
+    g0: Optional[float] = None
+    fcff: Optional[float] = None
+    currency: Optional[str] = None
+    fiscal_year_ending: Optional[int] = None
+    steady_fcff: Optional[float] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'GrowthDeclaration':
+        if isinstance(x, dict):
+            return cls(
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('GrowthDeclaration', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('GrowthDeclaration', 'as_of'),
+                g0=_atd_read_float(x['g0']) if 'g0' in x else None,
+                fcff=_atd_read_float(x['fcff']) if 'fcff' in x else None,
+                currency=_atd_read_string(x['currency']) if 'currency' in x else None,
+                fiscal_year_ending=_atd_read_int(x['fiscal_year_ending']) if 'fiscal_year_ending' in x else None,
+                steady_fcff=_atd_read_float(x['steady_fcff']) if 'steady_fcff' in x else None,
+            )
+        else:
+            _atd_bad_json('GrowthDeclaration', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        if self.g0 is not None:
+            res['g0'] = _atd_write_float(self.g0)
+        if self.fcff is not None:
+            res['fcff'] = _atd_write_float(self.fcff)
+        if self.currency is not None:
+            res['currency'] = _atd_write_string(self.currency)
+        if self.fiscal_year_ending is not None:
+            res['fiscal_year_ending'] = _atd_write_int(self.fiscal_year_ending)
+        if self.steady_fcff is not None:
+            res['steady_fcff'] = _atd_write_float(self.steady_fcff)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'GrowthDeclaration':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class NameGrowth:
+    """Original type: name_growth = { ... }
+    """
+
+    tickers: List[Tuple[str, GrowthDeclaration]]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'NameGrowth':
+        if isinstance(x, dict):
+            return cls(
+                tickers=_atd_read_assoc_object_into_list(GrowthDeclaration.from_json)(x['tickers']) if 'tickers' in x else _atd_missing_json_field('NameGrowth', 'tickers'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('NameGrowth', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['tickers'] = _atd_write_assoc_list_to_object((lambda x: x.to_json()))(self.tickers)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'NameGrowth':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class Belief:
     """Original type: belief = { ... }
     """

@@ -16,6 +16,7 @@ val build_out : string
 val runway : string
 val capital_intensity : string
 val goodwill : string
+val declared_growth : string
 
 val all : (string * string) list
 (** Every block's sentence, by the record field it rides on. *)
