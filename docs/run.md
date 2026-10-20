@@ -272,13 +272,20 @@ flow leaves it out and never where it already holds it:
   without the claim that came with it.
 - **Associates and joint ventures** are added at book where the cash flow starts from operating
   income, which leaves their earnings out, and not where it is built from net income, which
-  holds them already. Book is not market, and the item says so: a listed stake can be worth
+  holds them already, nor where the filing shows them inside operating income: operating
+  income less revenue less costs and expenses is the line between them, and where it equals
+  the equity-method line the investees' earnings sit inside (BWXT's 75 million for 2025),
+  where it is nil they do not (Caterpillar, CME, Kinder Morgan, McDonald's, Uber). Book is not market, and the item says so: a listed stake can be worth
   several times its carrying amount.
 - **Lease liabilities** outside the debt rows are deducted on IFRS statements and on the
   vendor's statements of a filer outside the United States. There the lease cost is
   depreciation, added back with the rest, and interest, and the principal is paid in financing,
   so the cash flow never pays it. A US GAAP operating lease's cost is inside operating income,
-  and its liability stays out, as `total_debt`'s why has always said.
+  and its liability stays out, as `total_debt`'s why has always said. A filer's IFRS
+  Borrowings may carry its leases already: where the debt less the lease liabilities is the
+  vendor's debt within the threshold and the debt itself is not, the leases are inside it and
+  are not deducted again (Shell's 75.643 billion of Borrowings holds its 28.933 billion of
+  leases).
 - **Contingent consideration** is deducted wherever filed: an acquisition's deferred price,
   paid outside the capex and working-capital lines the cash flow reads.
 - **Distributions since the base** are deducted where the valued period is the annual base the

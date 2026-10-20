@@ -6123,6 +6123,9 @@ class FiscalPeriod:
     contingent_consideration_row: Optional[str] = None
     lease_liabilities: Optional[float] = None
     lease_liabilities_row: Optional[str] = None
+    investees_in_operating_income: Optional[bool] = None
+    debt_due_within_year: Optional[float] = None
+    debt_due_within_year_row: Optional[str] = None
     net_income_row: Optional[str] = None
     net_interest_income_row: Optional[str] = None
     ffo: Optional[float] = None
@@ -6230,6 +6233,9 @@ class FiscalPeriod:
                 contingent_consideration_row=_atd_read_string(x['contingent_consideration_row']) if 'contingent_consideration_row' in x else None,
                 lease_liabilities=_atd_read_float(x['lease_liabilities']) if 'lease_liabilities' in x else None,
                 lease_liabilities_row=_atd_read_string(x['lease_liabilities_row']) if 'lease_liabilities_row' in x else None,
+                investees_in_operating_income=_atd_read_bool(x['investees_in_operating_income']) if 'investees_in_operating_income' in x else None,
+                debt_due_within_year=_atd_read_float(x['debt_due_within_year']) if 'debt_due_within_year' in x else None,
+                debt_due_within_year_row=_atd_read_string(x['debt_due_within_year_row']) if 'debt_due_within_year_row' in x else None,
                 net_income_row=_atd_read_string(x['net_income_row']) if 'net_income_row' in x else None,
                 net_interest_income_row=_atd_read_string(x['net_interest_income_row']) if 'net_interest_income_row' in x else None,
                 ffo=_atd_read_float(x['ffo']) if 'ffo' in x else None,
@@ -6380,6 +6386,12 @@ class FiscalPeriod:
             res['lease_liabilities'] = _atd_write_float(self.lease_liabilities)
         if self.lease_liabilities_row is not None:
             res['lease_liabilities_row'] = _atd_write_string(self.lease_liabilities_row)
+        if self.investees_in_operating_income is not None:
+            res['investees_in_operating_income'] = _atd_write_bool(self.investees_in_operating_income)
+        if self.debt_due_within_year is not None:
+            res['debt_due_within_year'] = _atd_write_float(self.debt_due_within_year)
+        if self.debt_due_within_year_row is not None:
+            res['debt_due_within_year_row'] = _atd_write_string(self.debt_due_within_year_row)
         if self.net_income_row is not None:
             res['net_income_row'] = _atd_write_string(self.net_income_row)
         if self.net_interest_income_row is not None:

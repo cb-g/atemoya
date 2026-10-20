@@ -21,7 +21,8 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?interest_recipe ?depreciation_amortization_recipe ?depreciation_amortization_composition
     ?net_income_to_common ?preferred_equity ?preferred_dividends ?preferred_outside_equity
     ?common_dividends_paid ?operating_cash_flow ?operating_cash_flow_row ?goodwill ?goodwill_row
-    ?minority_interest ?equity_method_investments ?contingent_consideration ?lease_liabilities () : Boundary_t.fiscal_period =
+    ?minority_interest ?equity_method_investments ?contingent_consideration ?lease_liabilities
+    ?investees_in_operating_income ?debt_due_within_year () : Boundary_t.fiscal_period =
   {
     period_end;
     ebit;
@@ -125,6 +126,9 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     contingent_consideration_row = Option.map (fun _ -> "BusinessCombinationContingentConsiderationLiability") contingent_consideration;
     lease_liabilities;
     lease_liabilities_row = Option.map (fun _ -> "LeaseLiabilities") lease_liabilities;
+    investees_in_operating_income;
+    debt_due_within_year;
+    debt_due_within_year_row = Option.map (fun _ -> "LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths") debt_due_within_year;
   }
 
 let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
@@ -3268,6 +3272,45 @@ let test_equity_bridge () =
   Alcotest.(check (option approx)) "distributions too" (Some 300.)
     (Option.map (fun (d : Boundary_t.distributions) -> d.net) converted.distributions_since_base)
 
+(* The sweep's pairing tests and the debt rule, every figure invented: associates are not
+   added where the filing shows their earnings inside operating income; IFRS leases are not
+   deducted where the debt read already holds them; the principal due within a year is
+   added only where the vendor's debt validates it. *)
+let test_bridge_pairing_and_the_debt_rule () =
+  let check ~primary ~secondary : Boundary_t.cross_check =
+    let rel = Float.abs (primary -. secondary) /. Float.max primary secondary in
+    { provider = "vendor"; source = ""; period_end = "2025-09-30"; secondary_period_end = "2025-09-30"; threshold = 0.02;
+      fields = [ { field = "total_debt"; primary = Some primary; secondary = Some secondary; relative_difference = Some rel; agree = Some (rel <= 0.02) } ];
+      disagreements = (if rel <= 0.02 then 0 else 1) }
+  in
+  let on_latest f = function (latest : Boundary_t.fiscal_period) :: rest -> f latest :: rest | [] -> [] in
+  let block (v : Boundary_t.valuation) =
+    match v.inputs with
+    | Some (`Dcf i) -> (i, Option.get i.equity_bridge)
+    | _ -> Alcotest.failf "not a dcf: %s" (Option.value v.failed_reason ~default:"")
+  in
+  let applied (b : Boundary_t.equity_bridge) name = (List.find (fun (x : Boundary_t.bridge_item) -> x.name = name) b.items).applied in
+  (* associates inside operating income *)
+  let investees flag = on_latest (fun p -> { p with Boundary_t.equity_method_investments = Some 500.; equity_method_investments_row = Some "EquityMethodInvestments"; investees_in_operating_income = flag }) (growing ()) in
+  Alcotest.(check bool) "added where the filing shows them outside" true (applied (snd (block (run (financials (investees (Some false)))))) "equity_method_investments");
+  Alcotest.(check bool) "and where it cannot tell" true (applied (snd (block (run (financials (investees None))))) "equity_method_investments");
+  Alcotest.(check bool) "not where operating income holds them" false (applied (snd (block (run (financials (investees (Some true)))))) "equity_method_investments");
+  (* IFRS leases already inside the debt read: the growing fixture's debt is 5000 *)
+  let leased = on_latest (fun p -> { p with Boundary_t.lease_liabilities = Some 1000.; lease_liabilities_row = Some "LeaseLiabilities" }) (growing ()) in
+  let lease_run vendor = snd (block (run (financials ~taxonomy:"ifrs-full" ~cross_check:(check ~primary:5000. ~secondary:vendor) leased))) in
+  Alcotest.(check bool) "deducted where the vendor's debt is ours" true (applied (lease_run 5000.) "lease_liabilities");
+  Alcotest.(check bool) "not where ours less the leases is the vendor's" false (applied (lease_run 4000.) "lease_liabilities");
+  Alcotest.(check bool) "deducted where neither matches" true (applied (lease_run 3000.) "lease_liabilities");
+  (* the principal due within a year, validated by the vendor's debt *)
+  let due = List.map (fun p -> { p with Boundary_t.debt_due_within_year = Some 700.; debt_due_within_year_row = Some "LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths" }) (growing ()) in
+  let debt_of vendor = fst (block (run (financials ~cross_check:(check ~primary:5000. ~secondary:vendor) due))) in
+  let taken = debt_of 5700. in
+  check_float "added where it brings ours to the vendor's" 5700. taken.total_debt;
+  Alcotest.(check bool) "and named in the debt's source" true
+    (contains (Option.value taken.total_debt_source ~default:"") "LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths");
+  check_float "not where ours already agrees" 5000. (debt_of 5000.).total_debt;
+  check_float "nor where it does not bring agreement" 5000. (debt_of 9000.).total_debt
+
 (* The declared growth (--growth FILE). The loader is strict: exactly one basis, the fields
    each basis needs and nothing else, dated, with a why. *)
 let test_declared_growth_loader () =
@@ -4946,6 +4989,7 @@ let () =
           Alcotest.test_case "the base rate beside the growth" `Quick test_base_rate;
           Alcotest.test_case "the growth shadow" `Quick test_growth_shadow;
           Alcotest.test_case "the equity bridge" `Quick test_equity_bridge;
+          Alcotest.test_case "the bridge pairing tests and the debt rule" `Quick test_bridge_pairing_and_the_debt_rule;
           Alcotest.test_case "the declared growth: the loader" `Quick test_declared_growth_loader;
           Alcotest.test_case "the declared growth" `Quick test_declared_growth;
           Alcotest.test_case "quality: the nine signals, the ratios, the reasons" `Quick test_quality;

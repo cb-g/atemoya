@@ -2270,6 +2270,12 @@ class EbitRows:
     equity_method: List[str]
     costs_and_expenses: List[str] = field(default_factory=lambda: [])
     interest_nonoperating: List[str] = field(default_factory=lambda: [])
+    impairment_goodwill_and_intangibles: List[str] = field(default_factory=lambda: [])
+    impairment_goodwill: List[str] = field(default_factory=lambda: [])
+    impairment_intangibles: List[str] = field(default_factory=lambda: [])
+    impairment_intangible_parts: List[str] = field(default_factory=lambda: [])
+    impairment_long_lived: List[str] = field(default_factory=lambda: [])
+    impairment_total: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'EbitRows':
@@ -2282,6 +2288,12 @@ class EbitRows:
                 equity_method=_atd_read_list(_atd_read_string)(x['equity_method']) if 'equity_method' in x else _atd_missing_json_field('EbitRows', 'equity_method'),
                 costs_and_expenses=_atd_read_list(_atd_read_string)(x['costs_and_expenses']) if 'costs_and_expenses' in x else [],
                 interest_nonoperating=_atd_read_list(_atd_read_string)(x['interest_nonoperating']) if 'interest_nonoperating' in x else [],
+                impairment_goodwill_and_intangibles=_atd_read_list(_atd_read_string)(x['impairment_goodwill_and_intangibles']) if 'impairment_goodwill_and_intangibles' in x else [],
+                impairment_goodwill=_atd_read_list(_atd_read_string)(x['impairment_goodwill']) if 'impairment_goodwill' in x else [],
+                impairment_intangibles=_atd_read_list(_atd_read_string)(x['impairment_intangibles']) if 'impairment_intangibles' in x else [],
+                impairment_intangible_parts=_atd_read_list(_atd_read_string)(x['impairment_intangible_parts']) if 'impairment_intangible_parts' in x else [],
+                impairment_long_lived=_atd_read_list(_atd_read_string)(x['impairment_long_lived']) if 'impairment_long_lived' in x else [],
+                impairment_total=_atd_read_list(_atd_read_string)(x['impairment_total']) if 'impairment_total' in x else [],
             )
         else:
             _atd_bad_json('EbitRows', x)
@@ -2295,6 +2307,12 @@ class EbitRows:
         res['equity_method'] = _atd_write_list(_atd_write_string)(self.equity_method)
         res['costs_and_expenses'] = _atd_write_list(_atd_write_string)(self.costs_and_expenses)
         res['interest_nonoperating'] = _atd_write_list(_atd_write_string)(self.interest_nonoperating)
+        res['impairment_goodwill_and_intangibles'] = _atd_write_list(_atd_write_string)(self.impairment_goodwill_and_intangibles)
+        res['impairment_goodwill'] = _atd_write_list(_atd_write_string)(self.impairment_goodwill)
+        res['impairment_intangibles'] = _atd_write_list(_atd_write_string)(self.impairment_intangibles)
+        res['impairment_intangible_parts'] = _atd_write_list(_atd_write_string)(self.impairment_intangible_parts)
+        res['impairment_long_lived'] = _atd_write_list(_atd_write_string)(self.impairment_long_lived)
+        res['impairment_total'] = _atd_write_list(_atd_write_string)(self.impairment_total)
         return res
 
     @classmethod
@@ -2510,6 +2528,7 @@ class DebtXbrl:
     notes: List[str] = field(default_factory=lambda: [])
     noncurrent_notes: List[str] = field(default_factory=lambda: [])
     noncurrent_loans: List[str] = field(default_factory=lambda: [])
+    current_by_maturity: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'DebtXbrl':
@@ -2530,6 +2549,7 @@ class DebtXbrl:
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
                 noncurrent_notes=_atd_read_list(_atd_read_string)(x['noncurrent_notes']) if 'noncurrent_notes' in x else [],
                 noncurrent_loans=_atd_read_list(_atd_read_string)(x['noncurrent_loans']) if 'noncurrent_loans' in x else [],
+                current_by_maturity=_atd_read_list(_atd_read_string)(x['current_by_maturity']) if 'current_by_maturity' in x else [],
             )
         else:
             _atd_bad_json('DebtXbrl', x)
@@ -2551,6 +2571,7 @@ class DebtXbrl:
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
         res['noncurrent_notes'] = _atd_write_list(_atd_write_string)(self.noncurrent_notes)
         res['noncurrent_loans'] = _atd_write_list(_atd_write_string)(self.noncurrent_loans)
+        res['current_by_maturity'] = _atd_write_list(_atd_write_string)(self.current_by_maturity)
         return res
 
     @classmethod

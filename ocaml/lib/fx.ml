@@ -132,6 +132,7 @@ let convert ~rate (fin : financials) =
       equity_method_investments = scale rate p.equity_method_investments;
       contingent_consideration = scale rate p.contingent_consideration;
       lease_liabilities = scale rate p.lease_liabilities;
+      debt_due_within_year = scale rate p.debt_due_within_year;
     }
   in
   let distributions (d : distributions) =

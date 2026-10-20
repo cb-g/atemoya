@@ -128,6 +128,9 @@ type fiscal_period = {
   ?contingent_consideration_row : string option;
   ?lease_liabilities : float option;          (* lease liabilities outside the debt rows, IFRS and vendor statements only *)
   ?lease_liabilities_row : string option;
+  ?investees_in_operating_income : bool option;   (* operating income less revenue less costs and expenses equals the equity-method line: true; equals nil: false; absent where the filing cannot tell *)
+  ?debt_due_within_year : float option;      (* the maturity schedule's principal due within a year, read where the debt carries no current line; the valuer takes it only where the vendor's debt validates it *)
+  ?debt_due_within_year_row : string option;
   ?net_income_row : string option;
   ?net_interest_income_row : string option;
   (* The definition each composed field follows and the components summed (11). *)

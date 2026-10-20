@@ -1471,3 +1471,47 @@ def test_senior_notes_are_debt_only_where_nothing_wider_is_filed() -> None:
     # all notes before senior notes alone, and the whole before its parts
     assert period({"LongTermNotesPayable": usd(fact("2025-12-31", 1800.0)), "SeniorLongTermNotes": usd(fact("2025-12-31", 1690.0))}).total_debt == 1800.0
     assert period({"LongTermNotesAndLoans": usd(fact("2025-12-31", 1760.0)), "SeniorLongTermNotes": usd(fact("2025-12-31", 1690.0))}).total_debt == 1760.0
+
+
+def test_impairments_inside_operating_income_are_added_back_as_filed() -> None:
+    """(2026-10-19) An impairment writes down capital the capex line already charged, so the
+    operating income the cash flow starts from is read before it: goodwill and intangibles
+    as one element, else each, the intangibles as one element or as their two parts, every
+    long-lived element, and the filer's total only where no part is filed. Figures invented."""
+    def flows(**lines: float) -> dict[str, object]:
+        return {tag: usd(fact("2025-12-31", v, start="2025-01-01")) for tag, v in lines.items()}
+    base = {"OperatingIncomeLoss": 150.0}
+    p = period(flows(**base, GoodwillImpairmentLoss=300.0, ImpairmentOfIntangibleAssetsIndefinitelivedExcludingGoodwill=430.0,
+                     AssetImpairmentCharges=738.0))
+    assert (p.ebit, p.ebit_recipe) == (150.0 + 300.0 + 430.0, "operating_income")
+    assert components(p.ebit_composition) == [("operating_income", 150.0, "OperatingIncomeLoss"), ("impairment", 300.0, "GoodwillImpairmentLoss"),
+                                              ("impairment", 430.0, "ImpairmentOfIntangibleAssetsIndefinitelivedExcludingGoodwill")]
+    assert period(flows(**base, GoodwillAndIntangibleAssetImpairment=500.0, GoodwillImpairmentLoss=300.0)).ebit == 650.0
+    assert period(flows(**base, ImpairmentOfIntangibleAssetsExcludingGoodwill=260.0, ImpairmentOfLongLivedAssetsHeldForUse=770.0,
+                        ImpairmentOfIntangibleAssetsFinitelived=100.0)).ebit == 150.0 + 260.0 + 770.0
+    assert period(flows(**base, AssetImpairmentCharges=120.0)).ebit == 270.0
+    plain = period(flows(**base))
+    assert (plain.ebit, plain.ebit_row) == (150.0, "OperatingIncomeLoss")
+
+
+def test_the_filing_shows_whether_operating_income_holds_the_investees() -> None:
+    """(2026-10-19) Operating income less revenue less costs and expenses is the line between
+    them: the equity-method line where it sits inside, nil where it does not. Invented."""
+    def flows(**lines: float) -> dict[str, object]:
+        return {tag: usd(fact("2025-12-31", v, start="2025-01-01")) for tag, v in lines.items()}
+    inside = period(flows(Revenues=1000.0, CostsAndExpenses=675.0, OperatingIncomeLoss=400.0, IncomeLossFromEquityMethodInvestments=75.0))
+    assert inside.investees_in_operating_income is True
+    outside = period(flows(Revenues=1000.0, CostsAndExpenses=675.0, OperatingIncomeLoss=325.0, IncomeLossFromEquityMethodInvestments=75.0))
+    assert outside.investees_in_operating_income is False
+    untested = period(flows(Revenues=1000.0, OperatingIncomeLoss=325.0, IncomeLossFromEquityMethodInvestments=75.0))
+    assert untested.investees_in_operating_income is None
+
+
+def test_the_principal_due_within_a_year_is_read_only_beside_a_noncurrent_line_with_no_current_one() -> None:
+    """(2026-10-19) Read for the valuer, which takes it only where the vendor validates it."""
+    lone = period({"LongTermDebtNoncurrent": usd(fact("2025-12-31", 30.0)), "ShortTermBorrowings": usd(fact("2025-12-31", 5.0)),
+                   "LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths": usd(fact("2025-12-31", 7.0))})
+    assert (lone.total_debt, lone.debt_due_within_year) == (35.0, 7.0)
+    paired = period({"LongTermDebtNoncurrent": usd(fact("2025-12-31", 30.0)), "LongTermDebtCurrent": usd(fact("2025-12-31", 7.0)),
+                     "LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths": usd(fact("2025-12-31", 7.0))})
+    assert (paired.total_debt, paired.debt_due_within_year) == (37.0, None)

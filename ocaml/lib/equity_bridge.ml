@@ -31,18 +31,37 @@ let minority (p : fiscal_period) ~cash_flow ~share_count_includes_minority =
 
 let investees (p : fiscal_period) ~cash_flow =
   let applied, why =
-    match (p.equity_method_investments, cash_flow) with
-    | None, _ -> (false, not_filed)
-    | Some _, Parent_net_income -> (false, "not added: net income holds the investees' earnings already")
-    | Some _, Consolidated_operating_income ->
+    match (p.equity_method_investments, cash_flow, p.investees_in_operating_income) with
+    | None, _, _ -> (false, not_filed)
+    | Some _, Parent_net_income, _ -> (false, "not added: net income holds the investees' earnings already")
+    | Some _, Consolidated_operating_income, Some true ->
+        ( false,
+          "not added: the filer's operating income holds the investees' earnings, operating income less revenue less costs and expenses equalling the equity-method line, so the cash flow values them already" )
+    | Some _, Consolidated_operating_income, (Some false | None) ->
         (true, "added at book value, not market: operating income leaves the investees' earnings out")
   in
   item ~name:"equity_method_investments" ~value:p.equity_method_investments ~row:p.equity_method_investments_row ~applied
     ~sign:(-1.) ~why
 
+(* On IFRS statements a filer's Borrowings may carry its leases: the debt less the lease
+   liabilities is then the vendor's debt within the threshold, where the debt itself is not. *)
+let leases_inside_debt (fin : financials) (p : fiscal_period) lease =
+  match (fin.cross_check, p.total_debt) with
+  | Some cc, Some debt when fin.taxonomy = "ifrs-full" && cc.period_end = p.period_end -> (
+      match List.find_opt (fun (f : field_check) -> f.field = "total_debt") cc.fields with
+      | Some { agree = Some false; primary = Some primary; secondary = Some vendor; _ } when primary > 0. ->
+          (* the check is in the statements' currency; the period may have been converted *)
+          let vendor = vendor *. (debt /. primary) and less = debt -. lease in
+          Float.abs (less -. vendor) <= cc.threshold *. Float.max (Float.abs less) (Float.abs vendor)
+      | _ -> false)
+  | _ -> false
+
 let leases (fin : financials) (p : fiscal_period) =
   let applied, why =
     match (p.lease_liabilities, leases_outside_debt fin) with
+    | Some lease, true when leases_inside_debt fin p lease ->
+        ( false,
+          "not deducted: the debt read already holds them, the debt less the lease liabilities matching the vendor's debt within the threshold where the debt itself does not" )
     | None, true -> (false, not_filed)
     | None, false -> (false, "not read: under US GAAP an operating lease's cost is inside operating income")
     | Some _, false -> (false, "not deducted: under US GAAP an operating lease's cost is inside operating income")

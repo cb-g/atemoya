@@ -521,8 +521,8 @@ same claims.
 |---|---|---|
 | minority interests | `MinorityInterest`, else equity including them less the parent's; `NoncontrollingInterests`; the vendor's row | the cash flow starts from consolidated operating income and the universe entry does not declare the share count to hold the minority's units |
 | minority buyouts since the base | the latest 10-Q's year-to-date `PaymentsToMinorityShareholders`, less `MinorityInterestDecreaseFromRedemptions` where filed | beside the minority interests, where they apply and the year-to-date figures run from the valued base |
-| associates and joint ventures, at book | `EquityMethodInvestments`; `InvestmentsAccountedForUsingEquityMethod`; the vendor's aggregate row, else its two | the cash flow starts from consolidated operating income, which leaves their earnings out |
-| lease liabilities | `LeaseLiabilities`, else its parts; the vendor's two lease rows | IFRS statements, and the vendor's statements of a filer outside the United States: the cost is depreciation, added back, and interest, and the principal is paid in financing |
+| associates and joint ventures, at book | `EquityMethodInvestments`; `InvestmentsAccountedForUsingEquityMethod`; the vendor's aggregate row, else its two | the cash flow starts from consolidated operating income, which leaves their earnings out, and the filing does not show them inside it (operating income less revenue less costs and expenses equalling the equity-method line) |
+| lease liabilities | `LeaseLiabilities`, else its parts; the vendor's two lease rows | IFRS statements, and the vendor's statements of a filer outside the United States: the cost is depreciation, added back, and interest, and the principal is paid in financing; not where the debt read already holds them, its total less the leases being the vendor's debt |
 | contingent consideration | `BusinessCombinationContingentConsiderationLiability`, else its parts | wherever filed |
 | distributions since the base | the latest 10-Q's year-to-date buybacks and common dividends less shares issued | the valued period is the annual base the figures run from: the share count is today's |
 
@@ -801,6 +801,17 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- four fixes from the sweep of the vendor disagreements (2026-10-19): impairments of goodwill,
+  intangibles and long-lived assets are added back to operating income on every recipe on
+  filed us-gaap statements, since a write-down of capital already spent, through capex or an
+  acquisition, is not a cash cost (Crocs, PepsiCo, Coca-Cola, Teva and others, where the gap to the vendor's
+  line was the filed impairment); the equity bridge does not add associates where the filing
+  shows their earnings inside operating income (BWXT), nor deduct IFRS leases where the debt
+  read already holds them, the debt less the leases being the vendor's debt (Shell,
+  AstraZeneca); and the maturity schedule's principal due within a year is added to a debt
+  read with no current line where the vendor's debt validates it, on every period that
+  carries it (Caterpillar's 7.120 billion). Restructuring and litigation charges stay in
+  operating income, being paid in cash. No new `Failed` string.
 - two lines the filed path did not read (2026-10-19): `IncreaseDecreaseInOtherCurrentAssetsAndLiabilitiesNet`
   is read as a net working-capital component unless it equals the sum of the period's other
   components, when it is the filer's subtotal of them and is left out (Broadcom prints it as

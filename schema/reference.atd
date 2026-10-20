@@ -387,6 +387,7 @@ type debt_xbrl = {
   ~notes : string list;
   ~noncurrent_notes : string list;      (* (2026-10-19) the notes excluding the current portion, all notes first, then senior only *)
   ~noncurrent_loans : string list;      (* the loans excluding the current portion; summed with the notes where neither the whole nor the collateral split is filed *)
+  ~current_by_maturity : string list;   (* (2026-10-19) the principal due within a year from the maturity schedule, read where no current debt line is filed and taken only where the vendor's debt validates it *)
 }
 
 type debt_vendor = {
@@ -478,6 +479,12 @@ type ebit_rows = {
   equity_method : string list;
   ~costs_and_expenses : string list;        (* the filer's own total of costs and expenses, for the third recipe; empty where the section has none *)
   ~interest_nonoperating : string list;     (* interest elements that by their meaning sit below the operating line, so are not inside costs and expenses and are not added back *)
+  ~impairment_goodwill_and_intangibles : string list;   (* (2026-10-19) impairments inside operating income, added back: goodwill and intangibles as one element, *)
+  ~impairment_goodwill : string list;                   (* else goodwill, *)
+  ~impairment_intangibles : string list;                (* and intangibles as one element, *)
+  ~impairment_intangible_parts : string list;           (* else its indefinite- and finite-lived parts, summed; *)
+  ~impairment_long_lived : string list;                 (* long-lived assets, every one filed, summed; *)
+  ~impairment_total : string list;                      (* where no part above is filed, the filer's total of asset impairments *)
 }
 
 (* How many times a derived recipe may be refined, and the Failed reason when the refined

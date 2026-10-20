@@ -677,7 +677,42 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                  recipe))
     | _ -> Ok fin
   in
+  (* (2026-10-19) The maturity schedule's principal due within a year, where the debt read has
+     no current line, taken only where the vendor's debt validates it: the record's debt
+     disagrees with the vendor's and agrees with it once the figure is added, on the latest
+     period the check reads; then on every period that carries it, so a window reads one
+     definition. The check is in the statements' currency, so it reads the original period. *)
+  let debt_policy (fin : financials) =
+    let validated =
+      match (Period.latest original, original.cross_check) with
+      | Some latest, Some cc when cc.period_end = latest.period_end -> (
+          match (latest.debt_due_within_year, List.find_opt (fun (f : field_check) -> f.field = "total_debt") cc.fields) with
+          | Some due, Some { agree = Some false; primary = Some primary; secondary = Some vendor; _ } ->
+              let with_due = primary +. due in
+              let scale = Float.max (Float.abs with_due) (Float.abs vendor) in
+              scale > 0. && Float.abs (with_due -. vendor) /. scale <= cc.threshold
+          | _ -> false)
+      | _ -> false
+    in
+    if not validated then fin
+    else
+      let add (p : fiscal_period) =
+        match (p.debt_due_within_year, p.total_debt) with
+        | Some due, Some debt ->
+            let row = Option.value p.debt_due_within_year_row ~default:"" in
+            { p with
+              total_debt = Some (debt +. due);
+              total_debt_source = Some (Option.value p.total_debt_source ~default:"" ^ " + " ^ row);
+              total_debt_composition =
+                Option.map
+                  (fun (c : composition) -> { c with components = c.components @ [ { name = "current_by_maturity"; value = due; row } ] })
+                  p.total_debt_composition }
+        | _ -> p
+      in
+      { fin with periods = List.map add fin.periods; trailing_period = Option.map add fin.trailing_period }
+  in
   let run_model ~fin ?conversion ~model ~class_check ~rule ~country assumptions =
+    let fin = match model with `Dcf | `Dcf_midcycle -> debt_policy fin | _ -> fin in
     let failed = failed ~fin ~model ~class_check ~floor:(floor_of_rule rule) in
     (* (60) A refusal on one of the two build-out classes carries the readout, or the reason
        it has none; every other refusal carries neither field. *)

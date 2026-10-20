@@ -314,6 +314,8 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
                 and not any(c.row == base.depreciation_amortization_row for c in (dna_candidates or [])):
             notes.append(f"depreciation_amortization: the annual period reads {base.depreciation_amortization_row}, which has no trailing fact; left null rather than a smaller total")
             dna, dna_row, dna_candidates, dna_recipe, dna_composition = None, None, None, None, None
+    investees = fetch_sec.investees_in_operating_income(t, defs, end, v["total_revenue"])
+    due, due_row = fetch_sec.debt_due_within_year(t, defs, end, debt_composition)
     period = boundary.FiscalPeriod(
         period_end=end.isoformat(),
         ebit=ebit_value, pretax_income=v["pretax_income"], tax_provision=v["tax_provision"],
@@ -329,6 +331,7 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
         equity_method_investments=bridge["equity_method_investments"][0], equity_method_investments_row=bridge["equity_method_investments"][1],
         contingent_consideration=bridge["contingent_consideration"][0], contingent_consideration_row=bridge["contingent_consideration"][1],
         lease_liabilities=bridge["lease_liabilities"][0], lease_liabilities_row=bridge["lease_liabilities"][1],
+        investees_in_operating_income=investees, debt_due_within_year=due, debt_due_within_year_row=due_row,
         dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
         operating_cash_flow=v["operating_cash_flow"], operating_cash_flow_row=r["operating_cash_flow"],
         net_income_to_common=v["net_income_to_common"], net_income_to_common_row=r["net_income_to_common"],

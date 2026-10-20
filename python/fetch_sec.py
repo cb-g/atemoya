@@ -1148,6 +1148,70 @@ def contract_cost_amortization(facts: "Facts", d: reference.NwcXbrl, end: date, 
     return [boundary.Component(name="contract_cost_amortization", value=-addback[0], row=addback[1])]
 
 
+def impairments(facts: Facts, d: reference.EbitRows, end: date) -> list[boundary.Component]:
+    """(2026-10-19) Impairments inside operating income, as the filer files them, to be added
+    back: goodwill and intangibles as one element, else goodwill and the intangibles as one
+    element or as their indefinite- and finite-lived parts; every long-lived element filed;
+    the filer's total of asset impairments only where no part is filed, since it may carry
+    impairments of investments below operating income. A write-down of capital already
+    spent, through capex or an acquisition, is not a cash cost."""
+    def summed(tags: Iterable[str]) -> list[tuple[float, str]]:
+        return [(v, t) for t in tags if (v := facts.at(t, end, instant=False)) is not None]
+    hits: list[tuple[float, str]] = []
+    both = facts.first(d.impairment_goodwill_and_intangibles, end, instant=False)
+    if both is not None:
+        hits.append(both)
+    else:
+        goodwill = facts.first(d.impairment_goodwill, end, instant=False)
+        if goodwill is not None:
+            hits.append(goodwill)
+        intangibles = facts.first(d.impairment_intangibles, end, instant=False)
+        hits.extend([intangibles] if intangibles is not None else summed(d.impairment_intangible_parts))
+    hits.extend(summed(d.impairment_long_lived))
+    if not hits:
+        total = facts.first(d.impairment_total, end, instant=False)
+        if total is not None:
+            hits.append(total)
+    return [boundary.Component(name="impairment", value=v, row=t) for v, t in hits if v != 0]
+
+
+INVESTEES_TOLERANCE = 0.02
+
+
+def investees_in_operating_income(facts: Facts, defs: reference.FieldDefinitions, end: date, revenue: float | None) -> bool | None:
+    """(2026-10-19) Whether the filed operating income holds the equity-method earnings:
+    operating income less revenue less costs and expenses is the line that sits between
+    them, so it equals the equity-method line where they are inside (True) and is nil where
+    they are not (False); None where the filing files no such total, or the remainder is
+    neither."""
+    d = defs.ebit.xbrl
+    equity = facts.first(d.equity_method, end, instant=False)
+    operating = facts.first(d.operating_income, end, instant=False)
+    costs = facts.first(d.costs_and_expenses, end, instant=False) if d.costs_and_expenses else None
+    if equity is None or operating is None or costs is None or revenue is None or equity[0] == 0:
+        return None
+    remainder = operating[0] - (revenue - costs[0])
+    tolerance = INVESTEES_TOLERANCE * abs(equity[0])
+    if abs(remainder - equity[0]) <= tolerance:
+        return True
+    if abs(remainder) <= tolerance:
+        return False
+    return None
+
+
+CURRENT_DEBT_ROLES = ("aggregate", "total_including_current", "current_total", "current_long_term")
+
+
+def debt_due_within_year(facts: Facts, defs: reference.FieldDefinitions, end: date, debt: boundary.Composition | None) -> Line:
+    """(2026-10-19) The maturity schedule's principal due within a year, where the debt read
+    has a noncurrent line and no current one; a reading the valuer takes only where the
+    vendor's debt validates it, since the schedule is not always principal alone."""
+    roles: set[str] = {c.name for c in debt.components} if debt is not None else set()
+    if "noncurrent" not in roles or roles & set(CURRENT_DEBT_ROLES):
+        return None, None
+    return _first(facts, defs.total_debt.xbrl.current_by_maturity, end)
+
+
 ALTERNATIVE_RECIPE = "revenues_less_costs_and_expenses"
 
 
@@ -1167,6 +1231,8 @@ def ebit_alternative(facts: Facts, defs: reference.FieldDefinitions, end: date, 
     interest = facts.first(d.interest_expense, end, instant=False)
     if interest is not None and interest[1] not in d.interest_nonoperating:
         parts.append(boundary.Component(name="interest_expense", value=interest[0], row=interest[1]))
+    if taxonomy != "ifrs-full":
+        parts.extend(impairments(facts, d, end))
     return sum(p.value for p in parts), _composition(ALTERNATIVE_RECIPE, parts)
 
 
@@ -1176,10 +1242,11 @@ def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: floa
     equity-method earnings: each first present, subtracted as filed), recorded as the
     recipe pretax_plus_interest_less_nonoperating. (value, row, recipe, composition)."""
     d = defs.ebit.ifrs if taxonomy == "ifrs-full" else defs.ebit.xbrl
+    written_down = impairments(facts, d, end) if taxonomy != "ifrs-full" else []
     operating = facts.first(d.operating_income, end, instant=False)
     if operating is not None:
-        parts = [boundary.Component(name="operating_income", value=operating[0], row=operating[1])]
-        return operating[0], operating[1], "operating_income", _composition(defs.ebit.name, parts)
+        parts = [boundary.Component(name="operating_income", value=operating[0], row=operating[1])] + written_down
+        return sum(p.value for p in parts), operating[1] if not written_down else _label(parts), "operating_income", _composition(defs.ebit.name, parts)
     interest = facts.first(d.interest_expense, end, instant=False)
     if pretax is None or pretax_row is None or interest is None:
         return None, None, None, None
@@ -1189,6 +1256,7 @@ def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: floa
         hit = facts.first(tags, end, instant=False)
         if hit is not None:
             parts.append(boundary.Component(name=name, value=-hit[0], row=hit[1]))
+    parts.extend(written_down)
     return sum(p.value for p in parts), _label(parts), "pretax_plus_interest_less_nonoperating", _composition(defs.ebit.name, parts)
 
 
@@ -1485,6 +1553,8 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         common_dividends, common_dividends_row = common_dividends_of(
             v["common_dividends_paid"], r["common_dividends_paid"], v["dividends_paid"], v["preferred_dividends"])
         bridge = bridge_lines(facts, defs, end, taxonomy=taxonomy)
+        investees = None if ifrs else investees_in_operating_income(facts, defs, end, v["total_revenue"])
+        due, due_row = (None, None) if ifrs else debt_due_within_year(facts, defs, end, debt_composition)
         periods.append(
             boundary.FiscalPeriod(
                 period_end=end.isoformat(),
@@ -1501,6 +1571,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 equity_method_investments=bridge["equity_method_investments"][0], equity_method_investments_row=bridge["equity_method_investments"][1],
                 contingent_consideration=bridge["contingent_consideration"][0], contingent_consideration_row=bridge["contingent_consideration"][1],
                 lease_liabilities=bridge["lease_liabilities"][0], lease_liabilities_row=bridge["lease_liabilities"][1],
+                investees_in_operating_income=investees, debt_due_within_year=due, debt_due_within_year_row=due_row,
                 dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
                 operating_cash_flow=v["operating_cash_flow"], operating_cash_flow_row=r["operating_cash_flow"],
                 # (69) the common-only side, read on every filed period and used by the
