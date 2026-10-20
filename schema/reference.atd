@@ -328,7 +328,8 @@ type xbrl_tags = {
   ~preferred_dividend_evidence : string list;   (* (69) the elements moved out of dividend_evidence: a preferred dividend goes to a claim senior to common, so its presence must not make the retention rule read a filer as distributing to common holders *)
   ~redeemable_preferred_evidence : string list; (* (69) redeemable preferred is mezzanine equity and never sits inside stockholders' equity, so a filer that tags one of these needs no book deduction and taking one would double-count *)
   ~capex_software : string list;            (* capitalised internal-use software, its own investing line: added to the capex tag taken, first present *)
-  ~capex_includes_software : string list;   (* capex tags whose definition already carries software: nothing is added to them *)
+  ~capex_includes_software : string list;
+  ~net_income_minority_share : string list;   (* the minority holders' share of net income, taken from ProfitLoss where that is the net income read *)   (* capex tags whose definition already carries software: nothing is added to them *)
 }
 
 (* One definition per statement field, applied identically to filed statements (us-gaap

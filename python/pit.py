@@ -204,7 +204,11 @@ class History:
             if isinstance(stamp, pd.Timestamp) and isinstance(vol, (int, float)) and vol == vol:
                 volumes[stamp.date()] = float(vol)
         splits: dict[date, float] = {}
-        for stamp, ratio in ticker.splits.items():
+        record = cast(object, ticker.splits)   # typed a Series; the vendor can answer with None
+        if not isinstance(record, pd.Series):
+            # the vendor answered without its split record; no splits is not the same thing
+            raise ValueError(f"the vendor returned no split record for {symbol}")
+        for stamp, ratio in cast("pd.Series[float]", record).items():
             if isinstance(stamp, pd.Timestamp) and isinstance(ratio, float) and ratio > 0:
                 splits[stamp.date()] = float(ratio)
         return cls(closes, splits, volumes)

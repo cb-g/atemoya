@@ -346,6 +346,7 @@ class XbrlTags:
     redeemable_preferred_evidence: List[str] = field(default_factory=lambda: [])
     capex_software: List[str] = field(default_factory=lambda: [])
     capex_includes_software: List[str] = field(default_factory=lambda: [])
+    net_income_minority_share: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'XbrlTags':
@@ -368,6 +369,7 @@ class XbrlTags:
                 redeemable_preferred_evidence=_atd_read_list(_atd_read_string)(x['redeemable_preferred_evidence']) if 'redeemable_preferred_evidence' in x else [],
                 capex_software=_atd_read_list(_atd_read_string)(x['capex_software']) if 'capex_software' in x else [],
                 capex_includes_software=_atd_read_list(_atd_read_string)(x['capex_includes_software']) if 'capex_includes_software' in x else [],
+                net_income_minority_share=_atd_read_list(_atd_read_string)(x['net_income_minority_share']) if 'net_income_minority_share' in x else [],
             )
         else:
             _atd_bad_json('XbrlTags', x)
@@ -391,6 +393,7 @@ class XbrlTags:
         res['redeemable_preferred_evidence'] = _atd_write_list(_atd_write_string)(self.redeemable_preferred_evidence)
         res['capex_software'] = _atd_write_list(_atd_write_string)(self.capex_software)
         res['capex_includes_software'] = _atd_write_list(_atd_write_string)(self.capex_includes_software)
+        res['net_income_minority_share'] = _atd_write_list(_atd_write_string)(self.net_income_minority_share)
         return res
 
     @classmethod

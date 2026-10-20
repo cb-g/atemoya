@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from datetime import date
 
+import pytest
+
 import boundary
 import earnings
 import hedge
@@ -135,3 +137,25 @@ def test_the_gate_cannot_exclude_or_re_rank() -> None:
 
 def test_the_gate_from_a_record_carries_the_reason_through() -> None:
     assert hedge.earnings_gate(None, ticker="AAPL").reason == "no record in the run for AAPL"
+
+
+def test_a_failed_vendor_history_costs_the_moves_and_not_the_calendar(monkeypatch: pytest.MonkeyPatch) -> None:
+    """(2026-10-19) A vendor that answers without a split record raised out of the whole
+    universe fetch; the calendar's dates stand on the filings, so only the moves go."""
+    def failing(symbol: str) -> object:
+        raise ValueError(f"the vendor returned no split record for {symbol}")
+    monkeypatch.setattr(earnings, "history_of", failing)
+
+    class Vendor:
+        calendar: dict[str, object] = {}
+        def get_earnings_dates(self, limit: int = 40) -> None:
+            return None
+
+    filed = [date(2025, m, 1) for m in (1, 4, 7, 10)] + [date(2026, m, 1) for m in (1, 4, 7, 10)]
+    def releases(*_: object, **__: object) -> list[tuple[date, str]]:
+        return [(d, "") for d in filed]
+    monkeypatch.setattr(earnings, "filed_releases", releases)
+    calendar, reason = earnings.calendar_of("TEST", Vendor(), date(2026, 10, 19), cik="0000000001")
+    assert reason is None and calendar is not None
+    assert calendar.events == [] and calendar.realised_reason == "price history not fetched: the vendor returned no split record for TEST"
+    assert calendar.past_count == len(filed)

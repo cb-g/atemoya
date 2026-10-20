@@ -801,6 +801,16 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- net income where only ProfitLoss is filed (2026-10-19): `ProfitLoss` is read third in the
+  net-income chain, less the minority holders' share where filed, so a filer that files its
+  net income under that element alone anchors its years again; Mastercard (from 2014),
+  Guidewire (from 2015), Bloom Energy and Broadcom move from vendor statements to their filings
+  and Fidus gains two years. `PaymentsToAcquireSoftware` joins the capitalised-software
+  elements, read beside property and equipment (Mastercard, Tempus, Gogo). Broadcom and
+  Guidewire then refuse on their filings, on the existing working-capital and missing-debt
+  reasons, until the lines they file are read; no new `Failed` string. A vendor that answers
+  without its split record no longer stops a universe fetch: the earnings calendar keeps the
+  filed release dates and its measured moves carry the reason.
 - the equity bridge (2026-10-19): beside net debt, minority interests, minority buyouts since
   the base, associates and joint ventures at book, lease liabilities outside the debt rows,
   contingent consideration and what went to shareholders since the annual base, each applied

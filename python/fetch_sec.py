@@ -600,6 +600,17 @@ def bridge_lines(facts: "Facts", defs: reference.FieldDefinitions, end: date, *,
     return out
 
 
+def parent_net_income(facts: "Facts", tags: reference.XbrlTags, end: date, value: float | None, row: str | None) -> tuple[float | None, str | None]:
+    """Net income as read, less the minority holders' share where it was read from ProfitLoss,
+    the consolidated figure a filer may file in place of the parent's."""
+    if value is None or row != "ProfitLoss":
+        return value, row
+    minority = facts.first(tags.net_income_minority_share, end, instant=False)
+    if minority is None:
+        return value, row
+    return value - minority[0], f"{row} - {minority[1]}"
+
+
 def capex_with_software(facts: "Facts", tags: reference.XbrlTags, end: date, value: float | None, row: str | None) -> tuple[float | None, str | None]:
     """(2026-10-19) Capex with the capitalised internal-use software filed as its own
     investing line added to the tag taken; never to a tag whose definition already carries
@@ -1423,6 +1434,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         dna, dna_row, dna_candidates, dna_recipe, dna_composition = depreciation(facts, selected, tags, defs, end, taxonomy=taxonomy)
         if not ifrs:
             v["capex"], r["capex"] = capex_with_software(facts, tags, end, v["capex"], r["capex"])
+            v["net_income"], r["net_income"] = parent_net_income(facts, tags, end, v["net_income"], r["net_income"])
         if ifrs:
             cash_value, cash_row, cash_composition = cash_ifrs(facts, defs, end)
             debt, debt_row, debt_composition = total_debt_ifrs(facts, defs, end)

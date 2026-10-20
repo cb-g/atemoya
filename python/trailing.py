@@ -284,6 +284,7 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
         v[field], r[field] = fetch_sec.value_of(selected, field, end)
     dna, dna_row, dna_candidates, dna_recipe, dna_composition = fetch_sec.depreciation(t, selected, tags, defs, end, taxonomy=taxonomy)
     v["capex"], r["capex"] = fetch_sec.capex_with_software(t, tags, end, v["capex"], r["capex"])
+    v["net_income"], r["net_income"] = fetch_sec.parent_net_income(t, tags, end, v["net_income"], r["net_income"])
     cash_value, cash_row, cash_composition = fetch_sec.cash(t, defs, end)
     debt, debt_row, debt_composition = fetch_sec.total_debt(t, defs, params, end)
     nwc, nwc_row, nwc_composition = fetch_sec.delta_nwc(t, defs, end, notes)

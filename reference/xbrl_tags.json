@@ -19,7 +19,9 @@
     "(69) preferred_equity is the carrying value INSIDE stockholders' equity, first of the tags filed. A par-value line of zero is not a carrying value: PNC, MET and UNH file PreferredStockValue at exactly 0.0, and PNC and MET carry real preferred, so a zero does not resolve the field and does not satisfy the deduction. PreferredStockLiquidationPreferenceValue is deliberately absent: on filers that file both it equals the carrying value for some and differs every year for others, and one field cannot mean two things.",
     "ESEF (73): the annual reports EU, EEA and UK issuers file in Inline XBRL, read from filings.xbrl.org for a name whose universe entry declares an LEI, arrive in the companyfacts shape with form ESEF; the fetch extends annual_forms with that name on the ESEF path alone, so the SEC path's provider reason, which lists the forms, is unchanged on every record. RevenueFromContractsWithCustomers joins the ifrs-full revenue chain after Revenue: Air Liquide tags it and no Revenue, and every 20-F filer in the universe that tags it (BP, BHP, Rio Tinto, TSMC, Denison, TransAlta, Shell, Franco-Nevada, Grab) tags Revenue beside it, which stays first, so no existing record moves.",
     "operating_cash_flow (76): the cash-flow statement's net cash from operating activities, read for the runway readout and nothing else; the filer's own subtotal, so no recipe. us-gaap: the total first and the continuing-operations subtotal after it, because Air Products files only the latter on its own year; ifrs-full: the one element. The restatement scan harvests these names as it does every other, and they add restatement rows where a later filing restates the figure: measured before they were written, thirty-six rows on twenty names for the total and fourteen on six for the subtotal, recorded and never taken, no value moving on any of them.",
-    "(2026-10-19, from a downstream project that runs a clone and checked nineteen of its inputs against the filings) capex: capitalised internal-use software is capital spending filed as its own investing line, and its amortisation already sits in the D&A the record reads, so the software line (PaymentsToDevelopSoftware, else PaymentsForSoftware) is added to the capex tag taken, recorded as the sum of the two; never to PaymentsToAcquireProductiveAssets, whose definition already carries software, and never when the software line is itself the tag taken. Measured on the ten us-gaap filers in the universe that file both lines in their latest year: eight then match the vendor's capital expenditure within the threshold where none did (Intercontinental Exchange 0.373 + 0.418bn at FY2025, Intuit 0.175 + 0.046bn at FY2026, Okta 0.009 + 0.012bn at FY2026, The Trade Desk, CrowdStrike, Datadog, Robinhood, Zeta), and none that matched moves; Coinbase, IonQ and QXO move in earlier years only."
+    "(2026-10-19, from a downstream project that runs a clone and checked nineteen of its inputs against the filings) capex: capitalised internal-use software is capital spending filed as its own investing line, and its amortisation already sits in the D&A the record reads, so the software line (PaymentsToDevelopSoftware, else PaymentsForSoftware) is added to the capex tag taken, recorded as the sum of the two; never to PaymentsToAcquireProductiveAssets, whose definition already carries software, and never when the software line is itself the tag taken. Measured on the ten us-gaap filers in the universe that file both lines in their latest year: eight then match the vendor's capital expenditure within the threshold where none did (Intercontinental Exchange 0.373 + 0.418bn at FY2025, Intuit 0.175 + 0.046bn at FY2026, Okta 0.009 + 0.012bn at FY2026, The Trade Desk, CrowdStrike, Datadog, Robinhood, Zeta), and none that matched moves; Coinbase, IonQ and QXO move in earlier years only.",
+    "(2026-10-19) net income: ProfitLoss is read third, after the two parent elements, less the minority holders' share (NetIncomeLossAttributableToNoncontrollingInterest) where that is filed, since ProfitLoss is the consolidated figure. Some filers file net income under ProfitLoss alone: Mastercard from 2014, Guidewire from 2015, Bloom Energy and Fidus for 2024 and 2025, Broadcom for fiscal 2025. Without it no such year anchored a period, so Mastercard, Guidewire and Bloom Energy fell to vendor statements and Broadcom was valued on its fiscal 2024 base. A filer that files NetIncomeLoss is read as before.",
+    "(2026-10-19) capex: PaymentsToAcquireSoftware (software bought from vendors for internal use that qualifies for capitalisation) joins the capitalised-software list and the end of the capex chain, after the two software elements already read: Mastercard files its 0.726bn of capitalised software under it beside 0.489bn of property and equipment for 2025, the sum matching the vendor's capex line within the threshold, as do Tempus and Gogo; no filer that files the other two moves."
   ],
   "cross_check_threshold": 0.02,
   "max_filing_age_days": 400,
@@ -85,7 +87,8 @@
         "PaymentsToAcquireOtherProductiveAssets",
         "PaymentsToAcquireOtherPropertyPlantAndEquipment",
         "PaymentsForCapitalImprovements",
-        "PaymentsForSoftware"
+        "PaymentsForSoftware",
+        "PaymentsToAcquireSoftware"
       ]
     },
     "goodwill": {
@@ -105,7 +108,8 @@
       "kind": "duration",
       "tags": [
         "NetIncomeLoss",
-        "NetIncomeLossAvailableToCommonStockholdersBasic"
+        "NetIncomeLossAvailableToCommonStockholdersBasic",
+        "ProfitLoss"
       ]
     },
     "dividends_paid": {
@@ -433,9 +437,13 @@
   ],
   "capex_software": [
     "PaymentsToDevelopSoftware",
-    "PaymentsForSoftware"
+    "PaymentsForSoftware",
+    "PaymentsToAcquireSoftware"
   ],
   "capex_includes_software": [
     "PaymentsToAcquireProductiveAssets"
+  ],
+  "net_income_minority_share": [
+    "NetIncomeLossAttributableToNoncontrollingInterest"
   ]
 }

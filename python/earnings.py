@@ -276,13 +276,20 @@ def calendar_of(symbol: str, ticker: Any, as_of: date, *, cik: str | None = None
         next_as_of = max(dates).isoformat()
     cadence = cadence_days(dates)
 
-    closes = history_of(symbol)
-    market = history_of(BENCHMARK)
+    # the dates stand on the filings; a vendor history that fails costs only the moves around them
+    closes: Mapping[date, float] = {}
+    market: Mapping[date, float] = {}
+    history_failed: str | None = None
+    try:
+        closes = history_of(symbol)
+        market = history_of(BENCHMARK)
+    except Exception as e:  # noqa: BLE001
+        history_failed = f"price history not fetched: {e}"
     events = [e for d, stamp in releases[-EVENTS:]
               if (e := event_of(closes, market, d, session_of(stamp))) is not None]
     excesses = [abs(e.excess) for e in events]
     realised = statistics.median(excesses) if excesses else None
-    realised_reason = None if excesses else (
+    realised_reason = None if excesses else (history_failed or
         f"no release in the last {EVENTS} has a close on both sides of it in the vendor's history")
     return boundary.EarningsCalendar(
         past_source=past_source, past_source_why=past_why, past_count=len(dates),

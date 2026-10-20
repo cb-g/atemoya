@@ -1410,3 +1410,30 @@ def test_bridge_lines_are_read_as_filed_with_their_fallbacks() -> None:
     # and onto the filed period
     p = period({"MinorityInterest": usd(fact("2025-12-31", 300.0)), "EquityMethodInvestments": usd(fact("2025-12-31", 500.0))})
     assert (p.minority_interest, p.minority_interest_row, p.equity_method_investments) == (300.0, "MinorityInterest", 500.0)
+
+
+def test_net_income_filed_as_profit_loss_alone_anchors_the_year_less_the_minority_share() -> None:
+    """(2026-10-19) Some filers file net income under ProfitLoss and nothing else; the year then
+    anchors a period and the net income is the parent's, ProfitLoss less the minority holders'
+    share where filed. A filer that files NetIncomeLoss is read as before. Figures invented."""
+    gaap = {"ProfitLoss": usd(fact("2025-12-31", 1000.0, start="2025-01-01")),
+            "NetIncomeLossAttributableToNoncontrollingInterest": usd(fact("2025-12-31", 40.0, start="2025-01-01")),
+            "StockholdersEquity": usd(fact("2025-12-31", 5000.0))}
+    periods = fetch_sec.periods_from_facts(gaap, TAGS, DEFS, [])
+    assert [p.period_end for p in periods] == ["2025-12-31"]
+    assert (periods[0].net_income, periods[0].net_income_row) == (960.0, "ProfitLoss - NetIncomeLossAttributableToNoncontrollingInterest")
+    alone = {k: v for k, v in gaap.items() if k != "NetIncomeLossAttributableToNoncontrollingInterest"}
+    assert fetch_sec.periods_from_facts(alone, TAGS, DEFS, [])[0].net_income == 1000.0
+    both = {**gaap, "NetIncomeLoss": usd(fact("2025-12-31", 955.0, start="2025-01-01"))}
+    p = fetch_sec.periods_from_facts(both, TAGS, DEFS, [])[0]
+    assert (p.net_income, p.net_income_row) == (955.0, "NetIncomeLoss")
+
+
+def test_software_bought_for_internal_use_is_capex_beside_property_and_equipment() -> None:
+    """(2026-10-19) PaymentsToAcquireSoftware is capitalised software as much as the two
+    software elements read before it; figures invented."""
+    both = {"PaymentsToAcquireSoftware": usd(fact("2025-12-31", 70.0, start="2025-01-01")),
+            "PaymentsToAcquirePropertyPlantAndEquipment": usd(fact("2025-12-31", 50.0, start="2025-01-01"))}
+    p = period(both)
+    assert (p.capex, p.capex_row) == (120.0, "PaymentsToAcquirePropertyPlantAndEquipment + PaymentsToAcquireSoftware")
+    assert period({"PaymentsToAcquireSoftware": usd(fact("2025-12-31", 70.0, start="2025-01-01"))}).capex == 70.0
