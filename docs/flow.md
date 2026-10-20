@@ -801,6 +801,16 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- two lines the filed path did not read (2026-10-19): `IncreaseDecreaseInOtherCurrentAssetsAndLiabilitiesNet`
+  is read as a net working-capital component unless it equals the sum of the period's other
+  components, when it is the filer's subtotal of them and is left out (Broadcom prints it as
+  one line among the others, Valero's earlier filings as their subtotal); and where no
+  noncurrent debt tag, long-term debt total, `LongTermNotesAndLoans` or collateral split is
+  filed, the notes (`LongTermNotesPayable`, else `SeniorLongTermNotes`) and the loans
+  (`LongTermLoansPayable`) are summed as that whole's two parts (Guidewire's one debt line;
+  Equinix's FY2025 senior notes beside its term loans, where the record carried the current
+  portion alone). Broadcom and Guidewire value on their filings again; no new `Failed`
+  string.
 - net income where only ProfitLoss is filed (2026-10-19): `ProfitLoss` is read third in the
   net-income chain, less the minority holders' share where filed, so a filer that files its
   net income under that element alone anchors its years again; Mastercard (from 2014),

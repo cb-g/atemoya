@@ -385,6 +385,8 @@ type debt_xbrl = {
   ~interest_evidence : string list;         (* interest tags whose presence says the filer owes something; with no debt tag and none of these, debt is 0 (25) *)
   ~debt_evidence : string list;             (* (72) balance-sheet tags whose presence says the filer owes something (interest payable); read after interest_evidence, under the same sign and size test *)
   ~notes : string list;
+  ~noncurrent_notes : string list;      (* (2026-10-19) the notes excluding the current portion, all notes first, then senior only *)
+  ~noncurrent_loans : string list;      (* the loans excluding the current portion; summed with the notes where neither the whole nor the collateral split is filed *)
 }
 
 type debt_vendor = {
@@ -435,6 +437,7 @@ type nwc_xbrl = {
   ~contract_cost_amortization : string list;  (* amortisation of capitalised contract costs, first present: netted against the components only where a capitalisation tag is among them *)
   ~contract_cost_capitalisation : string list;  (* the component tags that carry the capitalised contract costs' change *)
   ~notes : string list;
+  ~net_unless_subtotal : string list;   (* a net line that is a component unless it equals the sum of the other components, when it is the filer's subtotal of them and is left out *)
 }
 
 type nwc_vendor = {

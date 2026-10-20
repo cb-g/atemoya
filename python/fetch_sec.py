@@ -1026,6 +1026,11 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, params: reference
         noncurrent = facts.first(d.noncurrent_without_total, end, instant=True)
         if noncurrent is None:
             by_collateral = [(v, t) for t in d.noncurrent_by_collateral if (v := facts.at(t, end, instant=True)) is not None]
+            if not by_collateral:
+                # (2026-10-19) else the notes and the loans, the two parts of LongTermNotesAndLoans
+                # (Equinix's FY2025 senior notes beside its term loans; Guidewire's notes alone)
+                by_collateral = [hit for hit in (facts.first(d.noncurrent_notes, end, instant=True),
+                                                 facts.first(d.noncurrent_loans, end, instant=True)) if hit is not None]
             if by_collateral:
                 noncurrent = (sum(v for v, _ in by_collateral), " + ".join(t for _, t in by_collateral))
 
@@ -1081,6 +1086,9 @@ def total_debt(facts: Facts, defs: reference.FieldDefinitions, params: reference
     return sum(p.value for p in parts), _label(parts), _composition(defs.total_debt.name, parts)
 
 
+SUBTOTAL_TOLERANCE = 0.0005   # a subtotal equals its parts to the filer's rounding
+
+
 def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: list[str]) -> Derived:
     """The filed change in operating working capital: the aggregate tag, else the sum of
     the components (assets and net balances added, liabilities subtracted), attempted only
@@ -1091,7 +1099,8 @@ def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: 
         parts = [boundary.Component(name="aggregate", value=aggregate[0], row=aggregate[1])]
         return aggregate[0], aggregate[1], _composition(defs.delta_nwc.name, parts)
     present = facts.duration_tags_with_prefix("IncreaseDecreaseIn", end)
-    classified = set(d.aggregate) | set(d.asset_components) | set(d.liability_components) | set(d.net_components) | set(d.excluded)
+    classified = (set(d.aggregate) | set(d.asset_components) | set(d.liability_components) | set(d.net_components)
+                  | set(d.net_unless_subtotal) | set(d.excluded))
     unclassified = [t for t in present if t not in classified]
     if unclassified:
         notes.append(f"delta_nwc {end}: left null, unclassified working-capital tags: {', '.join(unclassified)}")
@@ -1109,6 +1118,16 @@ def delta_nwc(facts: Facts, defs: reference.FieldDefinitions, end: date, notes: 
         value = facts.at(tag, end, instant=False)
         if value is not None:
             parts.append(boundary.Component(name="net_components", value=value, row=tag))
+    # (2026-10-19) a net line that equals the others' sum is the filer's subtotal of them
+    others = sum(p.value for p in parts)
+    for tag in d.net_unless_subtotal:
+        value = facts.at(tag, end, instant=False)
+        if value is None:
+            continue
+        if parts and abs(value - others) <= SUBTOTAL_TOLERANCE * max(abs(value), abs(others)):
+            notes.append(f"delta_nwc {end}: {tag} equals the sum of the other components, the filer's subtotal of them: left out")
+            continue
+        parts.append(boundary.Component(name="net_components", value=value, row=tag))
     if not parts:
         return None, None, None
     parts.extend(contract_cost_amortization(facts, d, end, parts))

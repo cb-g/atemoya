@@ -1437,3 +1437,37 @@ def test_software_bought_for_internal_use_is_capex_beside_property_and_equipment
     p = period(both)
     assert (p.capex, p.capex_row) == (120.0, "PaymentsToAcquirePropertyPlantAndEquipment + PaymentsToAcquireSoftware")
     assert period({"PaymentsToAcquireSoftware": usd(fact("2025-12-31", 70.0, start="2025-01-01"))}).capex == 70.0
+
+
+def test_a_net_working_capital_line_is_a_component_unless_it_is_the_others_subtotal() -> None:
+    """(2026-10-19) IncreaseDecreaseInOtherCurrentAssetsAndLiabilitiesNet is one line among
+    the others on one filer's statement and their subtotal on another's: where it equals the
+    others' sum it is left out, otherwise it is added as a net balance. Figures invented."""
+    def flows(**lines: float) -> dict[str, object]:
+        return {tag: usd(fact("2025-12-31", v, start="2025-01-01")) for tag, v in lines.items()}
+    component = period(flows(IncreaseDecreaseInAccountsReceivable=40.0, IncreaseDecreaseInAccountsPayable=10.0,
+                             IncreaseDecreaseInOtherCurrentAssetsAndLiabilitiesNet=7.0))
+    assert component.delta_nwc == 40.0 - 10.0 + 7.0
+    subtotal = period(flows(IncreaseDecreaseInAccountsReceivable=40.0, IncreaseDecreaseInAccountsPayable=10.0,
+                            IncreaseDecreaseInOtherCurrentAssetsAndLiabilitiesNet=30.0))
+    assert subtotal.delta_nwc == 40.0 - 10.0
+    alone = period(flows(IncreaseDecreaseInOtherCurrentAssetsAndLiabilitiesNet=12.0))
+    assert alone.delta_nwc == 12.0
+
+
+def test_senior_notes_are_debt_only_where_nothing_wider_is_filed() -> None:
+    """(2026-10-19) SeniorLongTermNotes under LongTermNotesAndLoans's guard: the debt where
+    the filer tags neither a noncurrent debt element nor a long-term debt total, and not
+    beside either. Figures invented."""
+    assert period({"SeniorLongTermNotes": usd(fact("2025-12-31", 680.0))}).total_debt == 680.0
+    beside = period({"SeniorLongTermNotes": usd(fact("2025-12-31", 680.0)), "LongTermDebtNoncurrent": usd(fact("2025-12-31", 900.0))})
+    assert beside.total_debt == 900.0
+    # the notes and the loans as the two parts, with the current portion beside them
+    parts = period({"SeniorLongTermNotes": usd(fact("2025-12-31", 1690.0)), "LongTermLoansPayable": usd(fact("2025-12-31", 70.0)),
+                    "LongTermDebtCurrent": usd(fact("2025-12-31", 130.0))})
+    assert parts.total_debt == 1690.0 + 70.0 + 130.0
+    assert components(parts.total_debt_composition) == [("noncurrent", 1690.0, "SeniorLongTermNotes"), ("noncurrent", 70.0, "LongTermLoansPayable"),
+                                                         ("current_long_term", 130.0, "LongTermDebtCurrent")]
+    # all notes before senior notes alone, and the whole before its parts
+    assert period({"LongTermNotesPayable": usd(fact("2025-12-31", 1800.0)), "SeniorLongTermNotes": usd(fact("2025-12-31", 1690.0))}).total_debt == 1800.0
+    assert period({"LongTermNotesAndLoans": usd(fact("2025-12-31", 1760.0)), "SeniorLongTermNotes": usd(fact("2025-12-31", 1690.0))}).total_debt == 1760.0

@@ -1345,6 +1345,7 @@ class NwcXbrl:
     contract_cost_amortization: List[str] = field(default_factory=lambda: [])
     contract_cost_capitalisation: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
+    net_unless_subtotal: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'NwcXbrl':
@@ -1358,6 +1359,7 @@ class NwcXbrl:
                 contract_cost_amortization=_atd_read_list(_atd_read_string)(x['contract_cost_amortization']) if 'contract_cost_amortization' in x else [],
                 contract_cost_capitalisation=_atd_read_list(_atd_read_string)(x['contract_cost_capitalisation']) if 'contract_cost_capitalisation' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                net_unless_subtotal=_atd_read_list(_atd_read_string)(x['net_unless_subtotal']) if 'net_unless_subtotal' in x else [],
             )
         else:
             _atd_bad_json('NwcXbrl', x)
@@ -1372,6 +1374,7 @@ class NwcXbrl:
         res['contract_cost_amortization'] = _atd_write_list(_atd_write_string)(self.contract_cost_amortization)
         res['contract_cost_capitalisation'] = _atd_write_list(_atd_write_string)(self.contract_cost_capitalisation)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        res['net_unless_subtotal'] = _atd_write_list(_atd_write_string)(self.net_unless_subtotal)
         return res
 
     @classmethod
@@ -2505,6 +2508,8 @@ class DebtXbrl:
     interest_evidence: List[str] = field(default_factory=lambda: [])
     debt_evidence: List[str] = field(default_factory=lambda: [])
     notes: List[str] = field(default_factory=lambda: [])
+    noncurrent_notes: List[str] = field(default_factory=lambda: [])
+    noncurrent_loans: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'DebtXbrl':
@@ -2523,6 +2528,8 @@ class DebtXbrl:
                 interest_evidence=_atd_read_list(_atd_read_string)(x['interest_evidence']) if 'interest_evidence' in x else [],
                 debt_evidence=_atd_read_list(_atd_read_string)(x['debt_evidence']) if 'debt_evidence' in x else [],
                 notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+                noncurrent_notes=_atd_read_list(_atd_read_string)(x['noncurrent_notes']) if 'noncurrent_notes' in x else [],
+                noncurrent_loans=_atd_read_list(_atd_read_string)(x['noncurrent_loans']) if 'noncurrent_loans' in x else [],
             )
         else:
             _atd_bad_json('DebtXbrl', x)
@@ -2542,6 +2549,8 @@ class DebtXbrl:
         res['interest_evidence'] = _atd_write_list(_atd_write_string)(self.interest_evidence)
         res['debt_evidence'] = _atd_write_list(_atd_write_string)(self.debt_evidence)
         res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        res['noncurrent_notes'] = _atd_write_list(_atd_write_string)(self.noncurrent_notes)
+        res['noncurrent_loans'] = _atd_write_list(_atd_write_string)(self.noncurrent_loans)
         return res
 
     @classmethod
