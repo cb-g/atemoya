@@ -1,6 +1,6 @@
 let allowed_fields =
   [ "ticker"; "entity_class"; "why"; "scope_limits"; "scope_limit_codes"; "cik"; "map_cik"; "lei"; "adr_ratio"; "build_out_return"; "build_out_lag_years"; "share_count_includes_minority";
-    "growth_history_from"; "credit_rating" ]
+    "growth_history_from"; "credit_rating"; "pro_forma_revenue" ]
 
 (* (60) A build-out declaration is exactly a value, the evidence for it and a date: a number
    with no why is not a declaration, and one of the two without the other says nothing. *)
@@ -118,7 +118,34 @@ let check_entry vocabulary index (entry : Yojson.Safe.t) =
                   | _ -> false)
               | Some _ -> false
             in
+            let is_date = function `String d -> Result.is_ok (Date.days_between ~from:d ~until:d) | _ -> false in
+            let pro_forma_ok =
+              match List.assoc_opt "pro_forma_revenue" fields with
+              | None -> true
+              | Some (`Assoc kv) -> (
+                  List.sort compare (List.map fst kv) = [ "as_of"; "revenues"; "why" ]
+                  && is_date (List.assoc "as_of" kv)
+                  && (match List.assoc "why" kv with `String w -> String.trim w <> "" | _ -> false)
+                  &&
+                  match List.assoc "revenues" kv with
+                  | `List (_ :: _ as years) ->
+                      List.for_all
+                        (function
+                          | `Assoc y ->
+                              List.sort compare (List.map fst y) = [ "period_end"; "value" ]
+                              && is_date (List.assoc "period_end" y)
+                              && (match List.assoc "value" y with `Float v -> v > 0. | `Int v -> v > 0 | _ -> false)
+                          | _ -> false)
+                        years
+                  | _ -> false)
+              | Some _ -> false
+            in
             if not ratio_ok then Error (Printf.sprintf "universe entry %s: adr_ratio must be a positive number (ordinary shares per receipt)" name)
+            else if not pro_forma_ok then
+              Error
+                (Printf.sprintf
+                   "universe entry %s: pro_forma_revenue must be exactly revenues (each a period_end and a positive value), a why citing the filing and an as_of date"
+                   name)
             else if not rating_ok then
               Error
                 (Printf.sprintf

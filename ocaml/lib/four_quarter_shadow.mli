@@ -17,6 +17,7 @@ val value :
   ?declared:string ->
   ?share_count_includes_minority:string ->
   ?growth_history_from:string ->
+  ?pro_forma_revenue:(string * float) list ->
   Dcf.assumptions ->
   country:string ->
   Boundary_t.financials ->

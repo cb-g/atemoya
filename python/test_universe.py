@@ -354,3 +354,22 @@ def test_a_credit_rating_is_a_rating_a_why_and_a_date() -> None:
             universe.load_text(json.dumps({"tickers": [{**entry, "credit_rating": bad}]}))
     with pytest.raises(universe.UniverseError, match="not an ISO date"):
         universe.load_text(json.dumps({"tickers": [{**entry, "credit_rating": {"rating": "A1/A+", "why": "w", "as_of": "March 2026"}}]}))
+
+
+def test_pro_forma_revenue_is_a_list_of_years_a_why_and_a_date() -> None:
+    """(2026-10-23) The filer's pro forma combined revenue for the years before a purchase:
+    exactly a non-empty list of years, each a date and a positive value, a why and a date."""
+    entry = {"ticker": "TEST", "entity_class": "OperatingCompany", "why": "an invented acquirer",
+             "pro_forma_revenue": {"revenues": [{"period_end": "2030-12-31", "value": 3000.0}], "why": "the 10-K's pro forma note", "as_of": "2031-02-14"}}
+    loaded = universe.load_text(json.dumps({"tickers": [entry]}))
+    pf = loaded.tickers[0].pro_forma_revenue
+    assert pf is not None and pf.revenues[0].value == 3000.0
+    bads: list[dict[str, object]] = [
+        {"revenues": [], "why": "w", "as_of": "2031-02-14"},
+        {"revenues": [{"period_end": "2030-12-31", "value": 0}], "why": "w", "as_of": "2031-02-14"},
+        {"revenues": [{"period_end": "2030-12-31"}], "why": "w", "as_of": "2031-02-14"},
+        {"revenues": [{"period_end": "2030-12-31", "value": 3000.0}], "why": " ", "as_of": "2031-02-14"},
+        {"revenues": [{"period_end": "2030-12-31", "value": 3000.0}], "why": "w", "as_of": "February"}]
+    for bad in bads:
+        with pytest.raises(universe.UniverseError, match="pro_forma_revenue must be exactly"):
+            universe.load_text(json.dumps({"tickers": [{**entry, "pro_forma_revenue": bad}]}))

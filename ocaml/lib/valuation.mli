@@ -66,6 +66,9 @@ type declaration = {
           universe entry declares a large acquisition before it *)
   credit_rating : Reference_t.declared_rating option;
       (** an agency's rating as the filing states it, taken before the synthetic rating *)
+  pro_forma_revenue : (string * float) list;
+      (** the filer's pro forma combined revenue by period end, in the statements' currency, for
+          the years before a large purchase; the revenue history reads from the earliest *)
 }
 
 val receipt_tolerance : float

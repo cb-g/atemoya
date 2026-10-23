@@ -163,6 +163,10 @@ let declarations (universe : Reference_t.universe option) cli_class =
                 share_count_includes_minority = e.share_count_includes_minority;
                 growth_history_from = Option.map (fun (h : Reference_t.declared_history) -> h.period_end) e.growth_history_from;
                 credit_rating = e.credit_rating;
+                pro_forma_revenue =
+                  (match e.pro_forma_revenue with
+                  | None -> []
+                  | Some d -> List.map (fun (y : Reference_t.pro_forma_year) -> (y.period_end, y.value)) d.revenues);
               } ))
           u.tickers
   in
@@ -179,6 +183,7 @@ let declarations (universe : Reference_t.universe option) cli_class =
           share_count_includes_minority = None;
           growth_history_from = None;
           credit_rating = None;
+          pro_forma_revenue = [];
         })
       cli_class
   in

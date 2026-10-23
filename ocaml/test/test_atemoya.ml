@@ -370,9 +370,9 @@ let params : Params.t =
   }
 
 let declaration ?(scope_limits = []) ?(scope_limit_codes = []) ?adr_ratio ?build_out_return ?build_out_lag_years
-    ?share_count_includes_minority ?growth_history_from ?credit_rating entity_class =
+    ?share_count_includes_minority ?growth_history_from ?credit_rating ?(pro_forma_revenue = []) entity_class =
   { Valuation.entity_class; scope_limits; scope_limit_codes; adr_ratio; build_out_return; build_out_lag_years;
-    share_count_includes_minority; growth_history_from; credit_rating }
+    share_count_includes_minority; growth_history_from; credit_rating; pro_forma_revenue }
 
 (* Most valuation tests declare an operating company; the class tests declare otherwise. *)
 let run ?(declared = Some (declaration `OperatingCompany)) fin =
@@ -3421,7 +3421,24 @@ let test_growth_history_from () =
   Alcotest.(check bool) "a date and a why load" true (Result.is_ok (load {|"growth_history_from": {"period_end": "2022-12-31", "why": "acquired then, 10-K cited"}|}));
   Alcotest.(check bool) "a bare date does not" false (Result.is_ok (load {|"growth_history_from": "2022-12-31"|}));
   Alcotest.(check bool) "nor one without a why" false (Result.is_ok (load {|"growth_history_from": {"period_end": "2022-12-31", "why": " "}|}));
-  Alcotest.(check bool) "nor a date that is not one" false (Result.is_ok (load {|"growth_history_from": {"period_end": "2022-13-45", "why": "w"}|}))
+  Alcotest.(check bool) "nor a date that is not one" false (Result.is_ok (load {|"growth_history_from": {"period_end": "2022-13-45", "why": "w"}|}));
+  (* the filer's pro forma revenue for the years before the purchase: the combined business,
+     read in place of the reported figures, the history starting at the earliest *)
+  let pro_forma = [ ("2021-09-30", 9500.); ("2022-09-30", 10000.) ] in
+  let combined = inputs (run ~declared:(Some (declaration ~pro_forma_revenue:pro_forma `OperatingCompany)) (financials jumped)) in
+  Alcotest.(check (list string)) "the history from the earliest declared year"
+    [ "2025-09-30"; "2024-09-30"; "2023-09-30"; "2022-09-30"; "2021-09-30" ] combined.revenue_periods;
+  let expected = (12000. /. 9500.) ** (1. /. ((365. *. 4. +. 1.) /. 365.25)) -. 1. in
+  Alcotest.(check (float 1e-3)) "and the declared figures in place of the reported ones" expected (Option.get combined.g_historical);
+  let earlier = inputs (run ~declared:(Some (declaration ~pro_forma_revenue:[ ("2020-09-30", 9000.) ] `OperatingCompany)) (financials jumped)) in
+  Alcotest.(check (list string)) "a declared year the statements do not carry still stands"
+    [ "2025-09-30"; "2024-09-30"; "2023-09-30"; "2022-09-30"; "2021-09-30"; "2020-09-30" ] earlier.revenue_periods;
+  Alcotest.(check bool) "a pro forma year loads" true
+    (Result.is_ok (load {|"pro_forma_revenue": {"revenues": [{"period_end": "2030-12-31", "value": 3000}], "why": "the 10-K's pro forma note", "as_of": "2031-02-14"}|}));
+  Alcotest.(check bool) "an empty list does not" false
+    (Result.is_ok (load {|"pro_forma_revenue": {"revenues": [], "why": "w", "as_of": "2031-02-14"}|}));
+  Alcotest.(check bool) "nor a value that is not positive" false
+    (Result.is_ok (load {|"pro_forma_revenue": {"revenues": [{"period_end": "2030-12-31", "value": 0}], "why": "w", "as_of": "2031-02-14"}|}))
 
 (* The sweep's pairing tests and the debt rule, every figure invented: associates are not
    added where the filing shows their earnings inside operating income; IFRS leases are not

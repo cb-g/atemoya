@@ -686,14 +686,30 @@ the shadow's margin of safety beside the headline's on the panel's rows. Its lim
 the block: what the headline is and how it leans, that the higher of two estimates is a rule
 and not a forecast, and that revenue history still reads a rebound or an acquisition as growth.
 
-A universe entry may declare `growth_history_from`, the first fiscal period end the revenue
-history reads, with the filing cited, where a large acquisition before it would read revenue
-bought as revenue grown (2026-10-23). Crocs acquired HEYDUDE on February 17, 2022 for a
-preliminary 2.3 billion dollars, and its revenue went from 2.313 billion in 2021 to 3.555
-billion in 2022; read across the purchase the history grew 15.0 per cent a year, and from 2022,
-the first year that holds both brands, 4.4. The history then needs three periods from the
-declared one, as always, and the record's `revenue_periods` lists those it read. No
-acquisition is detected: an undeclared one still reads as growth, a stated limit.
+A universe entry may declare `pro_forma_revenue`: the filer's own pro forma revenue of the
+combined business for the years before a large purchase, each year a period end and a value in
+the statements' currency, with a why citing the filing (2026-10-23). ASC 805 and IFRS 3 have the
+acquirer disclose the combined entity's revenue as though the acquisition had been made at the
+start of the period; where the filer does, the revenue history reads those figures in place of
+the filed ones and starts at the earliest of them, so it measures the combined business's growth
+rather than the purchase. Amgen states 29,964 and 30,969 million dollars for 2022 and 2023, as if
+Horizon, acquired on October 6, 2023, had been acquired on January 1, 2022; Crocs 2,894 and 3,645
+million for 2021 and 2022, as if HEYDUDE, acquired on February 17, 2022, had been combined on
+January 1, 2021; Sika 11,910.9 million francs for 2023, as if that year's acquisitions, MBCC
+Group the largest, had been consolidated from January 1, so its history begins in 2023. Read
+this way Amgen's filed revenue grows 7.0 per cent a year to 2025 rather than 9.1 from 2021, and
+Crocs's 8.7 rather than 4.4 from 2022 or 15.0 across the purchase. A declared year stands whether
+or not the statements carry that period; the history then needs three periods, as always, and
+the record's `revenue_periods` lists those it read. The figures are unaudited and leave out the
+synergies and the costs of combining, which the scope limit says. Thales's reports state no pro
+forma revenue for Imperva or Cobham Aerospace Communications, and its record keeps the reported
+history under a stated limit.
+
+`growth_history_from`, the first fiscal period end the history reads, with the filing cited,
+remains for a purchase whose filer states no pro forma figure and whose first full year leaves
+enough history; no entry declares it now, Crocs's declaration of 2022 replaced by its pro forma
+years, since 2022 held HEYDUDE only from February 17. No acquisition is detected: an undeclared
+one still reads as growth, a stated limit.
 
 **The headline stays the fundamental estimate (decided 2026-10-18).** The growth study on the
 rule panel (`docs/studies.md`, growth on the rule panel) found that no starting estimate

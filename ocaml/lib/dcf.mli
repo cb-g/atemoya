@@ -107,6 +107,7 @@ val value :
   ?declared:string ->
   ?share_count_includes_minority:string ->
   ?growth_history_from:string ->
+  ?pro_forma_revenue:(string * float) list ->
   assumptions ->
   country:string ->
   Boundary_t.financials ->
@@ -118,5 +119,7 @@ val value :
     less net debt and the [Equity_bridge] on the period, the cash flow being consolidated
     operating income; [share_count_includes_minority] is the universe entry's declaration, and
     [growth_history_from] the first period end the revenue history reads where the entry
-    declares a large acquisition before it.
+    declares a large acquisition before it; [pro_forma_revenue] the filer's pro forma combined
+    revenue by period end, in the record's currency, which stands for those years' revenue in
+    the history, read from the earliest of them.
     See the module contract. *)

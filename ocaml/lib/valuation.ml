@@ -25,6 +25,7 @@ type declaration = {
   share_count_includes_minority : string option;
   growth_history_from : string option;  (* the first period end the revenue history reads, declared *)
   credit_rating : Reference_t.declared_rating option;  (* an agency's rating, taken before the synthetic one *)
+  pro_forma_revenue : (string * float) list;  (* the filer's pro forma revenue by period end, statements' currency *)
 }
 
 let receipt_tolerance = 0.03
@@ -229,6 +230,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   let declared = Option.map (fun d -> d.entity_class) declaration in
   let share_count_includes_minority = Option.bind declaration (fun d -> d.share_count_includes_minority) in
   let growth_history_from = Option.bind declaration (fun d -> d.growth_history_from) in
+  let pro_forma_revenue = match declaration with Some d -> d.pro_forma_revenue | None -> [] in
   let receipt = receipt_check ~declared:(Option.bind declaration (fun d -> d.adr_ratio)) original in
   let hold_vintage = Option.is_some original.point_in_time in
   (* Age of the newest filing the statements come from, when they are filed ones. *)
@@ -827,7 +829,12 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         | Error reason -> failed reason
         | Ok fin -> (
             let class_name = match declared with Some c -> Admissibility.class_name c | None -> "" in
-            match Dcf.value ~declared:class_name ?share_count_includes_minority ?growth_history_from assumptions ~country fin with
+            (* the declared pro forma revenue is in the statements' currency, scaled as the rest *)
+            let pro_forma_revenue =
+              let rate = match conversion with Some (c : conversion) -> c.fx_rate | None -> 1. in
+              List.map (fun (d, v) -> (d, v *. rate)) pro_forma_revenue
+            in
+            match Dcf.value ~declared:class_name ?share_count_includes_minority ?growth_history_from ~pro_forma_revenue assumptions ~country fin with
             | Error reason -> failed_with_build_out reason
             | Ok (inputs, fair_value) ->
                 (* The growth shadow rides beside whatever the headline concludes, a gate's
@@ -836,7 +843,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                    the base sentence says what the annual base costs and is on Ok records only. *)
                 let record = finish ~price:inputs.price (`Dcf inputs) fair_value in
                 let shadow =
-                  Four_quarter_shadow.value ~declared:class_name ?share_count_includes_minority ?growth_history_from assumptions ~country fin
+                  Four_quarter_shadow.value ~declared:class_name ?share_count_includes_minority ?growth_history_from ~pro_forma_revenue assumptions ~country fin
                     ~fair_value
                 in
                 (* on the converted period, with the headline's free cash flow for the maintenance figure *)

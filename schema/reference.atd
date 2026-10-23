@@ -236,7 +236,19 @@ type universe_entry = {
   ?build_out_lag_years : declared_build_out option;   (* (60) whole years from spend to first earning *)
   ?share_count_includes_minority : string option;   (* the share count the price is quoted on already holds the units the minority interest stands for, so the equity bridge does not deduct it again; the why, citing the filing *)
   ?growth_history_from : declared_history option;
-  ?credit_rating : declared_rating option;   (* an agency's rating where one exists, taken before the synthetic rating the interest coverage earns; the why quotes the filing *)   (* the first fiscal period end the growth estimate's revenue history reads: a large acquisition before it would read bought revenue as growth; the why, citing the filing *)
+  ?credit_rating : declared_rating option;
+  ?pro_forma_revenue : declared_pro_forma option;   (* the filer's pro forma combined revenue for the years before a large purchase, as if it had been owned then: the growth estimate's revenue history reads from the earliest, these in place of the reported figures *)   (* an agency's rating where one exists, taken before the synthetic rating the interest coverage earns; the why quotes the filing *)   (* the first fiscal period end the growth estimate's revenue history reads: a large acquisition before it would read bought revenue as growth; the why, citing the filing *)
+}
+
+type pro_forma_year = {
+  period_end : string;                  (* ISO date of the fiscal year end *)
+  value : float;                        (* revenue in the statements' currency *)
+}
+
+type declared_pro_forma = {
+  revenues : pro_forma_year list;
+  why : string;                         (* the filing and the note that state them *)
+  as_of : string;                       (* ISO date of the filing *)
 }
 
 type declared_rating = {

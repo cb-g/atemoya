@@ -1241,15 +1241,25 @@
       "entity_class": "OperatingCompany",
       "why": "a footwear brand owner; the discounted cash flow on stable free cash flow.",
       "scope_limits": [
-        "structural: a large acquisition in 2022; the growth estimate's revenue history reads from the first year that holds it, and that year holds the acquired brand from February 17, so its growth into 2023 still carries about six weeks of revenue bought rather than grown"
+        "structural: a large acquisition in 2022, HEYDUDE on February 17; the growth estimate's revenue history reads the filer's unaudited pro forma revenue of the combined business for 2021 and 2022 in place of the filed figures, so it measures the two brands' growth rather than the purchase"
       ],
       "scope_limit_codes": [
         "acquired_history"
       ],
       "map_cik": "0001334036",
-      "growth_history_from": {
-        "period_end": "2022-12-31",
-        "why": "Crocs acquired 100% of the equity of HEYDUDE on February 17, 2022, for an aggregate preliminary purchase price of $2.3 billion (10-K for 2022, accession 0001334036-23-000015, note Acquisition of HEYDUDE; PaymentsToAcquireBusinessesNetOfCashAcquired of 2.047 billion and GoodwillAcquiredDuringPeriod of 0.713 billion for the year), so fiscal 2022 is the first year whose revenue holds both brands: revenue went from 2.313 billion in 2021 to 3.555 billion in 2022, and a history read across it measures the purchase as growth"
+      "pro_forma_revenue": {
+        "revenues": [
+          {
+            "period_end": "2021-12-31",
+            "value": 2894094000
+          },
+          {
+            "period_end": "2022-12-31",
+            "value": 3645291000
+          }
+        ],
+        "why": "Crocs's 10-K for 2022 (accession 0001334036-23-000015), note Acquisition of HEYDUDE, Unaudited Pro Forma Information: the historical results of Crocs and HEYDUDE combined as if the companies had been combined as of January 1, 2021, revenues of $3,645,291 thousand for 2022 and $2,894,094 thousand for 2021, against the 3.555 billion and 2.313 billion filed; Crocs acquired HEYDUDE on February 17, 2022",
+        "as_of": "2023-02-16"
       }
     },
     {
@@ -1923,6 +1933,12 @@
       "ticker": "HO.PA",
       "entity_class": "OperatingCompany",
       "why": "the Paris line of Thales, defence electronics, aerospace, space and digital identity and security, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here from the report's own facts, with the vendor's statements cross-checked beside them; positive, stable free cash flow; an operating company.",
+      "scope_limits": [
+        "acquisitions inside the window, Imperva on December 1, 2023 for 3,434 million euros and Cobham Aerospace Communications in April 2024 for 941.3 million, about 180 million of revenue in 2023, the largest of them, and the aircraft electrical systems business sold in October 2023; the annual reports state no pro forma revenue for the combined business, so the growth estimate's revenue history counts the acquired revenue as growth"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
+      ],
       "lei": "529900FNDVTQJOVVPZ19"
     },
     {
@@ -1997,7 +2013,7 @@
       "entity_class": "OperatingCompany",
       "why": "Amgen, biotechnology medicines at pharmaceutical scale; profitable with positive, stable free cash flow; an operating company, as the other large drug makers here are, confirmed by the user.",
       "scope_limits": [
-        "a large acquisition sits inside the window, so the filed history before it is a smaller company's and the debt taken on for it is most of the balance sheet",
+        "a large acquisition sits inside the window, Horizon on October 6, 2023: the growth estimate's revenue history reads the filer's unaudited pro forma revenue of the combined business for 2022 and 2023 in place of the filed figures, and the debt taken on for it is most of the balance sheet",
         "growth depends on a pipeline and on patents expiring inside the window, which the model does not see"
       ],
       "scope_limit_codes": [
@@ -2008,6 +2024,20 @@
       "credit_rating": {
         "rating": "Baa2/BBB",
         "why": "Amgen's 10-K for 2025 (accession 0000318154-26-000010) states that S&P, Moody's and Fitch assigned its senior notes BBB+, Baa1 and BBB+ at December 31, 2025; the middle of the three is BBB+, the table's Baa2/BBB",
+        "as_of": "2026-02-13"
+      },
+      "pro_forma_revenue": {
+        "revenues": [
+          {
+            "period_end": "2022-12-31",
+            "value": 29964000000
+          },
+          {
+            "period_end": "2023-12-31",
+            "value": 30969000000
+          }
+        ],
+        "why": "Amgen's 10-K for 2025 (accession 0000318154-26-000010), note 4, Acquisition, Supplemental Pro Forma Financial Information: the unaudited pro forma results of a hypothetical combined Amgen and Horizon, as if the acquisition of Horizon, closed on October 6, 2023, had occurred on January 1, 2022, give total revenues of $29,964 million for 2022 and $30,969 million for 2023, against the 26.323 billion and 28.190 billion filed; the 10-Ks for 2023 and 2024 state the same figures",
         "as_of": "2026-02-13"
       }
     },
@@ -2203,14 +2233,24 @@
       "why": "the Swiss line of Sika, construction chemicals: admixtures, sealants, adhesives and roofing, reporting in francs; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
       "scope_limits": [
         "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
-        "a large acquisition sits inside the window, so part of the growth read from the statements is bought and its debt and goodwill are on the balance sheet",
+        "a large acquisition sits inside the window, MBCC Group on May 2, 2023: the growth estimate's revenue history reads from 2023, with the filer's pro forma net sales for that year as if the year's acquisitions had been consolidated from January 1, so the years before it are not read, and its debt and goodwill are on the balance sheet",
         "demand follows construction activity, so the latest years are a point in a cycle"
       ],
       "scope_limit_codes": [
         "vendor_statements",
         "acquired_history",
         "backward_looking"
-      ]
+      ],
+      "pro_forma_revenue": {
+        "revenues": [
+          {
+            "period_end": "2023-12-31",
+            "value": 11910900000
+          }
+        ],
+        "why": "Sika's Annual Report 2023, notes to the consolidated financial statements, Acquisitions 2023, page 212: if the acquisitions had occurred on January 1, 2023, consolidated pro forma net sales would have been CHF 11,910.9 million, CHF 672.3 million above the 11,238.6 million reported; MBCC Group, acquired on May 2, 2023, contributed CHF 1,381.0 million of sales since the purchase; the statements were approved for publication on February 13, 2024",
+        "as_of": "2024-02-13"
+      }
     },
     {
       "ticker": "SCHP.SW",

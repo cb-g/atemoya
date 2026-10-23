@@ -9,7 +9,9 @@ interest stands for, so the equity bridge does not deduct it again) and growth_h
 the growth estimate's revenue history reads, where a large acquisition before it would read
 bought revenue as growth) and credit_rating (exactly a rating as reference/default_spreads.json
 prints it, a why quoting the filing and an as_of date: an agency's rating, taken before the
-synthetic rating the interest coverage earns); anything else is an error, so nothing that remembers an outcome or
+synthetic rating the interest coverage earns) and pro_forma_revenue (exactly revenues, each a
+period_end and a positive value, a why citing the filing and an as_of date: the filer's pro
+forma combined revenue for the years before a large purchase); anything else is an error, so nothing that remembers an outcome or
 a finding can creep back into a declaration."""
 
 from __future__ import annotations
@@ -23,7 +25,8 @@ from typing import Any, cast
 import reference
 
 ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "scope_limit_codes", "cik", "map_cik", "lei", "adr_ratio",
-           "build_out_return", "build_out_lag_years", "share_count_includes_minority", "growth_history_from", "credit_rating")
+           "build_out_return", "build_out_lag_years", "share_count_includes_minority", "growth_history_from", "credit_rating",
+           "pro_forma_revenue")
 REQUIRED = ("ticker", "entity_class", "why")
 # (60) A build-out declaration is exactly a value, the evidence for it and a date. A number
 # with no why is not a declaration, which is the whole point of the readout being declared.
@@ -70,6 +73,26 @@ def _check_entry(index: int, entry: object, vocabulary: frozenset[str] = frozens
             raise UniverseError(f"universe entry {name}: growth_history_from period_end is not an ISO date: {h['period_end']!r}") from e
         if not isinstance(h["why"], str) or not h["why"].strip():
             raise UniverseError(f"universe entry {name}: growth_history_from must be exactly a period_end (an ISO date) and a why citing the filing")
+    pro_forma = fields.get("pro_forma_revenue")
+    if pro_forma is not None:
+        bad = f"universe entry {name}: pro_forma_revenue must be exactly revenues (each a period_end and a positive value), a why citing the filing and an as_of date"
+        pf = cast(dict[str, Any], pro_forma) if isinstance(pro_forma, dict) else None
+        if pf is None or sorted(pf) != ["as_of", "revenues", "why"] or not isinstance(pf["why"], str) or not pf["why"].strip():
+            raise UniverseError(bad)
+        years = pf["revenues"]
+        if not isinstance(years, list) or not years:
+            raise UniverseError(bad)
+        try:
+            date.fromisoformat(str(pf["as_of"]))
+            for y in cast(list[Any], years):
+                if not isinstance(y, dict) or sorted(cast(dict[str, Any], y)) != ["period_end", "value"]:
+                    raise UniverseError(bad)
+                yy = cast(dict[str, Any], y)
+                date.fromisoformat(str(yy["period_end"]))
+                if isinstance(yy["value"], bool) or not isinstance(yy["value"], (int, float)) or yy["value"] <= 0:
+                    raise UniverseError(bad)
+        except ValueError as e:
+            raise UniverseError(bad) from e
     rating = fields.get("credit_rating")
     if rating is not None:
         r = cast(dict[str, Any], rating) if isinstance(rating, dict) else None

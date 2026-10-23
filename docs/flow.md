@@ -813,6 +813,13 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- the filer's pro forma revenue (2026-10-23): a universe entry may declare `pro_forma_revenue`,
+  the filer's pro forma revenue of the combined business for the years before a large purchase,
+  exactly a non-empty list of period ends and positive values, a why citing the filing and its
+  date, and the growth estimate's revenue history reads the declared figures in place of the
+  filed ones from the earliest of them; Amgen declares 2022 and 2023, Crocs 2021 and 2022 in
+  place of its `growth_history_from`, Sika 2023, and Thales, whose reports state none, carries
+  a stated limit. No new `Failed` string.
 - IFRS operating income and associates (2026-10-23): impairments inside IFRS operating profit
   are added back as US GAAP ones are, less the reversals IFRS allows; the bridge's IFRS
   element for associates was `InvestmentsAccountedForUsingEquityMethod`, which no filer uses,

@@ -158,7 +158,8 @@ let missing_report (fin : financials) (p : fiscal_period) ~nwc_periods =
 
 let mean xs = List.fold_left ( +. ) 0. xs /. float_of_int (List.length xs)
 
-let value ?(declared = "") ?share_count_includes_minority ?growth_history_from a ~country (fin : financials) =
+let value ?(declared = "") ?share_count_includes_minority ?growth_history_from ?(pro_forma_revenue = []) a ~country
+    (fin : financials) =
   let ( let* ) = Result.bind in
   let* p = latest_period fin in
   let nwc = series fin (fun q -> q.delta_nwc) in
@@ -171,10 +172,20 @@ let value ?(declared = "") ?share_count_includes_minority ?growth_history_from a
           (fun (q : fiscal_period) -> q.delta_nwc_composition))
       nwc
   in
-  (* a declared start: the history before a large acquisition is another business *)
+  (* a declared start: the history before a large acquisition is another business; the
+     filer's pro forma revenue, where declared, stands for the years before it, and the history
+     reads from the earliest of them *)
+  let pro_forma_from = List.fold_left (fun acc (d, _) -> match acc with Some a when a <= d -> acc | _ -> Some d) None pro_forma_revenue in
   let revenues =
-    series fin (fun q -> q.total_revenue)
-    |> List.filter (fun (period_end, _) -> match growth_history_from with Some from -> period_end >= from | None -> true)
+    let reported =
+      series fin (fun q -> q.total_revenue)
+      |> List.filter (fun (period_end, _) ->
+             (match growth_history_from with Some from -> period_end >= from | None -> true)
+             && match pro_forma_from with Some from -> period_end >= from | None -> true)
+    in
+    (* a declared year stands whether or not the statements carry that period *)
+    List.filter (fun (period_end, _) -> not (List.mem_assoc period_end pro_forma_revenue)) reported @ pro_forma_revenue
+    |> List.sort (fun (a, _) (b, _) -> compare b a)
   in
   match
     ( fin.currency,

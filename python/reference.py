@@ -405,6 +405,38 @@ class XbrlTags:
 
 
 @dataclass
+class ProFormaYear:
+    """Original type: pro_forma_year = { ... }
+    """
+
+    period_end: str
+    value: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'ProFormaYear':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('ProFormaYear', 'period_end'),
+                value=_atd_read_float(x['value']) if 'value' in x else _atd_missing_json_field('ProFormaYear', 'value'),
+            )
+        else:
+            _atd_bad_json('ProFormaYear', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['value'] = _atd_write_float(self.value)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'ProFormaYear':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class DeclaredRating:
     """Original type: declared_rating = { ... }
     """
@@ -433,6 +465,41 @@ class DeclaredRating:
 
     @classmethod
     def from_json_string(cls, x: str) -> 'DeclaredRating':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class DeclaredProForma:
+    """Original type: declared_pro_forma = { ... }
+    """
+
+    revenues: List[ProFormaYear]
+    why: str
+    as_of: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DeclaredProForma':
+        if isinstance(x, dict):
+            return cls(
+                revenues=_atd_read_list(ProFormaYear.from_json)(x['revenues']) if 'revenues' in x else _atd_missing_json_field('DeclaredProForma', 'revenues'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('DeclaredProForma', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('DeclaredProForma', 'as_of'),
+            )
+        else:
+            _atd_bad_json('DeclaredProForma', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['revenues'] = _atd_write_list((lambda x: x.to_json()))(self.revenues)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DeclaredProForma':
         return cls.from_json(json.loads(x))
 
     def to_json_string(self, **kw: Any) -> str:
@@ -525,6 +592,7 @@ class UniverseEntry:
     share_count_includes_minority: Optional[str] = None
     growth_history_from: Optional[DeclaredHistory] = None
     credit_rating: Optional[DeclaredRating] = None
+    pro_forma_revenue: Optional[DeclaredProForma] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'UniverseEntry':
@@ -544,6 +612,7 @@ class UniverseEntry:
                 share_count_includes_minority=_atd_read_string(x['share_count_includes_minority']) if 'share_count_includes_minority' in x else None,
                 growth_history_from=DeclaredHistory.from_json(x['growth_history_from']) if 'growth_history_from' in x else None,
                 credit_rating=DeclaredRating.from_json(x['credit_rating']) if 'credit_rating' in x else None,
+                pro_forma_revenue=DeclaredProForma.from_json(x['pro_forma_revenue']) if 'pro_forma_revenue' in x else None,
             )
         else:
             _atd_bad_json('UniverseEntry', x)
@@ -573,6 +642,8 @@ class UniverseEntry:
             res['growth_history_from'] = (lambda x: x.to_json())(self.growth_history_from)
         if self.credit_rating is not None:
             res['credit_rating'] = (lambda x: x.to_json())(self.credit_rating)
+        if self.pro_forma_revenue is not None:
+            res['pro_forma_revenue'] = (lambda x: x.to_json())(self.pro_forma_revenue)
         return res
 
     @classmethod
