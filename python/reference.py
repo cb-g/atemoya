@@ -405,6 +405,41 @@ class XbrlTags:
 
 
 @dataclass
+class DeclaredRating:
+    """Original type: declared_rating = { ... }
+    """
+
+    rating: str
+    why: str
+    as_of: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DeclaredRating':
+        if isinstance(x, dict):
+            return cls(
+                rating=_atd_read_string(x['rating']) if 'rating' in x else _atd_missing_json_field('DeclaredRating', 'rating'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('DeclaredRating', 'why'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('DeclaredRating', 'as_of'),
+            )
+        else:
+            _atd_bad_json('DeclaredRating', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['rating'] = _atd_write_string(self.rating)
+        res['why'] = _atd_write_string(self.why)
+        res['as_of'] = _atd_write_string(self.as_of)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DeclaredRating':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class DeclaredHistory:
     """Original type: declared_history = { ... }
     """
@@ -489,6 +524,7 @@ class UniverseEntry:
     build_out_lag_years: Optional[DeclaredBuildOut] = None
     share_count_includes_minority: Optional[str] = None
     growth_history_from: Optional[DeclaredHistory] = None
+    credit_rating: Optional[DeclaredRating] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'UniverseEntry':
@@ -507,6 +543,7 @@ class UniverseEntry:
                 build_out_lag_years=DeclaredBuildOut.from_json(x['build_out_lag_years']) if 'build_out_lag_years' in x else None,
                 share_count_includes_minority=_atd_read_string(x['share_count_includes_minority']) if 'share_count_includes_minority' in x else None,
                 growth_history_from=DeclaredHistory.from_json(x['growth_history_from']) if 'growth_history_from' in x else None,
+                credit_rating=DeclaredRating.from_json(x['credit_rating']) if 'credit_rating' in x else None,
             )
         else:
             _atd_bad_json('UniverseEntry', x)
@@ -534,6 +571,8 @@ class UniverseEntry:
             res['share_count_includes_minority'] = _atd_write_string(self.share_count_includes_minority)
         if self.growth_history_from is not None:
             res['growth_history_from'] = (lambda x: x.to_json())(self.growth_history_from)
+        if self.credit_rating is not None:
+            res['credit_rating'] = (lambda x: x.to_json())(self.credit_rating)
         return res
 
     @classmethod

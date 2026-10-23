@@ -7,6 +7,8 @@
     market-cap threshold in dollars, the smaller and riskier firms'; its key is the rating and
     its source names the coverage, its two figures, the period, the table and the vintage. A
     row is the last whose [above] the coverage reaches, so every coverage has one. Where the
+    universe entry declares an agency's rating the rule carries its row, and that spread is
+    returned whatever the coverage, the source quoting the declaration. Where the
     period carries no interest expense above nil, the [fallback], the declared flat spread, is
     returned with a source that says why: beside debt the rating cannot be read, and without
     debt the spread carries no weight. Nothing else is read; no rating agency's rating is. *)
@@ -18,10 +20,17 @@ type rule = {
   age_days : int;
   size : size;
   size_note : string;  (** why this table: the market cap in dollars against the threshold *)
+  declared : (Reference_t.default_spread_row * Reference_t.declared_rating) option;
+      (** an agency's rating declared on the universe entry and its row, taken before the
+          synthetic rating on every path *)
 }
 
 val row : Reference_t.default_spread_row list -> float -> Reference_t.default_spread_row option
 (** The last row whose [above] the coverage reaches. *)
+
+val with_declared : rule -> Reference_t.declared_rating -> (rule, string) result
+(** The declared rating's row, the same spread in either table; an [Error] naming the rating
+    where the table carries no such row. *)
 
 val with_size : rule -> market_cap_usd:(float, string) result -> rule
 (** The table for a market cap in dollars; the large firms' where it could not be converted,

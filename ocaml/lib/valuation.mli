@@ -64,6 +64,8 @@ type declaration = {
   growth_history_from : string option;
       (** the first fiscal period end the growth estimate's revenue history reads, where the
           universe entry declares a large acquisition before it *)
+  credit_rating : Reference_t.declared_rating option;
+      (** an agency's rating as the filing states it, taken before the synthetic rating *)
 }
 
 val receipt_tolerance : float

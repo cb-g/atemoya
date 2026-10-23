@@ -39,6 +39,7 @@ file.
 | parameters | risk-free curve for (key) has no (tenor) tenor |
 | parameters | (parameter) for (key) (as_of date) is N days old, older than its max_age_days M |
 | parameters | (parameter) for (key) has as_of (date), later than the valuation date (today) |
+| parameters | declared credit rating (rating) is not a rating on reference/default_spreads.json |
 | EBIT policy | operating income not filed; derived EBIT misses the cross-check ((recipe): derived (x) against the vendor's (y), (d)% beyond the 2% threshold, or: no vendor operating income to check against) |
 | mid-cycle window | mid-cycle normalisation needs at least 8 annual return observations, have (k); the provider carries (n) periods |
 | mid-cycle window | mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat, have (k) |
@@ -812,6 +813,11 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- a declared credit rating (2026-10-23): a universe entry may declare `credit_rating`, exactly a
+  rating as `reference/default_spreads.json` prints it, a why quoting the filing and its date,
+  and every path then takes that rating's spread before the synthetic one; a rating the table
+  does not print is refused with "declared credit rating (rating) is not a rating on
+  reference/default_spreads.json". None is declared by this change.
 - a declared start for the revenue history (2026-10-23): a universe entry may declare
   `growth_history_from`, exactly a period end and a why citing the filing, and the growth
   estimate's revenue history reads from it; Crocs declares 2022, the year of its HEYDUDE

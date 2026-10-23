@@ -366,9 +366,9 @@ let params : Params.t =
   }
 
 let declaration ?(scope_limits = []) ?(scope_limit_codes = []) ?adr_ratio ?build_out_return ?build_out_lag_years
-    ?share_count_includes_minority ?growth_history_from entity_class =
+    ?share_count_includes_minority ?growth_history_from ?credit_rating entity_class =
   { Valuation.entity_class; scope_limits; scope_limit_codes; adr_ratio; build_out_return; build_out_lag_years;
-    share_count_includes_minority; growth_history_from }
+    share_count_includes_minority; growth_history_from; credit_rating }
 
 (* Most valuation tests declare an operating company; the class tests declare otherwise. *)
 let run ?(declared = Some (declaration `OperatingCompany)) fin =
@@ -2472,6 +2472,7 @@ let test_flow_chart_names_every_reason () =
       "through the cycle the business reinvested more than it earned";
       "mid-cycle reinvestment needs at least 8 periods with capex, d&a, delta_nwc and nopat";
       "risk-free curve not fetched for"; "fx not fetched for";
+      "is not a rating on reference/default_spreads.json";
       "non-positive free cash flow"; "the DCF is not applicable; declared";
       "missing market data: financial_currency"; "missing market data: trading_currency";
       "fx for"; "field definition mismatch"; "operating income not filed; derived EBIT misses the cross-check";
@@ -3347,7 +3348,7 @@ let test_debt_spread () =
       large = [ row (-100000.) 1.999999 "B" 0.05; row 2. 4.999999 "BBB" 0.02; row 5. 100000. "AAA" 0.005 ];
       small = [ row (-100000.) 3.999999 "B" 0.05; row 4. 7.999999 "BBB" 0.02; row 8. 100000. "AAA" 0.005 ] }
   in
-  let rule = { Debt_spread.spreads; age_days = 10; size = Debt_spread.Large; size_note = "the large firms' table" } in
+  let rule = { Debt_spread.spreads; age_days = 10; size = Debt_spread.Large; size_note = "the large firms' table"; declared = None } in
   let flat = param 0.01 in
   let at ?(r = rule) ?(interest = Some 100.) ?(debt = 1000.) ebit =
     Debt_spread.resolve r ~fallback:flat ~ebit ~interest_expense:interest ~total_debt:debt ~period_end:"2025-09-30"
@@ -3367,6 +3368,14 @@ let test_debt_spread () =
   check_float "no interest expense beside debt: the flat spread" 0.01 none.value;
   Alcotest.(check bool) "with the reason" true (contains none.source "no rating is read");
   Alcotest.(check bool) "without debt it carries no weight" true (contains (at ~interest:None ~debt:0. 300.).source "carries no weight");
+  (* an agency's rating declared: its row's spread whatever the coverage, and a rating the
+     table does not print is refused by name *)
+  let rated d = Result.get_ok (Debt_spread.with_declared rule d) in
+  let declared : Reference_t.declared_rating = { rating = "AAA"; why = "the filing says so"; as_of = "2026-03-06" } in
+  check_float "a declared rating's spread, whatever the coverage" 0.005 (at ~r:(rated declared) (-50.)).value;
+  Alcotest.(check bool) "with the declaration in the source" true (contains (at ~r:(rated declared) 300.).source "declared credit rating AAA");
+  Alcotest.(check bool) "an unknown rating is refused by name" true
+    (match Debt_spread.with_declared rule { declared with rating = "AA+" } with Error e -> contains e "AA+" | Ok _ -> false);
   (* the DCF on the rule: the growing fixture's latest operating income over an interest of a
      third of it is a coverage of 3 *)
   let a = { assumptions with debt_spread_rule = Some rule } in

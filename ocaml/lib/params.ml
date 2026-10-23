@@ -230,7 +230,7 @@ let debt_spread_rule ?hold_vintage t ~today =
   | None -> Ok None
   | Some (s : default_spreads) ->
       let* age_days = age ?hold_vintage ~today ~name:"default_spreads" ~key:"global" ~as_of:s.as_of ~max_age_days:s.max_age_days () in
-      Ok (Some { Debt_spread.spreads = s; age_days; size = Debt_spread.Large; size_note = "the large firms' table" })
+      Ok (Some { Debt_spread.spreads = s; age_days; size = Debt_spread.Large; size_note = "the large firms' table"; declared = None })
 
 let resolve ?hold_vintage t ~today ~country ~industry =
   let* projection_years = int_scalar ?hold_vintage t.params.projection_years ~today ~name:"projection_years" in

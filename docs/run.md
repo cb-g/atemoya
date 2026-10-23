@@ -444,12 +444,16 @@ times its interest, discounted its debt at the rate a large firm with no debt pa
 filers cover their interest many times over and borrow below that point; on the snapshot of
 2026-10-19, 69 of the 106 DCF records rate Aaa.
 
-The declared flat spread stands where the period carries no interest expense beside debt, and the
-parameter says so (Apple has filed no interest-expense line since its 2023 year). Not read,
-each a stated limit: an agency's rating or a bond's yield, which the textbook prefers where they
-exist and which no source here carries, so a firm whose coverage understates its rating pays
-more than its bonds do (BP's mid-cycle coverage, its 2020 impairments inside the window, is
-1.60, a B); the workbook's table for financial
+The textbook takes an agency's rating where one exists and the synthetic one where none does,
+and a universe entry may declare `credit_rating`: exactly a rating as the table prints it, a
+why quoting the filing's own statement of its ratings, and the filing's date. Where one is
+declared every path takes that rating's spread whatever the coverage, and the parameter's
+source quotes the declaration; a rating the table does not print fails the record by name. No
+source here carries ratings, so each is read from the filer's annual report and declared by
+hand; a firm whose coverage understates its standing and declares none pays more than its bonds
+do (BP's mid-cycle coverage, its 2020 impairments inside the window, is 1.60, a B, where its
+20-F for 2025 states ratings of A- to A+). Not read, each a stated limit: a bond's yield, which
+no source here carries; the workbook's table for financial
 service firms, on long-term interest only, since the financial firms the DCF values as operating
 companies all but clear the top row of the tables used (Intercontinental Exchange's 6.1 is the
 exception, 0.30 points); and a convertible's or a lease's interest inside the expense, which is

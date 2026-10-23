@@ -235,7 +235,14 @@ type universe_entry = {
   ?build_out_return : declared_build_out option;      (* (60) the after-tax return the new capital earns once earning, a decimal *)
   ?build_out_lag_years : declared_build_out option;   (* (60) whole years from spend to first earning *)
   ?share_count_includes_minority : string option;   (* the share count the price is quoted on already holds the units the minority interest stands for, so the equity bridge does not deduct it again; the why, citing the filing *)
-  ?growth_history_from : declared_history option;   (* the first fiscal period end the growth estimate's revenue history reads: a large acquisition before it would read bought revenue as growth; the why, citing the filing *)
+  ?growth_history_from : declared_history option;
+  ?credit_rating : declared_rating option;   (* an agency's rating where one exists, taken before the synthetic rating the interest coverage earns; the why quotes the filing *)   (* the first fiscal period end the growth estimate's revenue history reads: a large acquisition before it would read bought revenue as growth; the why, citing the filing *)
+}
+
+type declared_rating = {
+  rating : string;                      (* a rating as reference/default_spreads.json prints it, e.g. "A1/A+" *)
+  why : string;                         (* the agencies' ratings as the filing states them, and which this is *)
+  as_of : string;                       (* ISO date of the filing *)
 }
 
 type declared_history = {

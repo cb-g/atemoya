@@ -24,6 +24,7 @@ type declaration = {
   build_out_lag_years : Reference_t.declared_build_out option;
   share_count_includes_minority : string option;
   growth_history_from : string option;  (* the first period end the revenue history reads, declared *)
+  credit_rating : Reference_t.declared_rating option;  (* an agency's rating, taken before the synthetic one *)
 }
 
 let receipt_tolerance = 0.03
@@ -439,7 +440,13 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
     in
     { a with debt_spread_rule = Option.map (fun r -> Debt_spread.with_size r ~market_cap_usd) a.debt_spread_rule }
   in
-  let with_record_assumptions (a : Dcf.assumptions) = with_debt_spread_size (with_required_return a)
+  (* An agency's rating declared on the universe entry is taken before the synthetic one. *)
+  let with_declared_rating (a : Dcf.assumptions) =
+    match (a.debt_spread_rule, Option.bind declaration (fun d -> d.credit_rating)) with
+    | Some rule, Some rating -> Result.map (fun r -> { a with debt_spread_rule = Some r }) (Debt_spread.with_declared rule rating)
+    | _ -> Ok a
+  in
+  let with_record_assumptions (a : Dcf.assumptions) = with_declared_rating (with_debt_spread_size (with_required_return a))
   in
   (* The declared growth (--growth FILE), per name: a shadow beside the generic or mid-cycle
      DCF's headline on the reader's own starting growth or future free cash flow. *)
@@ -893,10 +900,9 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                       Params.resolve_cross ~hold_vintage ~rf_note:(other_currency_rf_note own) params
                         ~today ~domicile:country ~rate_country ~industry:original.industry))
         in
-        match resolved with
+        match Result.bind resolved with_record_assumptions with
         | Error reason -> failed reason
-        | Ok assumptions ->
-            run_model ~fin:original ~model ~class_check ~rule ~country (with_record_assumptions assumptions))
+        | Ok assumptions -> run_model ~fin:original ~model ~class_check ~rule ~country assumptions)
     | Ok (), _, Some financial, Some trading -> (
         match Fx.rate params.fx_sources params.fx_rates ~today ~financial ~trading with
         | Error reason -> failed reason
@@ -905,8 +911,10 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
             | Error reason -> failed reason
             | Ok rate_country -> (
                 match
-                  Params.resolve_cross ~hold_vintage params ~today ~domicile:country ~rate_country
-                    ~industry:original.industry
+                  Result.bind
+                    (Params.resolve_cross ~hold_vintage params ~today ~domicile:country ~rate_country
+                       ~industry:original.industry)
+                    with_record_assumptions
                 with
                 | Error reason -> failed reason
                 | Ok assumptions ->
@@ -928,8 +936,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                         price_unit_divisor = original.price_unit_divisor;
                       }
                     in
-                    run_model ~fin:converted ~conversion ~model ~class_check ~rule ~country
-                      (with_record_assumptions assumptions))))
+                    run_model ~fin:converted ~conversion ~model ~class_check ~rule ~country assumptions)))
   in
   (* Before anything else: a ticker that no longer names the declared filer is another
      company's data under this entry's class and scope limits, and nothing below is safe. *)

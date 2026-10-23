@@ -7,7 +7,9 @@ receipt, a positive number), the two build-out declarations (60), share_count_in
 interest stands for, so the equity bridge does not deduct it again) and growth_history_from
 (exactly a period_end, an ISO date, and a why citing the filing: the first fiscal period end
 the growth estimate's revenue history reads, where a large acquisition before it would read
-bought revenue as growth); anything else is an error, so nothing that remembers an outcome or
+bought revenue as growth) and credit_rating (exactly a rating as reference/default_spreads.json
+prints it, a why quoting the filing and an as_of date: an agency's rating, taken before the
+synthetic rating the interest coverage earns); anything else is an error, so nothing that remembers an outcome or
 a finding can creep back into a declaration."""
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from typing import Any, cast
 import reference
 
 ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "scope_limit_codes", "cik", "map_cik", "lei", "adr_ratio",
-           "build_out_return", "build_out_lag_years", "share_count_includes_minority", "growth_history_from")
+           "build_out_return", "build_out_lag_years", "share_count_includes_minority", "growth_history_from", "credit_rating")
 REQUIRED = ("ticker", "entity_class", "why")
 # (60) A build-out declaration is exactly a value, the evidence for it and a date. A number
 # with no why is not a declaration, which is the whole point of the readout being declared.
@@ -68,6 +70,15 @@ def _check_entry(index: int, entry: object, vocabulary: frozenset[str] = frozens
             raise UniverseError(f"universe entry {name}: growth_history_from period_end is not an ISO date: {h['period_end']!r}") from e
         if not isinstance(h["why"], str) or not h["why"].strip():
             raise UniverseError(f"universe entry {name}: growth_history_from must be exactly a period_end (an ISO date) and a why citing the filing")
+    rating = fields.get("credit_rating")
+    if rating is not None:
+        r = cast(dict[str, Any], rating) if isinstance(rating, dict) else None
+        if r is None or sorted(r) != ["as_of", "rating", "why"] or not all(isinstance(r[k], str) and r[k].strip() for k in r):
+            raise UniverseError(f"universe entry {name}: credit_rating must be exactly a rating, a why quoting the filing and an as_of date")
+        try:
+            date.fromisoformat(r["as_of"])
+        except ValueError as e:
+            raise UniverseError(f"universe entry {name}: credit_rating as_of is not an ISO date: {r['as_of']!r}") from e
     minority = fields.get("share_count_includes_minority")
     if minority is not None and (not isinstance(minority, str) or not minority.strip()):
         raise UniverseError(f"universe entry {name}: share_count_includes_minority must be the why, a non-empty string citing the filing")

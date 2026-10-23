@@ -338,3 +338,19 @@ def test_a_growth_history_start_is_a_date_and_a_why() -> None:
             universe.load_text(json.dumps({"tickers": [{**entry, "growth_history_from": bad}]}))
     with pytest.raises(universe.UniverseError, match="not an ISO date"):
         universe.load_text(json.dumps({"tickers": [{**entry, "growth_history_from": {"period_end": "2022-13-45", "why": "w"}}]}))
+
+
+def test_a_credit_rating_is_a_rating_a_why_and_a_date() -> None:
+    """(2026-10-23) An agency's rating where one exists, taken before the synthetic one: exactly
+    a rating, a why quoting the filing and an as_of date."""
+    entry = {"ticker": "TEST", "entity_class": "OperatingCompany", "why": "an invented issuer",
+             "credit_rating": {"rating": "A1/A+", "why": "the annual report states the agencies' ratings", "as_of": "2026-03-06"}}
+    loaded = universe.load_text(json.dumps({"tickers": [entry]}))
+    rating = loaded.tickers[0].credit_rating
+    assert rating is not None and rating.rating == "A1/A+"
+    for bad in ("A1/A+", {"rating": "A1/A+", "why": "w"}, {"rating": " ", "why": "w", "as_of": "2026-03-06"},
+                {"rating": "A1/A+", "why": "w", "as_of": "2026-03-06", "agency": "x"}):
+        with pytest.raises(universe.UniverseError, match="credit_rating must be exactly"):
+            universe.load_text(json.dumps({"tickers": [{**entry, "credit_rating": bad}]}))
+    with pytest.raises(universe.UniverseError, match="not an ISO date"):
+        universe.load_text(json.dumps({"tickers": [{**entry, "credit_rating": {"rating": "A1/A+", "why": "w", "as_of": "March 2026"}}]}))

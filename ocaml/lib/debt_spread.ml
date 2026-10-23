@@ -2,10 +2,21 @@ open Reference_t
 
 type size = Large | Small
 
-type rule = { spreads : default_spreads; age_days : int; size : size; size_note : string }
+type rule = {
+  spreads : default_spreads;
+  age_days : int;
+  size : size;
+  size_note : string;
+  declared : (default_spread_row * declared_rating) option;
+}
 
 let row rows coverage =
   List.fold_left (fun found (r : default_spread_row) -> if coverage >= r.above then Some r else found) None rows
+
+let with_declared rule (d : declared_rating) =
+  match List.find_opt (fun (r : default_spread_row) -> r.rating = d.rating) rule.spreads.large with
+  | Some r -> Ok { rule with declared = Some (r, d) }
+  | None -> Error (Printf.sprintf "declared credit rating %s is not a rating on reference/default_spreads.json" d.rating)
 
 let with_size rule ~market_cap_usd =
   let threshold = rule.spreads.small_firm_market_cap_usd in
@@ -19,6 +30,15 @@ let with_size rule ~market_cap_usd =
 
 let resolve rule ~(fallback : Boundary_t.parameter) ~ebit ~interest_expense ~total_debt ~period_end : Boundary_t.parameter =
   let table = match rule.size with Large -> rule.spreads.large | Small -> rule.spreads.small in
+  match (rule.declared, interest_expense) with
+  | Some (r, d), _ ->
+      { fallback with
+        value = r.spread; key = r.rating;
+        source =
+          Printf.sprintf "declared credit rating %s, as of %s: %s; the rating's spread on %s" r.rating d.as_of d.why
+            rule.spreads.source;
+        as_of = d.as_of; age_days = rule.age_days }
+  | None, interest_expense ->
   match interest_expense with
   | Some interest when interest > 0. -> (
       let coverage = ebit /. interest in
