@@ -450,9 +450,11 @@ why quoting the filing's own statement of its ratings, and the filing's date. Wh
 declared every path takes that rating's spread whatever the coverage, and the parameter's
 source quotes the declaration; a rating the table does not print fails the record by name. No
 source here carries ratings, so each is read from the filer's annual report and declared by
-hand; a firm whose coverage understates its standing and declares none pays more than its bonds
-do (BP's mid-cycle coverage, its 2020 impairments inside the window, is 1.60, a B, where its
-20-F for 2025 states ratings of A- to A+). Not read, each a stated limit: a bond's yield, which
+hand, by one rule: the middle of three agencies' ratings, the lower of two, the one where one,
+as bond indices class a bond, since that class is what the market prices. BP declares A1/A+,
+its 20-F for 2025 stating A- from Standard & Poor's, A1 from Moody's and A+ from Fitch (its
+mid-cycle coverage, its 2020 impairments inside the window, is 1.60, a B). A firm whose
+coverage understates its standing and declares none pays more than its bonds do. Not read, each a stated limit: a bond's yield, which
 no source here carries; the workbook's table for financial
 service firms, on long-term interest only, since the financial firms the DCF values as operating
 companies all but clear the top row of the tables used (Intercontinental Exchange's 6.1 is the

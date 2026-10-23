@@ -813,6 +813,9 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- BP's credit rating (2026-10-23): BP declares A1/A+, the middle of the three ratings its 20-F
+  for 2025 states, by the rule docs/run.md writes down for every declaration (the middle of
+  three, the lower of two, the one where one). No new `Failed` string.
 - a declared credit rating (2026-10-23): a universe entry may declare `credit_rating`, exactly a
   rating as `reference/default_spreads.json` prints it, a why quoting the filing and its date,
   and every path then takes that rating's spread before the synthetic one; a rating the table

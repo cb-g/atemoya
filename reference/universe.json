@@ -506,7 +506,12 @@
       "entity_class": "Cyclical",
       "why": "an integrated oil company filing under IFRS on a 20-F; a second one; adr_ratio: one American depositary share is six ordinary shares (20-F, deposit agreement).",
       "map_cik": "0000313807",
-      "adr_ratio": 6
+      "adr_ratio": 6,
+      "credit_rating": {
+        "rating": "A1/A+",
+        "why": "BP's 20-F for 2025 (accession 0000313807-26-000006) states that Standard & Poor's long-term credit rating for BP p.l.c. is A- (stable), Moody's A1 (stable) and Fitch's A+ (stable); the middle of the three is A+, the grade Moody's A1 names, the table's A1/A+",
+        "as_of": "2026-03-06"
+      }
     },
     {
       "ticker": "DAL",
