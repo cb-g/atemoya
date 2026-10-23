@@ -283,6 +283,8 @@ type financials = {
   ?trailing_period_reason : string option;
   ?distributions_since_base : distributions option;   (* what went to shareholders since the annual base, from the latest 10-Q; US filers only; absent with the reason below *)
   ?distributions_reason : string option;
+  ?dilution : dilution option;        (* the shares the filer's awards and warrants add, from its own diluted count; absent with the reason below *)
+  ?dilution_reason : string option;
   ?identity_mismatch : string option; (* the ticker no longer names the filer the universe entry declared (map_cik); the record is refused before anything else *)
   ?latest_filing : string option;     (* ISO date of the newest annual filing the statements come from *)
   ?cross_check : cross_check option;  (* the vendor's statements compared with the filed ones *)
@@ -322,6 +324,25 @@ type distributions = {
   ?minority_net : float option;       (* buyouts less the book they removed, at least nil: the price paid above the book the bridge carries *)
   filed : string;
   accession : string;
+}
+
+(* The shares a company's options, restricted stock units and warrants add to the count the
+   price is quoted on, from the filer's own diluted count: the treasury-stock method nets the
+   compensation not yet recognised against the awards, so the increment is the part already
+   earned, which no future cash flow charges, the rest being in the stock-compensation cost
+   inside operating income. Conversion shares the filer tags apart are left out: a
+   convertible stays in the debt and a convertible preferred in the bridge, at carrying
+   value. *)
+type dilution = {
+  period_end : string;                (* the newest period, a quarter or a year, with both counts and a profit *)
+  span : string;                      (* quarter | year *)
+  diluted : float;                    (* weighted-average diluted shares *)
+  basic : float;                      (* weighted-average basic shares *)
+  excluded : float;                   (* conversion shares of debt and preferred the filer tags apart, left out *)
+  ?excluded_rows : string option;
+  ratio : float;                      (* (diluted - basic - excluded) / basic, at least nil *)
+  source : string;                    (* the elements or vendor rows read *)
+  ?accession : string option;
 }
 
 (* Closed variants: consumers must match every constructor. *)
@@ -1244,9 +1265,10 @@ type build_out = {
   conversion_note : string;                      (* (63) how the two relate, on the record *)
   maintenance_note : string;
   tranches : build_out_tranche list;    (* the last three filed years, newest first *)
-  standing_business_per_share : float;  (* the standing business alone, after net debt, per effective share *)
+  standing_business_per_share : float;  (* the standing business alone, after net debt and the equity bridge, per diluted share *)
   net_debt : float;
-  shares : float;
+  ?equity_bridge : equity_bridge option;  (* the headline's bridge on the latest period; absent on records written before it *)
+  shares : float;                       (* the effective count times one plus the dilution ratio *)
   wacc : float;
   tax_rate : float;
   terminal_growth_rate : float;
@@ -1561,6 +1583,8 @@ type valuation = {
   ?market_implied : market_implied option;      (* (36) present on an Ok record when --options DIR holds a chain for the name and a usable expiry *)
   ?market_implied_reason : string option;       (* (36) present instead under --options: no options data | no expiry ... | smile fit failed: ... ; neither field without --options *)
   ?receipt_check : receipt_check option;        (* (42) present iff the financials carry cover_page_shares and the name has a declared ratio or a cross-currency listing *)
+  ?dilution : dilution option;                  (* copied from the financials where the model divides by the share count it scales *)
+  ?dilution_reason : string option;             (* present instead: why no dilution was applied *)
   ?stretch : stretch option;                    (* (52) copied from the financials; never fails a record *)
   ?stretch_reason : string option;
   ?insiders : insiders option;                  (* (66) copied from the financials; never fails a record *)

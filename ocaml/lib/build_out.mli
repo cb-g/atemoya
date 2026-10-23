@@ -33,7 +33,7 @@ val value_per_share :
   build_out_return:float ->
   lag_years:int ->
   float
-(** The standing business plus the build-out, less net debt, per effective share.
+(** The standing business plus the build-out, less net debt and the bridge, per share.
     [build_out_return] is the accounting return, as declared (63): each tranche earns the
     cash yield it converts to on its cost from [lag_years] after the year it was spent,
     less its own maintenance at [depreciation_to_capital], as a flat perpetuity discounted
@@ -45,15 +45,19 @@ val of_record :
   periods:Boundary_t.fiscal_period list ->
   price:float ->
   market_cap:float ->
+  shares:float ->
   cash:float ->
   total_debt:float ->
   book_equity:float ->
+  bridge:Boundary_t.equity_bridge ->
   wacc:float ->
   tax_rate:float ->
   terminal_growth_rate:float ->
   scope_limits:string list ->
   (Boundary_t.build_out, string) result
-(** The whole block from one record's latest periods, or the reason there is none.
+(** The whole block from one record's latest periods, or the reason there is none. [shares]
+    is the diluted count ([Dilution.shares]) and [bridge] the headline's equity bridge on the
+    latest period, both on the record, so the map values the same claims as the headline. 
     [declared_return] is the accounting return (63); the block carries the cash return it
     converts to beside it, and the return axis and the price contour are in accounting
     terms, as the declaration is. *)

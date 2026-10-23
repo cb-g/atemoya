@@ -696,11 +696,59 @@
     },
     "notes": [
       "(2026-10-19) Built after a survey of the 104 records valued by the generic and mid-cycle DCF, item by item against the equity value, and a downstream project's evidence on thirteen names read against the filings; items found immaterial across the run were left unread, and the 2026-10-23 note below corrects that list.",
-      "Not read: a vendor-statement or 20-F filer's distributions since the base, since no quarterly cash flow is filed in the sources read (the vendor's quarterly rows were missing or nil where the half-year reports print them); a captive finance arm's debt, a lender's loan book and customer deposits classified in financing, which no filer tags alike; dilution from options, units and warrants, since stock compensation is already a cost inside operating income.",
+      "Not read: a vendor-statement or 20-F filer's distributions since the base, since no quarterly cash flow is filed in the sources read (the vendor's quarterly rows were missing or nil where the half-year reports print them); a captive finance arm's debt, a lender's loan book and customer deposits classified in financing, which no filer tags alike; dilution from options, units and warrants, which is not a bridge item: the 2026-10-23 dilution definition scales the share count instead, by the filer's treasury-method increment, the part of the awards already earned, the rest being the stock compensation inside operating income.",
       "(2026-10-19) PaymentsOfOrdinaryDividends is read after PaymentsOfDividends: Alphabet, Duke and Johnson & Johnson file their year-to-date dividends under it alone, and like PaymentsOfDividends it is every holder's, common, preferred and minority, so it stands third behind the common-only element.",
       "(2026-10-19) Two pairing tests from the sweep of the record's vendor disagreements: associates are not added where the filing shows their earnings inside operating income, operating income less revenue less costs and expenses equalling the equity-method line (BWXT's 0.075 billion for 2025; nil on Caterpillar, CME, Kinder Morgan, McDonald's and Uber); and lease liabilities are not deducted on IFRS statements where the debt read already holds them, the debt less the lease liabilities matching the vendor's debt within the threshold while the debt itself does not (Shell's Borrowings of 75.643 billion less 28.933 billion of leases is the vendor's 46.710 billion; AstraZeneca's likewise).",
       "(2026-10-23) The textbook items, from a second survey of every standard item between enterprise and equity value across the same records, the filings' balance-sheet faces read where the elements overlap. The first survey had called pension deficits immaterial because it read DefinedBenefitPlanFundedStatusOfPlan, which six filers tag without a plan dimension; the balance-sheet lines are filed by twenty-three, and reach several points of the equity value on Delta (3.156 billion), Caterpillar (3.838) and Lockheed Martin (3.915). Long-term financial investments: the parts are AvailableForSaleSecuritiesDebtSecuritiesNoncurrent (else its excluding-interest variant, else MarketableSecuritiesNoncurrent; Apple's 77.723 billion, Micron's 30.019), the held-to-maturity element, and the largest of the equity-securities elements, since Nvidia tags its 22.251 billion of non-marketable securities under EquitySecuritiesFVNINoncurrent and EquitySecuritiesWithoutReadilyDeterminableFairValueAmount alike; the filer's line (LongTermInvestments, else OtherLongTermInvestments, else OtherInvestments) holds them where it is at least their sum and the associates too where it still covers the parts without them, Sea's 1.889 billion being 1.300 of debt securities, 0.035 held to maturity, 0.376 of equity securities and 0.178 of associates, Kinder Morgan's 7.532 its associates alone and Microsoft's 36.348 its 12.000 of associates and the rest, while ServiceNow's 1.542 billion of strategic investments under OtherLongTermInvestments is a line beside its 3.771 of long-term marketable securities. EquitySecuritiesFvNi, unclassified, is not read: Cisco's and Workday's sit inside the short-term investments line the cash reads. Associates presented under InvestmentsInAffiliatesSubsidiariesAssociatesAndJointVentures alone were weighed and not added: Union Pacific nets its affiliates' income inside an operating expense and McDonald's inside other operating income, so their operating income holds them. Pensions: the combined pension-and-retiree-health element first, else the pension and retiree-health parts summed (Procter & Gamble's 2.204 and 0.736 billion, BWXT's two face lines), less DefinedBenefitPlanAssetsForPlanBenefitsNoncurrent (Northrop Grumman's 3.167 billion beside 1.110 owed), else the funded status negated; the current portion sits in accrued liabilities and is not read, nor the vendor's current pension row, which carries other payables for a filer with no defined-benefit plan. Preferred: the first preferred element above nil, ConvertiblePreferredStockNonredeemableOrRedeemableIssuerOptionValue last for Alphabet's issue, with redeemable preferred beside it; RedeemableNoncontrollingInterestEquityCarryingAmount joins the minority interest. A decommissioning trust held under the filer's investment line is added like any other investment while the obligation it funds is not deducted: Vistra's 5.091 billion of investments stand beside 4.216 billion of asset-retirement obligations, and Vistra is refused by class; no valued record files a trust element. Not read, each a stated limit: what an investment line under the filer's own element holds beyond the standard elements beneath it (the rest of Intel's equity investments, the marketable part of Uber's, the associates inside Delta's, whose 3.644 billion of equity securities are read), IFRS OtherNoncurrentFinancialAssets, which carries loans and derivatives beside the stakes, and the stakes at fair value through profit or loss, which may carry derivatives; assets held for sale, whose earnings sit inside operating income unless the disposal is a discontinued operation; tax losses carried forward; dilution, the subject of a later rule.",
       "(2026-10-23) Provisions, read from the same survey and each filer's face. On US GAAP statements litigation accrued: LossContingencyAccrualAtCarryingValue (Teva's 4.753 billion, Uber's 2.100), else LitigationReserve or EstimatedLitigationLiability, else the first current-and-noncurrent pair of one of them (Alphabet's 15.594 billion current, Mastercard's LitigationReserveCurrent), less DeferredTaxAssetsTaxDeferredExpenseReservesAndAccrualsLegalSettlements where filed (Teva's 0.650 billion, Uber's 0.234), the filer's own measure of the tax the payments save; else after tax at the statutory rate, which understates a fine. Not read: AssetRetirementObligation and its parts, whose accretion ASC 410 classes as an operating expense, so the cash flow bears it as it accrues; environmental accruals, recoverable in large part through contract pricing at Northrop Grumman, Lockheed Martin, RTX and BWXT, where the receivable is recorded apart. On IFRS statements ProvisionForDecommissioningRestorationAndRehabilitationCosts and LegalProceedingsProvision summed (Shell's 18.801 billion of decommissioning provisions, on its net-income path and so not deducted), else NoncurrentProvisions (BP's 15.670 billion, its only tag beside the current 4.709); current provisions are ongoing, like payables, and the vendor's provision rows hold both kinds, so neither is read. Thales presents its pensions as NoncurrentProvisionsForEmployeeBenefits (1.589 billion), read as the defined-benefit line where none of those elements is filed."
+    ]
+  },
+  "dilution": {
+    "name": "awards_and_warrants_by_the_treasury_stock_method",
+    "why": "The share count the price is quoted on is the shares outstanding, and an option, a restricted stock unit or a warrant not yet settled is not among them. Stock compensation is a cost inside operating income, and the cash flow charges the awards as they are earned; what is already earned of the awards outstanding is in no future cash flow, and is a claim on the equity the count divides. The filer's diluted count measures it: the treasury-stock method adds the shares the awards would issue and takes back the shares their exercise price and the compensation not yet recognised would buy, so the increment over the basic count is the earned part. The count is scaled by the increment over the basic count, read from the newest quarter or year that files both counts and a net income above nil, a loss period's diluted count being its basic count by rule. Conversion shares the filer tags apart are left out of the increment: a convertible stays in the debt at carrying value and a convertible preferred in the bridge, the out-of-the-money treatment, and one deep in the money is understated by the difference.",
+    "xbrl": {
+      "diluted": [
+        "WeightedAverageNumberOfDilutedSharesOutstanding"
+      ],
+      "basic": [
+        "WeightedAverageNumberOfSharesOutstandingBasic"
+      ],
+      "net_income": [
+        "NetIncomeLoss",
+        "ProfitLoss"
+      ],
+      "excluded": [
+        "IncrementalCommonSharesAttributableToConversionOfDebtSecurities",
+        "IncrementalCommonSharesAttributableToConversionOfPreferredStock"
+      ]
+    },
+    "ifrs": {
+      "diluted": [
+        "AdjustedWeightedAverageShares"
+      ],
+      "basic": [
+        "WeightedAverageShares"
+      ],
+      "net_income": [
+        "ProfitLossAttributableToOwnersOfParent",
+        "ProfitLoss"
+      ],
+      "excluded": []
+    },
+    "vendor": {
+      "diluted": [
+        "Diluted Average Shares"
+      ],
+      "basic": [
+        "Basic Average Shares"
+      ],
+      "net_income": [
+        "Net Income"
+      ],
+      "excluded": []
+    },
+    "notes": [
+      "(2026-10-23) Measured before it was written on every SEC-filed record valued that day: the newest profitable period's increment over the basic count reaches 9.36 per cent at Tesla (its quarter to 2026-06-30, 303 million incremental shares under IncrementalCommonSharesAttributableToShareBasedPaymentArrangements), 7.26 at Sea (its 2025 year, a 20-F under us-gaap) and 7.04 at Palantir, and is under one per cent on most. Today's count is the shares outstanding: on 60 of the 70 records with a cover-page count, market cap over price is that count within one per cent, the rest explained by stale cover-page facts, a declared unit count and depositary shares. A guard against shares issued between the period read and today, today's count against the period's point count, was weighed and not taken: it reads a dual-class filer's second class (Expedia's class B) and shares issued for acquisitions (Welltower, Prologis) as conversions. Lumentum is the case it was for: its count rose from 71.7 to 88.6 million shares between 2026-03-28 and 2026-06-27, its 10-K recording 5.7 million issued on conversion of convertible securities, and the conversion shares its quarter to 2026-03-28 tags apart (20.8 million, 21.7 with the preferred's) are left out of the increment, so a share already issued is not counted again; what remains of its convertibles is in the debt at carrying value, a stated limit."
     ]
   },
   "refinement_policy": {

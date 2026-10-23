@@ -181,7 +181,7 @@ let value ?share_count_includes_minority (a : Dcf.assumptions) ~country ~require
                 let enterprise_value =
                   Dcf.enterprise_value ~fcff:fcff_mid ~wacc ~growth_path ~terminal_growth_rate:a.terminal_growth_rate.value
                 in
-                let shares = market_cap /. price in
+                let shares = Dilution.shares fin ~market_cap ~price in
                 let net_debt = total_debt -. cash in
                 (* the bridge pairs with the recipe: filed operating income is consolidated,
                    the bottom-up recipe is the parent's net income *)

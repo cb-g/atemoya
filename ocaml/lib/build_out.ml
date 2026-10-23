@@ -141,8 +141,8 @@ let contour ~value_at ~price ~returns ~lag_years =
         { lag_years; return_required = Some (bisect low high 60); contour_reason = None }
 
 let of_record ~(declared_return : Reference_t.declared_build_out)
-    ~(declared_lag_years : Reference_t.declared_build_out) ~periods ~price ~market_cap ~cash
-    ~total_debt ~book_equity ~wacc ~tax_rate ~terminal_growth_rate ~scope_limits =
+    ~(declared_lag_years : Reference_t.declared_build_out) ~periods ~price ~market_cap ~shares ~cash
+    ~total_debt ~book_equity ~(bridge : Boundary_t.equity_bridge) ~wacc ~tax_rate ~terminal_growth_rate ~scope_limits =
   match periods with
   | [] -> Error "no fiscal period"
   | latest :: _ -> (
@@ -180,7 +180,6 @@ let of_record ~(declared_return : Reference_t.declared_build_out)
               if tranches = [] then
                 Error "no year in the last three carries capex above depreciation"
               else
-                let shares = market_cap /. price in
                 let net_debt = total_debt -. cash in
                 (* The standing business: the same free cash flow the DCF computes, with
                    maintenance capex in place of the capex actually spent, held flat and
@@ -193,7 +192,7 @@ let of_record ~(declared_return : Reference_t.declared_build_out)
                 let depreciation_to_capital = depreciation /. invested_capital in
                 let returns = returns_axis declared_return.value in
                 let value_at ~build_out_return ~lag_years =
-                  value_per_share ~standing ~tranches ~depreciation_to_capital ~wacc ~net_debt
+                  value_per_share ~standing ~tranches ~depreciation_to_capital ~wacc ~net_debt:(net_debt +. bridge.total)
                     ~shares ~build_out_return ~lag_years
                 in
                 let surface =
@@ -228,8 +227,9 @@ let of_record ~(declared_return : Reference_t.declared_build_out)
                     conversion_note;
                     maintenance_note;
                     tranches;
-                    standing_business_per_share = (standing -. net_debt) /. shares;
+                    standing_business_per_share = (standing -. net_debt -. bridge.total) /. shares;
                     net_debt;
+                    equity_bridge = Some bridge;
                     shares;
                     wacc;
                     tax_rate;

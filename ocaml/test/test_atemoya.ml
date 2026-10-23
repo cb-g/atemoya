@@ -148,7 +148,7 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     ?(industry = Some "Consumer Electronics") ?(provider = "yfinance")
     ?(statements_unavailable = "") ?latest_filing ?cross_check ?(taxonomy = "")
     ?vendor_financial_currency ?cover_page_shares ?cover_page_split_factor ?trailing_period ?trailing_basis
-    ?trailing_period_reason ?distributions_since_base ?distributions_reason periods : Boundary_t.financials =
+    ?trailing_period_reason ?distributions_since_base ?distributions_reason ?dilution ?dilution_reason periods : Boundary_t.financials =
   {
     ticker = "TEST";
     as_of = "2026-09-10T00:00:00+00:00";
@@ -195,6 +195,8 @@ let financials ?(currency = Some "USD") ?financial_currency ?trading_currency
     trailing_period_reason;
     distributions_since_base;
     distributions_reason;
+    dilution;
+    dilution_reason;
   }
 
 let full_period ?period_end ?(ebit = 1200.) ?(pretax_income = 1000.)
@@ -3309,6 +3311,29 @@ let test_equity_bridge () =
   Alcotest.(check (option approx)) "distributions too" (Some 300.)
     (Option.map (fun (d : Boundary_t.distributions) -> d.net) converted.distributions_since_base)
 
+(* The dilution, every figure invented: the filer's increment of a tenth over its basic count
+   divides the equity value by a count a tenth larger on the generic and the mid-cycle DCF, and
+   the record carries the reading; without one the record says why. *)
+let test_dilution () =
+  let d : Boundary_t.dilution =
+    { period_end = "2026-03-31"; span = "quarter"; diluted = 1100.; basic = 1000.; excluded = 0.; excluded_rows = None;
+      ratio = 0.1; source = "WeightedAverageNumberOfDilutedSharesOutstanding / WeightedAverageNumberOfSharesOutstandingBasic";
+      accession = Some "q1-2026" }
+  in
+  let fv (v : Boundary_t.valuation) = Option.get v.fair_value in
+  let plain = run (financials ~dilution_reason:"no period files both a weighted-average diluted and a basic share count" (growing ())) in
+  let diluted = run (financials ~dilution:d (growing ())) in
+  check_float "the fair value on a count a tenth larger" (fv plain /. 1.1) (fv diluted);
+  (match diluted.inputs with
+  | Some (`Dcf i) -> check_float "the inputs carry the diluted count" (5000. /. 10. *. 1.1) i.shares
+  | _ -> Alcotest.fail "not a dcf");
+  Alcotest.(check (option approx)) "the record carries the reading" (Some 0.1) (Option.map (fun (x : Boundary_t.dilution) -> x.ratio) diluted.dilution);
+  Alcotest.(check (option string)) "and without one says why" (Some "no period files both a weighted-average diluted and a basic share count") plain.dilution_reason;
+  let cyc f = run ~declared:(Some (declaration `Cyclical)) (f (midcycle_periods ())) in
+  let cyc_plain = cyc (financials ?dilution:None) and cyc_diluted = cyc (financials ~dilution:d) in
+  check_float "and on the mid-cycle path" (fv cyc_plain /. 1.1) (fv cyc_diluted);
+  check_float "nil is the effective count" 500. (Dilution.shares (financials (growing ())) ~market_cap:5000. ~price:10.)
+
 (* The sweep's pairing tests and the debt rule, every figure invented: associates are not
    added where the filing shows their earnings inside operating income; IFRS leases are not
    deducted where the debt read already holds them; the principal due within a year is
@@ -4552,12 +4577,25 @@ let build_out_periods =
       ~delta_nwc:30. ~cash:60. ~total_debt:200. ~book_equity:1300. ~net_income:550. ();
   ]
 
-let build_out_block ?(return_value = 0.20) ?(lag = 2.) () =
+let no_bridge ?(total = 0.) () : Boundary_t.equity_bridge = { definition = Equity_bridge.definition; items = []; total }
+
+let build_out_block ?(return_value = 0.20) ?(lag = 2.) ?(bridge = no_bridge ()) ?(shares = 100.) () =
   Build_out.of_record
     ~declared_return:(declared return_value "the record's own recent return, cited not used")
     ~declared_lag_years:(declared lag "a campus is powered in two years")
-    ~periods:build_out_periods ~price:50. ~market_cap:5000. ~cash:100. ~total_debt:400.
-    ~book_equity:1700. ~wacc:0.10 ~tax_rate:0.25 ~terminal_growth_rate:0.02 ~scope_limits:[ "declared" ]
+    ~periods:build_out_periods ~price:50. ~market_cap:5000. ~shares ~cash:100. ~total_debt:400.
+    ~book_equity:1700. ~bridge ~wacc:0.10 ~tax_rate:0.25 ~terminal_growth_rate:0.02 ~scope_limits:[ "declared" ]
+
+(* The readout values the headline's claims: the bridge's total comes off beside net debt,
+   and the count is the diluted one, every figure invented. *)
+let test_build_out_claims () =
+  match (build_out_block (), build_out_block ~bridge:(no_bridge ~total:200. ()) ~shares:110. ()) with
+  | Ok plain, Ok claimed ->
+      check_float "the standing business per share, after the bridge and on the diluted count"
+        ((plain.standing_business_per_share *. 100. -. 200.) /. 110.) claimed.standing_business_per_share;
+      Alcotest.(check bool) "the bridge is on the block" true (Option.is_some claimed.equity_bridge);
+      check_float "and the count" 110. claimed.shares
+  | Error e, _ | _, Error e -> Alcotest.failf "block: %s" e
 
 let test_build_out_split_and_tranches () =
   (* Growth capex is capex less depreciation where positive, and never negative: the third
@@ -4636,8 +4674,8 @@ let test_build_out_contour_recovers_a_known_return () =
       (match
          Build_out.of_record
            ~declared_return:(declared 0.20 "cited") ~declared_lag_years:(declared 2. "cited")
-           ~periods:build_out_periods ~price ~market_cap:(price *. shares) ~cash:100.
-           ~total_debt:400. ~book_equity:1700. ~wacc:0.10 ~tax_rate:0.25
+           ~periods:build_out_periods ~price ~market_cap:(price *. shares) ~shares ~cash:100.
+           ~total_debt:400. ~book_equity:1700. ~bridge:(no_bridge ()) ~wacc:0.10 ~tax_rate:0.25
            ~terminal_growth_rate:0.02 ~scope_limits:[]
        with
       | Error e -> Alcotest.failf "block at the priced point: %s" e
@@ -4686,8 +4724,8 @@ let test_build_out_gate_and_null_reasons () =
   let flat = List.map (fun (p : Boundary_t.fiscal_period) -> { p with capex = Some 10. }) build_out_periods in
   match
     Build_out.of_record ~declared_return:(declared 0.20 "cited") ~declared_lag_years:(declared 2. "cited")
-      ~periods:flat ~price:50. ~market_cap:5000. ~cash:100. ~total_debt:400. ~book_equity:1700.
-      ~wacc:0.10 ~tax_rate:0.25 ~terminal_growth_rate:0.02 ~scope_limits:[]
+      ~periods:flat ~price:50. ~market_cap:5000. ~shares:100. ~cash:100. ~total_debt:400. ~book_equity:1700.
+      ~bridge:(no_bridge ()) ~wacc:0.10 ~tax_rate:0.25 ~terminal_growth_rate:0.02 ~scope_limits:[]
   with
   | Ok _ -> Alcotest.fail "a name with no growth capex should have no block"
   | Error e -> Alcotest.(check bool) "and says so" true (contains e "capex above depreciation")
@@ -4974,6 +5012,7 @@ let () =
       ( "build-out",
         [
           case "the split, the tranches and the axes (60)" test_build_out_split_and_tranches;
+          case "it values the headline's claims: the bridge and the diluted count" test_build_out_claims;
           case "the standing business and the tranche arithmetic by hand (60)" test_build_out_standing_business_and_tranche_arithmetic;
           case "the contour recovers a known return, else says which end (60)" test_build_out_contour_recovers_a_known_return;
           case "the gate is silent out of scope and names what is not so (60)" test_build_out_gate_and_null_reasons;
@@ -5026,6 +5065,7 @@ let () =
           Alcotest.test_case "the base rate beside the growth" `Quick test_base_rate;
           Alcotest.test_case "the growth shadow" `Quick test_growth_shadow;
           Alcotest.test_case "the equity bridge" `Quick test_equity_bridge;
+          Alcotest.test_case "the dilution scales the count" `Quick test_dilution;
           Alcotest.test_case "the bridge pairing tests and the debt rule" `Quick test_bridge_pairing_and_the_debt_rule;
           Alcotest.test_case "the declared growth: the loader" `Quick test_declared_growth_loader;
           Alcotest.test_case "the declared growth" `Quick test_declared_growth;

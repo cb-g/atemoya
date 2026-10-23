@@ -724,6 +724,25 @@ type bridge_definition = {
   vendor : bridge_vendor;
 }
 
+(* The shares awards and warrants add (dilution): the filer's own weighted-average diluted
+   and basic counts for the newest quarter or year with both and a profit, less the
+   conversion shares it tags apart; or the vendor's two average rows. *)
+type dilution_counts = {
+  diluted : string list;
+  basic : string list;
+  net_income : string list;          (* a loss period's diluted count is its basic count by rule, so a profit is required *)
+  ~excluded : string list;           (* conversion shares tagged apart, summed and left out *)
+}
+
+type dilution_definition = {
+  name : string;
+  why : string;
+  xbrl : dilution_counts;
+  ifrs : dilution_counts;
+  vendor : dilution_counts;
+  ~notes : string list;
+}
+
 type field_definitions = {
   source : string;
   as_of : string;
@@ -734,6 +753,7 @@ type field_definitions = {
   ?required_on_latest_period : required_on_latest_period option;   (* (27) *)
   ?bdc : bdc_definition option;                         (* (59) *)
   ?equity_bridge : bridge_definition option;
+  ?dilution : dilution_definition option;
   cash : cash_definition;
   total_debt : debt_definition;
   delta_nwc : nwc_definition;

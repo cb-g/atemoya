@@ -49,6 +49,7 @@ import fetch_esef
 import fetch_sec
 import quality
 import recency
+import dilution
 import trailing
 import reference
 import earnings
@@ -971,9 +972,24 @@ def fetch(symbol: str, as_of: datetime, sec: SecContext, *, depth: int = fetch_s
           declared_cik: str | None = None, declared_lei: str | None = None) -> tuple[boundary.Financials, boundary.Financials | None]:
     """The record, and for an XBRL-primary name the vendor's shadow record beside it. [depth] is
     the number of annual periods the routed model needs (periods_needed); [declared_cik] the
-    universe entry's cik (22); [declared_lei] its lei (73), read only when no SEC filer resolves."""
-    notes: list[str] = []
+    universe entry's cik (22); [declared_lei] its lei (73), read only when no SEC filer resolves.
+    A record off SEC filings takes its dilution from the vendor's income statement here; an SEC
+    filer's is read from its own facts beside the other filed readings."""
     ticker = yf.Ticker(symbol)
+    financials, shadow = _fetch(symbol, ticker, as_of, sec, depth=depth, declared_cik=declared_cik, declared_lei=declared_lei)
+    if financials.provider != fetch_sec.PROVIDER:
+        try:
+            columns = _columns(ticker.income_stmt)
+        except Exception as e:  # the vendor call is the untrusted edge; any failure is the reason
+            financials.dilution, financials.dilution_reason = None, f"income statement: vendor failed: {type(e).__name__}: {e}"
+        else:
+            financials.dilution, financials.dilution_reason = dilution.of_vendor(columns, DEFINITIONS)
+    return financials, shadow
+
+
+def _fetch(symbol: str, ticker: yf.Ticker, as_of: datetime, sec: SecContext, *, depth: int,
+           declared_cik: str | None, declared_lei: str | None) -> tuple[boundary.Financials, boundary.Financials | None]:
+    notes: list[str] = []
     quote, profile = _info(ticker, notes)
     vendor = vendor_periods(ticker, notes)
     stretch_block, stretch_reason = stretch_of(symbol, as_of.date())
@@ -1140,6 +1156,10 @@ def main(argv: list[str]) -> int:
         # what went to shareholders since the annual base, from the same quarterly filing, for the equity bridge
         financials.distributions_since_base, financials.distributions_reason = trailing.distributions_of(
             filed_facts, financials.taxonomy, financials.financial_currency, sec.tags, sec.definitions, financials.periods)
+        # the shares awards and warrants add, from the filer's own diluted count
+        if financials.provider == fetch_sec.PROVIDER:
+            financials.dilution, financials.dilution_reason = dilution.of_facts(
+                filed_facts, financials.taxonomy, financials.financial_currency, sec.definitions)
         # allow_nan=False: a NaN that slipped through is a bug here, not invalid JSON
         # for the other side to choke on.
         text = financials.to_json_string(indent=2, allow_nan=False)

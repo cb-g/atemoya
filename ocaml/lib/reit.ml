@@ -106,7 +106,7 @@ let value (a : Dcf.assumptions) ~country (fin : financials) =
           let growth_path =
             Growth.path ~g0 ~terminal_growth_rate ~lambda:a.mean_reversion_lambda.value ~projection_years
           in
-          let shares = market_cap /. price in
+          let shares = Dilution.shares fin ~market_cap ~price in
           let covered_dividend = Float.min dividends_paid ffo in
           let dividend_per_share = covered_dividend /. shares in
           let dividend_path = dividend_path ~d0:dividend_per_share ~growth_path in

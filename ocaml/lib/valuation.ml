@@ -317,6 +317,17 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
   (* capital intensity from the statements, on every record; the generic-DCF branch adds the
      free cash flow with maintenance capex on the converted period *)
   let capital_intensity = Capital.intensity (Period.latest original) ~fcff:None in
+  (* The dilution the model scaled its share count by, where it divides by one it scales. *)
+  let dilution_of ~(fin : financials) (inputs : model_inputs option) =
+    match inputs with
+    | None -> (None, None)
+    | Some (`Bdc_nav _) ->
+        (None, Some "not applied: the net asset value per share the filer states is per share outstanding")
+    | Some _ -> (
+        match fin.dilution with
+        | Some d -> (Some d, None)
+        | None -> (None, Some (Option.value fin.dilution_reason ~default:"no dilution read")))
+  in
   (* [fin] is the record the model saw: the original, or its converted copy. *)
   let record ~(fin : financials) ?model ?class_check ?inputs ?fair_value ?margin_of_safety
       ?signal ?failed_reason ?build_out ?build_out_reason ~price ~status ~floor () =
@@ -400,6 +411,8 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       quality_reason = snd quality;
       recency = original.recency;
       recency_reason = original.recency_reason;
+      dilution = fst (dilution_of ~fin inputs);
+      dilution_reason = snd (dilution_of ~fin inputs);
     }
   in
   (* The declared required return (34), per name: a names entry, else the class default,
@@ -540,10 +553,15 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                 match (declaration_build_out ()) with
                 | Error why -> (None, Some why)
                 | Ok (declared_return, declared_lag_years) -> (
+                    let bridge =
+                      Equity_bridge.of_period ~cash_flow:Equity_bridge.Consolidated_operating_income
+                        ~statutory_tax_rate:a.statutory_tax_rate.value ?share_count_includes_minority fin p
+                    in
                     match
                       Build_out.of_record ~declared_return ~declared_lag_years ~periods:fin.periods
-                        ~price ~market_cap ~cash ~total_debt ~book_equity ~wacc ~tax_rate
-                        ~terminal_growth_rate:a.terminal_growth_rate.value ~scope_limits
+                        ~price ~market_cap ~shares:(Dilution.shares fin ~market_cap ~price) ~cash ~total_debt
+                        ~book_equity ~bridge ~wacc ~tax_rate ~terminal_growth_rate:a.terminal_growth_rate.value
+                        ~scope_limits
                     with
                     | Ok block -> (Some block, None)
                     | Error why -> (None, Some why)))))

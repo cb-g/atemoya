@@ -358,7 +358,8 @@ capital, and the part of the first projected year already earned; the textbook b
 whole, which would have added associates whose earnings a net-income recipe already holds and
 deducted a minority interest whose units the share count already divides; and diluted shares,
 since stock compensation is already a cost inside operating income and the shares for awards
-already granted need a rule that does not count the cost twice.
+already granted need a rule that does not count the cost twice. That rule followed on
+2026-10-23 (Dilution, below).
 
 Not read, each a stated limit: the distributions of a filer whose quarterly cash flow is not in
 the sources read (a 20-F filer's half-years, and every name on vendor statements, where the
@@ -388,6 +389,40 @@ falls; IFRS filers that present their pensions as provisions for employee benefi
 1,589 million) are read from that line. A decommissioning trust held
 under the filer's investment line would be added while the obligation it funds is not
 deducted; no valued record holds one (Vistra's, refused by class).
+
+## Dilution
+
+The share count the price is quoted on is the shares outstanding, market cap over price, and
+an option, a restricted stock unit or a warrant not yet settled is not among them. Stock
+compensation is a cost inside operating income, so the cash flow charges the awards as they
+are earned; what is already earned of the awards outstanding is in no future cash flow, and it
+is a claim on the equity the count divides. The filer's own diluted count measures that part:
+the treasury-stock method adds the shares the awards would issue and takes back the shares
+their exercise price and the compensation not yet recognised would buy. Every model that
+divides an equity value or a total dividend by the count (the generic and mid-cycle DCF, the
+residual-income models, the REIT model, and the build-out readout) divides by the effective
+count times one plus the filer's increment over its basic count; `dilution` on the record
+carries the reading, or `dilution_reason` why there is none (`python/dilution.py`,
+`ocaml/lib/dilution.ml`, `reference/field_definitions.json` dilution). The BDC's net asset
+value per share is the filer's per share outstanding and is not scaled.
+
+The reading is the newest quarter or fiscal year that files both weighted-average counts and a
+net income above nil, the quarter at an equal end, within a year of the newest period with both
+counts: a loss period's diluted count is its basic count by rule, the awards being
+antidilutive, so a loss quarter says nothing about them and the profitable year before is read.
+Conversion shares the filer tags apart are left out, a convertible staying in the debt and a
+convertible preferred in the bridge at carrying value, the treatment of an instrument out of
+the money: Lumentum's quarter to 2026-03-28 counts 21.7 million conversion shares, left out,
+and Procter & Gamble's year 68.3 million of its convertible preferred. Off SEC filings, the
+vendor's diluted and basic average rows on its newest annual column are read the same way.
+
+Not read, each a stated limit: a convertible deep in the money, which the debt holds at
+carrying value below what it converts into; conversion shares a filer does not tag apart,
+which stay in the increment while the convertible stays in the debt (Sea's 20-F tags none);
+a quarter's vesting between the period read and today, which the count already holds and the
+increment still counts; awards whose vesting turns on a condition not yet met, which the
+filer's diluted count leaves out; and every dilution on a record whose recent periods report
+losses.
 
 ## Terminal growth is held to the risk-free rate
 
@@ -997,7 +1032,9 @@ a contour per lag.
 
 It is a map of what the price requires, not a value. The record stays `Failed` with its own
 reason; the block adds no fair value, no margin of safety and no signal, nothing downstream
-reads it, and it never fails a record.
+reads it, and it never fails a record. It values the claims the headline does: net debt and
+the equity bridge on the latest period come off the standing business and the build-out, and
+the count is the diluted one (2026-10-23; before, net debt alone and the effective count).
 
 The two declarations live on the universe entry, both or neither, each exactly a value, the
 evidence for it and a date:

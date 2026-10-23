@@ -4614,6 +4614,61 @@ class Earnings:
 
 
 @dataclass
+class Dilution:
+    """Original type: dilution = { ... }
+    """
+
+    period_end: str
+    span: str
+    diluted: float
+    basic: float
+    excluded: float
+    ratio: float
+    source: str
+    excluded_rows: Optional[str] = None
+    accession: Optional[str] = None
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'Dilution':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('Dilution', 'period_end'),
+                span=_atd_read_string(x['span']) if 'span' in x else _atd_missing_json_field('Dilution', 'span'),
+                diluted=_atd_read_float(x['diluted']) if 'diluted' in x else _atd_missing_json_field('Dilution', 'diluted'),
+                basic=_atd_read_float(x['basic']) if 'basic' in x else _atd_missing_json_field('Dilution', 'basic'),
+                excluded=_atd_read_float(x['excluded']) if 'excluded' in x else _atd_missing_json_field('Dilution', 'excluded'),
+                ratio=_atd_read_float(x['ratio']) if 'ratio' in x else _atd_missing_json_field('Dilution', 'ratio'),
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('Dilution', 'source'),
+                excluded_rows=_atd_read_string(x['excluded_rows']) if 'excluded_rows' in x else None,
+                accession=_atd_read_string(x['accession']) if 'accession' in x else None,
+            )
+        else:
+            _atd_bad_json('Dilution', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['span'] = _atd_write_string(self.span)
+        res['diluted'] = _atd_write_float(self.diluted)
+        res['basic'] = _atd_write_float(self.basic)
+        res['excluded'] = _atd_write_float(self.excluded)
+        res['ratio'] = _atd_write_float(self.ratio)
+        res['source'] = _atd_write_string(self.source)
+        if self.excluded_rows is not None:
+            res['excluded_rows'] = _atd_write_string(self.excluded_rows)
+        if self.accession is not None:
+            res['accession'] = _atd_write_string(self.accession)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'Dilution':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class DeclaredGrowth:
     """Original type: declared_growth = { ... }
     """
@@ -5203,6 +5258,7 @@ class BuildOut:
     surface: List[BuildOutRow]
     price_contour: List[BuildOutContour]
     scope_limits: List[str]
+    equity_bridge: Optional[EquityBridge] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'BuildOut':
@@ -5225,6 +5281,7 @@ class BuildOut:
                 surface=_atd_read_list(BuildOutRow.from_json)(x['surface']) if 'surface' in x else _atd_missing_json_field('BuildOut', 'surface'),
                 price_contour=_atd_read_list(BuildOutContour.from_json)(x['price_contour']) if 'price_contour' in x else _atd_missing_json_field('BuildOut', 'price_contour'),
                 scope_limits=_atd_read_list(_atd_read_string)(x['scope_limits']) if 'scope_limits' in x else _atd_missing_json_field('BuildOut', 'scope_limits'),
+                equity_bridge=EquityBridge.from_json(x['equity_bridge']) if 'equity_bridge' in x else None,
             )
         else:
             _atd_bad_json('BuildOut', x)
@@ -5248,6 +5305,8 @@ class BuildOut:
         res['surface'] = _atd_write_list((lambda x: x.to_json()))(self.surface)
         res['price_contour'] = _atd_write_list((lambda x: x.to_json()))(self.price_contour)
         res['scope_limits'] = _atd_write_list(_atd_write_string)(self.scope_limits)
+        if self.equity_bridge is not None:
+            res['equity_bridge'] = (lambda x: x.to_json())(self.equity_bridge)
         return res
 
     @classmethod
@@ -5554,6 +5613,8 @@ class Valuation:
     market_implied: Optional[MarketImplied] = None
     market_implied_reason: Optional[str] = None
     receipt_check: Optional[ReceiptCheck] = None
+    dilution: Optional[Dilution] = None
+    dilution_reason: Optional[str] = None
     stretch: Optional[Stretch] = None
     stretch_reason: Optional[str] = None
     insiders: Optional[Insiders] = None
@@ -5633,6 +5694,8 @@ class Valuation:
                 market_implied=MarketImplied.from_json(x['market_implied']) if 'market_implied' in x else None,
                 market_implied_reason=_atd_read_string(x['market_implied_reason']) if 'market_implied_reason' in x else None,
                 receipt_check=ReceiptCheck.from_json(x['receipt_check']) if 'receipt_check' in x else None,
+                dilution=Dilution.from_json(x['dilution']) if 'dilution' in x else None,
+                dilution_reason=_atd_read_string(x['dilution_reason']) if 'dilution_reason' in x else None,
                 stretch=Stretch.from_json(x['stretch']) if 'stretch' in x else None,
                 stretch_reason=_atd_read_string(x['stretch_reason']) if 'stretch_reason' in x else None,
                 insiders=Insiders.from_json(x['insiders']) if 'insiders' in x else None,
@@ -5735,6 +5798,10 @@ class Valuation:
             res['market_implied_reason'] = _atd_write_string(self.market_implied_reason)
         if self.receipt_check is not None:
             res['receipt_check'] = (lambda x: x.to_json())(self.receipt_check)
+        if self.dilution is not None:
+            res['dilution'] = (lambda x: x.to_json())(self.dilution)
+        if self.dilution_reason is not None:
+            res['dilution_reason'] = _atd_write_string(self.dilution_reason)
         if self.stretch is not None:
             res['stretch'] = (lambda x: x.to_json())(self.stretch)
         if self.stretch_reason is not None:
@@ -6629,6 +6696,8 @@ class Financials:
     trailing_period_reason: Optional[str] = None
     distributions_since_base: Optional[Distributions] = None
     distributions_reason: Optional[str] = None
+    dilution: Optional[Dilution] = None
+    dilution_reason: Optional[str] = None
     identity_mismatch: Optional[str] = None
     latest_filing: Optional[str] = None
     cross_check: Optional[CrossCheck] = None
@@ -6679,6 +6748,8 @@ class Financials:
                 trailing_period_reason=_atd_read_string(x['trailing_period_reason']) if 'trailing_period_reason' in x else None,
                 distributions_since_base=Distributions.from_json(x['distributions_since_base']) if 'distributions_since_base' in x else None,
                 distributions_reason=_atd_read_string(x['distributions_reason']) if 'distributions_reason' in x else None,
+                dilution=Dilution.from_json(x['dilution']) if 'dilution' in x else None,
+                dilution_reason=_atd_read_string(x['dilution_reason']) if 'dilution_reason' in x else None,
                 identity_mismatch=_atd_read_string(x['identity_mismatch']) if 'identity_mismatch' in x else None,
                 latest_filing=_atd_read_string(x['latest_filing']) if 'latest_filing' in x else None,
                 cross_check=CrossCheck.from_json(x['cross_check']) if 'cross_check' in x else None,
@@ -6739,6 +6810,10 @@ class Financials:
             res['distributions_since_base'] = (lambda x: x.to_json())(self.distributions_since_base)
         if self.distributions_reason is not None:
             res['distributions_reason'] = _atd_write_string(self.distributions_reason)
+        if self.dilution is not None:
+            res['dilution'] = (lambda x: x.to_json())(self.dilution)
+        if self.dilution_reason is not None:
+            res['dilution_reason'] = _atd_write_string(self.dilution_reason)
         if self.identity_mismatch is not None:
             res['identity_mismatch'] = _atd_write_string(self.identity_mismatch)
         if self.latest_filing is not None:

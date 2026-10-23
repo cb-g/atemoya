@@ -244,7 +244,7 @@ let value ?(declared = "") ?share_count_includes_minority a ~country (fin : fina
             enterprise_value ~fcff ~wacc ~growth_path
               ~terminal_growth_rate:a.terminal_growth_rate.value
           in
-          let shares = market_cap /. price in
+          let shares = Dilution.shares fin ~market_cap ~price in
           let net_debt = total_debt -. cash in
           let bridge =
             Equity_bridge.of_period ~cash_flow:Equity_bridge.Consolidated_operating_income

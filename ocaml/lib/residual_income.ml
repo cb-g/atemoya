@@ -256,7 +256,7 @@ let value ?roe_target ?(book = fun (p : fiscal_period) -> p.book_equity) (a : Dc
           (* No terminal: ROE has reverted to the cost of equity, and growth at the cost of
              equity is value neutral. *)
           let equity_value = book_equity +. s.pv_excess_returns in
-          let shares = market_cap /. price in
+          let shares = Dilution.shares fin ~market_cap ~price in
           let fair_value = equity_value /. shares in
           let ratio num den =
             match (num, den) with

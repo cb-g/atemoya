@@ -810,6 +810,14 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- dilution (2026-10-23): every model that divides an equity value or a total dividend by the
+  share count divides by the effective count times one plus the filer's treasury-method
+  increment over its basic count, from the newest quarter or year with both counts and a
+  profit, conversion shares tagged apart left out; the vendor's average rows off SEC filings;
+  the BDC's net asset value per share is not scaled. `dilution` or `dilution_reason` on the
+  record. The build-out readout, which the bridge's commit had left on net debt alone, nets the
+  bridge and divides by the diluted count too. A definition change: fair values move, no status
+  or `Failed` string does.
 - the equity bridge's provisions (2026-10-23): litigation accrued on US GAAP statements is
   deducted on every cash flow, less the filer's deferred tax asset on legal settlements where
   filed, else after tax; IFRS decommissioning and legal provisions, else the noncurrent

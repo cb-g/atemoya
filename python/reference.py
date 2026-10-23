@@ -2509,6 +2509,88 @@ class DnaDefinition:
 
 
 @dataclass
+class DilutionCounts:
+    """Original type: dilution_counts = { ... }
+    """
+
+    diluted: List[str]
+    basic: List[str]
+    net_income: List[str]
+    excluded: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DilutionCounts':
+        if isinstance(x, dict):
+            return cls(
+                diluted=_atd_read_list(_atd_read_string)(x['diluted']) if 'diluted' in x else _atd_missing_json_field('DilutionCounts', 'diluted'),
+                basic=_atd_read_list(_atd_read_string)(x['basic']) if 'basic' in x else _atd_missing_json_field('DilutionCounts', 'basic'),
+                net_income=_atd_read_list(_atd_read_string)(x['net_income']) if 'net_income' in x else _atd_missing_json_field('DilutionCounts', 'net_income'),
+                excluded=_atd_read_list(_atd_read_string)(x['excluded']) if 'excluded' in x else [],
+            )
+        else:
+            _atd_bad_json('DilutionCounts', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['diluted'] = _atd_write_list(_atd_write_string)(self.diluted)
+        res['basic'] = _atd_write_list(_atd_write_string)(self.basic)
+        res['net_income'] = _atd_write_list(_atd_write_string)(self.net_income)
+        res['excluded'] = _atd_write_list(_atd_write_string)(self.excluded)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DilutionCounts':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class DilutionDefinition:
+    """Original type: dilution_definition = { ... }
+    """
+
+    name: str
+    why: str
+    xbrl: DilutionCounts
+    ifrs: DilutionCounts
+    vendor: DilutionCounts
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DilutionDefinition':
+        if isinstance(x, dict):
+            return cls(
+                name=_atd_read_string(x['name']) if 'name' in x else _atd_missing_json_field('DilutionDefinition', 'name'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('DilutionDefinition', 'why'),
+                xbrl=DilutionCounts.from_json(x['xbrl']) if 'xbrl' in x else _atd_missing_json_field('DilutionDefinition', 'xbrl'),
+                ifrs=DilutionCounts.from_json(x['ifrs']) if 'ifrs' in x else _atd_missing_json_field('DilutionDefinition', 'ifrs'),
+                vendor=DilutionCounts.from_json(x['vendor']) if 'vendor' in x else _atd_missing_json_field('DilutionDefinition', 'vendor'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('DilutionDefinition', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['name'] = _atd_write_string(self.name)
+        res['why'] = _atd_write_string(self.why)
+        res['xbrl'] = (lambda x: x.to_json())(self.xbrl)
+        res['ifrs'] = (lambda x: x.to_json())(self.ifrs)
+        res['vendor'] = (lambda x: x.to_json())(self.vendor)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DilutionDefinition':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class DebtXbrl:
     """Original type: debt_xbrl = { ... }
     """
@@ -3333,6 +3415,7 @@ class FieldDefinitions:
     required_on_latest_period: Optional[RequiredOnLatestPeriod] = None
     bdc: Optional[BdcDefinition] = None
     equity_bridge: Optional[BridgeDefinition] = None
+    dilution: Optional[DilutionDefinition] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'FieldDefinitions':
@@ -3355,6 +3438,7 @@ class FieldDefinitions:
                 required_on_latest_period=RequiredOnLatestPeriod.from_json(x['required_on_latest_period']) if 'required_on_latest_period' in x else None,
                 bdc=BdcDefinition.from_json(x['bdc']) if 'bdc' in x else None,
                 equity_bridge=BridgeDefinition.from_json(x['equity_bridge']) if 'equity_bridge' in x else None,
+                dilution=DilutionDefinition.from_json(x['dilution']) if 'dilution' in x else None,
             )
         else:
             _atd_bad_json('FieldDefinitions', x)
@@ -3384,6 +3468,8 @@ class FieldDefinitions:
             res['bdc'] = (lambda x: x.to_json())(self.bdc)
         if self.equity_bridge is not None:
             res['equity_bridge'] = (lambda x: x.to_json())(self.equity_bridge)
+        if self.dilution is not None:
+            res['dilution'] = (lambda x: x.to_json())(self.dilution)
         return res
 
     @classmethod
