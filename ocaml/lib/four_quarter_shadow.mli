@@ -16,6 +16,7 @@ val scope_limits : string list
 val value :
   ?declared:string ->
   ?share_count_includes_minority:string ->
+  ?growth_history_from:string ->
   Dcf.assumptions ->
   country:string ->
   Boundary_t.financials ->

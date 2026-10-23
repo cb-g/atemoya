@@ -235,6 +235,12 @@ type universe_entry = {
   ?build_out_return : declared_build_out option;      (* (60) the after-tax return the new capital earns once earning, a decimal *)
   ?build_out_lag_years : declared_build_out option;   (* (60) whole years from spend to first earning *)
   ?share_count_includes_minority : string option;   (* the share count the price is quoted on already holds the units the minority interest stands for, so the equity bridge does not deduct it again; the why, citing the filing *)
+  ?growth_history_from : declared_history option;   (* the first fiscal period end the growth estimate's revenue history reads: a large acquisition before it would read bought revenue as growth; the why, citing the filing *)
+}
+
+type declared_history = {
+  period_end : string;                  (* ISO date: the first fiscal year end whose revenue holds the acquired business *)
+  why : string;
 }
 
 

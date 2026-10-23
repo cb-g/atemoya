@@ -61,6 +61,9 @@ type declaration = {
   build_out_return : Reference_t.declared_build_out option;     (** (60) what the new capital earns once earning *)
   build_out_lag_years : Reference_t.declared_build_out option;  (** (60) whole years from spend to first earning *)
   share_count_includes_minority : string option;  (** the universe entry's declaration that the share count holds the minority's units; read by the equity bridge *)
+  growth_history_from : string option;
+      (** the first fiscal period end the growth estimate's revenue history reads, where the
+          universe entry declares a large acquisition before it *)
 }
 
 val receipt_tolerance : float

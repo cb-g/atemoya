@@ -405,6 +405,38 @@ class XbrlTags:
 
 
 @dataclass
+class DeclaredHistory:
+    """Original type: declared_history = { ... }
+    """
+
+    period_end: str
+    why: str
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DeclaredHistory':
+        if isinstance(x, dict):
+            return cls(
+                period_end=_atd_read_string(x['period_end']) if 'period_end' in x else _atd_missing_json_field('DeclaredHistory', 'period_end'),
+                why=_atd_read_string(x['why']) if 'why' in x else _atd_missing_json_field('DeclaredHistory', 'why'),
+            )
+        else:
+            _atd_bad_json('DeclaredHistory', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['period_end'] = _atd_write_string(self.period_end)
+        res['why'] = _atd_write_string(self.why)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DeclaredHistory':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class DeclaredBuildOut:
     """Original type: declared_build_out = { ... }
     """
@@ -456,6 +488,7 @@ class UniverseEntry:
     build_out_return: Optional[DeclaredBuildOut] = None
     build_out_lag_years: Optional[DeclaredBuildOut] = None
     share_count_includes_minority: Optional[str] = None
+    growth_history_from: Optional[DeclaredHistory] = None
 
     @classmethod
     def from_json(cls, x: Any) -> 'UniverseEntry':
@@ -473,6 +506,7 @@ class UniverseEntry:
                 build_out_return=DeclaredBuildOut.from_json(x['build_out_return']) if 'build_out_return' in x else None,
                 build_out_lag_years=DeclaredBuildOut.from_json(x['build_out_lag_years']) if 'build_out_lag_years' in x else None,
                 share_count_includes_minority=_atd_read_string(x['share_count_includes_minority']) if 'share_count_includes_minority' in x else None,
+                growth_history_from=DeclaredHistory.from_json(x['growth_history_from']) if 'growth_history_from' in x else None,
             )
         else:
             _atd_bad_json('UniverseEntry', x)
@@ -498,6 +532,8 @@ class UniverseEntry:
             res['build_out_lag_years'] = (lambda x: x.to_json())(self.build_out_lag_years)
         if self.share_count_includes_minority is not None:
             res['share_count_includes_minority'] = _atd_write_string(self.share_count_includes_minority)
+        if self.growth_history_from is not None:
+            res['growth_history_from'] = (lambda x: x.to_json())(self.growth_history_from)
         return res
 
     @classmethod

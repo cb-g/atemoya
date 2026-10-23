@@ -106,6 +106,7 @@ val missing_report : Boundary_t.financials -> Boundary_t.fiscal_period -> nwc_pe
 val value :
   ?declared:string ->
   ?share_count_includes_minority:string ->
+  ?growth_history_from:string ->
   assumptions ->
   country:string ->
   Boundary_t.financials ->
@@ -115,5 +116,7 @@ val value :
     free-cash-flow refusal (31): a base FCFF at or below zero is an [Error], since
     the DCF is meaningless on it, not conservative. The equity value is the enterprise value
     less net debt and the [Equity_bridge] on the period, the cash flow being consolidated
-    operating income; [share_count_includes_minority] is the universe entry's declaration.
+    operating income; [share_count_includes_minority] is the universe entry's declaration, and
+    [growth_history_from] the first period end the revenue history reads where the entry
+    declares a large acquisition before it.
     See the module contract. *)

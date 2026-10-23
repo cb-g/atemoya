@@ -1171,14 +1171,16 @@
       "entity_class": "OperatingCompany",
       "why": "a footwear brand owner; the discounted cash flow on stable free cash flow.",
       "scope_limits": [
-        "structural: a large acquisition inside the growth window, so the history the growth estimate reads is two businesses",
-        "a write-down of the acquired brand in the latest filed year, which the model reads as a fall in earnings rather than as a one-off"
+        "structural: a large acquisition in 2022; the growth estimate's revenue history reads from the first year that holds it, and that year holds the acquired brand from February 17, so its growth into 2023 still carries about six weeks of revenue bought rather than grown"
       ],
       "scope_limit_codes": [
-        "acquired_history",
-        "one_off_in_window"
+        "acquired_history"
       ],
-      "map_cik": "0001334036"
+      "map_cik": "0001334036",
+      "growth_history_from": {
+        "period_end": "2022-12-31",
+        "why": "Crocs acquired 100% of the equity of HEYDUDE on February 17, 2022, for an aggregate preliminary purchase price of $2.3 billion (10-K for 2022, accession 0001334036-23-000015, note Acquisition of HEYDUDE; PaymentsToAcquireBusinessesNetOfCashAcquired of 2.047 billion and GoodwillAcquiredDuringPeriod of 0.713 billion for the year), so fiscal 2022 is the first year whose revenue holds both brands: revenue went from 2.313 billion in 2021 to 3.555 billion in 2022, and a history read across it measures the purchase as growth"
+      }
     },
     {
       "ticker": "APD",

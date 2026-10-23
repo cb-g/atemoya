@@ -812,6 +812,11 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- a declared start for the revenue history (2026-10-23): a universe entry may declare
+  `growth_history_from`, exactly a period end and a why citing the filing, and the growth
+  estimate's revenue history reads from it; Crocs declares 2022, the year of its HEYDUDE
+  acquisition, and its stale limit that the model read the brand's write-down as a fall in
+  earnings, untrue since impairments are added back, is removed. No new `Failed` string.
 - the cost of debt (2026-10-23): the spread over the risk-free rate is the synthetic rating's,
   from the record's interest coverage, operating income over interest expense, on Damodaran's
   January 2026 tables (`reference/default_spreads.json`), the large firms' or, below 5 billion

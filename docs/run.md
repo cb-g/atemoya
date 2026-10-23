@@ -649,6 +649,15 @@ the shadow's margin of safety beside the headline's on the panel's rows. Its lim
 the block: what the headline is and how it leans, that the higher of two estimates is a rule
 and not a forecast, and that revenue history still reads a rebound or an acquisition as growth.
 
+A universe entry may declare `growth_history_from`, the first fiscal period end the revenue
+history reads, with the filing cited, where a large acquisition before it would read revenue
+bought as revenue grown (2026-10-23). Crocs acquired HEYDUDE on February 17, 2022 for a
+preliminary 2.3 billion dollars, and its revenue went from 2.313 billion in 2021 to 3.555
+billion in 2022; read across the purchase the history grew 15.0 per cent a year, and from 2022,
+the first year that holds both brands, 4.4. The history then needs three periods from the
+declared one, as always, and the record's `revenue_periods` lists those it read. No
+acquisition is detected: an undeclared one still reads as growth, a stated limit.
+
 **The headline stays the fundamental estimate (decided 2026-10-18).** The growth study on the
 rule panel (`docs/studies.md`, growth on the rule panel) found that no starting estimate
 forecasts the growth that followed, the fundamental one least of all, and that it reads a

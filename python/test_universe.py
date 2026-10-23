@@ -322,3 +322,19 @@ def test_a_share_count_holding_the_minority_is_declared_with_its_why() -> None:
     for bad in ("", "  ", 1):
         with pytest.raises(universe.UniverseError, match="share_count_includes_minority must be the why"):
             universe.load_text(json.dumps({"tickers": [{**entry, "share_count_includes_minority": bad}]}))
+
+
+def test_a_growth_history_start_is_a_date_and_a_why() -> None:
+    """(2026-10-23) The first fiscal period end the revenue history reads, where a large
+    acquisition before it would read bought revenue as growth: exactly an ISO date and a why."""
+    entry = {"ticker": "TEST", "entity_class": "OperatingCompany", "why": "an invented acquirer",
+             "growth_history_from": {"period_end": "2022-12-31", "why": "the acquisition closed that year, the 10-K cited"}}
+    loaded = universe.load_text(json.dumps({"tickers": [entry]}))
+    history = loaded.tickers[0].growth_history_from
+    assert history is not None and history.period_end == "2022-12-31"
+    for bad in ("2022-12-31", {"period_end": "2022-12-31"}, {"period_end": "2022-12-31", "why": " "},
+                {"period_end": "2022-12-31", "why": "w", "extra": 1}):
+        with pytest.raises(universe.UniverseError, match="growth_history_from must be exactly"):
+            universe.load_text(json.dumps({"tickers": [{**entry, "growth_history_from": bad}]}))
+    with pytest.raises(universe.UniverseError, match="not an ISO date"):
+        universe.load_text(json.dumps({"tickers": [{**entry, "growth_history_from": {"period_end": "2022-13-45", "why": "w"}}]}))

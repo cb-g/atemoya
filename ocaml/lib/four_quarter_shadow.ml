@@ -18,7 +18,7 @@ let scope_limits =
     "only a filer of quarterly reports has one; a 20-F filer and a name on vendor statements carry the reason instead";
     Measured.four_quarter_shadow ]
 
-let value ?(declared = "") ?share_count_includes_minority a ~country (fin : financials) ~fair_value =
+let value ?(declared = "") ?share_count_includes_minority ?growth_history_from a ~country (fin : financials) ~fair_value =
   match fin.trailing_period with
   | None -> Error (Option.value fin.trailing_period_reason ~default:no_trailing)
   | Some t -> (
@@ -33,7 +33,7 @@ let value ?(declared = "") ?share_count_includes_minority a ~country (fin : fina
       | _ -> (
           let annual = Period.latest fin in
           let shadowed = { fin with periods = t :: fin.periods } in
-          match Dcf.value ~declared ?share_count_includes_minority a ~country shadowed with
+          match Dcf.value ~declared ?share_count_includes_minority ?growth_history_from a ~country shadowed with
           | Error reason -> Error ("the trailing period: " ^ reason)
           | Ok (inputs, shadow_value) ->
               let revenue_over_annual =

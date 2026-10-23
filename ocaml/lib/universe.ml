@@ -1,5 +1,6 @@
 let allowed_fields =
-  [ "ticker"; "entity_class"; "why"; "scope_limits"; "scope_limit_codes"; "cik"; "map_cik"; "lei"; "adr_ratio"; "build_out_return"; "build_out_lag_years"; "share_count_includes_minority" ]
+  [ "ticker"; "entity_class"; "why"; "scope_limits"; "scope_limit_codes"; "cik"; "map_cik"; "lei"; "adr_ratio"; "build_out_return"; "build_out_lag_years"; "share_count_includes_minority";
+    "growth_history_from" ]
 
 (* (60) A build-out declaration is exactly a value, the evidence for it and a date: a number
    with no why is not a declaration, and one of the two without the other says nothing. *)
@@ -94,7 +95,23 @@ let check_entry vocabulary index (entry : Yojson.Safe.t) =
               | Some (`String s) -> String.trim s <> ""
               | Some _ -> false
             in
+            let history_ok =
+              match List.assoc_opt "growth_history_from" fields with
+              | None -> true
+              | Some (`Assoc kv) -> (
+                  List.sort compare (List.map fst kv) = [ "period_end"; "why" ]
+                  &&
+                  match (List.assoc "period_end" kv, List.assoc "why" kv) with
+                  | `String d, `String w -> Result.is_ok (Date.days_between ~from:d ~until:d) && String.trim w <> ""
+                  | _ -> false)
+              | Some _ -> false
+            in
             if not ratio_ok then Error (Printf.sprintf "universe entry %s: adr_ratio must be a positive number (ordinary shares per receipt)" name)
+            else if not history_ok then
+              Error
+                (Printf.sprintf
+                   "universe entry %s: growth_history_from must be exactly a period_end (an ISO date) and a why citing the filing"
+                   name)
             else if not minority_ok then
               Error (Printf.sprintf "universe entry %s: share_count_includes_minority must be the why, a non-empty string citing the filing" name)
             else

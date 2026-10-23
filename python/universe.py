@@ -2,10 +2,13 @@
 optionally scope_limits with scope_limit_codes (one code per limit, in order, each from the
 file's own scope_codes vocabulary), cik, lei (73, the Legal Entity Identifier whose ESEF reports are
 the statements, twenty characters), adr_ratio (42, ordinary shares per depositary
-receipt, a positive number), the two build-out declarations (60) and share_count_includes_minority
+receipt, a positive number), the two build-out declarations (60), share_count_includes_minority
 (the why, a non-empty string, where the share count already holds the units a minority
-interest stands for, so the equity bridge does not deduct it again); anything else is an
-error, so nothing that remembers an outcome or a finding can creep back into a declaration."""
+interest stands for, so the equity bridge does not deduct it again) and growth_history_from
+(exactly a period_end, an ISO date, and a why citing the filing: the first fiscal period end
+the growth estimate's revenue history reads, where a large acquisition before it would read
+bought revenue as growth); anything else is an error, so nothing that remembers an outcome or
+a finding can creep back into a declaration."""
 
 from __future__ import annotations
 
@@ -18,7 +21,7 @@ from typing import Any, cast
 import reference
 
 ALLOWED = ("ticker", "entity_class", "why", "scope_limits", "scope_limit_codes", "cik", "map_cik", "lei", "adr_ratio",
-           "build_out_return", "build_out_lag_years", "share_count_includes_minority")
+           "build_out_return", "build_out_lag_years", "share_count_includes_minority", "growth_history_from")
 REQUIRED = ("ticker", "entity_class", "why")
 # (60) A build-out declaration is exactly a value, the evidence for it and a date. A number
 # with no why is not a declaration, which is the whole point of the readout being declared.
@@ -54,6 +57,17 @@ def _check_entry(index: int, entry: object, vocabulary: frozenset[str] = frozens
     ratio = fields.get("adr_ratio")
     if ratio is not None and (isinstance(ratio, bool) or not isinstance(ratio, (int, float)) or ratio <= 0):
         raise UniverseError(f"universe entry {name}: adr_ratio must be a positive number (ordinary shares per receipt)")
+    history = fields.get("growth_history_from")
+    if history is not None:
+        if not isinstance(history, dict) or sorted(cast(dict[str, Any], history)) != ["period_end", "why"]:
+            raise UniverseError(f"universe entry {name}: growth_history_from must be exactly a period_end (an ISO date) and a why citing the filing")
+        h = cast(dict[str, Any], history)
+        try:
+            date.fromisoformat(str(h["period_end"]))
+        except ValueError as e:
+            raise UniverseError(f"universe entry {name}: growth_history_from period_end is not an ISO date: {h['period_end']!r}") from e
+        if not isinstance(h["why"], str) or not h["why"].strip():
+            raise UniverseError(f"universe entry {name}: growth_history_from must be exactly a period_end (an ISO date) and a why citing the filing")
     minority = fields.get("share_count_includes_minority")
     if minority is not None and (not isinstance(minority, str) or not minority.strip()):
         raise UniverseError(f"universe entry {name}: share_count_includes_minority must be the why, a non-empty string citing the filing")

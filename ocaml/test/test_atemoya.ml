@@ -366,9 +366,9 @@ let params : Params.t =
   }
 
 let declaration ?(scope_limits = []) ?(scope_limit_codes = []) ?adr_ratio ?build_out_return ?build_out_lag_years
-    ?share_count_includes_minority entity_class =
+    ?share_count_includes_minority ?growth_history_from entity_class =
   { Valuation.entity_class; scope_limits; scope_limit_codes; adr_ratio; build_out_return; build_out_lag_years;
-    share_count_includes_minority }
+    share_count_includes_minority; growth_history_from }
 
 (* Most valuation tests declare an operating company; the class tests declare otherwise. *)
 let run ?(declared = Some (declaration `OperatingCompany)) fin =
@@ -3377,6 +3377,30 @@ let test_debt_spread () =
       Alcotest.(check bool) "its source names the coverage" true (contains i.debt_spread.source "interest coverage 3.00")
   | Error e -> Alcotest.failf "dcf: %s" e)
 
+(* A declared start for the revenue history, every figure invented: a growing fixture whose
+   oldest year is a smaller business reads a lower growth from the declared year on, and the
+   record lists the periods it read; the loader takes exactly a date and a why. *)
+let test_growth_history_from () =
+  let inputs (v : Boundary_t.valuation) = match v.inputs with Some (`Dcf i) -> i | _ -> Alcotest.failf "not a dcf: %s" (Option.value v.failed_reason ~default:"") in
+  (* five years, the oldest half the size: the acquisition came in the year after it *)
+  let jumped =
+    List.map2
+      (fun period_end revenue -> full_period ~period_end ~total_revenue:revenue ~capex:400. ~delta_nwc:100. ())
+      [ "2025-09-30"; "2024-09-30"; "2023-09-30"; "2022-09-30"; "2021-09-30" ] [ 12000.; 11500.; 11000.; 10500.; 5250. ]
+  in
+  let all = inputs (run (financials jumped)) in
+  let from = "2022-09-30" in
+  let declared = inputs (run ~declared:(Some (declaration ~growth_history_from:from `OperatingCompany)) (financials jumped)) in
+  Alcotest.(check bool) "the history before the declared year is not read" true
+    (not (List.exists (fun p -> p < from) declared.revenue_periods) && List.exists (fun p -> p < from) all.revenue_periods);
+  Alcotest.(check bool) "and the acquired jump is no longer growth" true
+    (Option.get declared.g_historical < Option.get all.g_historical);
+  let load entry = Universe.load_string (Printf.sprintf {|{"scope_codes": {}, "tickers": [{"ticker": "T", "entity_class": "OperatingCompany", "why": "w", %s}]}|} entry) in
+  Alcotest.(check bool) "a date and a why load" true (Result.is_ok (load {|"growth_history_from": {"period_end": "2022-12-31", "why": "acquired then, 10-K cited"}|}));
+  Alcotest.(check bool) "a bare date does not" false (Result.is_ok (load {|"growth_history_from": "2022-12-31"|}));
+  Alcotest.(check bool) "nor one without a why" false (Result.is_ok (load {|"growth_history_from": {"period_end": "2022-12-31", "why": " "}|}));
+  Alcotest.(check bool) "nor a date that is not one" false (Result.is_ok (load {|"growth_history_from": {"period_end": "2022-13-45", "why": "w"}|}))
+
 (* The sweep's pairing tests and the debt rule, every figure invented: associates are not
    added where the filing shows their earnings inside operating income; IFRS leases are not
    deducted where the debt read already holds them; the principal due within a year is
@@ -5110,6 +5134,7 @@ let () =
           Alcotest.test_case "the equity bridge" `Quick test_equity_bridge;
           Alcotest.test_case "the dilution scales the count" `Quick test_dilution;
           Alcotest.test_case "the synthetic rating's spread" `Quick test_debt_spread;
+          Alcotest.test_case "a declared start for the revenue history" `Quick test_growth_history_from;
           Alcotest.test_case "the bridge pairing tests and the debt rule" `Quick test_bridge_pairing_and_the_debt_rule;
           Alcotest.test_case "the declared growth: the loader" `Quick test_declared_growth_loader;
           Alcotest.test_case "the declared growth" `Quick test_declared_growth;

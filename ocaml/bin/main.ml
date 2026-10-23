@@ -161,6 +161,7 @@ let declarations (universe : Reference_t.universe option) cli_class =
                 build_out_return = e.build_out_return;
                 build_out_lag_years = e.build_out_lag_years;
                 share_count_includes_minority = e.share_count_includes_minority;
+                growth_history_from = Option.map (fun (h : Reference_t.declared_history) -> h.period_end) e.growth_history_from;
               } ))
           u.tickers
   in
@@ -175,6 +176,7 @@ let declarations (universe : Reference_t.universe option) cli_class =
           build_out_return = None;
           build_out_lag_years = None;
           share_count_includes_minority = None;
+          growth_history_from = None;
         })
       cli_class
   in
