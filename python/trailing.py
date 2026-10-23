@@ -314,6 +314,8 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
                 and not any(c.row == base.depreciation_amortization_row for c in (dna_candidates or [])):
             notes.append(f"depreciation_amortization: the annual period reads {base.depreciation_amortization_row}, which has no trailing fact; left null rather than a smaller total")
             dna, dna_row, dna_candidates, dna_recipe, dna_composition = None, None, None, None, None
+    dna_alt, dna_alt_composition = fetch_sec.depreciation_alternative(selected, tags, defs, end, (dna, dna_row, dna_candidates, dna_recipe, dna_composition))
+    cash_alt, cash_alt_composition = fetch_sec.cash_alternative(t, defs, end, cash_value, cash_composition)
     investees = fetch_sec.investees_in_operating_income(t, defs, end, v["total_revenue"])
     due, due_row = fetch_sec.debt_due_within_year(t, defs, end, debt_composition)
     period = boundary.FiscalPeriod(
@@ -354,6 +356,8 @@ def of_record(facts: Mapping[str, object] | None, taxonomy: str, unit: str | Non
         net_interest_income_row=r["net_interest_income"],
         ebit_recipe=ebit_recipe, ebit_composition=ebit_composition,
         ebit_alternative=alt_value, ebit_alternative_composition=alt_composition,
+        depreciation_amortization_alternative=dna_alt, depreciation_amortization_alternative_composition=dna_alt_composition,
+        cash_alternative=cash_alt, cash_alternative_composition=cash_alt_composition,
         interest_expense=interest_value, interest_expense_row=interest_row, interest_recipe=interest_recipe,
         cash_composition=cash_composition,
         total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,

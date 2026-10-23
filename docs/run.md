@@ -239,6 +239,20 @@ the record as `revenues_less_costs_and_expenses` when used. It is a fallback and
 first choice. The refinement policy in that file allows two refinements of a recipe and
 names the `Failed` reason for a miss.
 
+Two more readings ride beside the ones taken, where the element alone cannot say which the
+filer means, and are taken by the same test (2026-10-23): only where the record's line
+disagrees with the vendor's and the alternative agrees with it on the latest period, then on
+every period that carries it, on the generic and mid-cycle DCF. `depreciation_amortization_alternative`
+is the D&A total plus the amortisation of intangibles filed beside it where that is no larger
+than the total, the case the total-plus rule cannot decide: Home Depot prints "depreciation and
+amortization, excluding amortization of intangible assets" (3,514 million for its 2025 year)
+beside 607 million of intangible amortisation, and most filers' totals hold theirs.
+`cash_alternative` is the cash plus an available-for-sale total the filing does not class
+current or noncurrent, where the cash carries no short-term line: Okta's 10-K for 2026 tags
+its 1,695 million of short-term investments under that total alone, while Amgen's sits inside
+its cash equivalents and an insurer's is its portfolio. The maturity schedule's principal due
+within a year (Caterpillar) is the same kind of reading.
+
 ## The equity bridge
 
 A DCF values the business; the share count divides the common equity. Between the two stand

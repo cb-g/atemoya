@@ -2902,6 +2902,7 @@ class CashXbrl:
     restricted_cash: List[List[str]]
     short_term_investments: List[str]
     investments_inclusive: List[str] = field(default_factory=lambda: [])
+    unclassified_available_for_sale: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'CashXbrl':
@@ -2912,6 +2913,7 @@ class CashXbrl:
                 restricted_cash=_atd_read_list(_atd_read_list(_atd_read_string))(x['restricted_cash']) if 'restricted_cash' in x else _atd_missing_json_field('CashXbrl', 'restricted_cash'),
                 short_term_investments=_atd_read_list(_atd_read_string)(x['short_term_investments']) if 'short_term_investments' in x else _atd_missing_json_field('CashXbrl', 'short_term_investments'),
                 investments_inclusive=_atd_read_list(_atd_read_string)(x['investments_inclusive']) if 'investments_inclusive' in x else [],
+                unclassified_available_for_sale=_atd_read_list(_atd_read_string)(x['unclassified_available_for_sale']) if 'unclassified_available_for_sale' in x else [],
             )
         else:
             _atd_bad_json('CashXbrl', x)
@@ -2923,6 +2925,7 @@ class CashXbrl:
         res['restricted_cash'] = _atd_write_list(_atd_write_list(_atd_write_string))(self.restricted_cash)
         res['short_term_investments'] = _atd_write_list(_atd_write_string)(self.short_term_investments)
         res['investments_inclusive'] = _atd_write_list(_atd_write_string)(self.investments_inclusive)
+        res['unclassified_available_for_sale'] = _atd_write_list(_atd_write_string)(self.unclassified_available_for_sale)
         return res
 
     @classmethod

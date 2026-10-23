@@ -166,6 +166,10 @@ type fiscal_period = {
   ?ebit_composition : composition option;
   ?ebit_alternative : float option;            (* the third recipe beside a derived ebit: revenues less the filer's total costs and expenses, plus interest expense where it is inside those costs; read by the EBIT policy only when the derived figure misses the cross-check *)
   ?ebit_alternative_composition : composition option;
+  ?depreciation_amortization_alternative : float option;   (* (2026-10-23) the total taken plus the intangible amortisation filed beside it, where that is no larger than the total so the rule cannot tell whether the total holds it; taken only where the vendor's D&A validates it *)
+  ?depreciation_amortization_alternative_composition : composition option;
+  ?cash_alternative : float option;           (* (2026-10-23) the cash read plus an unclassified available-for-sale total, where the cash carries no short-term line; taken only where the vendor's cash validates it *)
+  ?cash_alternative_composition : composition option;
   ?interest_expense : float option;           (* the filed interest expense line, first present of the ebit definition's tags or vendor rows (25); the mid-cycle model's bottom-up NOPAT reads it *)
   ?interest_expense_row : string option;
   ?depreciation_amortization_candidates : component list option;   (* (27) every D&A total tag filed for the period with its value; depreciation_amortization_row names the largest, taken *)

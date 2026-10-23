@@ -892,6 +892,48 @@ def cash(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
     return sum(p.value for p in parts), _label(parts), _composition(defs.cash.name, parts)
 
 
+def cash_alternative(facts: Facts, defs: reference.FieldDefinitions, end: date, value: float | None,
+                     composition: boundary.Composition | None) -> tuple[float | None, boundary.Composition | None]:
+    """(2026-10-23) The cash read plus an available-for-sale total the filing does not class
+    current or noncurrent, where the cash carries no short-term line: recorded, never taken
+    here. Okta's 10-K for 2026 tags its balance-sheet short-term investments under the
+    unclassified total alone, and its quarterly filings the same balance as
+    ShortTermInvestments; Amgen's total sits inside its cash equivalents and an insurer's is
+    its portfolio, so the element cannot say which it is and the valuer takes the figure only
+    where the vendor's cash validates it."""
+    if value is None or composition is None:
+        return None, None
+    if any(c.name in ("short_term_investments", "cash_and_investments") for c in composition.components):
+        return None, None
+    hit = facts.first(defs.cash.xbrl.unclassified_available_for_sale, end, instant=True)
+    if hit is None or hit[0] <= 0.:
+        return None, None
+    parts = list(composition.components) + [boundary.Component(name="unclassified_available_for_sale", value=hit[0], row=hit[1])]
+    return value + hit[0], _composition(defs.cash.name, parts)
+
+
+def depreciation_alternative(selected: Selected, tags: reference.XbrlTags, defs: reference.FieldDefinitions, end: date,
+                             dna: DnaResult) -> tuple[float | None, boundary.Composition | None]:
+    """(2026-10-23) The total taken plus the amortisation of intangibles filed beside it, where
+    the amortisation is no larger than the total, so the total-plus rule cannot tell whether
+    the total holds it: recorded, never taken here. Home Depot prints "depreciation and
+    amortization, excluding amortization of intangible assets" under
+    DepreciationDepletionAndAmortization beside an intangible amortisation line, and most
+    filers' totals hold theirs; the valuer takes the sum only where the vendor's D&A validates
+    it."""
+    value, row, candidates, recipe, _ = dna
+    definition = defs.depreciation_amortization
+    if definition is None or value is None or row is None or recipe is not None or not candidates:
+        return None, None
+    declared = list(tags.depreciation_components)
+    amortization, amortization_row = value_of(selected, declared[1], end) if len(declared) > 1 else (None, None)
+    if amortization is None or amortization <= 0. or amortization > value:
+        return None, None
+    parts = [boundary.Component(name="total", value=value, row=row),
+             boundary.Component(name="amortization", value=amortization, row=amortization_row or declared[1])]
+    return value + amortization, _composition(definition.name, parts)
+
+
 def cash_ifrs(facts: Facts, defs: reference.FieldDefinitions, end: date) -> Derived:
     """Cash and cash equivalents plus the first investment alternative with any tag present,
     summed (IFRS filers split current financial assets by measurement category)."""
@@ -1622,6 +1664,8 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         for field, _ in taxonomy_fields(tags, taxonomy):
             v[field], r[field] = value_of(selected, field, end)
         dna, dna_row, dna_candidates, dna_recipe, dna_composition = depreciation(facts, selected, tags, defs, end, taxonomy=taxonomy)
+        dna_alt, dna_alt_composition = (None, None) if ifrs else depreciation_alternative(
+            selected, tags, defs, end, (dna, dna_row, dna_candidates, dna_recipe, dna_composition))
         if not ifrs:
             v["capex"], r["capex"] = capex_with_software(facts, tags, end, v["capex"], r["capex"])
             v["net_income"], r["net_income"] = parent_net_income(facts, tags, end, v["net_income"], r["net_income"])
@@ -1639,6 +1683,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                     comparative, defs, declared_params, end,
                     chosen_cash=(cash_value, cash_row, cash_composition), chosen_debt=(debt, debt_row, debt_composition))
             nwc, nwc_row, nwc_composition = delta_nwc(facts, defs, end, notes)
+        cash_alt, cash_alt_composition = (None, None) if ifrs else cash_alternative(facts, defs, end, cash_value, cash_composition)
         ebit_value, ebit_row, ebit_recipe, ebit_composition = ebit(facts, defs, end, v["pretax_income"], r["pretax_income"], taxonomy=taxonomy)
         # the third recipe rides beside a derived figure only; a filed operating income needs none
         alt_value, alt_composition = (ebit_alternative(facts, defs, end, v["total_revenue"], r["total_revenue"], taxonomy=taxonomy)
@@ -1699,6 +1744,8 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 net_interest_income_row=r["net_interest_income"],
                 ebit_recipe=ebit_recipe, ebit_composition=ebit_composition,
                 ebit_alternative=alt_value, ebit_alternative_composition=alt_composition,
+                depreciation_amortization_alternative=dna_alt, depreciation_amortization_alternative_composition=dna_alt_composition,
+                cash_alternative=cash_alt, cash_alternative_composition=cash_alt_composition,
                 interest_expense=interest_value, interest_expense_row=interest_row, interest_recipe=interest_recipe,
                 cash_composition=cash_composition,
                 total_debt_composition=debt_composition, delta_nwc_composition=nwc_composition,

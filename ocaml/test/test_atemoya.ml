@@ -119,6 +119,10 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     common_dividends_paid_row = None;
     ebit_alternative = None;
     ebit_alternative_composition = None;
+    depreciation_amortization_alternative = None;
+    depreciation_amortization_alternative_composition = None;
+    cash_alternative = None;
+    cash_alternative_composition = None;
     minority_interest;
     minority_interest_row = Option.map (fun _ -> "MinorityInterest") minority_interest;
     equity_method_investments;
@@ -3449,6 +3453,39 @@ let test_bridge_pairing_and_the_debt_rule () =
   check_float "not where ours already agrees" 5000. (debt_of 5000.).total_debt;
   check_float "nor where it does not bring agreement" 5000. (debt_of 9000.).total_debt
 
+(* (2026-10-23) The vendor-validated alternatives, every figure invented: a D&A total with the
+   intangible amortisation beside it, and a cash with an unclassified available-for-sale
+   total beside it, each taken only where the alternative brings the record's line to the
+   vendor's, then on every period; never where the line already agrees or the alternative
+   misses too. *)
+let test_vendor_validated_alternatives () =
+  let check field ~primary ~secondary : Boundary_t.cross_check =
+    let rel = Float.abs (primary -. secondary) /. Float.max primary secondary in
+    { provider = "vendor"; source = ""; period_end = "2025-09-30"; secondary_period_end = "2025-09-30"; threshold = 0.02;
+      fields = [ { field; primary = Some primary; secondary = Some secondary; relative_difference = Some rel; agree = Some (rel <= 0.02) } ];
+      disagreements = (if rel <= 0.02 then 0 else 1) }
+  in
+  let inputs (v : Boundary_t.valuation) = match v.inputs with Some (`Dcf i) -> i | _ -> Alcotest.failf "not a dcf: %s" (Option.value v.failed_reason ~default:"") in
+  let comp rows : Boundary_t.composition = { definition = "test"; components = List.map (fun (name, value, row) -> ({ name; value; row } : Boundary_t.component)) rows } in
+  let with_alt = List.map (fun (p : Boundary_t.fiscal_period) ->
+      let dna = Option.get p.depreciation_amortization and cash = Option.get p.cash in
+      { p with depreciation_amortization_alternative = Some (dna +. 60.);
+               depreciation_amortization_alternative_composition = Some (comp [ ("total", dna, "DepreciationDepletionAndAmortization"); ("amortization", 60., "AmortizationOfIntangibleAssets") ]);
+               cash_alternative = Some (cash +. 400.);
+               cash_alternative_composition = Some (comp [ ("cash_equivalents", cash, "CashAndCashEquivalentsAtCarryingValue"); ("unclassified_available_for_sale", 400., "DebtSecuritiesAvailableForSaleExcludingAccruedInterest") ]) })
+      (growing ()) in
+  let latest = List.hd with_alt in
+  let dna = Option.get latest.depreciation_amortization and cash = Option.get latest.cash in
+  let dna_run vendor = inputs (run (financials ~cross_check:(check "depreciation_amortization" ~primary:dna ~secondary:vendor) with_alt)) in
+  let dna_of v = Option.get (dna_run v).depreciation_amortization in
+  check_float "taken where the sum is the vendor's" (dna +. 60.) (dna_of (dna +. 60.));
+  check_float "not where the total already is" dna (dna_of dna);
+  check_float "nor where the sum misses too" dna (dna_of (dna +. 600.));
+  let cash_run vendor = inputs (run (financials ~cross_check:(check "cash" ~primary:cash ~secondary:vendor) with_alt)) in
+  check_float "the cash with the total where that is the vendor's" (cash +. 400.) (cash_run (cash +. 400.)).cash;
+  check_float "not where the cash already is" cash (cash_run cash).cash;
+  check_float "nor where both miss" cash (cash_run (cash +. 4000.)).cash
+
 (* The declared growth (--growth FILE). The loader is strict: exactly one basis, the fields
    each basis needs and nothing else, dated, with a why. *)
 let test_declared_growth_loader () =
@@ -5144,6 +5181,7 @@ let () =
           Alcotest.test_case "the dilution scales the count" `Quick test_dilution;
           Alcotest.test_case "the synthetic rating's spread" `Quick test_debt_spread;
           Alcotest.test_case "a declared start for the revenue history" `Quick test_growth_history_from;
+          Alcotest.test_case "the vendor-validated alternatives" `Quick test_vendor_validated_alternatives;
           Alcotest.test_case "the bridge pairing tests and the debt rule" `Quick test_bridge_pairing_and_the_debt_rule;
           Alcotest.test_case "the declared growth: the loader" `Quick test_declared_growth_loader;
           Alcotest.test_case "the declared growth" `Quick test_declared_growth;

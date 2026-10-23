@@ -761,8 +761,53 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       in
       { fin with periods = List.map add fin.periods; trailing_period = Option.map add fin.trailing_period }
   in
+  (* (2026-10-23) A refined reading the fetcher records beside the one it took, where the
+     element alone cannot say which the filer means: taken only where the vendor validates it,
+     the record's line disagreeing with the vendor's and the alternative agreeing with it on
+     the latest period the check reads, then on every period that carries it. The check is in
+     the statements' currency, so it reads the original period. *)
+  let vendor_validates ~field (alternative : fiscal_period -> float option) =
+    match (Period.latest original, original.cross_check) with
+    | Some latest, Some cc when cc.period_end = latest.period_end -> (
+        match (alternative latest, List.find_opt (fun (f : field_check) -> f.field = field) cc.fields) with
+        | Some alt, Some { agree = Some false; secondary = Some vendor; _ } ->
+            let scale = Float.max (Float.abs alt) (Float.abs vendor) in
+            scale > 0. && Float.abs (alt -. vendor) /. scale <= cc.threshold
+        | _ -> false)
+    | _ -> false
+  in
+  let rows_of (c : composition option) =
+    Option.map (fun (c : composition) -> String.concat " + " (List.map (fun (x : component) -> x.row) c.components)) c
+  in
+  (* Home Depot prints depreciation excluding the amortisation of intangibles beside it *)
+  let dna_policy (fin : financials) =
+    if not (vendor_validates ~field:"depreciation_amortization" (fun p -> p.depreciation_amortization_alternative)) then fin
+    else
+      let take (p : fiscal_period) =
+        match p.depreciation_amortization_alternative with
+        | Some alt ->
+            { p with
+              depreciation_amortization = Some alt;
+              depreciation_amortization_row = rows_of p.depreciation_amortization_alternative_composition;
+              depreciation_amortization_recipe = Some "total_plus_intangible_amortization";
+              depreciation_amortization_composition = p.depreciation_amortization_alternative_composition }
+        | None -> p
+      in
+      { fin with periods = List.map take fin.periods; trailing_period = Option.map take fin.trailing_period }
+  in
+  (* Okta tags its short-term investments under an unclassified available-for-sale total *)
+  let cash_policy (fin : financials) =
+    if not (vendor_validates ~field:"cash" (fun p -> p.cash_alternative)) then fin
+    else
+      let take (p : fiscal_period) =
+        match p.cash_alternative with
+        | Some alt -> { p with cash = Some alt; cash_row = rows_of p.cash_alternative_composition; cash_composition = p.cash_alternative_composition }
+        | None -> p
+      in
+      { fin with periods = List.map take fin.periods; trailing_period = Option.map take fin.trailing_period }
+  in
   let run_model ~fin ?conversion ~model ~class_check ~rule ~country assumptions =
-    let fin = match model with `Dcf | `Dcf_midcycle -> debt_policy fin | _ -> fin in
+    let fin = match model with `Dcf | `Dcf_midcycle -> debt_policy (cash_policy (dna_policy fin)) | _ -> fin in
     let failed = failed ~fin ~model ~class_check ~floor:(floor_of_rule rule) in
     (* (60) A refusal on one of the two build-out classes carries the readout, or the reason
        it has none; every other refusal carries neither field. *)

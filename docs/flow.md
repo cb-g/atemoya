@@ -813,6 +813,11 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- two vendor-validated readings (2026-10-23): the D&A total plus the intangible amortisation
+  filed beside it (Home Depot) and the cash plus an unclassified available-for-sale total
+  (Okta), each recorded on the period as an alternative and taken on the generic and
+  mid-cycle DCF only where it turns the record's disagreement with the vendor's line into
+  agreement on the latest period, then on every period carrying it. No new `Failed` string.
 - BP's credit rating (2026-10-23): BP declares A1/A+, the middle of the three ratings its 20-F
   for 2025 states, by the rule docs/run.md writes down for every declaration (the middle of
   three, the lower of two, the one where one). No new `Failed` string.

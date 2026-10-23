@@ -6222,6 +6222,10 @@ class FiscalPeriod:
     ebit_composition: Optional[Composition] = None
     ebit_alternative: Optional[float] = None
     ebit_alternative_composition: Optional[Composition] = None
+    depreciation_amortization_alternative: Optional[float] = None
+    depreciation_amortization_alternative_composition: Optional[Composition] = None
+    cash_alternative: Optional[float] = None
+    cash_alternative_composition: Optional[Composition] = None
     interest_expense: Optional[float] = None
     interest_expense_row: Optional[str] = None
     depreciation_amortization_candidates: Optional[List[Component]] = None
@@ -6342,6 +6346,10 @@ class FiscalPeriod:
                 ebit_composition=Composition.from_json(x['ebit_composition']) if 'ebit_composition' in x else None,
                 ebit_alternative=_atd_read_float(x['ebit_alternative']) if 'ebit_alternative' in x else None,
                 ebit_alternative_composition=Composition.from_json(x['ebit_alternative_composition']) if 'ebit_alternative_composition' in x else None,
+                depreciation_amortization_alternative=_atd_read_float(x['depreciation_amortization_alternative']) if 'depreciation_amortization_alternative' in x else None,
+                depreciation_amortization_alternative_composition=Composition.from_json(x['depreciation_amortization_alternative_composition']) if 'depreciation_amortization_alternative_composition' in x else None,
+                cash_alternative=_atd_read_float(x['cash_alternative']) if 'cash_alternative' in x else None,
+                cash_alternative_composition=Composition.from_json(x['cash_alternative_composition']) if 'cash_alternative_composition' in x else None,
                 interest_expense=_atd_read_float(x['interest_expense']) if 'interest_expense' in x else None,
                 interest_expense_row=_atd_read_string(x['interest_expense_row']) if 'interest_expense_row' in x else None,
                 depreciation_amortization_candidates=_atd_read_list(Component.from_json)(x['depreciation_amortization_candidates']) if 'depreciation_amortization_candidates' in x else None,
@@ -6537,6 +6545,14 @@ class FiscalPeriod:
             res['ebit_alternative'] = _atd_write_float(self.ebit_alternative)
         if self.ebit_alternative_composition is not None:
             res['ebit_alternative_composition'] = (lambda x: x.to_json())(self.ebit_alternative_composition)
+        if self.depreciation_amortization_alternative is not None:
+            res['depreciation_amortization_alternative'] = _atd_write_float(self.depreciation_amortization_alternative)
+        if self.depreciation_amortization_alternative_composition is not None:
+            res['depreciation_amortization_alternative_composition'] = (lambda x: x.to_json())(self.depreciation_amortization_alternative_composition)
+        if self.cash_alternative is not None:
+            res['cash_alternative'] = _atd_write_float(self.cash_alternative)
+        if self.cash_alternative_composition is not None:
+            res['cash_alternative_composition'] = (lambda x: x.to_json())(self.cash_alternative_composition)
         if self.interest_expense is not None:
             res['interest_expense'] = _atd_write_float(self.interest_expense)
         if self.interest_expense_row is not None:

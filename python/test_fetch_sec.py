@@ -1624,3 +1624,25 @@ def test_the_principal_due_within_a_year_is_read_only_beside_a_noncurrent_line_w
     paired = period({"LongTermDebtNoncurrent": usd(fact("2025-12-31", 30.0)), "LongTermDebtCurrent": usd(fact("2025-12-31", 7.0)),
                      "LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths": usd(fact("2025-12-31", 7.0))})
     assert (paired.total_debt, paired.debt_due_within_year) == (37.0, None)
+
+
+def test_the_alternatives_the_valuer_takes_only_where_the_vendor_validates_them() -> None:
+    """(2026-10-23) Recorded beside the reading taken, never taken here, every figure invented:
+    the D&A total plus the intangible amortisation filed beside it, where that is no larger than
+    the total (a larger one is summed by the total-plus rule already); the cash plus an
+    unclassified available-for-sale total, where the cash carries no short-term line."""
+    total = {"DepreciationDepletionAndAmortization": usd(fact("2025-12-31", 300.0, start="2025-01-01")),
+             "AmortizationOfIntangibleAssets": usd(fact("2025-12-31", 60.0, start="2025-01-01"))}
+    p = period(total)
+    assert (p.depreciation_amortization, p.depreciation_amortization_alternative) == (300.0, 360.0)
+    assert components(p.depreciation_amortization_alternative_composition) == [
+        ("total", 300.0, "DepreciationDepletionAndAmortization"), ("amortization", 60.0, "AmortizationOfIntangibleAssets")]
+    larger = period({**total, "AmortizationOfIntangibleAssets": usd(fact("2025-12-31", 400.0, start="2025-01-01"))})
+    assert (larger.depreciation_amortization, larger.depreciation_amortization_alternative) == (700.0, None)
+    cash = {"CashAndCashEquivalentsAtCarryingValue": usd(fact("2025-12-31", 900.0)),
+            "DebtSecuritiesAvailableForSaleExcludingAccruedInterest": usd(fact("2025-12-31", 1700.0))}
+    c = period(cash)
+    assert (c.cash, c.cash_alternative) == (900.0, 2600.0)
+    assert components(c.cash_alternative_composition)[-1] == ("unclassified_available_for_sale", 1700.0, "DebtSecuritiesAvailableForSaleExcludingAccruedInterest")
+    classed = period({**cash, "ShortTermInvestments": usd(fact("2025-12-31", 1700.0))})
+    assert (classed.cash, classed.cash_alternative) == (2600.0, None)

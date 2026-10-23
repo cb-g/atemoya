@@ -357,6 +357,7 @@ type cash_xbrl = {
   restricted_cash : string list list;       (* deducted when a restricted_inclusive tag supplied the value: first complete alternative *)
   short_term_investments : string list;     (* optional component *)
   ~investments_inclusive : string list;     (* (62) searched after cash_equivalents: an aggregate that already carries the short-term investments, so the component is not added again *)
+  ~unclassified_available_for_sale : string list;   (* (2026-10-23) an available-for-sale total the filing does not class current or noncurrent: recorded beside a cash with no short-term line, taken only where the vendor's cash validates it *)
 }
 
 type cash_vendor = {
