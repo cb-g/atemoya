@@ -524,7 +524,7 @@ same claims.
 |---|---|---|
 | minority interests | `MinorityInterest`, else equity including them less the parent's, with `RedeemableNoncontrollingInterestEquityCarryingAmount` beside it; `NoncontrollingInterests`; the vendor's row | the cash flow starts from consolidated operating income and the universe entry does not declare the share count to hold the minority's units |
 | minority buyouts since the base | the latest 10-Q's year-to-date `PaymentsToMinorityShareholders`, less `MinorityInterestDecreaseFromRedemptions` where filed | beside the minority interests, where they apply and the year-to-date figures run from the valued base |
-| associates and joint ventures, at book | `EquityMethodInvestments`; `InvestmentsAccountedForUsingEquityMethod`; the vendor's aggregate row, else its two | the cash flow starts from consolidated operating income, which leaves their earnings out, and the filing does not show them inside it (operating income less revenue less costs and expenses equalling the equity-method line) |
+| associates and joint ventures, at book | `EquityMethodInvestments`; `InvestmentAccountedForUsingEquityMethod`, else its associates and joint ventures; the vendor's aggregate row, else its two | the cash flow starts from consolidated operating income, which leaves their earnings out, and the filing does not show them inside it (operating income less revenue less costs and expenses equalling the equity-method line); on IFRS statements only where the subtotals place the share below operating profit |
 | lease liabilities | `LeaseLiabilities`, else its parts; the vendor's two lease rows | IFRS statements, and the vendor's statements of a filer outside the United States: the cost is depreciation, added back, and interest, and the principal is paid in financing; not where the debt read already holds them, its total less the leases being the vendor's debt |
 | long-term financial investments, at carrying value | debt securities classified noncurrent, held to maturity, equity securities outside the equity method (the largest element), beside `LongTermInvestments`, `OtherLongTermInvestments` or `OtherInvestments`, less the associates the line holds; `NoncurrentInvestmentsOtherThanInvestmentsAccountedForUsingEquityMethod`, else the stakes at fair value through other comprehensive income; the vendor's financial-assets row, else its children | as associates: the cash flow starts from consolidated operating income, which leaves their returns out |
 | contingent consideration | `BusinessCombinationContingentConsiderationLiability`, else its parts | wherever filed |
@@ -813,6 +813,12 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- IFRS operating income and associates (2026-10-23): impairments inside IFRS operating profit
+  are added back as US GAAP ones are, less the reversals IFRS allows; the bridge's IFRS
+  element for associates was `InvestmentsAccountedForUsingEquityMethod`, which no filer uses,
+  and is now `InvestmentAccountedForUsingEquityMethod`, else its associates and joint ventures,
+  added only where the filing's subtotals place the share below operating profit. A definition
+  change: fair values move, no status or `Failed` string does.
 - the stated credit ratings (2026-10-23): seventeen more DCF records declare the ratings their
   latest annual report states, each on another row than its synthetic rating, all of them lower
   (United Rentals, Delta, McDonald's, Amgen, Expedia, RTX, Coca-Cola, Nucor, Valero,

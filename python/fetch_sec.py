@@ -652,7 +652,8 @@ def bridge_lines(facts: "Facts", defs: reference.FieldDefinitions, end: date, *,
         return out
     if taxonomy == "ifrs-full":
         out["minority_interest"] = _first(facts, d.ifrs.minority_interest, end)
-        out["equity_method_investments"] = _first(facts, d.ifrs.equity_method_investments, end)
+        investees = _first(facts, d.ifrs.equity_method_investments, end)
+        out["equity_method_investments"] = investees if investees[0] is not None else _parts_summed(facts, d.ifrs.equity_method_investments_parts, end)
         lease = _first(facts, d.ifrs.lease_liabilities, end)
         out["lease_liabilities"] = lease if lease[0] is not None else _parts_summed(facts, d.ifrs.lease_liabilities_parts, end)
         held = _first(facts, d.ifrs.financial_investments, end)
@@ -847,7 +848,7 @@ def _composition(definition: str, parts: list[boundary.Component]) -> boundary.C
     return boundary.Composition(definition=definition, components=parts)
 
 
-SUBTRACTED = frozenset({"restricted_cash", "liability_components", "contract_cost_amortization", "interest_income", "other_nonoperating", "equity_method", "cash_flow_signed_components", "gain_on_property_sales"})  # components summed with their sign flipped
+SUBTRACTED = frozenset({"restricted_cash", "liability_components", "contract_cost_amortization", "interest_income", "other_nonoperating", "equity_method", "cash_flow_signed_components", "gain_on_property_sales", "impairment_reversal"})  # components summed with their sign flipped
 
 
 def _label(parts: list[boundary.Component]) -> str:
@@ -1313,14 +1314,57 @@ def impairments(facts: Facts, d: reference.EbitRows, end: date) -> list[boundary
         intangibles = facts.first(d.impairment_intangibles, end, instant=False)
         hits.extend([intangibles] if intangibles is not None else summed(d.impairment_intangible_parts))
     hits.extend(summed(d.impairment_long_lived))
+    # (2026-10-23) IFRS lets a write-down be reversed, a gain inside operating income on the
+    # same capital, taken out beside the write-down it reverses: by asset beside the parts,
+    # the filer's total of reversals beside its total. US GAAP forbids it, and lists none.
+    reversals = summed(d.impairment_reversal_parts) if hits else []
     if not hits:
         total = facts.first(d.impairment_total, end, instant=False)
         if total is not None:
             hits.append(total)
-    return [boundary.Component(name="impairment", value=v, row=t) for v, t in hits if v != 0]
+            reversal = facts.first(d.impairment_reversal_total, end, instant=False)
+            reversals = [reversal] if reversal is not None else []
+    return ([boundary.Component(name="impairment", value=v, row=t) for v, t in hits if v != 0]
+            + [boundary.Component(name="impairment_reversal", value=-v, row=t) for v, t in reversals if v != 0])
 
 
 INVESTEES_TOLERANCE = 0.02
+
+
+INVESTEES_IFRS_TOLERANCE = 0.2  # relative to the share: the gap may carry another small non-operating line (Unilever's)
+
+
+def investees_in_operating_income_ifrs(facts: Facts, defs: reference.FieldDefinitions, end: date) -> bool | None:
+    """(2026-10-23) Where an IFRS filer presents its share of associates and joint ventures,
+    which IFRS leaves to the filer: below operating profit (False) where the gap between
+    operating profit and profit before tax, net of finance income and costs, is the share
+    within a fifth of it (Unilever), or where the gap between profit before tax less tax and
+    profit after tax is (ASML, after tax); None where neither is, which is where the share
+    sits inside operating profit (BP's profit before interest and taxation holds it) or the
+    filing cannot tell, and the bridge then adds nothing."""
+    d = defs.ebit.ifrs
+    share = facts.first(d.equity_method, end, instant=False)
+    if share is None:
+        parts = [v for t in d.equity_method_parts if (v := facts.at(t, end, instant=False)) is not None]
+        share = (sum(parts), "parts") if parts else None
+    operating = facts.first(d.operating_income, end, instant=False)
+    if share is None or share[0] == 0 or operating is None:
+        return None
+
+    def matches(gap: float) -> bool:
+        return abs(gap - share[0]) <= INVESTEES_IFRS_TOLERANCE * abs(share[0])
+
+    before = facts.first(d.profit_before_tax, end, instant=False)
+    if before is not None:
+        income = facts.first(d.interest_income, end, instant=False)
+        costs = facts.first(d.interest_expense, end, instant=False)
+        if matches(before[0] - operating[0] - (income[0] if income else 0.) + (costs[0] if costs else 0.)):
+            return False
+        after = facts.first(d.profit_after_tax, end, instant=False)
+        tax = facts.first(d.income_tax, end, instant=False)
+        if after is not None and tax is not None and matches(after[0] - (before[0] - tax[0])):
+            return False
+    return None
 
 
 def investees_in_operating_income(facts: Facts, defs: reference.FieldDefinitions, end: date, revenue: float | None) -> bool | None:
@@ -1387,7 +1431,7 @@ def ebit(facts: Facts, defs: reference.FieldDefinitions, end: date, pretax: floa
     equity-method earnings: each first present, subtracted as filed), recorded as the
     recipe pretax_plus_interest_less_nonoperating. (value, row, recipe, composition)."""
     d = defs.ebit.ifrs if taxonomy == "ifrs-full" else defs.ebit.xbrl
-    written_down = impairments(facts, d, end) if taxonomy != "ifrs-full" else []
+    written_down = impairments(facts, d, end)
     operating = facts.first(d.operating_income, end, instant=False)
     if operating is not None:
         parts = [boundary.Component(name="operating_income", value=operating[0], row=operating[1])] + written_down
@@ -1701,7 +1745,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
         common_dividends, common_dividends_row = common_dividends_of(
             v["common_dividends_paid"], r["common_dividends_paid"], v["dividends_paid"], v["preferred_dividends"])
         bridge = bridge_lines(facts, defs, end, taxonomy=taxonomy)
-        investees = None if ifrs else investees_in_operating_income(facts, defs, end, v["total_revenue"])
+        investees = investees_in_operating_income_ifrs(facts, defs, end) if ifrs else investees_in_operating_income(facts, defs, end, v["total_revenue"])
         due, due_row = (None, None) if ifrs else debt_due_within_year(facts, defs, end, debt_composition)
         periods.append(
             boundary.FiscalPeriod(

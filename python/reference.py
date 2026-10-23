@@ -2351,6 +2351,12 @@ class EbitRows:
     impairment_intangible_parts: List[str] = field(default_factory=lambda: [])
     impairment_long_lived: List[str] = field(default_factory=lambda: [])
     impairment_total: List[str] = field(default_factory=lambda: [])
+    impairment_reversal_parts: List[str] = field(default_factory=lambda: [])
+    impairment_reversal_total: List[str] = field(default_factory=lambda: [])
+    equity_method_parts: List[str] = field(default_factory=lambda: [])
+    profit_before_tax: List[str] = field(default_factory=lambda: [])
+    profit_after_tax: List[str] = field(default_factory=lambda: [])
+    income_tax: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'EbitRows':
@@ -2369,6 +2375,12 @@ class EbitRows:
                 impairment_intangible_parts=_atd_read_list(_atd_read_string)(x['impairment_intangible_parts']) if 'impairment_intangible_parts' in x else [],
                 impairment_long_lived=_atd_read_list(_atd_read_string)(x['impairment_long_lived']) if 'impairment_long_lived' in x else [],
                 impairment_total=_atd_read_list(_atd_read_string)(x['impairment_total']) if 'impairment_total' in x else [],
+                impairment_reversal_parts=_atd_read_list(_atd_read_string)(x['impairment_reversal_parts']) if 'impairment_reversal_parts' in x else [],
+                impairment_reversal_total=_atd_read_list(_atd_read_string)(x['impairment_reversal_total']) if 'impairment_reversal_total' in x else [],
+                equity_method_parts=_atd_read_list(_atd_read_string)(x['equity_method_parts']) if 'equity_method_parts' in x else [],
+                profit_before_tax=_atd_read_list(_atd_read_string)(x['profit_before_tax']) if 'profit_before_tax' in x else [],
+                profit_after_tax=_atd_read_list(_atd_read_string)(x['profit_after_tax']) if 'profit_after_tax' in x else [],
+                income_tax=_atd_read_list(_atd_read_string)(x['income_tax']) if 'income_tax' in x else [],
             )
         else:
             _atd_bad_json('EbitRows', x)
@@ -2388,6 +2400,12 @@ class EbitRows:
         res['impairment_intangible_parts'] = _atd_write_list(_atd_write_string)(self.impairment_intangible_parts)
         res['impairment_long_lived'] = _atd_write_list(_atd_write_string)(self.impairment_long_lived)
         res['impairment_total'] = _atd_write_list(_atd_write_string)(self.impairment_total)
+        res['impairment_reversal_parts'] = _atd_write_list(_atd_write_string)(self.impairment_reversal_parts)
+        res['impairment_reversal_total'] = _atd_write_list(_atd_write_string)(self.impairment_reversal_total)
+        res['equity_method_parts'] = _atd_write_list(_atd_write_string)(self.equity_method_parts)
+        res['profit_before_tax'] = _atd_write_list(_atd_write_string)(self.profit_before_tax)
+        res['profit_after_tax'] = _atd_write_list(_atd_write_string)(self.profit_after_tax)
+        res['income_tax'] = _atd_write_list(_atd_write_string)(self.income_tax)
         return res
 
     @classmethod
@@ -3213,6 +3231,7 @@ class BridgeIfrs:
     equity_method_investments: List[str]
     lease_liabilities: List[str]
     lease_liabilities_parts: List[str]
+    equity_method_investments_parts: List[str] = field(default_factory=lambda: [])
     financial_investments: List[str] = field(default_factory=lambda: [])
     financial_investments_parts: List[str] = field(default_factory=lambda: [])
     pension_net: List[str] = field(default_factory=lambda: [])
@@ -3230,6 +3249,7 @@ class BridgeIfrs:
                 equity_method_investments=_atd_read_list(_atd_read_string)(x['equity_method_investments']) if 'equity_method_investments' in x else _atd_missing_json_field('BridgeIfrs', 'equity_method_investments'),
                 lease_liabilities=_atd_read_list(_atd_read_string)(x['lease_liabilities']) if 'lease_liabilities' in x else _atd_missing_json_field('BridgeIfrs', 'lease_liabilities'),
                 lease_liabilities_parts=_atd_read_list(_atd_read_string)(x['lease_liabilities_parts']) if 'lease_liabilities_parts' in x else _atd_missing_json_field('BridgeIfrs', 'lease_liabilities_parts'),
+                equity_method_investments_parts=_atd_read_list(_atd_read_string)(x['equity_method_investments_parts']) if 'equity_method_investments_parts' in x else [],
                 financial_investments=_atd_read_list(_atd_read_string)(x['financial_investments']) if 'financial_investments' in x else [],
                 financial_investments_parts=_atd_read_list(_atd_read_string)(x['financial_investments_parts']) if 'financial_investments_parts' in x else [],
                 pension_net=_atd_read_list(_atd_read_string)(x['pension_net']) if 'pension_net' in x else [],
@@ -3248,6 +3268,7 @@ class BridgeIfrs:
         res['equity_method_investments'] = _atd_write_list(_atd_write_string)(self.equity_method_investments)
         res['lease_liabilities'] = _atd_write_list(_atd_write_string)(self.lease_liabilities)
         res['lease_liabilities_parts'] = _atd_write_list(_atd_write_string)(self.lease_liabilities_parts)
+        res['equity_method_investments_parts'] = _atd_write_list(_atd_write_string)(self.equity_method_investments_parts)
         res['financial_investments'] = _atd_write_list(_atd_write_string)(self.financial_investments)
         res['financial_investments_parts'] = _atd_write_list(_atd_write_string)(self.financial_investments_parts)
         res['pension_net'] = _atd_write_list(_atd_write_string)(self.pension_net)

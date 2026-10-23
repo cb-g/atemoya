@@ -32,7 +32,7 @@ let minority (p : fiscal_period) ~cash_flow ~share_count_includes_minority =
   in
   item ~name:"minority_interest" ~value:p.minority_interest ~row:p.minority_interest_row ~applied ~sign:1. ~why
 
-let investees (p : fiscal_period) ~cash_flow =
+let investees (fin : financials) (p : fiscal_period) ~cash_flow =
   let applied, why =
     match (p.equity_method_investments, cash_flow, p.investees_in_operating_income) with
     | None, _, _ -> (false, not_filed)
@@ -40,6 +40,11 @@ let investees (p : fiscal_period) ~cash_flow =
     | Some _, Consolidated_operating_income, Some true ->
         ( false,
           "not added: the filer's operating income holds the investees' earnings, operating income less revenue less costs and expenses equalling the equity-method line, so the cash flow values them already" )
+    (* (2026-10-23) IFRS leaves the share's place to the filer, and BP's profit before interest
+       and taxation holds it: added only where the subtotals place it below *)
+    | Some _, Consolidated_operating_income, None when fin.taxonomy = "ifrs-full" ->
+        ( false,
+          "not added: the filing's subtotals do not place the investees' share below operating profit, which IFRS leaves to the filer, so the cash flow may value them already" )
     | Some _, Consolidated_operating_income, (Some false | None) ->
         (true, "added at book value, not market: operating income leaves the investees' earnings out")
   in
@@ -200,7 +205,7 @@ let preferred (p : fiscal_period) =
 let of_period ~cash_flow ~statutory_tax_rate ?share_count_includes_minority (fin : financials) (p : fiscal_period) =
   let minority_item = minority p ~cash_flow ~share_count_includes_minority in
   let items =
-    [ minority_item; buyouts fin p ~minority:minority_item; investees p ~cash_flow; financial p ~cash_flow; leases fin p;
+    [ minority_item; buyouts fin p ~minority:minority_item; investees fin p ~cash_flow; financial p ~cash_flow; leases fin p;
       contingent p; pension p ~cash_flow ~statutory_tax_rate; provisions fin p ~cash_flow ~statutory_tax_rate; preferred p;
       distributions fin p ]
   in

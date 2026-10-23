@@ -499,6 +499,12 @@ type ebit_rows = {
   ~impairment_intangible_parts : string list;           (* else its indefinite- and finite-lived parts, summed; *)
   ~impairment_long_lived : string list;                 (* long-lived assets, every one filed, summed; *)
   ~impairment_total : string list;                      (* where no part above is filed, the filer's total of asset impairments *)
+  ~impairment_reversal_parts : string list;             (* (2026-10-23) IFRS reversals of impairment by asset, subtracted beside the parts *)
+  ~impairment_reversal_total : string list;             (* and the filer's total of reversals, subtracted beside its total *)
+  ~equity_method_parts : string list;                   (* (2026-10-23) the share of associates and of joint ventures, summed where no total is filed *)
+  ~profit_before_tax : string list;                     (* the subtotals that place the share: before tax, after it, and the tax between *)
+  ~profit_after_tax : string list;
+  ~income_tax : string list;
 }
 
 (* How many times a derived recipe may be refined, and the Failed reason when the refined
@@ -705,6 +711,7 @@ type bridge_xbrl = {
 type bridge_ifrs = {
   minority_interest : string list;
   equity_method_investments : string list;
+  ~equity_method_investments_parts : string list;   (* associates and joint ventures, summed where no total is filed *)
   lease_liabilities : string list;
   lease_liabilities_parts : string list;        (* noncurrent and current, summed where no total is filed *)
   ~financial_investments : string list;

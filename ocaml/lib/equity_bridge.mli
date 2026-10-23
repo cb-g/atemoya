@@ -6,7 +6,8 @@
     record's currency, and applies each only where the cash flow it pairs with leaves it out:
     minority interests, redeemable ones included, are deducted, and associates and long-term
     financial investments added at their carrying value, where the cash flow starts from
-    consolidated operating income, none of them where it is built from the parent's net
+    consolidated operating income (associates not where the filing shows their earnings
+    inside it, nor on IFRS statements where its subtotals do not place them below), none of them where it is built from the parent's net
     income, and minority interests not where the share count is declared to hold the units
     already; the defined-benefit plans' net liability is deducted after tax at the statutory
     rate, a surplus added, where the cash flow starts from operating income, not on the

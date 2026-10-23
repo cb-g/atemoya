@@ -237,7 +237,12 @@ less the filer's own total of costs and expenses, plus interest where the intere
 those costs, carried on the period as `ebit_alternative` with its composition and named on
 the record as `revenues_less_costs_and_expenses` when used. It is a fallback and never a
 first choice. The refinement policy in that file allows two refinements of a recipe and
-names the `Failed` reason for a miss.
+names the `Failed` reason for a miss. On every recipe the impairments inside operating income
+are added back, a write-down of capital already spent being no cash cost: on US GAAP statements
+since 2026-10-19, and on IFRS statements since 2026-10-23, by asset where filed and less the
+reversals IFRS allows, else the filer's total less its total of reversals (BP's operating
+income for 2020, -21.7 billion as filed, is -8.0 billion once its 13.8 billion of impairments
+less 0.1 billion of reversals are added back).
 
 Two more readings ride beside the ones taken, where the element alone cannot say which the
 filer means, and are taken by the same test (2026-10-23): only where the record's line
@@ -289,7 +294,13 @@ flow leaves it out and never where it already holds it:
   holds them already, nor where the filing shows them inside operating income: operating
   income less revenue less costs and expenses is the line between them, and where it equals
   the equity-method line the investees' earnings sit inside (BWXT's 75 million for 2025),
-  where it is nil they do not (Caterpillar, CME, Kinder Morgan, McDonald's, Uber). Book is not market, and the item says so: a listed stake can be worth
+  where it is nil they do not (Caterpillar, CME, Kinder Morgan, McDonald's, Uber). On IFRS
+  statements, which leave the share's place to the filer, they are added only where the
+  subtotals place it below operating profit: the gap from operating profit to profit before
+  tax, net of finance income and costs, is the share within a fifth of it (Unilever), or the
+  gap from profit before tax less tax to profit after it is (ASML, after tax); BP's profit
+  before interest and taxation holds its associates' earnings, and its 20.7 billion is not
+  added. Book is not market, and the item says so: a listed stake can be worth
   several times its carrying amount.
 - **Lease liabilities** outside the debt rows are deducted on IFRS statements and on the
   vendor's statements of a filer outside the United States. There the lease cost is

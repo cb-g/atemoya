@@ -1399,12 +1399,12 @@ def test_bridge_lines_are_read_as_filed_with_their_fallbacks() -> None:
         200.0, "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest - StockholdersEquity")
     assert fetch_sec.bridge_lines(fetch_sec.Facts({}, TAGS, []), DEFS, END, taxonomy="us-gaap") == {f: (None, None) for f in fetch_sec.BRIDGE_FIELDS}
     ifrs = fetch_sec.Facts({"NoncontrollingInterests": in_unit("EUR", twenty_f("2025-12-31", 80.0)),
-                            "InvestmentsAccountedForUsingEquityMethod": in_unit("EUR", twenty_f("2025-12-31", 120.0)),
+                            "InvestmentAccountedForUsingEquityMethod": in_unit("EUR", twenty_f("2025-12-31", 120.0)),
                             "NoncurrentLeaseLiabilities": in_unit("EUR", twenty_f("2025-12-31", 150.0)),
                             "CurrentLeaseLiabilities": in_unit("EUR", twenty_f("2025-12-31", 30.0))}, TAGS, [], unit="EUR")
     lines = fetch_sec.bridge_lines(ifrs, DEFS, END, taxonomy="ifrs-full")
     assert lines["minority_interest"] == (80.0, "NoncontrollingInterests")
-    assert lines["equity_method_investments"] == (120.0, "InvestmentsAccountedForUsingEquityMethod")
+    assert lines["equity_method_investments"] == (120.0, "InvestmentAccountedForUsingEquityMethod")
     assert lines["lease_liabilities"] == (180.0, "NoncurrentLeaseLiabilities + CurrentLeaseLiabilities")
     assert lines["contingent_consideration"] == (None, None)
     # and onto the filed period
@@ -1646,3 +1646,33 @@ def test_the_alternatives_the_valuer_takes_only_where_the_vendor_validates_them(
     assert components(c.cash_alternative_composition)[-1] == ("unclassified_available_for_sale", 1700.0, "DebtSecuritiesAvailableForSaleExcludingAccruedInterest")
     classed = period({**cash, "ShortTermInvestments": usd(fact("2025-12-31", 1700.0))})
     assert (classed.cash, classed.cash_alternative) == (2600.0, None)
+
+
+def test_ifrs_impairments_net_of_reversals_and_where_the_investees_sit() -> None:
+    """(2026-10-23) Every figure invented. IFRS impairments inside operating profit are added
+    back as on US GAAP statements, by asset where filed, less the reversals by asset; the
+    filer's total less its total of reversals where no part is filed. The share of associates
+    and joint ventures is placed below operating profit where the gap to profit before tax,
+    net of finance income and costs, is the share within a fifth, or the gap from profit
+    before tax less tax to profit after it is; otherwise the filing does not place it."""
+    def facts(lines: dict[str, float]) -> fetch_sec.Facts:
+        return fetch_sec.Facts({t: in_unit("EUR", twenty_f("2025-12-31", v, start="2025-01-01")) for t, v in lines.items()}, TAGS, [], unit="EUR")
+    parts = facts({"ProfitLossFromOperatingActivities": 1000.0, "ImpairmentLossRecognisedInProfitOrLossPropertyPlantAndEquipment": 80.0,
+                   "ImpairmentLossRecognisedInProfitOrLossGoodwill": 20.0, "ReversalOfImpairmentLossRecognisedInProfitOrLossPropertyPlantAndEquipment": 30.0,
+                   "ImpairmentLossRecognisedInProfitOrLoss": 100.0})
+    value, _, recipe, composition = fetch_sec.ebit(parts, DEFS, END, None, None, taxonomy="ifrs-full")
+    assert (value, recipe) == (1070.0, "operating_income")
+    assert [(c.name, c.value) for c in (composition.components if composition else [])] == [
+        ("operating_income", 1000.0), ("impairment", 20.0), ("impairment", 80.0), ("impairment_reversal", -30.0)]
+    total = facts({"ProfitLossFromOperatingActivities": 1000.0, "ImpairmentLoss": 150.0, "ReversalOfImpairmentLoss": 40.0})
+    assert fetch_sec.ebit(total, DEFS, END, None, None, taxonomy="ifrs-full")[0] == 1110.0
+
+    def placed(lines: dict[str, float]) -> bool | None:
+        return fetch_sec.investees_in_operating_income_ifrs(facts(lines), DEFS, END)
+    base = {"ProfitLossFromOperatingActivities": 1000.0, "FinanceIncome": 40.0, "FinanceCosts": 100.0,
+            "ShareOfProfitLossOfAssociatesAndJointVenturesAccountedForUsingEquityMethod": 50.0}
+    assert placed({**base, "ProfitLossBeforeTax": 995.0}) is False                     # 995 - 1000 - 40 + 100 = 55, the share
+    assert placed({**base, "ProfitLossBeforeTax": 940.0, "IncomeTaxExpenseContinuingOperations": 200.0,
+                   "ProfitLoss": 790.0}) is False                                       # after tax: 790 - (940 - 200) = 50
+    assert placed({**base, "ProfitLossBeforeTax": 940.0, "IncomeTaxExpenseContinuingOperations": 200.0,
+                   "ProfitLoss": 740.0}) is None                                        # inside operating profit, or untold

@@ -3273,8 +3273,17 @@ let test_equity_bridge () =
   check_float "the engine reproduces it at the recorded growth" ((us.equity_value) /. us.shares)
     (Implied.dcf_fair_value us ~g0:us.g0 ~lambda:us.mean_reversion_lambda.value);
   (* IFRS: the lease too *)
-  check_float "and 200 of leases under IFRS, the provisions after tax at the rate and not less the asset"
-    (-100. +. rest -. 60. +. (80. *. after_tax)) (block (inputs (bridged ~taxonomy:"ifrs-full" ()))).total;
+  (* under IFRS the investees are added only where the subtotals place their share below
+     operating profit, which the fixture's period does not say *)
+  check_float "and 200 of leases under IFRS, the provisions after tax at the rate and not less the asset, the unplaced investees not"
+    (-100. +. rest -. 60. +. (80. *. after_tax) +. 500.) (block (inputs (bridged ~taxonomy:"ifrs-full" ()))).total;
+  let placed =
+    match with_lines (growing ()) with
+    | p :: tail -> { p with Boundary_t.investees_in_operating_income = Some false } :: tail
+    | [] -> []
+  in
+  Alcotest.(check bool) "and added where they are placed below it" true
+    (applied (block (inputs (run (financials ~taxonomy:"ifrs-full" ~distributions_since_base:(paid "2025-09-30") placed)))) "equity_method_investments");
   let abroad = financials ~country:(Some "Sweden") ~distributions_since_base:(paid "2025-09-30") (with_lines (growing ())) in
   check_float "and on the vendor's statements of a filer abroad, at the rate given, the provisions unread" (-100. +. 80. +. 50.)
     (Equity_bridge.of_period ~cash_flow:Equity_bridge.Consolidated_operating_income ~statutory_tax_rate:0.2 abroad
