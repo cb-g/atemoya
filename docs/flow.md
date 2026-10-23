@@ -813,6 +813,12 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- the stated credit ratings (2026-10-23): seventeen more DCF records declare the ratings their
+  latest annual report states, each on another row than its synthetic rating, all of them lower
+  (United Rentals, Delta, McDonald's, Amgen, Expedia, RTX, Coca-Cola, Nucor, Valero,
+  ConocoPhillips, Chevron, Procter & Gamble, AstraZeneca, Abbott, Cboe, CME, SAP), by the rule
+  BP's declaration wrote down, a notch the table does not print taking its grade's row. No new
+  `Failed` string.
 - two vendor-validated readings (2026-10-23): the D&A total plus the intangible amortisation
   filed beside it (Home Depot) and the cash plus an unclassified available-for-sale total
   (Okta), each recorded on the period as an alternative and taken on the generic and

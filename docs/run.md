@@ -465,10 +465,16 @@ declared every path takes that rating's spread whatever the coverage, and the pa
 source quotes the declaration; a rating the table does not print fails the record by name. No
 source here carries ratings, so each is read from the filer's annual report and declared by
 hand, by one rule: the middle of three agencies' ratings, the lower of two, the one where one,
-as bond indices class a bond, since that class is what the market prices. BP declares A1/A+,
-its 20-F for 2025 stating A- from Standard & Poor's, A1 from Moody's and A+ from Fitch (its
-mid-cycle coverage, its 2020 impairments inside the window, is 1.60, a B). A firm whose
-coverage understates its standing and declares none pays more than its bonds do. Not read, each a stated limit: a bond's yield, which
+as bond indices class a bond, since that class is what the market prices; a notch the table
+does not print takes its grade's row, AA- the Aa2/AA row and BBB+ the Baa2/BBB row. Every DCF
+record whose latest annual report states the ratings in effect declares them where they fall on
+another row than the synthetic rating, in either direction (2026-10-23): eighteen records,
+BP the one whose coverage understates its standing (its mid-cycle coverage, its 2020
+impairments inside the window, is 1.60, a B, where its 20-F states A- to A+) and seventeen whose
+agencies rate them below what their coverage earns, United Rentals the furthest (A on coverage,
+BB+ from both agencies). Kinder Morgan's stated ratings fall on its synthetic row; AbbVie's 10-K
+states only the rating Moody's raised; Gilead, PepsiCo, ServiceNow, BWXT and the forty records
+whose annual reports name no agency keep the synthetic rating, a stated limit. Not read, each a stated limit: a bond's yield, which
 no source here carries; the workbook's table for financial
 service firms, on long-term interest only, since the financial firms the DCF values as operating
 companies all but clear the top row of the tables used (Intercontinental Exchange's 6.1 is the

@@ -81,7 +81,12 @@
       "ticker": "KO",
       "entity_class": "OperatingCompany",
       "why": "a plain operating company with negative net interest income",
-      "map_cik": "0000021344"
+      "map_cik": "0000021344",
+      "credit_rating": {
+        "rating": "A1/A+",
+        "why": "Coca-Cola's 10-K for 2025 (accession 0001628280-26-010047) states that its long-term debt was rated A+ by Standard & Poor's and A1 by Moody's at December 31, 2025; the lower of the two is A+, the table's A1/A+",
+        "as_of": "2026-02-20"
+      }
     },
     {
       "ticker": "COST",
@@ -100,19 +105,34 @@
       "ticker": "CVX",
       "entity_class": "Cyclical",
       "why": "an integrated oil company: earnings set by the oil price; files no operating income line, so its EBIT is derived from filed tags",
-      "map_cik": "0000093410"
+      "map_cik": "0000093410",
+      "credit_rating": {
+        "rating": "Aa2/AA",
+        "why": "Chevron's 10-K for 2025 (accession 0000093410-26-000078) states that its securities carry an AA- rating by Standard and Poor's and an Aa2 rating by Moody's; the lower of the two is AA-, the table's Aa2/AA",
+        "as_of": "2026-02-24"
+      }
     },
     {
       "ticker": "COP",
       "entity_class": "Cyclical",
       "why": "an exploration and production company: earnings set by the oil and gas price",
-      "map_cik": "0001163165"
+      "map_cik": "0001163165",
+      "credit_rating": {
+        "rating": "A2/A",
+        "why": "ConocoPhillips's 10-K for 2025 (accession 0001163165-26-000009) states long-term debt ratings of A from Fitch, A- from S&P and A2 from Moody's; the middle of the three is A, the grade Moody's A2 names, the table's A2/A",
+        "as_of": "2026-02-17"
+      }
     },
     {
       "ticker": "VLO",
       "entity_class": "Cyclical",
       "why": "a refiner: earnings set by crack spreads it does not control",
-      "map_cik": "0001035002"
+      "map_cik": "0001035002",
+      "credit_rating": {
+        "rating": "Baa2/BBB",
+        "why": "Valero's 10-K for 2025 (accession 0001628280-26-011499) states senior unsecured ratings of Baa2 from Moody's, BBB from Standard & Poor's and BBB from Fitch at December 31, 2025; the middle of the three is BBB, the table's Baa2/BBB",
+        "as_of": "2026-02-25"
+      }
     },
     {
       "ticker": "JPM",
@@ -223,7 +243,12 @@
       "entity_class": "OperatingCompany",
       "why": "a German software company filing under IFRS on a 20-F, reporting in euros under a dollar listing; adr_ratio: one American depositary receipt is one ordinary share (20-F, deposit agreement).",
       "map_cik": "0001000184",
-      "adr_ratio": 1
+      "adr_ratio": 1,
+      "credit_rating": {
+        "rating": "A1/A+",
+        "why": "SAP's 20-F for 2025 (accession 0001104659-26-020058) states long-term credit ratings of A+ by S&P Global Ratings and A1 by Moody's; the lower of the two is A+, the table's A1/A+",
+        "as_of": "2026-02-26"
+      }
     },
     {
       "ticker": "SONY",
@@ -236,7 +261,12 @@
       "ticker": "AZN.L",
       "entity_class": "OperatingCompany",
       "why": "dollar statements under a pence price: the cross-currency and minor-unit path. The filer is declared by CIK: AstraZeneca files a 20-F in IFRS in dollars, the same statements the London line trades on, and the ticker map knows only the depositary receipt.",
-      "cik": "0000901832"
+      "cik": "0000901832",
+      "credit_rating": {
+        "rating": "A1/A+",
+        "why": "AstraZeneca's 20-F for 2025 (accession 0001104659-26-019130) states that the Group's long-term credit rating was A1 by Moody's and A+ by Standard and Poor's at 31 December 2025; the lower of the two is A+, the table's A1/A+",
+        "as_of": "2026-02-24"
+      }
     },
     {
       "ticker": "SPY",
@@ -350,7 +380,12 @@
       "ticker": "PG",
       "entity_class": "OperatingCompany",
       "why": "consumer staples: decades of stable free cash flow",
-      "map_cik": "0000080424"
+      "map_cik": "0000080424",
+      "credit_rating": {
+        "rating": "Aa2/AA",
+        "why": "Procter & Gamble's 10-K for its year to June 2026 (accession 0000080424-26-000103) states long-term credit ratings of Aa3 from Moody's and AA- from Standard & Poor's on June 30, 2026; the lower of the two is AA-, the table's Aa2/AA",
+        "as_of": "2026-08-04"
+      }
     },
     {
       "ticker": "PEP",
@@ -368,7 +403,12 @@
       "ticker": "MCD",
       "entity_class": "OperatingCompany",
       "why": "a franchisor: franchise economics with heavy leases on both sides",
-      "map_cik": "0000063908"
+      "map_cik": "0000063908",
+      "credit_rating": {
+        "rating": "Baa2/BBB",
+        "why": "McDonald's 10-K for 2025 (accession 0000063908-26-000035) states that Standard & Poor's and Moody's rate its long-term debt BBB+ and Baa1; the lower of the two is BBB+, the table's Baa2/BBB",
+        "as_of": "2026-02-24"
+      }
     },
     {
       "ticker": "UNP",
@@ -492,7 +532,12 @@
       "ticker": "NUE",
       "entity_class": "Cyclical",
       "why": "steel: a commodity cyclical on domestic filings",
-      "map_cik": "0000073309"
+      "map_cik": "0000073309",
+      "credit_rating": {
+        "rating": "A3/A-",
+        "why": "Nucor's 10-K for 2025 (accession 0001193125-26-071575) states long-term ratings of A- from Standard and Poor's, A3 from Moody's and A- from Fitch; the middle of the three is A-, the table's A3/A-",
+        "as_of": "2026-02-25"
+      }
     },
     {
       "ticker": "SHEL",
@@ -517,7 +562,12 @@
       "ticker": "DAL",
       "entity_class": "Cyclical",
       "why": "an airline: cyclical, lease-heavy, with loss years inside the window",
-      "map_cik": "0000027904"
+      "map_cik": "0000027904",
+      "credit_rating": {
+        "rating": "Baa2/BBB",
+        "why": "Delta's 10-K for 2024 (accession 0000027904-25-000004) states that Fitch and S&P Global upgraded their ratings of Delta to BBB- during 2024, and its 10-K for 2025 (accession 0000027904-26-000013) that Moody's upgraded it to Baa2 in February 2025 and the other two changed only their outlooks; the middle of the three is BBB-, the table's Baa2/BBB",
+        "as_of": "2026-02-11"
+      }
     },
     {
       "ticker": "WFC",
@@ -660,7 +710,12 @@
       "ticker": "ABT",
       "entity_class": "OperatingCompany",
       "why": "Diagnostics, devices and nutrition; a diversified operating company on filed statements.",
-      "map_cik": "0000001800"
+      "map_cik": "0000001800",
+      "credit_rating": {
+        "rating": "Aa2/AA",
+        "why": "Abbott's 10-K for 2025 (accession 0001628280-26-010185) states that its long-term debt rating was AA- by S&P Global Ratings and Aa3 by Moody's Investors Service at December 31, 2025; the lower of the two is AA-, the table's Aa2/AA",
+        "as_of": "2026-02-20"
+      }
     },
     {
       "ticker": "HCA",
@@ -745,13 +800,23 @@
       "scope_limit_codes": [
         "pass_through_balances"
       ],
-      "map_cik": "0001156375"
+      "map_cik": "0001156375",
+      "credit_rating": {
+        "rating": "Aa2/AA",
+        "why": "CME's 10-K for 2025 (accession 0001156375-26-000009) states long-term debt ratings of AA- from Standard & Poor's and Aa3 from Moody's at December 31, 2025; the lower of the two is AA-, the table's Aa2/AA",
+        "as_of": "2026-02-26"
+      }
     },
     {
       "ticker": "CBOE",
       "entity_class": "OperatingCompany",
       "why": "Options and equities exchanges; a fee business, an operating company.",
-      "map_cik": "0001374310"
+      "map_cik": "0001374310",
+      "credit_rating": {
+        "rating": "A3/A-",
+        "why": "Cboe's 10-K for 2025 (accession 0001628280-26-010013) states investment grade ratings from S&P Global Ratings (A-) and Moody's Investors Service (A2) at December 31, 2025; the lower of the two is A-, the table's A3/A-",
+        "as_of": "2026-02-20"
+      }
     },
     {
       "ticker": "MA",
@@ -1682,7 +1747,12 @@
       "scope_limit_codes": [
         "rebound_window"
       ],
-      "map_cik": "0001324424"
+      "map_cik": "0001324424",
+      "credit_rating": {
+        "rating": "Baa2/BBB",
+        "why": "Expedia's 10-K for 2025 (accession 0001324424-26-000008) states ratings of Baa2 from Moody's, BBB from S&P and BBB from Fitch at December 31, 2025; the middle of the three is BBB, the table's Baa2/BBB",
+        "as_of": "2026-02-13"
+      }
     },
     {
       "ticker": "ABNB",
@@ -1842,7 +1912,12 @@
       "scope_limit_codes": [
         "one_off_in_window"
       ],
-      "map_cik": "0000101829"
+      "map_cik": "0000101829",
+      "credit_rating": {
+        "rating": "Baa2/BBB",
+        "why": "RTX's 10-K for 2025 (accession 0000101829-26-000006) states a Moody's rating of Baa1 and an S&P Global rating of BBB+, both with stable outlooks; the lower of the two is BBB+, the table's Baa2/BBB",
+        "as_of": "2026-02-06"
+      }
     },
     {
       "ticker": "HO.PA",
@@ -1929,7 +2004,12 @@
         "acquired_history",
         "product_transition"
       ],
-      "map_cik": "0000318154"
+      "map_cik": "0000318154",
+      "credit_rating": {
+        "rating": "Baa2/BBB",
+        "why": "Amgen's 10-K for 2025 (accession 0000318154-26-000010) states that S&P, Moody's and Fitch assigned its senior notes BBB+, Baa1 and BBB+ at December 31, 2025; the middle of the three is BBB+, the table's Baa2/BBB",
+        "as_of": "2026-02-13"
+      }
     },
     {
       "ticker": "KRYS",
@@ -2382,7 +2462,12 @@
       ],
       "scope_limit_codes": [
         "filer_tagging"
-      ]
+      ],
+      "credit_rating": {
+        "rating": "Ba1/BB+",
+        "why": "United Rentals' 10-K for 2025 (accession 0001067701-26-000007) states corporate ratings of Ba1 from Moody's and BB+ from Standard & Poor's as of January 26, 2026; the lower of the two is BB+, the table's Ba1/BB+",
+        "as_of": "2026-01-28"
+      }
     },
     {
       "ticker": "STWD",
