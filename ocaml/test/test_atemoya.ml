@@ -246,6 +246,7 @@ let assumptions : Dcf.assumptions =
       { value = 15; key = "global"; source = "test"; as_of = today; age_days = 0 };
     midcycle_scale_floor = param 0.10;
     required_return = None;
+    debt_spread_rule = None;
   }
 
 (* A reference set as JSON, exercising aliases, estimated cells and staleness. Every rate
@@ -360,6 +361,7 @@ let params : Params.t =
             "Bank": {"mean": 0, "sd": 1.0, "floor": -2, "ceiling": 3, "why": "the long run converges to the cost of equity", "as_of": "2026-09-23"},
             "Insurer": {"mean": 0, "sd": 1.0, "floor": -2, "ceiling": 2, "why": "the same, narrower above", "as_of": "2026-09-23"}}}|};
     required_returns = Reference_j.required_returns_of_string {|{"classes": {}, "names": {}}|};
+    default_spreads = None;
     base_rates = None;
   }
 
@@ -3334,6 +3336,47 @@ let test_dilution () =
   check_float "and on the mid-cycle path" (fv cyc_plain /. 1.1) (fv cyc_diluted);
   check_float "nil is the effective count" 500. (Dilution.shares (financials (growing ())) ~market_cap:5000. ~price:10.)
 
+(* The synthetic rating, every figure invented: an interest coverage takes the last row whose
+   lower bound it reaches; below the threshold in dollars the smaller firms' table, which asks
+   more coverage for the same spread; no interest expense beside debt keeps the declared flat
+   spread and says so; and the DCF discounts its debt at the rating's spread. *)
+let test_debt_spread () =
+  let row above up_to rating spread : Reference_t.default_spread_row = { above; up_to; rating; spread } in
+  let spreads : Reference_t.default_spreads =
+    { source = "invented table"; as_of = "2026-01-01"; max_age_days = 400; small_firm_market_cap_usd = 1000.; notes = [];
+      large = [ row (-100000.) 1.999999 "B" 0.05; row 2. 4.999999 "BBB" 0.02; row 5. 100000. "AAA" 0.005 ];
+      small = [ row (-100000.) 3.999999 "B" 0.05; row 4. 7.999999 "BBB" 0.02; row 8. 100000. "AAA" 0.005 ] }
+  in
+  let rule = { Debt_spread.spreads; age_days = 10; size = Debt_spread.Large; size_note = "the large firms' table" } in
+  let flat = param 0.01 in
+  let at ?(r = rule) ?(interest = Some 100.) ?(debt = 1000.) ebit =
+    Debt_spread.resolve r ~fallback:flat ~ebit ~interest_expense:interest ~total_debt:debt ~period_end:"2025-09-30"
+  in
+  check_float "a coverage of 3 is BBB" 0.02 (at 300.).value;
+  Alcotest.(check string) "the key is the rating" "BBB" (at 300.).key;
+  check_float "exactly on a lower bound takes that row" 0.005 (at 500.).value;
+  check_float "between two rows' printed bounds takes the lower" 0.02 (at 499.99995).value;
+  check_float "a loss is the bottom row" 0.05 (at (-50.)).value;
+  let small = Debt_spread.with_size rule ~market_cap_usd:(Ok 500.) in
+  check_float "the smaller firms ask more coverage for the same spread" 0.05 (at ~r:small 300.).value;
+  check_float "and a dollar figure at the threshold is large" 0.02
+    (at ~r:(Debt_spread.with_size rule ~market_cap_usd:(Ok 1000.)) 300.).value;
+  Alcotest.(check bool) "an unconverted market cap takes the large table and says why" true
+    (contains (Debt_spread.with_size rule ~market_cap_usd:(Error "no rate")).size_note "no rate");
+  let none = at ~interest:None 300. in
+  check_float "no interest expense beside debt: the flat spread" 0.01 none.value;
+  Alcotest.(check bool) "with the reason" true (contains none.source "no rating is read");
+  Alcotest.(check bool) "without debt it carries no weight" true (contains (at ~interest:None ~debt:0. 300.).source "carries no weight");
+  (* the DCF on the rule: the growing fixture's latest operating income over an interest of a
+     third of it is a coverage of 3 *)
+  let a = { assumptions with debt_spread_rule = Some rule } in
+  let periods = match growing () with p :: rest -> { p with Boundary_t.interest_expense = Option.map (fun e -> e /. 3.) p.ebit } :: rest | [] -> [] in
+  (match Dcf.value a ~country:"United States" (financials periods) with
+  | Ok (i, _) ->
+      check_float "the record's spread is the rating's" 0.02 i.debt_spread.value;
+      Alcotest.(check bool) "its source names the coverage" true (contains i.debt_spread.source "interest coverage 3.00")
+  | Error e -> Alcotest.failf "dcf: %s" e)
+
 (* The sweep's pairing tests and the debt rule, every figure invented: associates are not
    added where the filing shows their earnings inside operating income; IFRS leases are not
    deducted where the debt read already holds them; the principal due within a year is
@@ -5066,6 +5109,7 @@ let () =
           Alcotest.test_case "the growth shadow" `Quick test_growth_shadow;
           Alcotest.test_case "the equity bridge" `Quick test_equity_bridge;
           Alcotest.test_case "the dilution scales the count" `Quick test_dilution;
+          Alcotest.test_case "the synthetic rating's spread" `Quick test_debt_spread;
           Alcotest.test_case "the bridge pairing tests and the debt rule" `Quick test_bridge_pairing_and_the_debt_rule;
           Alcotest.test_case "the declared growth: the loader" `Quick test_declared_growth_loader;
           Alcotest.test_case "the declared growth" `Quick test_declared_growth;

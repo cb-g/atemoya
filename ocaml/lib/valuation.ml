@@ -423,6 +423,22 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
       required_return =
         Required_returns.resolve params.required_returns ?names:name_required_returns ~ticker:original.ticker ~entity_class () }
   in
+  (* The synthetic rating's table (2026-10-23): the large firms' or, below the threshold in
+     dollars, the smaller and riskier firms'; the market cap is in the trading currency. *)
+  let with_debt_spread_size (a : Dcf.assumptions) =
+    let market_cap_usd =
+      match (original.market_cap, original.trading_currency) with
+      | None, _ -> Error "no market cap"
+      | _, None -> Error "no trading currency"
+      | Some cap, Some "USD" -> Ok cap
+      | Some cap, Some trading ->
+          Result.map (fun (legs : Fx.legs) -> cap *. legs.fx_rate)
+            (Fx.rate params.fx_sources params.fx_rates ~today ~financial:trading ~trading:"USD")
+    in
+    { a with debt_spread_rule = Option.map (fun r -> Debt_spread.with_size r ~market_cap_usd) a.debt_spread_rule }
+  in
+  let with_record_assumptions (a : Dcf.assumptions) = with_debt_spread_size (with_required_return a)
+  in
   (* The declared growth (--growth FILE), per name: a shadow beside the generic or mid-cycle
      DCF's headline on the reader's own starting growth or future free cash flow. *)
   let growth_declaration =
@@ -545,9 +561,16 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                   Dcf.tax_rate ~statutory:a.statutory_tax_rate.value ~pretax_income:p.pretax_income
                     ~tax_provision:p.tax_provision
                 in
+                let debt_spread =
+                  match (a.debt_spread_rule, p.ebit) with
+                  | Some rule, Some ebit ->
+                      Debt_spread.resolve rule ~fallback:a.debt_spread ~ebit ~interest_expense:p.interest_expense ~total_debt
+                        ~period_end:p.period_end
+                  | _ -> a.debt_spread
+                in
                 let wacc =
                   Dcf.wacc ~cost_of_equity:(Dcf.cost_of_equity a)
-                    ~cost_of_debt:(a.risk_free_rate.value +. a.debt_spread.value) ~tax_rate
+                    ~cost_of_debt:(a.risk_free_rate.value +. debt_spread.value) ~tax_rate
                     ~market_cap ~total_debt
                 in
                 match (declaration_build_out ()) with
@@ -870,7 +893,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
         match resolved with
         | Error reason -> failed reason
         | Ok assumptions ->
-            run_model ~fin:original ~model ~class_check ~rule ~country (with_required_return assumptions))
+            run_model ~fin:original ~model ~class_check ~rule ~country (with_record_assumptions assumptions))
     | Ok (), _, Some financial, Some trading -> (
         match Fx.rate params.fx_sources params.fx_rates ~today ~financial ~trading with
         | Error reason -> failed reason
@@ -903,7 +926,7 @@ let run ?(thresholds = default_thresholds) ?name_beliefs ?name_required_returns 
                       }
                     in
                     run_model ~fin:converted ~conversion ~model ~class_check ~rule ~country
-                      (with_required_return assumptions))))
+                      (with_record_assumptions assumptions))))
   in
   (* Before anything else: a ticker that no longer names the declared filer is another
      company's data under this entry's class and scope limits, and nothing below is safe. *)

@@ -424,6 +424,37 @@ increment still counts; awards whose vesting turns on a condition not yet met, w
 filer's diluted count leaves out; and every dilution on a record whose recent periods report
 losses.
 
+## The cost of debt
+
+The pre-tax cost of debt is the risk-free rate plus a spread, and the spread is the one a
+company's own interest coverage earns. Operating income over interest expense gives a
+synthetic rating on Damodaran's January table, and the rating a default spread
+(`reference/default_spreads.json`, transcribed from the 2026 workbook; `ocaml/lib/debt_spread.ml`).
+Below 5 billion dollars of market cap the table is the smaller and riskier firms', which asks
+more coverage for the same rating; a market cap in another currency is converted at the
+fetched rate. A row is the last whose lower bound the coverage reaches, as the workbook looks
+it up. The generic DCF reads the operating income it values, the mid-cycle path its
+through-cycle operating income before tax, and the build-out readout the latest; each takes the
+latest period's interest expense. `debt_spread` on the inputs carries the rating as its key and
+the coverage, its two figures, the table and the vintage in its source.
+
+Before this every name borrowed at one point over the risk-free rate, a figure carried over from
+the first version: Gogo, its operating income 1.67
+times its interest, discounted its debt at the rate a large firm with no debt pays. Most large
+filers cover their interest many times over and borrow below that point; on the snapshot of
+2026-10-19, 69 of the 106 DCF records rate Aaa.
+
+The declared flat spread stands where the period carries no interest expense beside debt, and the
+parameter says so (Apple has filed no interest-expense line since its 2023 year). Not read,
+each a stated limit: an agency's rating or a bond's yield, which the textbook prefers where they
+exist and which no source here carries, so a firm whose coverage understates its rating pays
+more than its bonds do (BP's mid-cycle coverage, its 2020 impairments inside the window, is
+1.60, a B); the workbook's table for financial
+service firms, on long-term interest only, since the financial firms the DCF values as operating
+companies all but clear the top row of the tables used (Intercontinental Exchange's 6.1 is the
+exception, 0.30 points); and a convertible's or a lease's interest inside the expense, which is
+read as filed.
+
 ## Terminal growth is held to the risk-free rate
 
 A country's terminal growth comes from `reference/params.json`, one figure per country.

@@ -21,7 +21,12 @@ type assumptions = {
   beta : Boundary_t.parameter;
   beta_source : Boundary_t.beta_source;
   debt_spread : Boundary_t.parameter;
-      (** pre-tax cost of debt = risk_free_rate + debt_spread *)
+      (** pre-tax cost of debt = risk_free_rate + debt_spread; the declared flat spread, the
+          fallback where [debt_spread_rule] reads no rating *)
+  debt_spread_rule : Debt_spread.rule option;
+      (** the synthetic rating (2026-10-23): the spread the record's own interest coverage
+          earns, resolved by each model on the operating income it values; [None] in a
+          reference directory without the table *)
   growth_clamp_lower : Boundary_t.parameter;
   growth_clamp_upper : Boundary_t.parameter;
   mean_reversion_lambda : Boundary_t.parameter;

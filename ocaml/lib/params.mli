@@ -37,6 +37,8 @@ type t = {
       (** the declared class defaults on long-run growth (24); empty when the directory has no beliefs.json *)
   required_returns : Reference_t.required_returns;
       (** the declared required returns (34); both sections empty until the user declares one *)
+  default_spreads : Reference_t.default_spreads option;
+      (** the synthetic-rating table (2026-10-23); [None] in a reference directory written before it *)
 }
 
 val load : dir:string -> fetched:string -> (t, string) result

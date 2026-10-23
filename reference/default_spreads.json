@@ -1,0 +1,196 @@
+{
+  "source": "Damodaran, ratings, interest coverage ratios and default spreads, ratings.xls, January 2026 update (the workbook saved 2026-01-26, pages.stern.nyu.edu/~adamodar): a synthetic rating from the interest coverage ratio, operating income over interest expense, and the default spread over the risk-free rate that rating carries",
+  "as_of": "2026-01-01",
+  "max_age_days": 400,
+  "small_firm_market_cap_usd": 5000000000.0,
+  "notes": [
+    "Annual source, published each January; refresh due January 2027. as_of is the first day of the vintage month so ages are conservative, as the premium table's is.",
+    "Transcribed by hand from the workbook's 'Start here Ratings sheet': the table for large non-financial service firms and the one for smaller and riskier firms, which the workbook's input line defines as market capitalisation below 5 billion dollars. The web page of the same update (ratings.html, data as of January 2026) prints the first with the same figures and not the second. The workbook's third table, for financial service firms on the long-term interest coverage ratio, is not transcribed: banks and insurers are valued on residual income, which carries no cost of debt, and the financial firms the DCF values as operating companies are read on the tables above, a stated limit. On the snapshot of 2026-10-19 only Intercontinental Exchange's coverage, 6.1, would earn another row on the third table, 0.30 points less spread; Blackstone, Cboe, CME and Mastercard clear the top row of both.",
+    "Each row is the workbook's: a coverage ratio greater than `above` and at most `up_to` takes the rating and the spread. The workbook looks the ratio up on the first column, the last row whose `above` the ratio reaches, and the valuer does the same, so no ratio falls between two rows' bounds.",
+    "The spreads are the same in both tables, row for row; the coverage that earns each rating differs."
+  ],
+  "large": [
+    {
+      "above": -100000.0,
+      "up_to": 0.199999,
+      "rating": "D2/D",
+      "spread": 0.19
+    },
+    {
+      "above": 0.2,
+      "up_to": 0.649999,
+      "rating": "C2/C",
+      "spread": 0.16
+    },
+    {
+      "above": 0.65,
+      "up_to": 0.799999,
+      "rating": "Ca2/CC",
+      "spread": 0.1261
+    },
+    {
+      "above": 0.8,
+      "up_to": 1.249999,
+      "rating": "Caa/CCC",
+      "spread": 0.0885
+    },
+    {
+      "above": 1.25,
+      "up_to": 1.499999,
+      "rating": "B3/B-",
+      "spread": 0.0509
+    },
+    {
+      "above": 1.5,
+      "up_to": 1.749999,
+      "rating": "B2/B",
+      "spread": 0.0321
+    },
+    {
+      "above": 1.75,
+      "up_to": 1.999999,
+      "rating": "B1/B+",
+      "spread": 0.0275
+    },
+    {
+      "above": 2.0,
+      "up_to": 2.2499999,
+      "rating": "Ba2/BB",
+      "spread": 0.0184
+    },
+    {
+      "above": 2.25,
+      "up_to": 2.49999,
+      "rating": "Ba1/BB+",
+      "spread": 0.0138
+    },
+    {
+      "above": 2.5,
+      "up_to": 2.999999,
+      "rating": "Baa2/BBB",
+      "spread": 0.0111
+    },
+    {
+      "above": 3.0,
+      "up_to": 4.249999,
+      "rating": "A3/A-",
+      "spread": 0.0089
+    },
+    {
+      "above": 4.25,
+      "up_to": 5.499999,
+      "rating": "A2/A",
+      "spread": 0.0078
+    },
+    {
+      "above": 5.5,
+      "up_to": 6.499999,
+      "rating": "A1/A+",
+      "spread": 0.007
+    },
+    {
+      "above": 6.5,
+      "up_to": 8.499999,
+      "rating": "Aa2/AA",
+      "spread": 0.0055
+    },
+    {
+      "above": 8.5,
+      "up_to": 100000.0,
+      "rating": "Aaa/AAA",
+      "spread": 0.004
+    }
+  ],
+  "small": [
+    {
+      "above": -100000.0,
+      "up_to": 0.499999,
+      "rating": "D2/D",
+      "spread": 0.19
+    },
+    {
+      "above": 0.5,
+      "up_to": 0.799999,
+      "rating": "C2/C",
+      "spread": 0.16
+    },
+    {
+      "above": 0.8,
+      "up_to": 1.249999,
+      "rating": "Ca2/CC",
+      "spread": 0.1261
+    },
+    {
+      "above": 1.25,
+      "up_to": 1.499999,
+      "rating": "Caa/CCC",
+      "spread": 0.0885
+    },
+    {
+      "above": 1.5,
+      "up_to": 1.999999,
+      "rating": "B3/B-",
+      "spread": 0.0509
+    },
+    {
+      "above": 2.0,
+      "up_to": 2.499999,
+      "rating": "B2/B",
+      "spread": 0.0321
+    },
+    {
+      "above": 2.5,
+      "up_to": 2.999999,
+      "rating": "B1/B+",
+      "spread": 0.0275
+    },
+    {
+      "above": 3.0,
+      "up_to": 3.499999,
+      "rating": "Ba2/BB",
+      "spread": 0.0184
+    },
+    {
+      "above": 3.5,
+      "up_to": 3.9999999,
+      "rating": "Ba1/BB+",
+      "spread": 0.0138
+    },
+    {
+      "above": 4.0,
+      "up_to": 4.499999,
+      "rating": "Baa2/BBB",
+      "spread": 0.0111
+    },
+    {
+      "above": 4.5,
+      "up_to": 5.999999,
+      "rating": "A3/A-",
+      "spread": 0.0089
+    },
+    {
+      "above": 6.0,
+      "up_to": 7.499999,
+      "rating": "A2/A",
+      "spread": 0.0078
+    },
+    {
+      "above": 7.5,
+      "up_to": 9.499999,
+      "rating": "A1/A+",
+      "spread": 0.007
+    },
+    {
+      "above": 9.5,
+      "up_to": 12.499999,
+      "rating": "Aa2/AA",
+      "spread": 0.0055
+    },
+    {
+      "above": 12.5,
+      "up_to": 100000.0,
+      "rating": "Aaa/AAA",
+      "spread": 0.004
+    }
+  ]
+}

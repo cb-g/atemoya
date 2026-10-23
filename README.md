@@ -28,7 +28,7 @@ One line of JSON per name, `Ok` with a fair value or `Failed` with a reason.
   contingent consideration, pension deficits and provisions after tax, preferred stock and what went to
   shareholders since the annual report, each applied only where the cash flow leaves it out
   and shown item by item; the share count takes the filer's own dilution from awards and
-  warrants.
+  warrants, and debt costs the spread its own interest coverage earns.
 - **What the price needs.** The growth the market price implies, how long it must last,
   and how often companies of that size have grown that fast, from filed history.
 - **A belief beside the anchor, never inside it.** A declared belief on growth gives a

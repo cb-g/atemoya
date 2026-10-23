@@ -166,7 +166,15 @@ let value ?share_count_includes_minority (a : Dcf.assumptions) ~country ~require
               let fcff_mid = nopat_mid *. (1. -. reinvestment_rate_mid) in
               let g_fundamental = roic_mid *. reinvestment_rate_mid in
               let cost_of_equity = Dcf.cost_of_equity a in
-              let cost_of_debt = a.risk_free_rate.value +. a.debt_spread.value in
+              (* the through-cycle operating income before tax over the latest interest *)
+              let debt_spread =
+                match a.debt_spread_rule with
+                | None -> a.debt_spread
+                | Some rule ->
+                    Debt_spread.resolve rule ~fallback:a.debt_spread ~ebit:(nopat_mid /. (1. -. tax_rate))
+                      ~interest_expense:latest.interest_expense ~total_debt ~period_end:latest.period_end
+              in
+              let cost_of_debt = a.risk_free_rate.value +. debt_spread.value in
               let wacc = Dcf.wacc ~cost_of_equity ~cost_of_debt ~tax_rate ~market_cap ~total_debt in
               if wacc <= a.terminal_growth_rate.value then
                 Error (Printf.sprintf "wacc %.4f does not exceed terminal growth %.4f" wacc a.terminal_growth_rate.value)
@@ -259,7 +267,7 @@ let value ?share_count_includes_minority (a : Dcf.assumptions) ~country ~require
                       beta_source = a.beta_source;
                       cost_of_equity;
                       conversion = None;
-                      debt_spread = a.debt_spread;
+                      debt_spread;
                       cost_of_debt;
                       wacc;
                       terminal_growth_rate = a.terminal_growth_rate;

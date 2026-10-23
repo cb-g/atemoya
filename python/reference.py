@@ -3481,6 +3481,91 @@ class FieldDefinitions:
 
 
 @dataclass
+class DefaultSpreadRow:
+    """Original type: default_spread_row = { ... }
+    """
+
+    above: float
+    up_to: float
+    rating: str
+    spread: float
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DefaultSpreadRow':
+        if isinstance(x, dict):
+            return cls(
+                above=_atd_read_float(x['above']) if 'above' in x else _atd_missing_json_field('DefaultSpreadRow', 'above'),
+                up_to=_atd_read_float(x['up_to']) if 'up_to' in x else _atd_missing_json_field('DefaultSpreadRow', 'up_to'),
+                rating=_atd_read_string(x['rating']) if 'rating' in x else _atd_missing_json_field('DefaultSpreadRow', 'rating'),
+                spread=_atd_read_float(x['spread']) if 'spread' in x else _atd_missing_json_field('DefaultSpreadRow', 'spread'),
+            )
+        else:
+            _atd_bad_json('DefaultSpreadRow', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['above'] = _atd_write_float(self.above)
+        res['up_to'] = _atd_write_float(self.up_to)
+        res['rating'] = _atd_write_string(self.rating)
+        res['spread'] = _atd_write_float(self.spread)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DefaultSpreadRow':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
+class DefaultSpreads:
+    """Original type: default_spreads = { ... }
+    """
+
+    source: str
+    as_of: str
+    max_age_days: int
+    small_firm_market_cap_usd: float
+    large: List[DefaultSpreadRow]
+    small: List[DefaultSpreadRow]
+    notes: List[str] = field(default_factory=lambda: [])
+
+    @classmethod
+    def from_json(cls, x: Any) -> 'DefaultSpreads':
+        if isinstance(x, dict):
+            return cls(
+                source=_atd_read_string(x['source']) if 'source' in x else _atd_missing_json_field('DefaultSpreads', 'source'),
+                as_of=_atd_read_string(x['as_of']) if 'as_of' in x else _atd_missing_json_field('DefaultSpreads', 'as_of'),
+                max_age_days=_atd_read_int(x['max_age_days']) if 'max_age_days' in x else _atd_missing_json_field('DefaultSpreads', 'max_age_days'),
+                small_firm_market_cap_usd=_atd_read_float(x['small_firm_market_cap_usd']) if 'small_firm_market_cap_usd' in x else _atd_missing_json_field('DefaultSpreads', 'small_firm_market_cap_usd'),
+                large=_atd_read_list(DefaultSpreadRow.from_json)(x['large']) if 'large' in x else _atd_missing_json_field('DefaultSpreads', 'large'),
+                small=_atd_read_list(DefaultSpreadRow.from_json)(x['small']) if 'small' in x else _atd_missing_json_field('DefaultSpreads', 'small'),
+                notes=_atd_read_list(_atd_read_string)(x['notes']) if 'notes' in x else [],
+            )
+        else:
+            _atd_bad_json('DefaultSpreads', x)
+
+    def to_json(self) -> Any:
+        res: Dict[str, Any] = {}
+        res['source'] = _atd_write_string(self.source)
+        res['as_of'] = _atd_write_string(self.as_of)
+        res['max_age_days'] = _atd_write_int(self.max_age_days)
+        res['small_firm_market_cap_usd'] = _atd_write_float(self.small_firm_market_cap_usd)
+        res['large'] = _atd_write_list((lambda x: x.to_json()))(self.large)
+        res['small'] = _atd_write_list((lambda x: x.to_json()))(self.small)
+        res['notes'] = _atd_write_list(_atd_write_string)(self.notes)
+        return res
+
+    @classmethod
+    def from_json_string(cls, x: str) -> 'DefaultSpreads':
+        return cls.from_json(json.loads(x))
+
+    def to_json_string(self, **kw: Any) -> str:
+        return json.dumps(self.to_json(), **kw)
+
+
+@dataclass
 class CorrelationPair:
     """Original type: correlation_pair = { ... }
     """

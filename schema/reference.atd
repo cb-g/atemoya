@@ -724,6 +724,27 @@ type bridge_definition = {
   vendor : bridge_vendor;
 }
 
+(* A synthetic rating from interest coverage, operating income over interest expense, and the
+   default spread over the risk-free rate it carries: Damodaran's January table, transcribed by
+   hand (reference/default_spreads.json). A row is taken by the last [above] the coverage
+   reaches, as the workbook looks it up. *)
+type default_spread_row = {
+  above : float;
+  up_to : float;
+  rating : string;
+  spread : float;                    (* pre-tax, over the risk-free rate *)
+}
+
+type default_spreads = {
+  source : string;
+  as_of : string;
+  max_age_days : int;
+  small_firm_market_cap_usd : float; (* below it, the smaller and riskier firms' table *)
+  ~notes : string list;
+  large : default_spread_row list;
+  small : default_spread_row list;
+}
+
 (* The shares awards and warrants add (dilution): the filer's own weighted-average diluted
    and basic counts for the newest quarter or year with both and a profit, less the
    conversion shares it tags apart; or the vendor's two average rows. *)

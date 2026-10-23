@@ -125,8 +125,10 @@ standing business — the latest free cash flow with maintenance capex in place 
 actually spent, held flat, as a perpetuity at the settled terminal growth — plus the last
 three years' growth capex as tranches, each earning the converted cash return on its cost
 from the lag after its spend, less its own maintenance at the company's
-depreciation-to-capital ratio, as a flat perpetuity; less net debt, per effective share. The WACC, the tax rate and the
-terminal growth are the ones the DCF resolves for the name, from the same functions.
+depreciation-to-capital ratio, as a flat perpetuity; less net debt and the headline's equity
+bridge, per diluted share. The WACC, its spread the synthetic rating on the latest operating
+income, the tax rate and the terminal growth are the ones the DCF resolves for the name, from
+the same functions.
 
 The readout is the **price contour**: per lag, the return at which the value equals the
 price. Where no return in the declared range reaches the price, or the price is below the
@@ -810,6 +812,15 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- the cost of debt (2026-10-23): the spread over the risk-free rate is the synthetic rating's,
+  from the record's interest coverage, operating income over interest expense, on Damodaran's
+  January 2026 tables (`reference/default_spreads.json`), the large firms' or, below 5 billion
+  dollars of market cap, the smaller and riskier firms'; the generic DCF reads its own
+  operating income, the mid-cycle path its through-cycle operating income before tax, the
+  build-out the latest; the declared flat spread stands where the period carries no interest
+  expense beside debt. The currency conversion now scales interest expense, operating cash
+  flow, the working-capital gap and net investment income, which it had left in the statement
+  currency. A definition change: fair values move, no status or `Failed` string does.
 - dilution (2026-10-23): every model that divides an equity value or a total dividend by the
   share count divides by the effective count times one plus the filer's treasury-method
   increment over its basic count, from the newest quarter or year with both counts and a

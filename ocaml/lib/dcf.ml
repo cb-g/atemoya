@@ -7,6 +7,7 @@ type assumptions = {
   beta : parameter;
   beta_source : beta_source;
   debt_spread : parameter;
+  debt_spread_rule : Debt_spread.rule option;
   growth_clamp_lower : parameter;
   growth_clamp_upper : parameter;
   mean_reversion_lambda : parameter;
@@ -208,7 +209,14 @@ let value ?(declared = "") ?share_count_includes_minority a ~country (fin : fina
             ~pretax_income:p.pretax_income ~tax_provision:p.tax_provision
         in
         let cost_of_equity = cost_of_equity a in
-        let cost_of_debt = a.risk_free_rate.value +. a.debt_spread.value in
+        let debt_spread =
+          match a.debt_spread_rule with
+          | None -> a.debt_spread
+          | Some rule ->
+              Debt_spread.resolve rule ~fallback:a.debt_spread ~ebit ~interest_expense:p.interest_expense ~total_debt
+                ~period_end:p.period_end
+        in
+        let cost_of_debt = a.risk_free_rate.value +. debt_spread.value in
         let wacc =
           wacc ~cost_of_equity ~cost_of_debt ~tax_rate ~market_cap ~total_debt
         in
@@ -308,7 +316,7 @@ let value ?(declared = "") ?share_count_includes_minority a ~country (fin : fina
                   beta_source = a.beta_source;
                   cost_of_equity;
                   conversion = None;
-                  debt_spread = a.debt_spread;
+                  debt_spread;
                   cost_of_debt;
                   wacc;
                   terminal_growth_rate = a.terminal_growth_rate;

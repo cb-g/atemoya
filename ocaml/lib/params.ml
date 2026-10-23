@@ -17,6 +17,7 @@ type t = {
   field_definitions : field_definitions;
   beliefs : class_beliefs;
   required_returns : required_returns;
+  default_spreads : default_spreads option;   (* absent from a reference directory written before it (a point-in-time one): the flat spread stands *)
 }
 
 let read reader path =
@@ -62,6 +63,7 @@ let load ~dir ~fetched =
     if Sys.file_exists (file "beliefs.json") then Beliefs.load_classes (file "beliefs.json")
     else Ok ({ notes = [ "no beliefs.json in " ^ dir ]; classes = []; names = []; correlation = None } : Reference_t.class_beliefs)
   in
+  let* default_spreads = read_fetched Reference_j.read_default_spreads (file "default_spreads.json") in
   (* The declared required returns (34), strictly; empty when the directory has no file. *)
   let* required_returns =
     if Sys.file_exists (file "required_returns.json") then Required_returns.load_classes (file "required_returns.json")
@@ -83,6 +85,7 @@ let load ~dir ~fetched =
       field_definitions;
       beliefs;
       required_returns;
+      default_spreads;
     }
 
 let days_between = Date.days_between
@@ -220,6 +223,15 @@ let hold_to_risk_free ~(risk_free_rate : Boundary_t.parameter) (terminal : Bound
     }
   else terminal
 
+(* The synthetic-rating table (2026-10-23), aged like the premium table; its size is the
+   record's, set where the market cap is known. *)
+let debt_spread_rule ?hold_vintage t ~today =
+  match t.default_spreads with
+  | None -> Ok None
+  | Some (s : default_spreads) ->
+      let* age_days = age ?hold_vintage ~today ~name:"default_spreads" ~key:"global" ~as_of:s.as_of ~max_age_days:s.max_age_days () in
+      Ok (Some { Debt_spread.spreads = s; age_days; size = Debt_spread.Large; size_note = "the large firms' table" })
+
 let resolve ?hold_vintage t ~today ~country ~industry =
   let* projection_years = int_scalar ?hold_vintage t.params.projection_years ~today ~name:"projection_years" in
   let* midcycle_window_years =
@@ -243,6 +255,7 @@ let resolve ?hold_vintage t ~today ~country ~industry =
   in
   let terminal_growth_rate = hold_to_risk_free ~risk_free_rate terminal_growth_rate in
   let* debt_spread = scalar ?hold_vintage t.params.debt_spread ~today ~name:"debt_spread" in
+  let* debt_spread_rule = debt_spread_rule ?hold_vintage t ~today in
   let* growth_clamp_lower =
     scalar ?hold_vintage t.params.growth_clamp_lower ~today ~name:"growth_clamp_lower"
   in
@@ -261,6 +274,7 @@ let resolve ?hold_vintage t ~today ~country ~industry =
       beta;
       beta_source;
       debt_spread;
+      debt_spread_rule;
       growth_clamp_lower;
       growth_clamp_upper;
       mean_reversion_lambda;
@@ -318,6 +332,7 @@ let resolve_cross ?hold_vintage ?rf_note t ~today ~domicile ~rate_country ~indus
     scalar ?hold_vintage t.params.mean_reversion_lambda ~today ~name:"mean_reversion_lambda"
   in
   let* debt_spread = scalar ?hold_vintage t.params.debt_spread ~today ~name:"debt_spread" in
+  let* debt_spread_rule = debt_spread_rule ?hold_vintage t ~today in
   let* beta, beta_source = beta ?hold_vintage t.industry_betas ~today ~industry in
   Ok
     {
@@ -327,6 +342,7 @@ let resolve_cross ?hold_vintage ?rf_note t ~today ~domicile ~rate_country ~indus
       beta;
       beta_source;
       debt_spread;
+      debt_spread_rule;
       growth_clamp_lower;
       growth_clamp_upper;
       mean_reversion_lambda;
