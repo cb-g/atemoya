@@ -6129,6 +6129,10 @@ class FiscalPeriod:
     pension_net_row: Optional[str] = None
     preferred_stock: Optional[float] = None
     preferred_stock_row: Optional[str] = None
+    provisions: Optional[float] = None
+    provisions_row: Optional[str] = None
+    provisions_tax_asset: Optional[float] = None
+    provisions_tax_asset_row: Optional[str] = None
     investees_in_operating_income: Optional[bool] = None
     debt_due_within_year: Optional[float] = None
     debt_due_within_year_row: Optional[str] = None
@@ -6245,6 +6249,10 @@ class FiscalPeriod:
                 pension_net_row=_atd_read_string(x['pension_net_row']) if 'pension_net_row' in x else None,
                 preferred_stock=_atd_read_float(x['preferred_stock']) if 'preferred_stock' in x else None,
                 preferred_stock_row=_atd_read_string(x['preferred_stock_row']) if 'preferred_stock_row' in x else None,
+                provisions=_atd_read_float(x['provisions']) if 'provisions' in x else None,
+                provisions_row=_atd_read_string(x['provisions_row']) if 'provisions_row' in x else None,
+                provisions_tax_asset=_atd_read_float(x['provisions_tax_asset']) if 'provisions_tax_asset' in x else None,
+                provisions_tax_asset_row=_atd_read_string(x['provisions_tax_asset_row']) if 'provisions_tax_asset_row' in x else None,
                 investees_in_operating_income=_atd_read_bool(x['investees_in_operating_income']) if 'investees_in_operating_income' in x else None,
                 debt_due_within_year=_atd_read_float(x['debt_due_within_year']) if 'debt_due_within_year' in x else None,
                 debt_due_within_year_row=_atd_read_string(x['debt_due_within_year_row']) if 'debt_due_within_year_row' in x else None,
@@ -6410,6 +6418,14 @@ class FiscalPeriod:
             res['preferred_stock'] = _atd_write_float(self.preferred_stock)
         if self.preferred_stock_row is not None:
             res['preferred_stock_row'] = _atd_write_string(self.preferred_stock_row)
+        if self.provisions is not None:
+            res['provisions'] = _atd_write_float(self.provisions)
+        if self.provisions_row is not None:
+            res['provisions_row'] = _atd_write_string(self.provisions_row)
+        if self.provisions_tax_asset is not None:
+            res['provisions_tax_asset'] = _atd_write_float(self.provisions_tax_asset)
+        if self.provisions_tax_asset_row is not None:
+            res['provisions_tax_asset_row'] = _atd_write_string(self.provisions_tax_asset_row)
         if self.investees_in_operating_income is not None:
             res['investees_in_operating_income'] = _atd_write_bool(self.investees_in_operating_income)
         if self.debt_due_within_year is not None:

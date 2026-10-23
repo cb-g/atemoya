@@ -316,6 +316,21 @@ flow leaves it out and never where it already holds it:
   liability row less the surplus row. The current portion sits in accrued liabilities and is
   not read, nor the vendor's current pension row, which for some filers carries other
   payables.
+- **Provisions**, claims charged to earnings and paid outside the cash flow. On US GAAP
+  statements, litigation accrued is deducted on every cash flow, having been charged when it
+  arose, less the deferred tax asset the filer records on its legal settlements where it files
+  one (Teva's 4,753 million less 650 million; Uber's 2,100 million less 234 million), else after
+  tax at the statutory rate, which understates a fine, since a fine is not deductible.
+  An asset retirement obligation is not deducted: its accretion is an operating expense, and the
+  cash flow bears it. Environmental accruals are not read, since a defense contractor's are largely
+  recoverable through contract pricing and the receivable is recorded apart. On IFRS statements,
+  decommissioning and legal provisions, else the noncurrent provisions where neither is filed
+  (BP files only its totals, 15,670 million noncurrent), are deducted after tax where the cash
+  flow starts from operating income: they unwind in finance costs, below it, and are paid
+  outside the capex and working capital it reads. Not on the path built from net income, which
+  carries the unwinding (Shell's 18,801 million of decommissioning provisions). Current
+  provisions, ongoing like payables, are not read, nor the vendor's provision rows, which hold
+  both kinds.
 - **Preferred stock** is deducted at carrying value wherever filed, every cash flow here being
   before the preferred dividend: the first element filed above nil, since a par line of nil is
   not a carrying value, and redeemable preferred outside equity beside it. A redeemable
@@ -367,7 +382,10 @@ an investment line under the filer's own element holds beyond the standard eleme
 Delta's), the unclassified equity-securities total, and IFRS other financial assets, which
 hold loans and derivatives beside the stakes; assets held for sale, whose earnings stay inside
 operating income unless the disposal is a discontinued operation; tax losses carried forward,
-which the tax rate the record derives already reads in part. A decommissioning trust held
+which the tax rate the record derives already reads in part. Provisions followed the same day,
+read from the elements each filer uses and paired with the cash flow by where their cost
+falls; IFRS filers that present their pensions as provisions for employee benefits (Thales's
+1,589 million) are read from that line. A decommissioning trust held
 under the filer's investment line would be added while the obligation it funds is not
 deducted; no valued record holds one (Vistra's, refused by class).
 

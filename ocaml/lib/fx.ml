@@ -135,6 +135,8 @@ let convert ~rate (fin : financials) =
       financial_investments = scale rate p.financial_investments;
       pension_net = scale rate p.pension_net;
       preferred_stock = scale rate p.preferred_stock;
+      provisions = scale rate p.provisions;
+      provisions_tax_asset = scale rate p.provisions_tax_asset;
       debt_due_within_year = scale rate p.debt_due_within_year;
     }
   in

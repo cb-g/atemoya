@@ -2919,6 +2919,9 @@ class BridgeXbrl:
     pension_funded_status: List[str] = field(default_factory=lambda: [])
     preferred_stock: List[str] = field(default_factory=lambda: [])
     preferred_redeemable: List[str] = field(default_factory=lambda: [])
+    litigation_accruals: List[str] = field(default_factory=lambda: [])
+    litigation_accrual_parts: List[List[str]] = field(default_factory=lambda: [])
+    litigation_tax_asset: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'BridgeXbrl':
@@ -2945,6 +2948,9 @@ class BridgeXbrl:
                 pension_funded_status=_atd_read_list(_atd_read_string)(x['pension_funded_status']) if 'pension_funded_status' in x else [],
                 preferred_stock=_atd_read_list(_atd_read_string)(x['preferred_stock']) if 'preferred_stock' in x else [],
                 preferred_redeemable=_atd_read_list(_atd_read_string)(x['preferred_redeemable']) if 'preferred_redeemable' in x else [],
+                litigation_accruals=_atd_read_list(_atd_read_string)(x['litigation_accruals']) if 'litigation_accruals' in x else [],
+                litigation_accrual_parts=_atd_read_list(_atd_read_list(_atd_read_string))(x['litigation_accrual_parts']) if 'litigation_accrual_parts' in x else [],
+                litigation_tax_asset=_atd_read_list(_atd_read_string)(x['litigation_tax_asset']) if 'litigation_tax_asset' in x else [],
             )
         else:
             _atd_bad_json('BridgeXbrl', x)
@@ -2972,6 +2978,9 @@ class BridgeXbrl:
         res['pension_funded_status'] = _atd_write_list(_atd_write_string)(self.pension_funded_status)
         res['preferred_stock'] = _atd_write_list(_atd_write_string)(self.preferred_stock)
         res['preferred_redeemable'] = _atd_write_list(_atd_write_string)(self.preferred_redeemable)
+        res['litigation_accruals'] = _atd_write_list(_atd_write_string)(self.litigation_accruals)
+        res['litigation_accrual_parts'] = _atd_write_list(_atd_write_list(_atd_write_string))(self.litigation_accrual_parts)
+        res['litigation_tax_asset'] = _atd_write_list(_atd_write_string)(self.litigation_tax_asset)
         return res
 
     @classmethod
@@ -3049,6 +3058,9 @@ class BridgeIfrs:
     pension_net: List[str] = field(default_factory=lambda: [])
     pension_liabilities: List[str] = field(default_factory=lambda: [])
     pension_surplus: List[str] = field(default_factory=lambda: [])
+    pension_employee_benefits: List[str] = field(default_factory=lambda: [])
+    provisions_debt_like: List[str] = field(default_factory=lambda: [])
+    provisions_noncurrent: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'BridgeIfrs':
@@ -3063,6 +3075,9 @@ class BridgeIfrs:
                 pension_net=_atd_read_list(_atd_read_string)(x['pension_net']) if 'pension_net' in x else [],
                 pension_liabilities=_atd_read_list(_atd_read_string)(x['pension_liabilities']) if 'pension_liabilities' in x else [],
                 pension_surplus=_atd_read_list(_atd_read_string)(x['pension_surplus']) if 'pension_surplus' in x else [],
+                pension_employee_benefits=_atd_read_list(_atd_read_string)(x['pension_employee_benefits']) if 'pension_employee_benefits' in x else [],
+                provisions_debt_like=_atd_read_list(_atd_read_string)(x['provisions_debt_like']) if 'provisions_debt_like' in x else [],
+                provisions_noncurrent=_atd_read_list(_atd_read_string)(x['provisions_noncurrent']) if 'provisions_noncurrent' in x else [],
             )
         else:
             _atd_bad_json('BridgeIfrs', x)
@@ -3078,6 +3093,9 @@ class BridgeIfrs:
         res['pension_net'] = _atd_write_list(_atd_write_string)(self.pension_net)
         res['pension_liabilities'] = _atd_write_list(_atd_write_string)(self.pension_liabilities)
         res['pension_surplus'] = _atd_write_list(_atd_write_string)(self.pension_surplus)
+        res['pension_employee_benefits'] = _atd_write_list(_atd_write_string)(self.pension_employee_benefits)
+        res['provisions_debt_like'] = _atd_write_list(_atd_write_string)(self.provisions_debt_like)
+        res['provisions_noncurrent'] = _atd_write_list(_atd_write_string)(self.provisions_noncurrent)
         return res
 
     @classmethod

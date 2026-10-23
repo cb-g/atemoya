@@ -151,6 +151,44 @@ let pension (p : fiscal_period) ~cash_flow ~statutory_tax_rate =
   item_after_tax ~after_tax:(1. -. statutory_tax_rate) ~name:"pension_net" ~value:p.pension_net ~row:p.pension_net_row
     ~applied ~sign:1. ~why
 
+(* Claims charged to earnings and paid outside the cash flow. On US GAAP statements, litigation
+   accrued: charged when it arose, on every cash flow alike, and less the deferred tax asset the
+   filer records on its legal settlements where filed; an asset retirement obligation is not
+   read, its accretion being an operating expense the cash flow already bears. On IFRS
+   statements, decommissioning and legal provisions, else the noncurrent provisions, which
+   unwind in finance costs: below operating income, inside net income. *)
+let provisions (fin : financials) (p : fiscal_period) ~cash_flow ~statutory_tax_rate =
+  let name = "provisions" in
+  match p.provisions with
+  | _ when fin.taxonomy = "" ->
+      item ~name ~value:None ~row:None ~applied:false ~sign:1.
+        ~why:"not read on the vendor's statements, whose provision rows hold ongoing operating provisions beside the debt-like ones"
+  | None -> item ~name ~value:None ~row:None ~applied:false ~sign:1. ~why:not_filed
+  | Some v when fin.taxonomy = "ifrs-full" -> (
+      match cash_flow with
+      | Parent_net_income ->
+          item ~name ~value:(Some v) ~row:p.provisions_row ~applied:false ~sign:1.
+            ~why:"not deducted: net income carries their unwinding, a finance cost"
+      | Consolidated_operating_income ->
+          item_after_tax ~after_tax:(1. -. statutory_tax_rate) ~name ~value:(Some v) ~row:p.provisions_row ~applied:true ~sign:1.
+            ~why:
+              (Printf.sprintf
+                 "deducted after tax at the statutory %.4g: decommissioning and legal provisions, else the noncurrent provisions, unwind in finance costs below operating income and are paid outside the capex and working capital the cash flow reads; current provisions, ongoing like payables, are not read"
+                 statutory_tax_rate))
+  | Some v -> (
+      match p.provisions_tax_asset with
+      | Some asset when asset > 0. ->
+          let row = Option.map (fun r -> r ^ Option.fold ~none:"" ~some:(fun a -> " - " ^ a) p.provisions_tax_asset_row) p.provisions_row in
+          { name; value = Some v; row; applied = true; deduction = v -. asset;
+            why =
+              "deducted less the deferred tax asset the filer records on its legal settlements: litigation charged to earnings when accrued and paid outside every cash flow here" }
+      | _ ->
+          item_after_tax ~after_tax:(1. -. statutory_tax_rate) ~name ~value:(Some v) ~row:p.provisions_row ~applied:true ~sign:1.
+            ~why:
+              (Printf.sprintf
+                 "deducted after tax at the statutory %.4g, the filer recording no tax asset on it: litigation charged to earnings when accrued and paid outside every cash flow here; a fine is not deductible, and is then understated by the rate"
+                 statutory_tax_rate))
+
 let preferred (p : fiscal_period) =
   let applied, why =
     match p.preferred_stock with
@@ -163,7 +201,8 @@ let of_period ~cash_flow ~statutory_tax_rate ?share_count_includes_minority (fin
   let minority_item = minority p ~cash_flow ~share_count_includes_minority in
   let items =
     [ minority_item; buyouts fin p ~minority:minority_item; investees p ~cash_flow; financial p ~cash_flow; leases fin p;
-      contingent p; pension p ~cash_flow ~statutory_tax_rate; preferred p; distributions fin p ]
+      contingent p; pension p ~cash_flow ~statutory_tax_rate; provisions fin p ~cash_flow ~statutory_tax_rate; preferred p;
+      distributions fin p ]
   in
   { definition; items; total = List.fold_left (fun acc (i : bridge_item) -> acc +. i.deduction) 0. items }
 

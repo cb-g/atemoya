@@ -554,7 +554,7 @@ UNSECURED_LONG_TERM_DEBT = "UnsecuredLongTermDebt"   # the unsecured part of non
 
 Line = tuple[float | None, str | None]
 BRIDGE_FIELDS = ("minority_interest", "equity_method_investments", "contingent_consideration", "lease_liabilities",
-                 "financial_investments", "pension_net", "preferred_stock")
+                 "financial_investments", "pension_net", "preferred_stock", "provisions", "provisions_tax_asset")
 SUBSET_TOLERANCE = 0.0005  # relative: a filer's investment line holding its parts may differ from their sum by rounding
 
 
@@ -658,7 +658,10 @@ def bridge_lines(facts: "Facts", defs: reference.FieldDefinitions, end: date, *,
         held = _first(facts, d.ifrs.financial_investments, end)
         out["financial_investments"] = held if held[0] is not None else _parts_summed(facts, d.ifrs.financial_investments_parts, end)
         net = _first(facts, d.ifrs.pension_net, end)
-        out["pension_net"] = net if net[0] is not None else pension_net(facts, d.ifrs.pension_liabilities, [], d.ifrs.pension_surplus, end)
+        net = net if net[0] is not None else pension_net(facts, d.ifrs.pension_liabilities, [], d.ifrs.pension_surplus, end)
+        out["pension_net"] = net if net[0] is not None else _first(facts, d.ifrs.pension_employee_benefits, end)
+        debt_like = _parts_summed(facts, d.ifrs.provisions_debt_like, end)
+        out["provisions"] = debt_like if debt_like[0] is not None else _first(facts, d.ifrs.provisions_noncurrent, end)
     else:
         minority = _first(facts, d.xbrl.minority_interest, end)
         minority = minority if minority[0] is not None else _difference(facts, d.xbrl.minority_interest_totals, end)
@@ -674,7 +677,22 @@ def bridge_lines(facts: "Facts", defs: reference.FieldDefinitions, end: date, *,
         out["pension_net"] = net
         out["preferred_stock"] = _added(_first_positive(facts, d.xbrl.preferred_stock, end),
                                         _first_positive(facts, d.xbrl.preferred_redeemable, end))
+        out["provisions"] = litigation_accrued(facts, d.xbrl, end)
+        out["provisions_tax_asset"] = _first(facts, d.xbrl.litigation_tax_asset, end)
     return out
+
+
+def litigation_accrued(facts: "Facts", x: reference.BridgeXbrl, end: date) -> Line:
+    """Litigation accrued at [end]: a total, else the first current-and-noncurrent pair of one
+    total that is filed, summed."""
+    total = _first(facts, x.litigation_accruals, end)
+    if total[0] is not None:
+        return total
+    for pair in x.litigation_accrual_parts:
+        parts = _parts_summed(facts, pair, end)
+        if parts[0] is not None:
+            return parts
+    return None, None
 
 
 def bridge_fields(bridge: Mapping[str, Line]) -> dict[str, Any]:

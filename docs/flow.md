@@ -511,7 +511,7 @@ at all:
 ### The equity bridge
 
 Net debt is the bridge's first line and not its only one. `equity_bridge` on the generic and
-mid-cycle DCF inputs carries nine more items, each read where it is filed and applied only where
+mid-cycle DCF inputs carries ten more items, each read where it is filed and applied only where
 the cash flow it pairs with leaves it out, every one on the block with its value, row, whether
 it applied and why; `equity_value` is the enterprise value less net debt less the block's
 total, and the implied readouts, the shadows, the sensitivity and the belief map value on the
@@ -526,18 +526,21 @@ same claims.
 | long-term financial investments, at carrying value | debt securities classified noncurrent, held to maturity, equity securities outside the equity method (the largest element), beside `LongTermInvestments`, `OtherLongTermInvestments` or `OtherInvestments`, less the associates the line holds; `NoncurrentInvestmentsOtherThanInvestmentsAccountedForUsingEquityMethod`, else the stakes at fair value through other comprehensive income; the vendor's financial-assets row, else its children | as associates: the cash flow starts from consolidated operating income, which leaves their returns out |
 | contingent consideration | `BusinessCombinationContingentConsiderationLiability`, else its parts | wherever filed |
 | defined-benefit plans' net liability, after tax | pension and retiree health as one line, else apart, less the plan assets recognised, else the funded status negated; the net defined-benefit line, else its two sides; the vendor's noncurrent pension row less its surplus row | the cash flow starts from operating income, which carries the service cost and not the interest or the return on assets; a surplus added the same way |
+| provisions, after tax | litigation accrued (`LossContingencyAccrualAtCarryingValue`, `LitigationReserve`, `EstimatedLitigationLiability`, else a current-and-noncurrent pair), less `DeferredTaxAssetsTaxDeferredExpenseReservesAndAccrualsLegalSettlements` where filed; decommissioning and legal provisions, else `NoncurrentProvisions` | US GAAP litigation on every cash flow, charged when accrued and paid outside them; IFRS provisions where the cash flow starts from operating income, since they unwind in finance costs |
 | preferred stock, at carrying value | the first preferred element filed above nil, with `TemporaryEquityCarryingAmountAttributableToParent`; the vendor's two preferred rows | wherever filed: every cash flow is before the preferred dividend |
 | distributions since the base | the latest 10-Q's year-to-date buybacks and common dividends less shares issued | the valued period is the annual base the figures run from: the share count is today's |
 
 Not applied, by the same rule: minority interests, associates, financial investments and the
-plans' net liability on the mid-cycle path built from the parent's net income, which leaves the
-first out and holds the rest already; a US GAAP operating lease, whose cost is inside operating
+plans' net liability and IFRS provisions on the mid-cycle path built from the parent's net
+income, which leaves the first out and holds the rest already; a US GAAP operating lease, whose cost is inside operating
 income. Not read: a 20-F or vendor-statement filer's distributions since the base, which no
 quarterly cash flow in the sources read carries; dividends to minority holders and
 contributions from them, which move the cash and the minority's own book alike; a captive
 finance arm, a lender's loan book and customer deposits in financing, which no filer tags
 alike; an investment line under the filer's own element, the unclassified equity-securities
-total and IFRS other financial assets; assets held for sale; tax losses carried forward;
+total and IFRS other financial assets; assets held for sale; tax losses carried forward; a US
+GAAP asset retirement obligation, whose accretion is an operating expense, and environmental
+accruals, often recoverable apart; current provisions and the vendor's provision rows;
 dilution from options, units and warrants. The
 latest quarter's balance sheet is not taken for the date line, since on an annual base it would
 also bring in acquisitions paid since, seasonal working capital and the part of the first
@@ -807,6 +810,13 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- the equity bridge's provisions (2026-10-23): litigation accrued on US GAAP statements is
+  deducted on every cash flow, less the filer's deferred tax asset on legal settlements where
+  filed, else after tax; IFRS decommissioning and legal provisions, else the noncurrent
+  provisions, after tax where the cash flow starts from operating income; IFRS provisions for
+  employee benefits stand in for the defined-benefit lines where none is filed. A US GAAP asset
+  retirement obligation and environmental accruals are not read. A definition change: fair
+  values move, no status or `Failed` string does.
 - the equity bridge's textbook items (2026-10-23): long-term financial investments are added at
   carrying value, the defined-benefit plans' net liability is deducted after tax at the
   statutory rate (a surplus added), each where the cash flow starts from operating income, and

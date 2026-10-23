@@ -1486,6 +1486,41 @@ def test_textbook_bridge_lines_investments_pensions_and_preferred() -> None:
     assert (p.financial_investments, p.financial_investments_row, p.preferred_stock) == (210.0, "MarketableSecuritiesNoncurrent", 15.0)
 
 
+def test_provisions_litigation_on_us_gaap_and_debt_like_provisions_on_ifrs() -> None:
+    """(2026-10-23) Claims charged to earnings and paid outside the cash flow, every figure
+    invented. US GAAP: litigation accrued as a total, else the first current-and-noncurrent pair
+    of one total, beside the deferred tax asset recorded on legal settlements; an asset
+    retirement obligation is never read. IFRS: decommissioning and legal provisions summed,
+    else the noncurrent provisions; current provisions never; and the provisions for employee
+    benefits stand in for the defined-benefit lines where none is filed."""
+    def lines(facts: dict[str, object]) -> dict[str, tuple[float | None, str | None]]:
+        return fetch_sec.bridge_lines(fetch_sec.Facts(facts, TAGS, []), DEFS, END, taxonomy="us-gaap")
+
+    def on(tag: str, value: float) -> dict[str, object]:
+        return {tag: usd(fact("2025-12-31", value))}
+
+    total = lines(on("LossContingencyAccrualAtCarryingValue", 480.0) | on("LossContingencyAccrualCarryingValueCurrent", 100.0)
+                  | on("DeferredTaxAssetsTaxDeferredExpenseReservesAndAccrualsLegalSettlements", 65.0)
+                  | on("AssetRetirementObligationsNoncurrent", 900.0))
+    assert total["provisions"] == (480.0, "LossContingencyAccrualAtCarryingValue")
+    assert total["provisions_tax_asset"] == (65.0, "DeferredTaxAssetsTaxDeferredExpenseReservesAndAccrualsLegalSettlements")
+    assert lines(on("LitigationReserveCurrent", 30.0) | on("LitigationReserveNoncurrent", 50.0))["provisions"] == (
+        80.0, "LitigationReserveCurrent + LitigationReserveNoncurrent")
+    assert lines(on("AssetRetirementObligationsNoncurrent", 900.0))["provisions"] == (None, None)
+
+    def ifrs(facts: dict[str, float]) -> dict[str, tuple[float | None, str | None]]:
+        return fetch_sec.bridge_lines(fetch_sec.Facts({t: in_unit("EUR", twenty_f("2025-12-31", v)) for t, v in facts.items()}, TAGS, [], unit="EUR"),
+                                      DEFS, END, taxonomy="ifrs-full")
+    assert ifrs({"ProvisionForDecommissioningRestorationAndRehabilitationCosts": 700.0, "LegalProceedingsProvision": 40.0,
+                 "NoncurrentProvisions": 900.0, "CurrentProvisions": 300.0})["provisions"] == (
+        740.0, "ProvisionForDecommissioningRestorationAndRehabilitationCosts + LegalProceedingsProvision")
+    assert ifrs({"NoncurrentProvisions": 900.0, "CurrentProvisions": 300.0})["provisions"] == (900.0, "NoncurrentProvisions")
+    assert ifrs({"CurrentProvisions": 300.0})["provisions"] == (None, None)
+    assert ifrs({"NoncurrentProvisionsForEmployeeBenefits": 160.0})["pension_net"] == (160.0, "NoncurrentProvisionsForEmployeeBenefits")
+    assert ifrs({"NoncurrentProvisionsForEmployeeBenefits": 160.0, "LiabilityAssetOfDefinedBenefitPlans": 120.0})["pension_net"] == (
+        120.0, "LiabilityAssetOfDefinedBenefitPlans")
+
+
 def test_net_income_filed_as_profit_loss_alone_anchors_the_year_less_the_minority_share() -> None:
     """(2026-10-19) Some filers file net income under ProfitLoss and nothing else; the year then
     anchors a period and the net income is the parent's, ProfitLoss less the minority holders'

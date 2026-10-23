@@ -134,6 +134,10 @@ type fiscal_period = {
   ?pension_net_row : string option;
   ?preferred_stock : float option;            (* preferred stock at carrying value, inside equity and redeemable outside it, as filed at period end; read by the equity bridge alone *)
   ?preferred_stock_row : string option;
+  ?provisions : float option;                 (* claims charged to earnings and paid outside the cash flow, as filed at period end and before tax: litigation accrued on US GAAP statements; decommissioning and legal provisions, else the noncurrent provisions, on IFRS statements *)
+  ?provisions_row : string option;
+  ?provisions_tax_asset : float option;       (* the deferred tax asset the filer records on its legal settlements, where filed *)
+  ?provisions_tax_asset_row : string option;
   ?investees_in_operating_income : bool option;   (* operating income less revenue less costs and expenses equals the equity-method line: true; equals nil: false; absent where the filing cannot tell *)
   ?debt_due_within_year : float option;      (* the maturity schedule's principal due within a year, read where the debt carries no current line; the valuer takes it only where the vendor's debt validates it *)
   ?debt_due_within_year_row : string option;
@@ -447,7 +451,7 @@ type floor = {
    [growth_path] the yearly rates that mean-revert from it toward [terminal_growth_rate]. *)
 (* One item of the equity bridge: read, and applied or not by the pairing rule, with why. *)
 type bridge_item = {
-  name : string;                      (* minority_interest | minority_buyouts_since_base | equity_method_investments | financial_investments | lease_liabilities | contingent_consideration | pension_net | preferred_stock | distributions_since_base *)
+  name : string;                      (* minority_interest | minority_buyouts_since_base | equity_method_investments | financial_investments | lease_liabilities | contingent_consideration | pension_net | provisions | preferred_stock | distributions_since_base *)
   value : float nullable;             (* as read, in the record's currency; null where not read; before tax where the deduction is after it *)
   ?row : string option;
   applied : bool;

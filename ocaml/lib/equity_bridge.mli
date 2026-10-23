@@ -2,7 +2,7 @@
     common equity the share count divides, beyond net debt
     ([reference/field_definitions.json], equity_bridge).
 
-    Contract. [of_period] reads nine items from the valued period and the financials, in the
+    Contract. [of_period] reads ten items from the valued period and the financials, in the
     record's currency, and applies each only where the cash flow it pairs with leaves it out:
     minority interests, redeemable ones included, are deducted, and associates and long-term
     financial investments added at their carrying value, where the cash flow starts from
@@ -10,7 +10,10 @@
     income, and minority interests not where the share count is declared to hold the units
     already; the defined-benefit plans' net liability is deducted after tax at the statutory
     rate, a surplus added, where the cash flow starts from operating income, not on the
-    parent's net income; lease liabilities outside the debt rows are deducted on IFRS
+    parent's net income; litigation accrued on US GAAP statements is deducted on every cash
+    flow, less the filer's deferred tax asset on it where filed, else after tax, and IFRS
+    decommissioning and legal provisions, else the noncurrent provisions, after tax where the
+    cash flow starts from operating income; lease liabilities outside the debt rows are deducted on IFRS
     statements and on the vendor's statements of a filer outside the United States;
     contingent consideration and preferred stock wherever filed; what went to shareholders
     since the annual base, from the latest 10-Q, where the valued period is that base, and

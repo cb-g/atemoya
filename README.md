@@ -25,7 +25,7 @@ One line of JSON per name, `Ok` with a fair value or `Failed` with a reason.
   model is refused with the right lens named, so the reader learns what the measurement
   should have been. Between the business's value and the shares stand net debt and an equity
   bridge, minority interests, associates, long-term investments, leases outside debt,
-  contingent consideration, pension deficits after tax, preferred stock and what went to
+  contingent consideration, pension deficits and provisions after tax, preferred stock and what went to
   shareholders since the annual report, each applied only where the cash flow leaves it out
   and shown item by item.
 - **What the price needs.** The growth the market price implies, how long it must last,

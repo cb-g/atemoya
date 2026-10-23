@@ -683,6 +683,9 @@ type bridge_xbrl = {
   ~pension_funded_status : string list;         (* plan assets less obligations, read negated where no balance-sheet line is filed *)
   ~preferred_stock : string list;               (* the first positive carrying value: a par line of nil is not one *)
   ~preferred_redeemable : string list;          (* redeemable preferred outside equity *)
+  ~litigation_accruals : string list;           (* litigation accrued at period end, a total, first present *)
+  ~litigation_accrual_parts : string list list; (* current and noncurrent of one total, the first pair filed summed *)
+  ~litigation_tax_asset : string list;          (* the deferred tax asset recorded on legal settlements *)
 }
 
 type bridge_ifrs = {
@@ -695,6 +698,9 @@ type bridge_ifrs = {
   ~pension_net : string list;                   (* the net defined-benefit liability, an asset negative *)
   ~pension_liabilities : string list;           (* where no net line is filed *)
   ~pension_surplus : string list;
+  ~pension_employee_benefits : string list;     (* provisions for employee benefits, where no defined-benefit line is filed *)
+  ~provisions_debt_like : string list;          (* decommissioning and legal provisions, summed *)
+  ~provisions_noncurrent : string list;         (* where neither is filed *)
 }
 
 type bridge_vendor = {
