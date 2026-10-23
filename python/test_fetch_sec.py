@@ -1412,6 +1412,80 @@ def test_bridge_lines_are_read_as_filed_with_their_fallbacks() -> None:
     assert (p.minority_interest, p.minority_interest_row, p.equity_method_investments) == (300.0, "MinorityInterest", 500.0)
 
 
+def test_textbook_bridge_lines_investments_pensions_and_preferred() -> None:
+    """(2026-10-23) The bridge's textbook lines, every figure invented. Long-term financial
+    investments: the noncurrent debt securities, those held to maturity and the largest
+    equity-securities element (a filer may tag one line under two), beside the filer's
+    long-term investment line, which holds them where it is at least their sum, holds the
+    associates too where it still covers the parts without them, and is a line of its own
+    where it is below their sum. The defined-benefit plans: pension and retiree health as one
+    line or summed apart, less the surplus, else the funded status negated. Preferred stock: the
+    first carrying value above nil, a par line of nil skipped, and redeemable preferred beside
+    it; a redeemable minority interest joins the minority interest."""
+    def lines(facts: dict[str, object]) -> dict[str, tuple[float | None, str | None]]:
+        return fetch_sec.bridge_lines(fetch_sec.Facts(facts, TAGS, []), DEFS, END, taxonomy="us-gaap")
+
+    def on(tag: str, value: float) -> dict[str, object]:
+        return {tag: usd(fact("2025-12-31", value))}
+
+    # the parts alone: debt securities, held to maturity, and one equity line tagged twice
+    parts = lines(on("AvailableForSaleSecuritiesDebtSecuritiesNoncurrent", 300.0) | on("HeldToMaturitySecuritiesNoncurrent", 20.0)
+                  | on("EquitySecuritiesFVNINoncurrent", 70.0) | on("EquitySecuritiesWithoutReadilyDeterminableFairValueAmount", 70.0))
+    assert parts["financial_investments"] == (390.0, "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent + HeldToMaturitySecuritiesNoncurrent + EquitySecuritiesFVNINoncurrent")
+    # a line holding the parts and the associates: the associates come out, the bridge adding them apart
+    holding = lines(on("LongTermInvestments", 450.0) | on("AvailableForSaleSecuritiesDebtSecuritiesNoncurrent", 300.0)
+                    | on("EquityMethodInvestments", 150.0))
+    assert holding["financial_investments"] == (300.0, "LongTermInvestments - EquityMethodInvestments")
+    assert lines(on("LongTermInvestments", 150.0) | on("EquityMethodInvestments", 150.0))["financial_investments"] == (0.0, "LongTermInvestments - EquityMethodInvestments")
+    # a line holding the parts but not the associates, which it could not cover beside them
+    assert lines(on("LongTermInvestments", 350.0) | on("AvailableForSaleSecuritiesDebtSecuritiesNoncurrent", 300.0)
+                 | on("EquityMethodInvestments", 150.0))["financial_investments"] == (350.0, "LongTermInvestments")
+    # a line below the parts' sum is a line of its own beside them
+    beside = lines(on("OtherLongTermInvestments", 100.0) | on("AvailableForSaleSecuritiesDebtSecuritiesNoncurrent", 300.0))
+    assert beside["financial_investments"] == (400.0, "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent + OtherLongTermInvestments")
+    # the unclassified equity total is never read: it may sit inside the short-term line cash reads
+    assert lines(on("EquitySecuritiesFvNi", 80.0))["financial_investments"] == (None, None)
+
+    # pension and retiree health as one line, less the surplus
+    assert lines(on("PensionAndOtherPostretirementDefinedBenefitPlansLiabilitiesNoncurrent", 500.0)
+                 | on("DefinedBenefitPensionPlanLiabilitiesNoncurrent", 400.0)
+                 | on("DefinedBenefitPlanAssetsForPlanBenefitsNoncurrent", 120.0))["pension_net"] == (
+        380.0, "PensionAndOtherPostretirementDefinedBenefitPlansLiabilitiesNoncurrent - DefinedBenefitPlanAssetsForPlanBenefitsNoncurrent")
+    # or summed apart where no combined line is filed
+    assert lines(on("DefinedBenefitPensionPlanLiabilitiesNoncurrent", 400.0)
+                 | on("OtherPostretirementDefinedBenefitPlanLiabilitiesNoncurrent", 90.0))["pension_net"] == (
+        490.0, "DefinedBenefitPensionPlanLiabilitiesNoncurrent + OtherPostretirementDefinedBenefitPlanLiabilitiesNoncurrent")
+    assert lines(on("DefinedBenefitPlanAssetsForPlanBenefitsNoncurrent", 60.0))["pension_net"] == (-60.0, "- DefinedBenefitPlanAssetsForPlanBenefitsNoncurrent")
+    assert lines(on("DefinedBenefitPlanFundedStatusOfPlan", -45.0))["pension_net"] == (45.0, "-DefinedBenefitPlanFundedStatusOfPlan")
+
+    # preferred: the par line of nil skipped, redeemable preferred beside it
+    assert lines(on("PreferredStockValue", 0.0) | on("ConvertiblePreferredStockNonredeemableOrRedeemableIssuerOptionValue", 250.0)
+                 | on("TemporaryEquityCarryingAmountAttributableToParent", 30.0))["preferred_stock"] == (
+        280.0, "ConvertiblePreferredStockNonredeemableOrRedeemableIssuerOptionValue + TemporaryEquityCarryingAmountAttributableToParent")
+    assert lines(on("PreferredStockValue", 0.0))["preferred_stock"] == (None, None)
+    # a redeemable minority interest joins the minority interest
+    assert lines(on("MinorityInterest", 300.0) | on("RedeemableNoncontrollingInterestEquityCarryingAmount", 40.0))["minority_interest"] == (
+        340.0, "MinorityInterest + RedeemableNoncontrollingInterestEquityCarryingAmount")
+
+    # IFRS: the element that excludes the equity method, else the stakes held at fair value
+    # through other comprehensive income; the net defined-benefit line, else its two sides
+    def ifrs(facts: dict[str, float]) -> dict[str, tuple[float | None, str | None]]:
+        return fetch_sec.bridge_lines(fetch_sec.Facts({t: in_unit("EUR", twenty_f("2025-12-31", v)) for t, v in facts.items()}, TAGS, [], unit="EUR"),
+                                      DEFS, END, taxonomy="ifrs-full")
+    assert ifrs({"NoncurrentInvestmentsOtherThanInvestmentsAccountedForUsingEquityMethod": 90.0,
+                 "NoncurrentFinancialAssetsAtFairValueThroughOtherComprehensiveIncome": 60.0})["financial_investments"] == (
+        90.0, "NoncurrentInvestmentsOtherThanInvestmentsAccountedForUsingEquityMethod")
+    assert ifrs({"NoncurrentFinancialAssetsAtFairValueThroughOtherComprehensiveIncome": 60.0})["financial_investments"] == (
+        60.0, "NoncurrentFinancialAssetsAtFairValueThroughOtherComprehensiveIncome")
+    assert ifrs({"LiabilityAssetOfDefinedBenefitPlans": -25.0, "NoncurrentRecognisedAssetsDefinedBenefitPlan": 40.0})["pension_net"] == (
+        -25.0, "LiabilityAssetOfDefinedBenefitPlans")
+    assert ifrs({"NoncurrentRecognisedLiabilitiesDefinedBenefitPlan": 30.0, "NoncurrentRecognisedAssetsDefinedBenefitPlan": 50.0})["pension_net"] == (
+        -20.0, "NoncurrentRecognisedLiabilitiesDefinedBenefitPlan - NoncurrentRecognisedAssetsDefinedBenefitPlan")
+    # and onto the filed period
+    p = period(on("MarketableSecuritiesNoncurrent", 210.0) | on("PreferredStockValue", 15.0))
+    assert (p.financial_investments, p.financial_investments_row, p.preferred_stock) == (210.0, "MarketableSecuritiesNoncurrent", 15.0)
+
+
 def test_net_income_filed_as_profit_loss_alone_anchors_the_year_less_the_minority_share() -> None:
     """(2026-10-19) Some filers file net income under ProfitLoss and nothing else; the year then
     anchors a period and the net income is the parent's, ProfitLoss less the minority holders'

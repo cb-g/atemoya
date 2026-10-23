@@ -132,6 +132,9 @@ let convert ~rate (fin : financials) =
       equity_method_investments = scale rate p.equity_method_investments;
       contingent_consideration = scale rate p.contingent_consideration;
       lease_liabilities = scale rate p.lease_liabilities;
+      financial_investments = scale rate p.financial_investments;
+      pension_net = scale rate p.pension_net;
+      preferred_stock = scale rate p.preferred_stock;
       debt_due_within_year = scale rate p.debt_due_within_year;
     }
   in

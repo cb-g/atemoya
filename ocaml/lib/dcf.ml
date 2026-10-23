@@ -247,7 +247,8 @@ let value ?(declared = "") ?share_count_includes_minority a ~country (fin : fina
           let shares = market_cap /. price in
           let net_debt = total_debt -. cash in
           let bridge =
-            Equity_bridge.of_period ~cash_flow:Equity_bridge.Consolidated_operating_income ?share_count_includes_minority fin p
+            Equity_bridge.of_period ~cash_flow:Equity_bridge.Consolidated_operating_income
+              ~statutory_tax_rate:a.statutory_tax_rate.value ?share_count_includes_minority fin p
           in
           let equity_value = enterprise_value -. net_debt -. bridge.total in
           let fair_value = equity_value /. shares in

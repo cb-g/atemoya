@@ -6123,6 +6123,12 @@ class FiscalPeriod:
     contingent_consideration_row: Optional[str] = None
     lease_liabilities: Optional[float] = None
     lease_liabilities_row: Optional[str] = None
+    financial_investments: Optional[float] = None
+    financial_investments_row: Optional[str] = None
+    pension_net: Optional[float] = None
+    pension_net_row: Optional[str] = None
+    preferred_stock: Optional[float] = None
+    preferred_stock_row: Optional[str] = None
     investees_in_operating_income: Optional[bool] = None
     debt_due_within_year: Optional[float] = None
     debt_due_within_year_row: Optional[str] = None
@@ -6233,6 +6239,12 @@ class FiscalPeriod:
                 contingent_consideration_row=_atd_read_string(x['contingent_consideration_row']) if 'contingent_consideration_row' in x else None,
                 lease_liabilities=_atd_read_float(x['lease_liabilities']) if 'lease_liabilities' in x else None,
                 lease_liabilities_row=_atd_read_string(x['lease_liabilities_row']) if 'lease_liabilities_row' in x else None,
+                financial_investments=_atd_read_float(x['financial_investments']) if 'financial_investments' in x else None,
+                financial_investments_row=_atd_read_string(x['financial_investments_row']) if 'financial_investments_row' in x else None,
+                pension_net=_atd_read_float(x['pension_net']) if 'pension_net' in x else None,
+                pension_net_row=_atd_read_string(x['pension_net_row']) if 'pension_net_row' in x else None,
+                preferred_stock=_atd_read_float(x['preferred_stock']) if 'preferred_stock' in x else None,
+                preferred_stock_row=_atd_read_string(x['preferred_stock_row']) if 'preferred_stock_row' in x else None,
                 investees_in_operating_income=_atd_read_bool(x['investees_in_operating_income']) if 'investees_in_operating_income' in x else None,
                 debt_due_within_year=_atd_read_float(x['debt_due_within_year']) if 'debt_due_within_year' in x else None,
                 debt_due_within_year_row=_atd_read_string(x['debt_due_within_year_row']) if 'debt_due_within_year_row' in x else None,
@@ -6386,6 +6398,18 @@ class FiscalPeriod:
             res['lease_liabilities'] = _atd_write_float(self.lease_liabilities)
         if self.lease_liabilities_row is not None:
             res['lease_liabilities_row'] = _atd_write_string(self.lease_liabilities_row)
+        if self.financial_investments is not None:
+            res['financial_investments'] = _atd_write_float(self.financial_investments)
+        if self.financial_investments_row is not None:
+            res['financial_investments_row'] = _atd_write_string(self.financial_investments_row)
+        if self.pension_net is not None:
+            res['pension_net'] = _atd_write_float(self.pension_net)
+        if self.pension_net_row is not None:
+            res['pension_net_row'] = _atd_write_string(self.pension_net_row)
+        if self.preferred_stock is not None:
+            res['preferred_stock'] = _atd_write_float(self.preferred_stock)
+        if self.preferred_stock_row is not None:
+            res['preferred_stock_row'] = _atd_write_string(self.preferred_stock_row)
         if self.investees_in_operating_income is not None:
             res['investees_in_operating_income'] = _atd_write_bool(self.investees_in_operating_income)
         if self.debt_due_within_year is not None:

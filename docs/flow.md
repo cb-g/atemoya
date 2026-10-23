@@ -511,7 +511,7 @@ at all:
 ### The equity bridge
 
 Net debt is the bridge's first line and not its only one. `equity_bridge` on the generic and
-mid-cycle DCF inputs carries six more items, each read where it is filed and applied only where
+mid-cycle DCF inputs carries nine more items, each read where it is filed and applied only where
 the cash flow it pairs with leaves it out, every one on the block with its value, row, whether
 it applied and why; `equity_value` is the enterprise value less net debt less the block's
 total, and the implied readouts, the shadows, the sensitivity and the belief map value on the
@@ -519,20 +519,26 @@ same claims.
 
 | item | read from | applied where |
 |---|---|---|
-| minority interests | `MinorityInterest`, else equity including them less the parent's; `NoncontrollingInterests`; the vendor's row | the cash flow starts from consolidated operating income and the universe entry does not declare the share count to hold the minority's units |
+| minority interests | `MinorityInterest`, else equity including them less the parent's, with `RedeemableNoncontrollingInterestEquityCarryingAmount` beside it; `NoncontrollingInterests`; the vendor's row | the cash flow starts from consolidated operating income and the universe entry does not declare the share count to hold the minority's units |
 | minority buyouts since the base | the latest 10-Q's year-to-date `PaymentsToMinorityShareholders`, less `MinorityInterestDecreaseFromRedemptions` where filed | beside the minority interests, where they apply and the year-to-date figures run from the valued base |
 | associates and joint ventures, at book | `EquityMethodInvestments`; `InvestmentsAccountedForUsingEquityMethod`; the vendor's aggregate row, else its two | the cash flow starts from consolidated operating income, which leaves their earnings out, and the filing does not show them inside it (operating income less revenue less costs and expenses equalling the equity-method line) |
 | lease liabilities | `LeaseLiabilities`, else its parts; the vendor's two lease rows | IFRS statements, and the vendor's statements of a filer outside the United States: the cost is depreciation, added back, and interest, and the principal is paid in financing; not where the debt read already holds them, its total less the leases being the vendor's debt |
+| long-term financial investments, at carrying value | debt securities classified noncurrent, held to maturity, equity securities outside the equity method (the largest element), beside `LongTermInvestments`, `OtherLongTermInvestments` or `OtherInvestments`, less the associates the line holds; `NoncurrentInvestmentsOtherThanInvestmentsAccountedForUsingEquityMethod`, else the stakes at fair value through other comprehensive income; the vendor's financial-assets row, else its children | as associates: the cash flow starts from consolidated operating income, which leaves their returns out |
 | contingent consideration | `BusinessCombinationContingentConsiderationLiability`, else its parts | wherever filed |
+| defined-benefit plans' net liability, after tax | pension and retiree health as one line, else apart, less the plan assets recognised, else the funded status negated; the net defined-benefit line, else its two sides; the vendor's noncurrent pension row less its surplus row | the cash flow starts from operating income, which carries the service cost and not the interest or the return on assets; a surplus added the same way |
+| preferred stock, at carrying value | the first preferred element filed above nil, with `TemporaryEquityCarryingAmountAttributableToParent`; the vendor's two preferred rows | wherever filed: every cash flow is before the preferred dividend |
 | distributions since the base | the latest 10-Q's year-to-date buybacks and common dividends less shares issued | the valued period is the annual base the figures run from: the share count is today's |
 
-Not applied, by the same rule: minority interests and associates on the mid-cycle path built
-from the parent's net income, which leaves the one out and holds the other already; a US GAAP
-operating lease, whose cost is inside operating income. Not read: a 20-F or vendor-statement
-filer's distributions since the base, which no quarterly cash flow in the sources read carries;
-dividends to minority holders and contributions from them, which move the cash and the
-minority's own book alike; a captive finance arm, a lender's loan book and customer deposits
-in financing, which no filer tags alike; dilution from options, units and warrants. The
+Not applied, by the same rule: minority interests, associates, financial investments and the
+plans' net liability on the mid-cycle path built from the parent's net income, which leaves the
+first out and holds the rest already; a US GAAP operating lease, whose cost is inside operating
+income. Not read: a 20-F or vendor-statement filer's distributions since the base, which no
+quarterly cash flow in the sources read carries; dividends to minority holders and
+contributions from them, which move the cash and the minority's own book alike; a captive
+finance arm, a lender's loan book and customer deposits in financing, which no filer tags
+alike; an investment line under the filer's own element, the unclassified equity-securities
+total and IFRS other financial assets; assets held for sale; tax losses carried forward;
+dilution from options, units and warrants. The
 latest quarter's balance sheet is not taken for the date line, since on an annual base it would
 also bring in acquisitions paid since, seasonal working capital and the part of the first
 projected year already earned.
@@ -801,6 +807,13 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- the equity bridge's textbook items (2026-10-23): long-term financial investments are added at
+  carrying value, the defined-benefit plans' net liability is deducted after tax at the
+  statutory rate (a surplus added), each where the cash flow starts from operating income, and
+  preferred stock is deducted wherever filed; a redeemable minority interest joins the
+  minority interest. The first survey had read pensions from the funded-status element alone
+  and called them negligible. A definition change: fair values move, no status or `Failed`
+  string does.
 - four fixes from the sweep of the vendor disagreements (2026-10-19): impairments of goodwill,
   intangibles and long-lived assets are added back to operating income on every recipe on
   filed us-gaap statements, since a write-down of capital already spent, through capex or an

@@ -186,7 +186,7 @@ let value ?share_count_includes_minority (a : Dcf.assumptions) ~country ~require
                 (* the bridge pairs with the recipe: filed operating income is consolidated,
                    the bottom-up recipe is the parent's net income *)
                 let bridge =
-                  Equity_bridge.of_period ?share_count_includes_minority
+                  Equity_bridge.of_period ?share_count_includes_minority ~statutory_tax_rate:a.statutory_tax_rate.value
                     ~cash_flow:
                       (if filed_operating_income then Equity_bridge.Consolidated_operating_income
                        else Equity_bridge.Parent_net_income)

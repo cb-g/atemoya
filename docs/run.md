@@ -288,6 +288,38 @@ flow leaves it out and never where it already holds it:
   leases).
 - **Contingent consideration** is deducted wherever filed: an acquisition's deferred price,
   paid outside the capex and working-capital lines the cash flow reads.
+- **Long-term financial investments** are added at their carrying value where the cash flow
+  starts from operating income, which leaves out their interest, dividends and changes in
+  value, and not where it is built from net income, which holds them. They are the debt
+  securities classified noncurrent, those held to maturity, and the equity securities outside
+  the equity method, the largest element filed where a filer tags one line under two (Nvidia
+  tags its 22,251 million of non-marketable securities under both), beside the filer's
+  long-term investment line. Such a line holds the parts where it is at least their sum, and
+  the associates too where it still covers the parts without them, and the associates, which
+  the bridge adds on their own, are then taken out of it: Microsoft's 36,348 million of equity
+  and other investments less its 12,000 million of associates, Sea's long-term investments
+  less theirs. A line below the parts' sum is a line of its own beside them: ServiceNow's
+  1,542 million of strategic investments beside its 3,771 million of long-term marketable
+  securities. The unclassified equity-securities total is not read, since Cisco's and
+  Workday's sit inside the short-term investments cash already holds. No tax on a gain not yet
+  realised is deducted; Alphabet's 68,687 million of non-marketable securities carry 44,485
+  million of cumulative upward adjustments.
+- **The defined-benefit plans' net liability** is deducted after tax at the statutory rate, and
+  a surplus added the same way, where the cash flow starts from operating income: operating
+  income carries the plans' service cost, and the interest on the obligation and the return on
+  the assets fall below it, while contributions are deductible. Not on the path built from net
+  income, which carries that interest and return. Pension and retiree health are read as one
+  line where the filer files one (Caterpillar's 3,838 million of postemployment benefits), else
+  summed apart (BWXT prints 78 million of each on two lines), less the plan assets recognised
+  (Northrop Grumman's 3,167 million beside 1,110 million owed); on IFRS statements the net
+  defined-benefit line, else its two sides; on the vendor's statements the noncurrent
+  liability row less the surplus row. The current portion sits in accrued liabilities and is
+  not read, nor the vendor's current pension row, which for some filers carries other
+  payables.
+- **Preferred stock** is deducted at carrying value wherever filed, every cash flow here being
+  before the preferred dividend: the first element filed above nil, since a par line of nil is
+  not a carrying value, and redeemable preferred outside equity beside it. A redeemable
+  minority interest joins the minority interest above.
 - **Distributions since the base** are deducted where the valued period is the annual base the
   figures run from: buybacks and common dividends less shares issued, from the latest 10-Q's
   year-to-date cash flow statement (`distributions_since_base` on the financials). The share
@@ -318,13 +350,26 @@ the sources read (a 20-F filer's half-years, and every name on vendor statements
 vendor's quarterly rows were missing or nil where the half-year reports print the payments);
 the distributions on units the share count holds by declaration; a captive finance arm's debt,
 a lender's loan book and customer deposits classified in financing, which no filer tags alike
-and which need a declaration per name; long-term marketable securities, which the cash
-definition leaves out and is open; preferred stock, pension deficits and redeemable minority
-interests, negligible across the run, though Alphabet's 10-Q files 19,063 million of
-convertible preferred issued in the same half, which will stand on its next annual balance
-sheet and is then the item to add. The four-quarter shadow reads the bridge's lines at the
+and which need a declaration per name. The four-quarter shadow reads the bridge's lines at the
 quarter end where the 10-Q files them, and no distributions, its balance sheet being the
 quarter's own.
+
+**Decided (2026-10-23): the textbook items.** The first survey had called pension deficits
+negligible because it read the funded-status element, which six filers tag without a plan
+dimension; read from the balance-sheet lines they reach a few points of the equity value on
+Delta, Caterpillar and Lockheed Martin. A second survey took every standard item between
+enterprise and equity value across the same records, and the long-term financial
+investments, the plans' net liability and preferred stock are read from it, preferred being
+negligible on today's bases but standing on Alphabet's next: its 10-Q files 19,063 million of
+convertible preferred issued in the half after its base. Not read, each a stated limit: what
+an investment line under the filer's own element holds beyond the standard elements beneath it
+(the rest of Intel's equity investments, the marketable part of Uber's, the associates inside
+Delta's), the unclassified equity-securities total, and IFRS other financial assets, which
+hold loans and derivatives beside the stakes; assets held for sale, whose earnings stay inside
+operating income unless the disposal is a discontinued operation; tax losses carried forward,
+which the tax rate the record derives already reads in part. A decommissioning trust held
+under the filer's investment line would be added while the obligation it funds is not
+deducted; no valued record holds one (Vistra's, refused by class).
 
 ## Terminal growth is held to the risk-free rate
 

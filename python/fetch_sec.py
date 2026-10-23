@@ -29,7 +29,7 @@ from collections.abc import Iterable, Mapping
 from datetime import date, timedelta
 from pathlib import Path
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -553,7 +553,9 @@ UNSECURED_LONG_TERM_DEBT = "UnsecuredLongTermDebt"   # the unsecured part of non
 
 
 Line = tuple[float | None, str | None]
-BRIDGE_FIELDS = ("minority_interest", "equity_method_investments", "contingent_consideration", "lease_liabilities")
+BRIDGE_FIELDS = ("minority_interest", "equity_method_investments", "contingent_consideration", "lease_liabilities",
+                 "financial_investments", "pension_net", "preferred_stock")
+SUBSET_TOLERANCE = 0.0005  # relative: a filer's investment line holding its parts may differ from their sum by rounding
 
 
 def _parts_summed(facts: "Facts", candidates: Iterable[str], end: date) -> Line:
@@ -579,9 +581,71 @@ def _first(facts: "Facts", candidates: Iterable[str], end: date) -> Line:
     return (None, None) if hit is None else hit
 
 
+def _added(a: Line, b: Line) -> Line:
+    """Two lines summed where either is filed, the rows joined."""
+    hits = [(v, r) for v, r in (a, b) if v is not None]
+    if not hits:
+        return None, None
+    return sum(v for v, _ in hits), " + ".join(r for _, r in hits if r is not None)
+
+
+def _first_positive(facts: "Facts", candidates: Iterable[str], end: date) -> Line:
+    """The first candidate filed above nil: a par line of nil is not a carrying value (69)."""
+    for tag in candidates:
+        v = facts.at(tag, end, instant=True)
+        if v is not None and v > 0.:
+            return v, tag
+    return None, None
+
+
+def _largest(facts: "Facts", candidates: Iterable[str], end: date) -> Line:
+    """The largest candidate filed: for elements a filer may tag one line under twice."""
+    hits = [(v, t) for t in candidates if (v := facts.at(t, end, instant=True)) is not None]
+    return max(hits, key=lambda h: h[0]) if hits else (None, None)
+
+
+def financial_investments(facts: "Facts", x: reference.BridgeXbrl, end: date, investees: Line) -> Line:
+    """Long-term financial assets outside the equity method: the debt securities classified
+    noncurrent and the equity securities outside the equity method, beside the filer's
+    long-term investment line. A line at least the parts' sum holds them, and the associates
+    too where it still covers the parts without them (Sea's 1.889 billion is its 1.300 of
+    debt securities, 0.035 held to maturity, 0.376 of equity securities and 0.178 of
+    associates; Kinder Morgan's is its associates alone), so the associates the bridge adds on
+    their own are taken out of it; a line below the parts' sum is a line of its own beside
+    them (ServiceNow's strategic investments beside its long-term marketable securities)."""
+    parts = [(v, r) for v, r in (_first(facts, x.financial_investments_debt, end),
+                                 _first(facts, x.financial_investments_held_to_maturity, end),
+                                 _largest(facts, x.financial_investments_equity, end)) if v is not None and r is not None]
+    summed: Line = (sum(v for v, _ in parts), " + ".join(r for _, r in parts)) if parts else (None, None)
+    line = _first(facts, x.financial_investments_lines, end)
+    if line[0] is None:
+        return summed
+    held, part_sum = line[0], summed[0] or 0.
+    if held < part_sum - SUBSET_TOLERANCE * part_sum:
+        return _added(summed, line)
+    associates = investees[0]
+    if associates is not None and associates > 0. and held - associates >= part_sum - SUBSET_TOLERANCE * max(part_sum, associates):
+        return held - associates, f"{line[1]} - {investees[1]}"
+    return line
+
+
+def pension_net(facts: "Facts", liabilities: Iterable[str], parts: Iterable[str], surplus: Iterable[str], end: date) -> Line:
+    """The defined-benefit liabilities recognised, pension and retiree health as one line or
+    summed apart, less the plan assets recognised; None where neither is filed."""
+    owed = _first(facts, liabilities, end)
+    if owed[0] is None:
+        owed = _parts_summed(facts, parts, end)
+    held = _first(facts, surplus, end)
+    if owed[0] is None and held[0] is None:
+        return None, None
+    rows = [r for r in (owed[1], None if held[1] is None else f"- {held[1]}") if r is not None]
+    return (owed[0] or 0.) - (held[0] or 0.), " ".join(rows)
+
+
 def bridge_lines(facts: "Facts", defs: reference.FieldDefinitions, end: date, *, taxonomy: str) -> dict[str, Line]:
     """The equity bridge's balance-sheet lines at [end], by reference/field_definitions.json:
-    each as filed, or (None, None). The valuer decides which apply; nothing here nets them."""
+    each as filed, or (None, None). The valuer decides which apply; nothing here nets them,
+    except a line that holds another the bridge reads apart."""
     out: dict[str, Line] = {f: (None, None) for f in BRIDGE_FIELDS}
     d = defs.equity_bridge
     if d is None:
@@ -591,12 +655,33 @@ def bridge_lines(facts: "Facts", defs: reference.FieldDefinitions, end: date, *,
         out["equity_method_investments"] = _first(facts, d.ifrs.equity_method_investments, end)
         lease = _first(facts, d.ifrs.lease_liabilities, end)
         out["lease_liabilities"] = lease if lease[0] is not None else _parts_summed(facts, d.ifrs.lease_liabilities_parts, end)
+        held = _first(facts, d.ifrs.financial_investments, end)
+        out["financial_investments"] = held if held[0] is not None else _parts_summed(facts, d.ifrs.financial_investments_parts, end)
+        net = _first(facts, d.ifrs.pension_net, end)
+        out["pension_net"] = net if net[0] is not None else pension_net(facts, d.ifrs.pension_liabilities, [], d.ifrs.pension_surplus, end)
     else:
         minority = _first(facts, d.xbrl.minority_interest, end)
-        out["minority_interest"] = minority if minority[0] is not None else _difference(facts, d.xbrl.minority_interest_totals, end)
+        minority = minority if minority[0] is not None else _difference(facts, d.xbrl.minority_interest_totals, end)
+        out["minority_interest"] = _added(minority, _first_positive(facts, d.xbrl.minority_interest_redeemable, end))
         out["equity_method_investments"] = _first(facts, d.xbrl.equity_method_investments, end)
         contingent = _first(facts, d.xbrl.contingent_consideration, end)
         out["contingent_consideration"] = contingent if contingent[0] is not None else _parts_summed(facts, d.xbrl.contingent_consideration_parts, end)
+        out["financial_investments"] = financial_investments(facts, d.xbrl, end, out["equity_method_investments"])
+        net = pension_net(facts, d.xbrl.pension_liabilities, d.xbrl.pension_liabilities_parts, d.xbrl.pension_surplus, end)
+        if net[0] is None:
+            funded = _first(facts, d.xbrl.pension_funded_status, end)
+            net = (None, None) if funded[0] is None else (-funded[0], f"-{funded[1]}")
+        out["pension_net"] = net
+        out["preferred_stock"] = _added(_first_positive(facts, d.xbrl.preferred_stock, end),
+                                        _first_positive(facts, d.xbrl.preferred_redeemable, end))
+    return out
+
+
+def bridge_fields(bridge: Mapping[str, Line]) -> dict[str, Any]:
+    """The lines as the period's keyword arguments, each beside its row."""
+    out: dict[str, Any] = {}
+    for field in BRIDGE_FIELDS:
+        out[field], out[f"{field}_row"] = bridge[field]
     return out
 
 
@@ -1567,10 +1652,7 @@ def periods_from_facts(gaap: Mapping[str, object], tags: reference.XbrlTags, def
                 total_debt=debt, total_debt_source=debt_row,
                 book_equity=v["book_equity"], net_income=v["net_income"],
                 goodwill=v["goodwill"], goodwill_row=r["goodwill"],
-                minority_interest=bridge["minority_interest"][0], minority_interest_row=bridge["minority_interest"][1],
-                equity_method_investments=bridge["equity_method_investments"][0], equity_method_investments_row=bridge["equity_method_investments"][1],
-                contingent_consideration=bridge["contingent_consideration"][0], contingent_consideration_row=bridge["contingent_consideration"][1],
-                lease_liabilities=bridge["lease_liabilities"][0], lease_liabilities_row=bridge["lease_liabilities"][1],
+                **bridge_fields(bridge),
                 investees_in_operating_income=investees, debt_due_within_year=due, debt_due_within_year_row=due_row,
                 dividends_paid=v["dividends_paid"], dividends_paid_row=r["dividends_paid"],
                 operating_cash_flow=v["operating_cash_flow"], operating_cash_flow_row=r["operating_cash_flow"],

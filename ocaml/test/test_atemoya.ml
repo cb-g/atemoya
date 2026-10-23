@@ -22,6 +22,7 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     ?net_income_to_common ?preferred_equity ?preferred_dividends ?preferred_outside_equity
     ?common_dividends_paid ?operating_cash_flow ?operating_cash_flow_row ?goodwill ?goodwill_row
     ?minority_interest ?equity_method_investments ?contingent_consideration ?lease_liabilities
+    ?financial_investments ?pension_net ?preferred_stock
     ?investees_in_operating_income ?debt_due_within_year () : Boundary_t.fiscal_period =
   {
     period_end;
@@ -126,6 +127,12 @@ let period ?(period_end = "2025-09-30") ?ebit ?pretax_income ?tax_provision
     contingent_consideration_row = Option.map (fun _ -> "BusinessCombinationContingentConsiderationLiability") contingent_consideration;
     lease_liabilities;
     lease_liabilities_row = Option.map (fun _ -> "LeaseLiabilities") lease_liabilities;
+    financial_investments;
+    financial_investments_row = Option.map (fun _ -> "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent") financial_investments;
+    pension_net;
+    pension_net_row = Option.map (fun _ -> "PensionAndOtherPostretirementDefinedBenefitPlansLiabilitiesNoncurrent") pension_net;
+    preferred_stock;
+    preferred_stock_row = Option.map (fun _ -> "PreferredStockValue") preferred_stock;
     investees_in_operating_income;
     debt_due_within_year;
     debt_due_within_year_row = Option.map (fun _ -> "LongTermDebtMaturitiesRepaymentsOfPrincipalInNextTwelveMonths") debt_due_within_year;
@@ -3190,17 +3197,22 @@ let test_growth_shadow () =
   Alcotest.(check bool) "none off the generic DCF" true (Option.is_none wrapper.growth_shadow)
 
 (* The equity bridge, every figure invented. The growing fixture's latest period carries a
-   minority interest of 300, investees of 500, contingent consideration of 100 and lease
-   liabilities of 200; since its base 150 went to shareholders and 50 to buy minority
-   interests out above book. Each item applies only where its cash flow leaves it out. *)
+   minority interest of 300, investees of 500, long-term financial investments of 400,
+   contingent consideration of 100, lease liabilities of 200, a pension deficit of 100 before
+   tax and preferred stock of 50; since its base 150 went to shareholders and 50 to buy
+   minority interests out above book. Each item applies only where its cash flow leaves it
+   out. *)
 let test_equity_bridge () =
-  let with_lines ?(minority = Some 300.) periods =
+  let with_lines ?(minority = Some 300.) ?(pension = Some 100.) periods =
     match periods with
     | (latest : Boundary_t.fiscal_period) :: rest ->
         { latest with minority_interest = minority; minority_interest_row = Option.map (fun _ -> "MinorityInterest") minority;
           equity_method_investments = Some 500.; equity_method_investments_row = Some "EquityMethodInvestments";
           contingent_consideration = Some 100.; contingent_consideration_row = Some "BusinessCombinationContingentConsiderationLiability";
-          lease_liabilities = Some 200.; lease_liabilities_row = Some "LeaseLiabilities" }
+          lease_liabilities = Some 200.; lease_liabilities_row = Some "LeaseLiabilities";
+          financial_investments = Some 400.; financial_investments_row = Some "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent";
+          pension_net = pension; pension_net_row = Option.map (fun _ -> "PensionAndOtherPostretirementDefinedBenefitPlansLiabilitiesNoncurrent") pension;
+          preferred_stock = Some 50.; preferred_stock_row = Some "PreferredStockValue" }
         :: rest
     | [] -> []
   in
@@ -3214,15 +3226,15 @@ let test_equity_bridge () =
   in
   let plain = run (financials (growing ())) in
   let base = match plain.inputs with Some (`Dcf i) -> i | _ -> Alcotest.fail "not a dcf" in
-  let bridged ?declared ?(taxonomy = "") ?(since = "2025-09-30") () =
-    run ?declared (financials ~taxonomy ~distributions_since_base:(paid since) (with_lines (growing ())))
+  let bridged ?declared ?(taxonomy = "") ?(since = "2025-09-30") ?pension () =
+    run ?declared (financials ~taxonomy ~distributions_since_base:(paid since) (with_lines ?pension (growing ())))
   in
   let inputs (v : Boundary_t.valuation) = match v.inputs with Some (`Dcf i) -> i | _ -> Alcotest.fail "not a dcf" in
   let block (i : Boundary_t.inputs) = match i.equity_bridge with Some b -> b | None -> Alcotest.fail "no bridge" in
   let applied b name = (List.find (fun (x : Boundary_t.bridge_item) -> x.name = name) b.Boundary_t.items).applied in
   (* nothing filed: every item on the block, none applied, the value the record had *)
   let empty = block base in
-  Alcotest.(check int) "six items" 6 (List.length empty.items);
+  Alcotest.(check int) "nine items" 9 (List.length empty.items);
   check_float "nothing filed, nothing taken" 0. empty.total;
   Alcotest.(check bool) "each says why" true (List.for_all (fun (x : Boundary_t.bridge_item) -> x.why <> "") empty.items);
   Alcotest.(check string) "the definition the reference names"
@@ -3230,30 +3242,37 @@ let test_equity_bridge () =
     | `Assoc top -> (match List.assoc "equity_bridge" top with `Assoc d -> (match List.assoc "name" d with `String n -> n | _ -> "") | _ -> "")
     | _ -> "")
     Equity_bridge.definition;
-  (* a US filer on operating income: the minority and the buyouts deducted, the investees
-     added, the contingent price and the distributions deducted, the operating lease not *)
+  (* a US filer on operating income: the minority and the buyouts deducted, the investees and
+     the financial investments added, the contingent price, the pension deficit after tax, the
+     preferred and the distributions deducted, the operating lease not *)
   let us = inputs (bridged ()) in
   let b = block us in
-  check_float "300 + 50 - 500 + 100 + 150" 100. b.total;
+  let after_tax = 1. -. us.statutory_tax_rate.value in
+  let rest = (100. *. after_tax) +. 50. in
+  check_float "300 + 50 - 500 - 400 + 100 + 100 after tax + 50 + 150" (-300. +. rest) b.total;
   Alcotest.(check bool) "no US GAAP lease" false (applied b "lease_liabilities");
-  check_float "equity value is enterprise value less net debt less the bridge" (us.enterprise_value -. us.net_debt -. 100.) us.equity_value;
+  check_float "equity value is enterprise value less net debt less the bridge" (us.enterprise_value -. us.net_debt -. b.total) us.equity_value;
+  check_float "a surplus is added after tax the same way" (-300. -. (100. *. after_tax) +. 50.)
+    (block (inputs (bridged ~pension:(Some (-100.)) ()))).total;
   check_float "the engine reproduces it at the recorded growth" ((us.equity_value) /. us.shares)
     (Implied.dcf_fair_value us ~g0:us.g0 ~lambda:us.mean_reversion_lambda.value);
   (* IFRS: the lease too *)
-  check_float "and 200 of leases under IFRS" 300. (block (inputs (bridged ~taxonomy:"ifrs-full" ()))).total;
+  check_float "and 200 of leases under IFRS" (-100. +. rest) (block (inputs (bridged ~taxonomy:"ifrs-full" ()))).total;
   let abroad = financials ~country:(Some "Sweden") ~distributions_since_base:(paid "2025-09-30") (with_lines (growing ())) in
-  check_float "and on the vendor's statements of a filer abroad" 300.
-    (Equity_bridge.of_period ~cash_flow:Equity_bridge.Consolidated_operating_income abroad (List.hd abroad.periods)).total;
+  check_float "and on the vendor's statements of a filer abroad, at the rate given" (-100. +. 80. +. 50.)
+    (Equity_bridge.of_period ~cash_flow:Equity_bridge.Consolidated_operating_income ~statutory_tax_rate:0.2 abroad
+       (List.hd abroad.periods)).total;
   Alcotest.(check bool) "but not on a US filer's" false (Equity_bridge.leases_outside_debt (financials (growing ())));
   (* the share count declared to hold the minority's units: neither the minority nor its buyouts *)
   let declared = block (inputs (bridged ~declared:(Some (declaration ~share_count_includes_minority:"units in the count" `OperatingCompany)) ())) in
   Alcotest.(check bool) "the declared minority is not divided twice" false (applied declared "minority_interest" || applied declared "minority_buyouts_since_base");
-  check_float "the rest still applies" (-500. +. 100. +. 150.) declared.total;
+  check_float "the rest still applies" (-500. -. 400. +. 100. +. 150. +. rest) declared.total;
   (* the year-to-date figures run from another period: not applied *)
   let elsewhere = block (inputs (bridged ~since:"2024-09-30" ())) in
   Alcotest.(check bool) "distributions only from the valued base" false (applied elsewhere "distributions_since_base");
-  check_float "nor the buyouts" (300. -. 500. +. 100.) elsewhere.total;
-  (* the mid-cycle path built from the parent's net income: neither minority nor investees *)
+  check_float "nor the buyouts" (300. -. 500. -. 400. +. 100. +. rest) elsewhere.total;
+  (* the mid-cycle path built from the parent's net income: neither minority nor investees, nor
+     the financial investments or the pension, whose returns and costs net income holds *)
   let cyc = run ~declared:(Some (declaration `Cyclical))
       (financials ~distributions_since_base:(paid "2025-12-31") (with_lines (midcycle_periods ()))) in
   (match cyc.inputs with
@@ -3261,13 +3280,17 @@ let test_equity_bridge () =
       let b = block m.dcf in
       Alcotest.(check string) "bottom-up recipe" "nopat_bottom_up" m.nopat_recipe;
       Alcotest.(check bool) "neither the minority nor the investees" false (applied b "minority_interest" || applied b "equity_method_investments");
-      check_float "the contingent price and the distributions" (100. +. 150.) b.total;
-      check_float "on its equity value" (m.dcf.enterprise_value -. m.dcf.net_debt -. 250.) m.dcf.equity_value
+      Alcotest.(check bool) "nor the investments or the pension" false (applied b "financial_investments" || applied b "pension_net");
+      check_float "the contingent price, the preferred and the distributions" (100. +. 50. +. 150.) b.total;
+      check_float "on its equity value" (m.dcf.enterprise_value -. m.dcf.net_debt -. 300.) m.dcf.equity_value
   | _ -> Alcotest.failf "not a mid-cycle record: %s" (Option.value cyc.failed_reason ~default:""));
   (* the currency conversion scales every line *)
   let converted = Fx.convert ~rate:2. (financials ~distributions_since_base:(paid "2025-09-30") (with_lines (growing ()))) in
   (match converted.periods with
-  | p :: _ -> Alcotest.(check (option approx)) "minority in the trading currency" (Some 600.) p.minority_interest
+  | p :: _ ->
+      Alcotest.(check (option approx)) "minority in the trading currency" (Some 600.) p.minority_interest;
+      Alcotest.(check (option approx)) "and the new lines, (400 + 100 + 50) at 2" (Some 1100.)
+        (Option.map (fun x -> x +. Option.get p.pension_net +. Option.get p.preferred_stock) p.financial_investments)
   | [] -> Alcotest.fail "no periods");
   Alcotest.(check (option approx)) "distributions too" (Some 300.)
     (Option.map (fun (d : Boundary_t.distributions) -> d.net) converted.distributions_since_base)

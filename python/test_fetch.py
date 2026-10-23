@@ -263,6 +263,25 @@ def test_vendor_bridge_rows() -> None:
     assert none["minority_interest"] is None and none["equity_method_investments"] is None and none["lease_liabilities"] is None
 
 
+def test_vendor_textbook_bridge_rows() -> None:
+    """(2026-10-23) The bridge's textbook rows on the vendor's balance sheet, every figure
+    invented: the financial investments as the aggregate row else its children summed; the
+    noncurrent pension row less the surplus row, the current pension row never read (it
+    carries other payables for some filers); preferred stock where above nil."""
+    rows = {"Available For Sale Securities": 6.0, "Financial Assets Designatedas Fair Value Through Profitor Loss Total": 2.0,
+            "Non Current Pension And Other Postretirement Benefit Plans": 4.0, "Pensionand Other Post Retirement Benefit Plans Current": 9.0,
+            "Defined Pension Benefit": 1.5, "Preferred Stock": 0.0, "Preferred Securities Outside Stock Equity": 0.7, "Stockholders Equity": 10.0}
+    out = fetch._balance_values(rows)  # pyright: ignore[reportPrivateUsage]
+    assert (out["financial_investments"], out["financial_investments_row"]) == (
+        8.0, "Available For Sale Securities + Financial Assets Designatedas Fair Value Through Profitor Loss Total")
+    assert (out["pension_net"], out["pension_net_row"]) == (2.5, "Non Current Pension And Other Postretirement Benefit Plans - Defined Pension Benefit")
+    assert (out["preferred_stock"], out["preferred_stock_row"]) == (0.7, "Preferred Securities Outside Stock Equity")
+    aggregate = fetch._balance_values({**rows, "Investmentin Financial Assets": 8.5})  # pyright: ignore[reportPrivateUsage]
+    assert (aggregate["financial_investments"], aggregate["financial_investments_row"]) == (8.5, "Investmentin Financial Assets")
+    current_only = fetch._balance_values({"Pensionand Other Post Retirement Benefit Plans Current": 9.0, "Stockholders Equity": 10.0})  # pyright: ignore[reportPrivateUsage]
+    assert current_only["pension_net"] is None and current_only["preferred_stock"] is None
+
+
 def test_bridge_rows_alone_make_no_vendor_period() -> None:
     """(2026-10-19) The vendor's oldest balance-sheet column can carry a minority-interest or
     lease row and nothing else; that column was omitted as empty before the equity bridge read

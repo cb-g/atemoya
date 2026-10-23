@@ -128,6 +128,12 @@ type fiscal_period = {
   ?contingent_consideration_row : string option;
   ?lease_liabilities : float option;          (* lease liabilities outside the debt rows, IFRS and vendor statements only *)
   ?lease_liabilities_row : string option;
+  ?financial_investments : float option;      (* long-term financial assets outside the equity method, as filed at period end: debt securities held beyond a year, equity securities, the filer's long-term investment line less the associates it holds *)
+  ?financial_investments_row : string option;
+  ?pension_net : float option;                (* defined-benefit pension and retiree-health liabilities recognised less plan assets recognised, as filed at period end and before tax; negative where the plans are in surplus *)
+  ?pension_net_row : string option;
+  ?preferred_stock : float option;            (* preferred stock at carrying value, inside equity and redeemable outside it, as filed at period end; read by the equity bridge alone *)
+  ?preferred_stock_row : string option;
   ?investees_in_operating_income : bool option;   (* operating income less revenue less costs and expenses equals the equity-method line: true; equals nil: false; absent where the filing cannot tell *)
   ?debt_due_within_year : float option;      (* the maturity schedule's principal due within a year, read where the debt carries no current line; the valuer takes it only where the vendor's debt validates it *)
   ?debt_due_within_year_row : string option;
@@ -441,8 +447,8 @@ type floor = {
    [growth_path] the yearly rates that mean-revert from it toward [terminal_growth_rate]. *)
 (* One item of the equity bridge: read, and applied or not by the pairing rule, with why. *)
 type bridge_item = {
-  name : string;                      (* minority_interest | minority_buyouts_since_base | equity_method_investments | lease_liabilities | contingent_consideration | distributions_since_base *)
-  value : float nullable;             (* as read, in the record's currency; null where not read *)
+  name : string;                      (* minority_interest | minority_buyouts_since_base | equity_method_investments | financial_investments | lease_liabilities | contingent_consideration | pension_net | preferred_stock | distributions_since_base *)
+  value : float nullable;             (* as read, in the record's currency; null where not read; before tax where the deduction is after it *)
   ?row : string option;
   applied : bool;
   deduction : float;                  (* taken from the equity value: positive deducts, negative adds; 0 where not applied *)

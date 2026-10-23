@@ -2908,6 +2908,17 @@ class BridgeXbrl:
     issuance: List[str]
     minority_buyouts: List[str]
     minority_buyouts_book: List[str]
+    minority_interest_redeemable: List[str] = field(default_factory=lambda: [])
+    financial_investments_debt: List[str] = field(default_factory=lambda: [])
+    financial_investments_held_to_maturity: List[str] = field(default_factory=lambda: [])
+    financial_investments_equity: List[str] = field(default_factory=lambda: [])
+    financial_investments_lines: List[str] = field(default_factory=lambda: [])
+    pension_liabilities: List[str] = field(default_factory=lambda: [])
+    pension_liabilities_parts: List[str] = field(default_factory=lambda: [])
+    pension_surplus: List[str] = field(default_factory=lambda: [])
+    pension_funded_status: List[str] = field(default_factory=lambda: [])
+    preferred_stock: List[str] = field(default_factory=lambda: [])
+    preferred_redeemable: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'BridgeXbrl':
@@ -2923,6 +2934,17 @@ class BridgeXbrl:
                 issuance=_atd_read_list(_atd_read_string)(x['issuance']) if 'issuance' in x else _atd_missing_json_field('BridgeXbrl', 'issuance'),
                 minority_buyouts=_atd_read_list(_atd_read_string)(x['minority_buyouts']) if 'minority_buyouts' in x else _atd_missing_json_field('BridgeXbrl', 'minority_buyouts'),
                 minority_buyouts_book=_atd_read_list(_atd_read_string)(x['minority_buyouts_book']) if 'minority_buyouts_book' in x else _atd_missing_json_field('BridgeXbrl', 'minority_buyouts_book'),
+                minority_interest_redeemable=_atd_read_list(_atd_read_string)(x['minority_interest_redeemable']) if 'minority_interest_redeemable' in x else [],
+                financial_investments_debt=_atd_read_list(_atd_read_string)(x['financial_investments_debt']) if 'financial_investments_debt' in x else [],
+                financial_investments_held_to_maturity=_atd_read_list(_atd_read_string)(x['financial_investments_held_to_maturity']) if 'financial_investments_held_to_maturity' in x else [],
+                financial_investments_equity=_atd_read_list(_atd_read_string)(x['financial_investments_equity']) if 'financial_investments_equity' in x else [],
+                financial_investments_lines=_atd_read_list(_atd_read_string)(x['financial_investments_lines']) if 'financial_investments_lines' in x else [],
+                pension_liabilities=_atd_read_list(_atd_read_string)(x['pension_liabilities']) if 'pension_liabilities' in x else [],
+                pension_liabilities_parts=_atd_read_list(_atd_read_string)(x['pension_liabilities_parts']) if 'pension_liabilities_parts' in x else [],
+                pension_surplus=_atd_read_list(_atd_read_string)(x['pension_surplus']) if 'pension_surplus' in x else [],
+                pension_funded_status=_atd_read_list(_atd_read_string)(x['pension_funded_status']) if 'pension_funded_status' in x else [],
+                preferred_stock=_atd_read_list(_atd_read_string)(x['preferred_stock']) if 'preferred_stock' in x else [],
+                preferred_redeemable=_atd_read_list(_atd_read_string)(x['preferred_redeemable']) if 'preferred_redeemable' in x else [],
             )
         else:
             _atd_bad_json('BridgeXbrl', x)
@@ -2939,6 +2961,17 @@ class BridgeXbrl:
         res['issuance'] = _atd_write_list(_atd_write_string)(self.issuance)
         res['minority_buyouts'] = _atd_write_list(_atd_write_string)(self.minority_buyouts)
         res['minority_buyouts_book'] = _atd_write_list(_atd_write_string)(self.minority_buyouts_book)
+        res['minority_interest_redeemable'] = _atd_write_list(_atd_write_string)(self.minority_interest_redeemable)
+        res['financial_investments_debt'] = _atd_write_list(_atd_write_string)(self.financial_investments_debt)
+        res['financial_investments_held_to_maturity'] = _atd_write_list(_atd_write_string)(self.financial_investments_held_to_maturity)
+        res['financial_investments_equity'] = _atd_write_list(_atd_write_string)(self.financial_investments_equity)
+        res['financial_investments_lines'] = _atd_write_list(_atd_write_string)(self.financial_investments_lines)
+        res['pension_liabilities'] = _atd_write_list(_atd_write_string)(self.pension_liabilities)
+        res['pension_liabilities_parts'] = _atd_write_list(_atd_write_string)(self.pension_liabilities_parts)
+        res['pension_surplus'] = _atd_write_list(_atd_write_string)(self.pension_surplus)
+        res['pension_funded_status'] = _atd_write_list(_atd_write_string)(self.pension_funded_status)
+        res['preferred_stock'] = _atd_write_list(_atd_write_string)(self.preferred_stock)
+        res['preferred_redeemable'] = _atd_write_list(_atd_write_string)(self.preferred_redeemable)
         return res
 
     @classmethod
@@ -2958,6 +2991,11 @@ class BridgeVendor:
     equity_method_investments: List[str]
     equity_method_investments_parts: List[str]
     lease_liabilities_parts: List[str]
+    financial_investments: List[str] = field(default_factory=lambda: [])
+    financial_investments_parts: List[str] = field(default_factory=lambda: [])
+    pension_liabilities: List[str] = field(default_factory=lambda: [])
+    pension_surplus: List[str] = field(default_factory=lambda: [])
+    preferred_stock: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'BridgeVendor':
@@ -2967,6 +3005,11 @@ class BridgeVendor:
                 equity_method_investments=_atd_read_list(_atd_read_string)(x['equity_method_investments']) if 'equity_method_investments' in x else _atd_missing_json_field('BridgeVendor', 'equity_method_investments'),
                 equity_method_investments_parts=_atd_read_list(_atd_read_string)(x['equity_method_investments_parts']) if 'equity_method_investments_parts' in x else _atd_missing_json_field('BridgeVendor', 'equity_method_investments_parts'),
                 lease_liabilities_parts=_atd_read_list(_atd_read_string)(x['lease_liabilities_parts']) if 'lease_liabilities_parts' in x else _atd_missing_json_field('BridgeVendor', 'lease_liabilities_parts'),
+                financial_investments=_atd_read_list(_atd_read_string)(x['financial_investments']) if 'financial_investments' in x else [],
+                financial_investments_parts=_atd_read_list(_atd_read_string)(x['financial_investments_parts']) if 'financial_investments_parts' in x else [],
+                pension_liabilities=_atd_read_list(_atd_read_string)(x['pension_liabilities']) if 'pension_liabilities' in x else [],
+                pension_surplus=_atd_read_list(_atd_read_string)(x['pension_surplus']) if 'pension_surplus' in x else [],
+                preferred_stock=_atd_read_list(_atd_read_string)(x['preferred_stock']) if 'preferred_stock' in x else [],
             )
         else:
             _atd_bad_json('BridgeVendor', x)
@@ -2977,6 +3020,11 @@ class BridgeVendor:
         res['equity_method_investments'] = _atd_write_list(_atd_write_string)(self.equity_method_investments)
         res['equity_method_investments_parts'] = _atd_write_list(_atd_write_string)(self.equity_method_investments_parts)
         res['lease_liabilities_parts'] = _atd_write_list(_atd_write_string)(self.lease_liabilities_parts)
+        res['financial_investments'] = _atd_write_list(_atd_write_string)(self.financial_investments)
+        res['financial_investments_parts'] = _atd_write_list(_atd_write_string)(self.financial_investments_parts)
+        res['pension_liabilities'] = _atd_write_list(_atd_write_string)(self.pension_liabilities)
+        res['pension_surplus'] = _atd_write_list(_atd_write_string)(self.pension_surplus)
+        res['preferred_stock'] = _atd_write_list(_atd_write_string)(self.preferred_stock)
         return res
 
     @classmethod
@@ -2996,6 +3044,11 @@ class BridgeIfrs:
     equity_method_investments: List[str]
     lease_liabilities: List[str]
     lease_liabilities_parts: List[str]
+    financial_investments: List[str] = field(default_factory=lambda: [])
+    financial_investments_parts: List[str] = field(default_factory=lambda: [])
+    pension_net: List[str] = field(default_factory=lambda: [])
+    pension_liabilities: List[str] = field(default_factory=lambda: [])
+    pension_surplus: List[str] = field(default_factory=lambda: [])
 
     @classmethod
     def from_json(cls, x: Any) -> 'BridgeIfrs':
@@ -3005,6 +3058,11 @@ class BridgeIfrs:
                 equity_method_investments=_atd_read_list(_atd_read_string)(x['equity_method_investments']) if 'equity_method_investments' in x else _atd_missing_json_field('BridgeIfrs', 'equity_method_investments'),
                 lease_liabilities=_atd_read_list(_atd_read_string)(x['lease_liabilities']) if 'lease_liabilities' in x else _atd_missing_json_field('BridgeIfrs', 'lease_liabilities'),
                 lease_liabilities_parts=_atd_read_list(_atd_read_string)(x['lease_liabilities_parts']) if 'lease_liabilities_parts' in x else _atd_missing_json_field('BridgeIfrs', 'lease_liabilities_parts'),
+                financial_investments=_atd_read_list(_atd_read_string)(x['financial_investments']) if 'financial_investments' in x else [],
+                financial_investments_parts=_atd_read_list(_atd_read_string)(x['financial_investments_parts']) if 'financial_investments_parts' in x else [],
+                pension_net=_atd_read_list(_atd_read_string)(x['pension_net']) if 'pension_net' in x else [],
+                pension_liabilities=_atd_read_list(_atd_read_string)(x['pension_liabilities']) if 'pension_liabilities' in x else [],
+                pension_surplus=_atd_read_list(_atd_read_string)(x['pension_surplus']) if 'pension_surplus' in x else [],
             )
         else:
             _atd_bad_json('BridgeIfrs', x)
@@ -3015,6 +3073,11 @@ class BridgeIfrs:
         res['equity_method_investments'] = _atd_write_list(_atd_write_string)(self.equity_method_investments)
         res['lease_liabilities'] = _atd_write_list(_atd_write_string)(self.lease_liabilities)
         res['lease_liabilities_parts'] = _atd_write_list(_atd_write_string)(self.lease_liabilities_parts)
+        res['financial_investments'] = _atd_write_list(_atd_write_string)(self.financial_investments)
+        res['financial_investments_parts'] = _atd_write_list(_atd_write_string)(self.financial_investments_parts)
+        res['pension_net'] = _atd_write_list(_atd_write_string)(self.pension_net)
+        res['pension_liabilities'] = _atd_write_list(_atd_write_string)(self.pension_liabilities)
+        res['pension_surplus'] = _atd_write_list(_atd_write_string)(self.pension_surplus)
         return res
 
     @classmethod

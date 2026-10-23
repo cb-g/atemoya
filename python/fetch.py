@@ -225,6 +225,12 @@ class BalanceSheet(Statement):
     equity_method_investments_row: str | None = None
     lease_liabilities: float | None = None
     lease_liabilities_row: str | None = None
+    financial_investments: float | None = None
+    financial_investments_row: str | None = None
+    pension_net: float | None = None
+    pension_net_row: str | None = None
+    preferred_stock: float | None = None
+    preferred_stock_row: str | None = None
 
 
 # --- yfinance specifics -------------------------------------------------------------
@@ -465,6 +471,18 @@ def _bridge_rows(rows: Mapping[str, object], defs: reference.FieldDefinitions) -
     out["equity_method_investments"], out["equity_method_investments_row"] = (
         investees if investees[0] is not None else _rows_summed(rows, v.equity_method_investments_parts))
     out["lease_liabilities"], out["lease_liabilities_row"] = _rows_summed(rows, v.lease_liabilities_parts)
+    held = _first_present(rows, tuple(v.financial_investments))
+    out["financial_investments"], out["financial_investments_row"] = (
+        held if held[0] is not None else _rows_summed(rows, v.financial_investments_parts))
+    # the noncurrent liability row only: the vendor's current pension row carries other
+    # payables for some filers (Tencent's 40.6 billion, a filer without a defined-benefit plan)
+    owed, surplus = _first_present(rows, tuple(v.pension_liabilities)), _first_present(rows, tuple(v.pension_surplus))
+    out["pension_net"], out["pension_net_row"] = (None, None) if owed[0] is None and surplus[0] is None else (
+        (owed[0] or 0.0) - (surplus[0] or 0.0),
+        " ".join(r for r in (owed[1], None if surplus[1] is None else f"- {surplus[1]}") if r is not None))
+    preferred = [(value, label) for label in v.preferred_stock for value, _ in [_first_present(rows, (label,))] if value is not None and value > 0.0]
+    out["preferred_stock"], out["preferred_stock_row"] = (
+        (sum(value for value, _ in preferred), " + ".join(label for _, label in preferred)) if preferred else (None, None))
     return out
 
 
@@ -642,6 +660,12 @@ def _period(
         equity_method_investments_row=balance.equity_method_investments_row if balance else None,
         lease_liabilities=balance.lease_liabilities if balance else None,
         lease_liabilities_row=balance.lease_liabilities_row if balance else None,
+        financial_investments=balance.financial_investments if balance else None,
+        financial_investments_row=balance.financial_investments_row if balance else None,
+        pension_net=balance.pension_net if balance else None,
+        pension_net_row=balance.pension_net_row if balance else None,
+        preferred_stock=balance.preferred_stock if balance else None,
+        preferred_stock_row=balance.preferred_stock_row if balance else None,
     )
 
 
@@ -660,6 +684,8 @@ def _is_empty(period: boundary.FiscalPeriod) -> bool:
         # else; they never make a period that has no statement of its own
         "minority_interest", "minority_interest_row", "equity_method_investments", "equity_method_investments_row",
         "lease_liabilities", "lease_liabilities_row",
+        "financial_investments", "financial_investments_row", "pension_net", "pension_net_row",
+        "preferred_stock", "preferred_stock_row",
     }
 
     def empty(name: str) -> bool:

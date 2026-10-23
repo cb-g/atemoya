@@ -672,6 +672,17 @@ type bridge_xbrl = {
   issuance : string list;
   minority_buyouts : string list;               (* paid to reduce minority interests, dividends excluded *)
   minority_buyouts_book : string list;          (* the minority interests' book those payments removed *)
+  ~minority_interest_redeemable : string list;  (* redeemable minority interests outside equity, added to the minority interest where filed *)
+  ~financial_investments_debt : string list;    (* debt securities classified noncurrent, first present *)
+  ~financial_investments_held_to_maturity : string list;
+  ~financial_investments_equity : string list;  (* equity securities outside the equity method, the largest filed: a filer may tag one line under two *)
+  ~financial_investments_lines : string list;   (* the filer's long-term investment line, first present *)
+  ~pension_liabilities : string list;           (* pension and retiree-health liabilities as one line, first present *)
+  ~pension_liabilities_parts : string list;     (* pension and retiree-health apart, summed where no combined line is filed *)
+  ~pension_surplus : string list;
+  ~pension_funded_status : string list;         (* plan assets less obligations, read negated where no balance-sheet line is filed *)
+  ~preferred_stock : string list;               (* the first positive carrying value: a par line of nil is not one *)
+  ~preferred_redeemable : string list;          (* redeemable preferred outside equity *)
 }
 
 type bridge_ifrs = {
@@ -679,6 +690,11 @@ type bridge_ifrs = {
   equity_method_investments : string list;
   lease_liabilities : string list;
   lease_liabilities_parts : string list;        (* noncurrent and current, summed where no total is filed *)
+  ~financial_investments : string list;
+  ~financial_investments_parts : string list;   (* summed where the aggregate is not filed *)
+  ~pension_net : string list;                   (* the net defined-benefit liability, an asset negative *)
+  ~pension_liabilities : string list;           (* where no net line is filed *)
+  ~pension_surplus : string list;
 }
 
 type bridge_vendor = {
@@ -686,6 +702,11 @@ type bridge_vendor = {
   equity_method_investments : string list;
   equity_method_investments_parts : string list;   (* associates and joint ventures, summed where the aggregate row is absent *)
   lease_liabilities_parts : string list;
+  ~financial_investments : string list;
+  ~financial_investments_parts : string list;
+  ~pension_liabilities : string list;
+  ~pension_surplus : string list;
+  ~preferred_stock : string list;
 }
 
 type bridge_definition = {

@@ -9,10 +9,13 @@ let united_states = "United States"
 let leases_outside_debt (fin : financials) =
   fin.taxonomy = "ifrs-full" || (fin.taxonomy = "" && fin.country <> Some united_states)
 
-(* [sign] is +1 for a claim deducted, -1 for an asset added. *)
-let item ~name ~value ~row ~applied ~sign ~why =
-  let deduction = match (applied, value) with true, Some v -> sign *. v | _ -> 0. in
+(* [sign] is +1 for a claim deducted, -1 for an asset added; [after_tax] the share of the
+   value that is deducted, below 1 where a tax saving goes with settling it. *)
+let item_after_tax ~after_tax ~name ~value ~row ~applied ~sign ~why =
+  let deduction = match (applied, value) with true, Some v -> sign *. v *. after_tax | _ -> 0. in
   { name; value; row; applied = applied && Option.is_some value; deduction; why }
+
+let item ~name ~value ~row ~applied ~sign ~why = item_after_tax ~after_tax:1. ~name ~value ~row ~applied ~sign ~why
 
 let not_filed = "not filed at the period end"
 
@@ -118,11 +121,49 @@ let buyouts (fin : financials) (p : fiscal_period) ~(minority : bridge_item) =
                  d.since d.through))
   | _ -> item ~name ~value:None ~row:None ~applied:false ~sign:1. ~why:"not read: the year-to-date figures do not run from the valued period"
 
-let of_period ~cash_flow ?share_count_includes_minority (fin : financials) (p : fiscal_period) =
+(* Securities held beyond a year and stakes outside the equity method: their interest,
+   dividends and changes in value fall below operating income. *)
+let financial (p : fiscal_period) ~cash_flow =
+  let applied, why =
+    match (p.financial_investments, cash_flow) with
+    | None, _ -> (false, not_filed)
+    | Some _, Parent_net_income ->
+        (false, "not added: net income holds their interest, dividends and changes in value already")
+    | Some _, Consolidated_operating_income ->
+        ( true,
+          "added at carrying value: operating income leaves out their interest, dividends and changes in value; no tax on a gain not yet realised is deducted" )
+  in
+  item ~name:"financial_investments" ~value:p.financial_investments ~row:p.financial_investments_row ~applied ~sign:(-1.) ~why
+
+(* The defined-benefit plans' deficit, or surplus, after tax: contributions are deductible. *)
+let pension (p : fiscal_period) ~cash_flow ~statutory_tax_rate =
+  let applied, why =
+    match (p.pension_net, cash_flow) with
+    | None, _ -> (false, not_filed)
+    | Some _, Parent_net_income ->
+        (false, "not deducted: net income carries the plans' interest cost and the return on their assets already")
+    | Some _, Consolidated_operating_income ->
+        ( true,
+          Printf.sprintf
+            "deducted after tax at the statutory %.4g, a surplus added the same way: operating income carries the plans' service cost and leaves out the interest on the obligation and the return on the assets, and contributions are deductible"
+            statutory_tax_rate )
+  in
+  item_after_tax ~after_tax:(1. -. statutory_tax_rate) ~name:"pension_net" ~value:p.pension_net ~row:p.pension_net_row
+    ~applied ~sign:1. ~why
+
+let preferred (p : fiscal_period) =
+  let applied, why =
+    match p.preferred_stock with
+    | None -> (false, not_filed)
+    | Some _ -> (true, "deducted at carrying value: every cash flow here is before the preferred dividend")
+  in
+  item ~name:"preferred_stock" ~value:p.preferred_stock ~row:p.preferred_stock_row ~applied ~sign:1. ~why
+
+let of_period ~cash_flow ~statutory_tax_rate ?share_count_includes_minority (fin : financials) (p : fiscal_period) =
   let minority_item = minority p ~cash_flow ~share_count_includes_minority in
   let items =
-    [ minority_item; buyouts fin p ~minority:minority_item; investees p ~cash_flow; leases fin p; contingent p;
-      distributions fin p ]
+    [ minority_item; buyouts fin p ~minority:minority_item; investees p ~cash_flow; financial p ~cash_flow; leases fin p;
+      contingent p; pension p ~cash_flow ~statutory_tax_rate; preferred p; distributions fin p ]
   in
   { definition; items; total = List.fold_left (fun acc (i : bridge_item) -> acc +. i.deduction) 0. items }
 

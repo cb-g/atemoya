@@ -506,7 +506,7 @@
   },
   "equity_bridge": {
     "name": "claims_between_enterprise_and_equity_value",
-    "why": "Net debt is the bridge's first line and not its only one. The enterprise value is what the cash flow supports, and the cash flow decides what else stands between it and the common equity the share count divides: an item is applied where that cash flow leaves it out and never where it already holds it. Minority interests are deducted, and associates and joint ventures added at book, where the cash flow starts from consolidated operating income, which carries the minority holders' share of consolidated subsidiaries and none of the investees' earnings; neither where it is built from net income attributable to the parent, which leaves the one out and holds the other already, as the mid-cycle path's bottom-up recipe is; and a share count declared to hold the minority's units already (an Up-C partnership, cited on the universe entry) is not divided twice. Lease liabilities outside the debt rows are deducted where the lease cost sits outside operating income, under IFRS and on the vendor's statements of a filer outside the United States: the right-of-use depreciation is added back with the rest and the principal is paid in financing, so the cash flow never pays it; a US GAAP operating lease's cost is inside operating income and its liability stays out, as total_debt's why says. Contingent consideration is deducted wherever filed: the deferred price of an acquisition, paid outside the capex and working-capital lines the cash flow reads. What went to shareholders between the annual balance sheet and the latest quarter, buybacks and common dividends less shares issued, from the quarterly filing's own fiscal year-to-date cash flow statement, is deducted where the valued period is that annual one: the share count is today's, and the cash those payments spent is still in the base's net debt. Where minority interests are deducted, what was paid since the base to buy minority interests out (PaymentsToMinorityShareholders, which excludes dividends) is deducted beside them, less the book the purchases removed where that is filed: the bridge carries the minority at its base-date book and the purchase settled it at a price, and the cash left after the base. Dividends to minority holders and contributions from them are not read: each moves the cash and the minority's own book alike, and the bridge reads neither since the base, so taking the cash without the book would count a contribution's cash without the claim that came with it. The latest quarter's balance sheet is not taken instead: on an annual base it would also bring in acquisitions paid since, whose cash flows the base does not hold, seasonal working capital, and the part of the first projected year already earned. Associates are at book value, not market; the record says so on the item.",
+    "why": "Net debt is the bridge's first line and not its only one. The enterprise value is what the cash flow supports, and the cash flow decides what else stands between it and the common equity the share count divides: an item is applied where that cash flow leaves it out and never where it already holds it. Minority interests are deducted, and associates and joint ventures added at book, where the cash flow starts from consolidated operating income, which carries the minority holders' share of consolidated subsidiaries and none of the investees' earnings; neither where it is built from net income attributable to the parent, which leaves the one out and holds the other already, as the mid-cycle path's bottom-up recipe is; and a share count declared to hold the minority's units already (an Up-C partnership, cited on the universe entry) is not divided twice. Lease liabilities outside the debt rows are deducted where the lease cost sits outside operating income, under IFRS and on the vendor's statements of a filer outside the United States: the right-of-use depreciation is added back with the rest and the principal is paid in financing, so the cash flow never pays it; a US GAAP operating lease's cost is inside operating income and its liability stays out, as total_debt's why says. Contingent consideration is deducted wherever filed: the deferred price of an acquisition, paid outside the capex and working-capital lines the cash flow reads. What went to shareholders between the annual balance sheet and the latest quarter, buybacks and common dividends less shares issued, from the quarterly filing's own fiscal year-to-date cash flow statement, is deducted where the valued period is that annual one: the share count is today's, and the cash those payments spent is still in the base's net debt. Where minority interests are deducted, what was paid since the base to buy minority interests out (PaymentsToMinorityShareholders, which excludes dividends) is deducted beside them, less the book the purchases removed where that is filed: the bridge carries the minority at its base-date book and the purchase settled it at a price, and the cash left after the base. Dividends to minority holders and contributions from them are not read: each moves the cash and the minority's own book alike, and the bridge reads neither since the base, so taking the cash without the book would count a contribution's cash without the claim that came with it. The latest quarter's balance sheet is not taken instead: on an annual base it would also bring in acquisitions paid since, whose cash flows the base does not hold, seasonal working capital, and the part of the first projected year already earned. Long-term financial investments, the debt securities held beyond a year and the equity securities outside the equity method, are added at carrying value under the associates' condition, their interest, dividends and changes in value falling below operating income and inside net income. The defined-benefit plans' net liability is deducted after tax at the statutory rate, a surplus added the same way, where the cash flow starts from operating income, which carries the plans' service cost and leaves out the interest on the obligation and the return on the assets, contributions being deductible; not on the parent's net income, which carries both. Preferred stock is deducted at carrying value wherever filed: every cash flow here is before the preferred dividend. Associates and investments are at book or carrying value, not market, and no tax on an unrealised gain is deducted; the record says so on the item.",
     "xbrl": {
       "minority_interest": [
         "MinorityInterest"
@@ -543,6 +543,54 @@
       ],
       "minority_buyouts_book": [
         "MinorityInterestDecreaseFromRedemptions"
+      ],
+      "minority_interest_redeemable": [
+        "RedeemableNoncontrollingInterestEquityCarryingAmount"
+      ],
+      "financial_investments_debt": [
+        "AvailableForSaleSecuritiesDebtSecuritiesNoncurrent",
+        "DebtSecuritiesAvailableForSaleExcludingAccruedInterestNoncurrent",
+        "MarketableSecuritiesNoncurrent"
+      ],
+      "financial_investments_held_to_maturity": [
+        "HeldToMaturitySecuritiesNoncurrent",
+        "DebtSecuritiesHeldToMaturityAmortizedCostAfterAllowanceForCreditLossNoncurrent"
+      ],
+      "financial_investments_equity": [
+        "EquitySecuritiesFvNiNoncurrent",
+        "EquitySecuritiesFVNINoncurrent",
+        "EquitySecuritiesWithoutReadilyDeterminableFairValueAmount"
+      ],
+      "financial_investments_lines": [
+        "LongTermInvestments",
+        "OtherLongTermInvestments",
+        "OtherInvestments"
+      ],
+      "pension_liabilities": [
+        "PensionAndOtherPostretirementAndPostemploymentBenefitPlansLiabilitiesNoncurrent",
+        "PensionAndOtherPostretirementDefinedBenefitPlansLiabilitiesNoncurrent",
+        "LiabilityDefinedBenefitPlanNoncurrent"
+      ],
+      "pension_liabilities_parts": [
+        "DefinedBenefitPensionPlanLiabilitiesNoncurrent",
+        "OtherPostretirementDefinedBenefitPlanLiabilitiesNoncurrent"
+      ],
+      "pension_surplus": [
+        "DefinedBenefitPlanAssetsForPlanBenefitsNoncurrent",
+        "AssetsForPlanBenefitsDefinedBenefitPlan"
+      ],
+      "pension_funded_status": [
+        "DefinedBenefitPlanFundedStatusOfPlan"
+      ],
+      "preferred_stock": [
+        "PreferredStockValue",
+        "PreferredStockValueOutstanding",
+        "PreferredStockIncludingAdditionalPaidInCapitalNetOfDiscount",
+        "PreferredStockIncludingAdditionalPaidInCapital",
+        "ConvertiblePreferredStockNonredeemableOrRedeemableIssuerOptionValue"
+      ],
+      "preferred_redeemable": [
+        "TemporaryEquityCarryingAmountAttributableToParent"
       ]
     },
     "ifrs": {
@@ -558,6 +606,24 @@
       "lease_liabilities_parts": [
         "NoncurrentLeaseLiabilities",
         "CurrentLeaseLiabilities"
+      ],
+      "financial_investments": [
+        "NoncurrentInvestmentsOtherThanInvestmentsAccountedForUsingEquityMethod"
+      ],
+      "financial_investments_parts": [
+        "NoncurrentFinancialAssetsAtFairValueThroughOtherComprehensiveIncome"
+      ],
+      "pension_net": [
+        "LiabilityAssetOfDefinedBenefitPlans",
+        "NetDefinedBenefitLiabilityAsset"
+      ],
+      "pension_liabilities": [
+        "NoncurrentRecognisedLiabilitiesDefinedBenefitPlan",
+        "RecognisedLiabilitiesDefinedBenefitPlan"
+      ],
+      "pension_surplus": [
+        "NoncurrentRecognisedAssetsDefinedBenefitPlan",
+        "RecognisedAssetsDefinedBenefitPlan"
       ]
     },
     "vendor": {
@@ -574,13 +640,33 @@
       "lease_liabilities_parts": [
         "Long Term Capital Lease Obligation",
         "Current Capital Lease Obligation"
+      ],
+      "financial_investments": [
+        "Investmentin Financial Assets"
+      ],
+      "financial_investments_parts": [
+        "Available For Sale Securities",
+        "Held To Maturity Securities",
+        "Trading Securities",
+        "Financial Assets Designatedas Fair Value Through Profitor Loss Total"
+      ],
+      "pension_liabilities": [
+        "Non Current Pension And Other Postretirement Benefit Plans"
+      ],
+      "pension_surplus": [
+        "Defined Pension Benefit"
+      ],
+      "preferred_stock": [
+        "Preferred Stock",
+        "Preferred Securities Outside Stock Equity"
       ]
     },
     "notes": [
-      "(2026-10-19) Built after a survey of the 104 records valued by the generic and mid-cycle DCF, item by item against the equity value, and a downstream project's evidence on thirteen names read against the filings; items found immaterial across the run (preferred stock on this path, pension deficits, redeemable minority interests) are not read.",
+      "(2026-10-19) Built after a survey of the 104 records valued by the generic and mid-cycle DCF, item by item against the equity value, and a downstream project's evidence on thirteen names read against the filings; items found immaterial across the run were left unread, and the 2026-10-23 note below corrects that list.",
       "Not read: a vendor-statement or 20-F filer's distributions since the base, since no quarterly cash flow is filed in the sources read (the vendor's quarterly rows were missing or nil where the half-year reports print them); a captive finance arm's debt, a lender's loan book and customer deposits classified in financing, which no filer tags alike; dilution from options, units and warrants, since stock compensation is already a cost inside operating income.",
       "(2026-10-19) PaymentsOfOrdinaryDividends is read after PaymentsOfDividends: Alphabet, Duke and Johnson & Johnson file their year-to-date dividends under it alone, and like PaymentsOfDividends it is every holder's, common, preferred and minority, so it stands third behind the common-only element.",
-      "(2026-10-19) Two pairing tests from the sweep of the record's vendor disagreements: associates are not added where the filing shows their earnings inside operating income, operating income less revenue less costs and expenses equalling the equity-method line (BWXT's 0.075 billion for 2025; nil on Caterpillar, CME, Kinder Morgan, McDonald's and Uber); and lease liabilities are not deducted on IFRS statements where the debt read already holds them, the debt less the lease liabilities matching the vendor's debt within the threshold while the debt itself does not (Shell's Borrowings of 75.643 billion less 28.933 billion of leases is the vendor's 46.710 billion; AstraZeneca's likewise)."
+      "(2026-10-19) Two pairing tests from the sweep of the record's vendor disagreements: associates are not added where the filing shows their earnings inside operating income, operating income less revenue less costs and expenses equalling the equity-method line (BWXT's 0.075 billion for 2025; nil on Caterpillar, CME, Kinder Morgan, McDonald's and Uber); and lease liabilities are not deducted on IFRS statements where the debt read already holds them, the debt less the lease liabilities matching the vendor's debt within the threshold while the debt itself does not (Shell's Borrowings of 75.643 billion less 28.933 billion of leases is the vendor's 46.710 billion; AstraZeneca's likewise).",
+      "(2026-10-23) The textbook items, from a second survey of every standard item between enterprise and equity value across the same records, the filings' balance-sheet faces read where the elements overlap. The first survey had called pension deficits immaterial because it read DefinedBenefitPlanFundedStatusOfPlan, which six filers tag without a plan dimension; the balance-sheet lines are filed by twenty-three, and reach several points of the equity value on Delta (3.156 billion), Caterpillar (3.838) and Lockheed Martin (3.915). Long-term financial investments: the parts are AvailableForSaleSecuritiesDebtSecuritiesNoncurrent (else its excluding-interest variant, else MarketableSecuritiesNoncurrent; Apple's 77.723 billion, Micron's 30.019), the held-to-maturity element, and the largest of the equity-securities elements, since Nvidia tags its 22.251 billion of non-marketable securities under EquitySecuritiesFVNINoncurrent and EquitySecuritiesWithoutReadilyDeterminableFairValueAmount alike; the filer's line (LongTermInvestments, else OtherLongTermInvestments, else OtherInvestments) holds them where it is at least their sum and the associates too where it still covers the parts without them, Sea's 1.889 billion being 1.300 of debt securities, 0.035 held to maturity, 0.376 of equity securities and 0.178 of associates, Kinder Morgan's 7.532 its associates alone and Microsoft's 36.348 its 12.000 of associates and the rest, while ServiceNow's 1.542 billion of strategic investments under OtherLongTermInvestments is a line beside its 3.771 of long-term marketable securities. EquitySecuritiesFvNi, unclassified, is not read: Cisco's and Workday's sit inside the short-term investments line the cash reads. Associates presented under InvestmentsInAffiliatesSubsidiariesAssociatesAndJointVentures alone were weighed and not added: Union Pacific nets its affiliates' income inside an operating expense and McDonald's inside other operating income, so their operating income holds them. Pensions: the combined pension-and-retiree-health element first, else the pension and retiree-health parts summed (Procter & Gamble's 2.204 and 0.736 billion, BWXT's two face lines), less DefinedBenefitPlanAssetsForPlanBenefitsNoncurrent (Northrop Grumman's 3.167 billion beside 1.110 owed), else the funded status negated; the current portion sits in accrued liabilities and is not read, nor the vendor's current pension row, which carries other payables for a filer with no defined-benefit plan. Preferred: the first preferred element above nil, ConvertiblePreferredStockNonredeemableOrRedeemableIssuerOptionValue last for Alphabet's issue, with redeemable preferred beside it; RedeemableNoncontrollingInterestEquityCarryingAmount joins the minority interest. A decommissioning trust held under the filer's investment line is added like any other investment while the obligation it funds is not deducted: Vistra's 5.091 billion of investments stand beside 4.216 billion of asset-retirement obligations, and Vistra is refused by class; no valued record files a trust element. Not read, each a stated limit: what an investment line under the filer's own element holds beyond the standard elements beneath it (the rest of Intel's equity investments, the marketable part of Uber's, the associates inside Delta's, whose 3.644 billion of equity securities are read), IFRS OtherNoncurrentFinancialAssets, which carries loans and derivatives beside the stakes, and the stakes at fair value through profit or loss, which may carry derivatives; assets held for sale, whose earnings sit inside operating income unless the disposal is a discontinued operation; tax losses carried forward; provisions; dilution, the subject of a later rule."
     ]
   },
   "refinement_policy": {
