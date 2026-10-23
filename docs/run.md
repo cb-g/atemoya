@@ -1367,8 +1367,11 @@ uv run pytest
 Every figure in every test and fixture is invented. The tickers are `TEST`, `GEN`, `BNK`,
 `NIL` and the like, the statements are round numbers chosen so the arithmetic can be checked
 by hand, and the fixture files under `ocaml/test/fixtures/` say so in their `notes`. Nothing
-under test was ever fetched: a fixture written from a snapshot would be fetched data in the
-tree, which the data policy forbids, and a filer's real figures, public as they are, would
-read as a claim about that filer rather than a check on the code. A record a reader holds
-was produced from their own fetch and carries its provenance on itself; no test figure
-reaches one.
+under test is fetched: a fixture written from a snapshot would be fetched data in the tree,
+which the data policy forbids, and a filer's real figures, public as they are, would read as
+a claim about that filer rather than a check on the code. A test may name the filer whose
+filing's structure it models, never its figures. The pre-push audit holds every literal in
+the tests against the fetched filings; on 2026-10-23 it found the fetchers' tests and two
+alcotest fixtures written on real filed figures and vendor lines, and they were replaced by
+invented ones that keep each assertion's arithmetic. A record a reader holds was produced
+from their own fetch and carries its provenance on itself; no test figure reaches one.

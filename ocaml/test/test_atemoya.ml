@@ -3787,7 +3787,7 @@ let derived_ebit_period ?(recipe = "pretax_plus_interest_less_nonoperating") per
 
 let ebit_check ~agree : Boundary_t.cross_check =
   { a_cross_check with
-    fields = [ { field = "ebit"; primary = Some 25287.; secondary = Some 25596.; relative_difference = Some 0.012; agree = Some agree } ];
+    fields = [ { field = "ebit"; primary = Some 25000.; secondary = Some 25300.; relative_difference = Some 0.012; agree = Some agree } ];
     disagreements = (if agree then 0 else 1) }
 
 let test_ebit_policy_gate () =
@@ -3801,7 +3801,7 @@ let test_ebit_policy_gate () =
   Alcotest.check status "mid-cycle values past a failing ebit check" `Ok v.status;
   let miss = run (filed ~cross_check:(ebit_check ~agree:false) periods) in
   check_reason miss
-    [ "operating income not filed; derived EBIT misses the cross-check (pretax_plus_interest_less_nonoperating: derived 2.529e+04 against the vendor's 2.56e+04, 1.2% beyond the 2% threshold)" ];
+    [ "operating income not filed; derived EBIT misses the cross-check (pretax_plus_interest_less_nonoperating: derived 2.5e+04 against the vendor's 2.53e+04, 1.2% beyond the 2% threshold)" ];
   Alcotest.(check bool) "nothing computed" true (Option.is_none miss.inputs);
   (* the third recipe: where the derived figure misses and the period carries revenues less
      costs and expenses within the threshold of the same vendor figure, the DCF runs on that *)
@@ -4587,8 +4587,8 @@ let test_options_store_no_lookahead () =
 (* --- the BDC lens (59) --- *)
 
 let bdc_period ?(period_end = "2025-12-31") ?nav ?(nav_row = "NetAssetValuePerShare") ?nav_composition
-    ?(nii = 76.097) ?(dps = 2.15) ?(weighted_shares = 35.489578) () =
-  { (period ~period_end ~net_income:70. ~book_equity:694. ()) with
+    ?(nii = 75.0) ?(dps = 2.1) ?(weighted_shares = 36.0) () =
+  { (period ~period_end ~net_income:70. ~book_equity:700. ()) with
     net_asset_value_per_share = nav;
     net_asset_value_per_share_row = (if Option.is_some nav then Some nav_row else None);
     net_asset_value_composition = nav_composition;
@@ -4602,7 +4602,7 @@ let bdc_period ?(period_end = "2025-12-31") ?nav ?(nav_row = "NetAssetValuePerSh
 let bdc_financials periods =
   { (filed periods) with price = Some 20.; market_cap = Some 700.; industry = Some "Asset Management" }
 
-let bdc_history ?(navs = [ 19.55; 19.33; 19.37 ]) () =
+let bdc_history ?(navs = [ 19.5; 19.25; 19.3 ]) () =
   List.mapi
     (fun i nav -> bdc_period ~period_end:(Printf.sprintf "%d-12-31" (2025 - i)) ~nav ())
     navs
@@ -4610,24 +4610,24 @@ let bdc_history ?(navs = [ 19.55; 19.33; 19.37 ]) () =
 let test_bdc_nav_is_the_anchor_and_the_readouts_are_ratios () =
   let inputs, fair_value = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_history ()))) in
   (* the anchor is the filed mark, and nothing is discounted *)
-  check_float "fair value IS the filed net asset value per share" 19.55 fair_value;
-  check_float "and the record says the same" 19.55 inputs.net_asset_value_per_share;
+  check_float "fair value IS the filed net asset value per share" 19.5 fair_value;
+  check_float "and the record says the same" 19.5 inputs.net_asset_value_per_share;
   Alcotest.(check string) "taken from the filed tag" "NetAssetValuePerShare" inputs.net_asset_value_row;
   Alcotest.(check bool) "no discount rate anywhere on the record" false
     (contains (Boundary_j.string_of_bdc_inputs inputs) "cost_of_equity");
   Alcotest.(check bool) "and no growth rate either" false
     (contains (Boundary_j.string_of_bdc_inputs inputs) "terminal_growth");
   (* the four readouts, each a ratio of filed lines *)
-  check_float "price to nav" (20. /. 19.55) inputs.price_to_nav;
-  check_float "nii per share on the period's own weighted count" (76.097 /. 35.489578) inputs.net_investment_income_per_share;
-  check_float "nii yield on nav" (76.097 /. 35.489578 /. 19.55) inputs.nii_yield_on_nav;
-  check_float "distribution yield on price" (2.15 /. 20.) inputs.distribution_yield;
-  check_float "coverage is nii per share over the distribution" (76.097 /. 35.489578 /. 2.15) inputs.nii_coverage;
+  check_float "price to nav" (20. /. 19.5) inputs.price_to_nav;
+  check_float "nii per share on the period's own weighted count" (75.0 /. 36.0) inputs.net_investment_income_per_share;
+  check_float "nii yield on nav" (75.0 /. 36.0 /. 19.5) inputs.nii_yield_on_nav;
+  check_float "distribution yield on price" (2.1 /. 20.) inputs.distribution_yield;
+  check_float "coverage is nii per share over the distribution" (75.0 /. 36.0 /. 2.1) inputs.nii_coverage;
   (* the trend of the mark itself, over the filed periods *)
   Alcotest.(check (list string)) "nav periods, newest first" [ "2025-12-31"; "2024-12-31"; "2023-12-31" ] inputs.nav_periods;
   (* the trend runs from the oldest filed mark to the newest, in calendar years *)
   check_float "the trend is the compound change in the filed mark"
-    (((19.55 /. 19.37) ** (365.25 /. 731.)) -. 1.) inputs.nav_cagr;
+    (((19.5 /. 19.3) ** (365.25 /. 731.)) -. 1.) inputs.nav_cagr;
   let falling = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_history ~navs:[ 18.0; 19.0; 20.0 ] ()))) in
   Alcotest.(check bool) "a mark that fell reads a negative trend" true ((fst falling).nav_cagr < 0.);
   check_mentions "the caveat is on every record" inputs.caveat [ "the filer's own"; "does not verify" ]
@@ -4636,34 +4636,34 @@ let test_bdc_nav_recipe_coverage_and_guards () =
   (* without the per-share tag the recipe is net assets over shares, and the composition says so *)
   let composed =
     let parts : Boundary_t.component list =
-      [ { name = "net_assets"; value = 694.0; row = "StockholdersEquity" };
+      [ { name = "net_assets"; value = 700.0; row = "StockholdersEquity" };
         { name = "shares_outstanding"; value = 35.0; row = "CommonStockSharesOutstanding" } ]
     in
-    bdc_period ~nav:(694.0 /. 35.0) ~nav_row:"StockholdersEquity / CommonStockSharesOutstanding"
+    bdc_period ~nav:(700.0 /. 35.0) ~nav_row:"StockholdersEquity / CommonStockSharesOutstanding"
       ~nav_composition:{ definition = "filed_net_asset_value_and_its_coverage"; components = parts } ()
   in
   let periods = composed :: List.tl (bdc_history ()) in
   let inputs, fv = get (Bdc.value assumptions ~country:"United States" (bdc_financials periods)) in
-  check_float "the recipe's mark is the fair value" (694.0 /. 35.0) fv;
+  check_float "the recipe's mark is the fair value" (700.0 /. 35.0) fv;
   check_mentions "and the row names both tags" inputs.net_asset_value_row [ "StockholdersEquity"; "CommonStockSharesOutstanding" ];
   Alcotest.(check bool) "with the composition recorded" true (Option.is_some inputs.net_asset_value_composition);
   (* coverage below one is said on the record; at or above one it reads the other way *)
-  let thin = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period ~nav:19.55 ~nii:35. () :: List.tl (bdc_history ())))) in
+  let thin = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period ~nav:19.5 ~nii:35. () :: List.tl (bdc_history ())))) in
   Alcotest.(check bool) "below one" true ((fst thin).nii_coverage < 1.);
   check_mentions "and the record says what that means" (fst thin).coverage_note
     [ "covers only"; "paid out of capital and erodes the net asset value" ];
-  let fat = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period ~nav:19.55 ~nii:200. () :: List.tl (bdc_history ())))) in
+  let fat = get (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period ~nav:19.5 ~nii:200. () :: List.tl (bdc_history ())))) in
   Alcotest.(check bool) "above one" true ((fst fat).nii_coverage > 1.);
   check_mentions "and that too" (fst fat).coverage_note [ "covers the distribution"; "retained and lifts" ];
   (* the trend needs two periods with a filed mark *)
   check_error "one period is not a trend"
-    (Bdc.value assumptions ~country:"United States" (bdc_financials [ bdc_period ~nav:19.55 () ]))
+    (Bdc.value assumptions ~country:"United States" (bdc_financials [ bdc_period ~nav:19.5 () ]))
     [ "net asset value growth needs two periods carrying a filed net asset value per share, have 1" ];
   (* every absent filed line is named, never defaulted *)
   check_error "no mark" (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period () :: List.tl (bdc_history ()))))
     [ "missing statement fields"; "net_asset_value_per_share" ];
   check_error "a distribution of nothing has no coverage to read"
-    (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period ~nav:19.55 ~dps:0. () :: List.tl (bdc_history ()))))
+    (Bdc.value assumptions ~country:"United States" (bdc_financials (bdc_period ~nav:19.5 ~dps:0. () :: List.tl (bdc_history ()))))
     [ "distributions per share 0 is not positive" ]
 
 let test_bdc_routes_refuses_the_projection_readouts_and_never_enters_the_frontier () =

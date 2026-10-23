@@ -54,25 +54,25 @@ def fetch_sec_periods(facts: dict[str, object]):  # pyright: ignore[reportUnknow
 
 def test_dei_shares_sums_share_classes_filed_on_the_same_date() -> None:
     facts = {"facts": {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
-        fact("2025-01-31", 5.8e9, filed="2025-02-20"), fact("2025-01-31", 0.9e9, filed="2025-02-20"), fact("2025-01-31", 5.4e9, filed="2025-02-20"),
-        fact("2025-01-31", 5.8e9, filed="2025-02-20"),  # a duplicate of one class is not counted twice
+        fact("2025-01-31", 6.0e9, filed="2025-02-20"), fact("2025-01-31", 1.0e9, filed="2025-02-20"), fact("2025-01-31", 5.0e9, filed="2025-02-20"),
+        fact("2025-01-31", 6.0e9, filed="2025-02-20"),  # a duplicate of one class is not counted twice
     ]}}}}}
     got = pit.point_count(facts, date(2025, 3, 31), DEFS, TAGS)
-    assert got is not None and math.isclose(got.shares, 12.1e9) and got.source == "dei cover page"
+    assert got is not None and math.isclose(got.shares, 12.0e9) and got.source == "dei cover page"
 
 
 def test_price_on_corrects_for_splits_after_the_date_and_takes_the_last_trading_day() -> None:
-    # closes as the vendor serves them: split-adjusted for a 4:1 split on 2020-08-31
-    closes = {date(2020, 8, 27): 125.01, date(2020, 8, 28): 124.81, date(2020, 8, 31): 129.04, date(2020, 9, 1): 134.18}
-    history = pit.History(closes, {date(2014, 6, 9): 7.0, date(2020, 8, 31): 4.0})
+    # invented closes, split-adjusted as the vendor serves them, for a 3:1 split on 2020-08-31
+    closes = {date(2020, 8, 27): 100.0, date(2020, 8, 28): 101.0, date(2020, 8, 31): 103.0, date(2020, 9, 1): 104.0}
+    history = pit.History(closes, {date(2015, 6, 8): 2.0, date(2020, 8, 31): 3.0})
     got = pit.price_on(history, date(2020, 8, 28))
     assert got is not None
     price_date, close, factor = got
-    assert (price_date, close, factor) == (date(2020, 8, 28), 124.81, 4.0)
-    assert math.isclose(close * factor, 499.24)  # the price actually quoted that day
+    assert (price_date, close, factor) == (date(2020, 8, 28), 101.0, 3.0)
+    assert math.isclose(close * factor, 303.0)  # the price actually quoted that day
     # a weekend date takes the Friday before; the split on the date itself is not "after"
     got = pit.price_on(history, date(2020, 8, 30))
-    assert got is not None and got[0] == date(2020, 8, 28) and got[2] == 4.0
+    assert got is not None and got[0] == date(2020, 8, 28) and got[2] == 3.0
     got = pit.price_on(history, date(2020, 8, 31))
     assert got is not None and got[0] == date(2020, 8, 31) and got[2] == 1.0
     assert pit.price_on(history, date(2020, 8, 20)) is None  # nothing within the lookback
@@ -113,13 +113,13 @@ def test_point_count_falls_back_to_the_balance_sheet_count_then_fails() -> None:
     """Alphabet: no undimensioned cover page, but a balance-sheet count at the newest fiscal
     period end filed by the date; a weighted-average count never stands in for a point."""
     facts = {"facts": {"us-gaap": {
-        "CommonStockSharesOutstanding": {"units": {"shares": [fact("2024-12-31", 12211e6, filed="2025-02-05"), fact("2025-12-31", 12088e6, filed="2026-02-05")]}},
-        "WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [fact("2025-12-31", 12150e6, start="2025-01-01", filed="2026-02-05")]}}}}}
+        "CommonStockSharesOutstanding": {"units": {"shares": [fact("2024-12-31", 12200e6, filed="2025-02-06"), fact("2025-12-31", 12100e6, filed="2026-02-06")]}},
+        "WeightedAverageNumberOfDilutedSharesOutstanding": {"units": {"shares": [fact("2025-12-31", 12160e6, start="2025-01-01", filed="2026-02-06")]}}}}}
     on = pit.filed_on_or_before(facts, date(2025, 6, 30))
     got = pit.point_count(on, date(2025, 6, 30), DEFS, TAGS)
-    assert got is not None and (got.shares, got.source, got.tag, got.as_of, got.filed) == (12211e6, "balance sheet count", "CommonStockSharesOutstanding", "2024-12-31", "2025-02-05")
+    assert got is not None and (got.shares, got.source, got.tag, got.as_of, got.filed) == (12200e6, "balance sheet count", "CommonStockSharesOutstanding", "2024-12-31", "2025-02-06")
     newest = pit.point_count(facts, date(2026, 6, 30), DEFS, TAGS)
-    assert newest is not None and (newest.shares, newest.as_of) == (12088e6, "2025-12-31")
+    assert newest is not None and (newest.shares, newest.as_of) == (12100e6, "2025-12-31")
     weighted_only = {"facts": {"us-gaap": {"WeightedAverageNumberOfDilutedSharesOutstanding": facts["facts"]["us-gaap"]["WeightedAverageNumberOfDilutedSharesOutstanding"]}}}  # pyright: ignore[reportIndexIssue]
     assert pit.point_count(weighted_only, date(2026, 6, 30), DEFS, TAGS) is None
     assert DEFS.shares_for_market_cap.point_in_time.cover_page == ["EntityCommonStockSharesOutstanding"]
@@ -227,12 +227,12 @@ def test_the_count_nearest_the_period_wins_then_the_cover_page_within_400_days()
 
 
 def test_the_count_is_carried_through_the_vendor_split_record() -> None:
-    count = pit.PointCount(7652.0, "balance sheet count", "CommonStockSharesOutstanding", "2025-03-31", "2025-07-14")
-    history = pit.History({}, {date(2025, 9, 8): 2.0, date(2019, 9, 26): 2.0})
+    count = pit.PointCount(7600.0, "balance sheet count", "CommonStockSharesOutstanding", "2025-03-31", "2025-07-15")
+    history = pit.History({}, {date(2025, 9, 9): 2.0, date(2019, 9, 25): 2.0})
     after = count.adjusted(history, date(2025, 9, 30))
-    assert after.shares == 15304.0 and after.split_factor == 2.0 and after.split_record == "split record: 2 on 2025-09-08"
+    assert after.shares == 15200.0 and after.split_factor == 2.0 and after.split_record == "split record: 2 on 2025-09-09"
     before = count.adjusted(history, date(2025, 6, 30))  # the bonus is after D: no adjustment, and the record says none
-    assert before.shares == 7652.0 and before.split_factor == 1.0 and before.split_record == "split record: none between 2025-03-31 and 2025-06-30"
+    assert before.shares == 7600.0 and before.split_factor == 1.0 and before.split_record == "split record: none between 2025-03-31 and 2025-06-30"
 
 
 def test_universe_loader_accepts_a_positive_receipt_ratio_only() -> None:
