@@ -216,6 +216,11 @@ the vendor. An issuer the aggregator does not carry (Allianz, on the German regi
 stays on the vendor and the reason says so; and where the aggregator's newest report is
 past the filing-age gate while the vendor carries a newer annual, the vendor's statements
 are used by a decision written into the provider reason, as the companyfacts lag is.
+Requests go two a second; a 429 or 503, the host asking for a slower pace, is repeated
+after 10, 30 and 90 seconds, a longer Retry-After honoured up to five minutes, and only
+then raised. Any error a fetch raises stops the batch, a name skipped leaving the
+snapshot short without a word, and the trace names the ticker and its place in the batch;
+the names before it are written, and the rest can be fetched into the same `--out`.
 
 A Korea Exchange line (`.KS`, `.KQ`) reads its annual reports from OpenDART (74) when
 `DART_API_KEY` is set, in the environment or on its line of the env file at the repo

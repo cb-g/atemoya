@@ -1127,11 +1127,17 @@ def main(argv: list[str]) -> int:
     # two presentations disagree is a finding to look at, not a record to refuse.
     reconciled: list[tuple[str, str, bool]] = []
 
-    for symbol in tickers:
+    for position, symbol in enumerate(tickers, 1):
         entry = entries.get(symbol)
-        financials, shadow = fetch(symbol, as_of, sec,
-                                   depth=periods_needed(entry.entity_class if entry else None, sec.admissibility, sec.params),
-                                   declared_cik=entry.cik if entry else None, declared_lei=entry.lei if entry else None)
+        try:
+            financials, shadow = fetch(symbol, as_of, sec,
+                                       depth=periods_needed(entry.entity_class if entry else None, sec.admissibility, sec.params),
+                                       declared_cik=entry.cik if entry else None, declared_lei=entry.lei if entry else None)
+        except Exception as e:
+            # a name skipped would leave the snapshot short without a word, so the batch stops;
+            # the names before it are written, and the trace says where to resume
+            e.add_note(f"while fetching {symbol}, name {position} of {len(tickers)}; the names before it are in {out}")
+            raise
         financials.identity_mismatch = identity_mismatch(symbol, sec.tickers, entry.map_cik if entry else None)
         # the quality block's lines: read beside the statements from the same cached facts, moving none of them
         filed_facts = None

@@ -7,8 +7,13 @@ Every number is invented; nothing here was read from a filer."""
 from __future__ import annotations
 
 import dataclasses
+import email.message
+import io
 import json
+import urllib.error
 from datetime import date
+
+import pytest
 
 import fetch_esef as fe
 import fetch_sec
@@ -179,3 +184,61 @@ def test_the_aggregator_lagging_the_filer_is_a_recorded_decision() -> None:
     assert fetch.esef_lags(esef, vendor, date(2025, 12, 31), 400) is None          # inside the gate: the filing stands
     assert fetch.esef_lags(esef, [period("2024-12-31", None)], date(2026, 9, 29), 400) is None   # the vendor is no newer
     assert fetch.esef_lags([], vendor, date(2026, 9, 29), 400) is None
+
+
+class _Answers:
+    """urlopen stand-in: answers in order, an int an HTTP error with that status (a 429 with a
+    Retry-After of 45 seconds), bytes a body; the sleeps the helper asks for are kept."""
+
+    def __init__(self, *answers: int | bytes) -> None:
+        self.answers, self.calls, self.slept = list(answers), 0, list[float]()
+
+    def urlopen(self, request: object, timeout: int) -> io.BytesIO:
+        self.calls += 1
+        answer = self.answers.pop(0)
+        if isinstance(answer, int):
+            headers = email.message.Message()
+            if answer == 429:
+                headers["Retry-After"] = "45"
+            raise urllib.error.HTTPError("https://filings.xbrl.org/x.json", answer, "", headers, None)
+        return io.BytesIO(answer)
+
+
+def _answering(monkeypatch: pytest.MonkeyPatch, answers: _Answers) -> _Answers:
+    monkeypatch.setattr(fe.urllib.request, "urlopen", answers.urlopen)
+    monkeypatch.setattr(fe.time, "sleep", answers.slept.append)
+    monkeypatch.setattr(fe, "_last_request", 0.0)
+    return answers
+
+
+def test_a_throttled_answer_is_repeated_after_the_wait_the_host_asks_for(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A 429 in a batch no longer stops it: the request is repeated after the host's Retry-After
+    where that is longer than the helper's own wait, and a 503 after the helper's own."""
+    answers = _answering(monkeypatch, _Answers(429, 503, b"{}"))
+    assert fe._get("https://filings.xbrl.org/x.json") == b"{}"  # pyright: ignore[reportPrivateUsage]
+    assert answers.calls == 3
+    assert [s for s in answers.slept if s >= 1] == [45.0, fe.RETRY_WAITS[1]]
+
+
+def test_a_host_still_throttling_after_every_wait_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    answers = _answering(monkeypatch, _Answers(*[503] * (len(fe.RETRY_WAITS) + 1)))
+    with pytest.raises(urllib.error.HTTPError):
+        fe._get("https://filings.xbrl.org/x.json")  # pyright: ignore[reportPrivateUsage]
+    assert answers.calls == len(fe.RETRY_WAITS) + 1
+    assert [s for s in answers.slept if s >= 1] == list(fe.RETRY_WAITS)
+
+
+def test_any_other_error_is_raised_at_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    answers = _answering(monkeypatch, _Answers(404, b"{}"))
+    with pytest.raises(urllib.error.HTTPError):
+        fe._get("https://filings.xbrl.org/x.json")  # pyright: ignore[reportPrivateUsage]
+    assert answers.calls == 1 and [s for s in answers.slept if s >= 1] == []
+
+
+def test_the_wait_honours_a_longer_retry_after_up_to_the_cap() -> None:
+    assert fe.retry_wait("45", 10.0) == 45.0
+    assert fe.retry_wait("5", 10.0) == 10.0
+    assert fe.retry_wait(str(fe.RETRY_WAIT_CAP * 10), 10.0) == fe.RETRY_WAIT_CAP
+    assert fe.retry_wait("Wed, 21 Oct 2026 07:28:00 GMT", 10.0) == 10.0  # the HTTP-date form leaves the default
+    assert fe.retry_wait(None, 30.0) == 30.0
+

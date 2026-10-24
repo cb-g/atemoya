@@ -37,6 +37,7 @@ from __future__ import annotations
 import json
 import tempfile
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
@@ -58,6 +59,9 @@ TAXONOMY = "ifrs-full"
 FORM = "ESEF"  # the form name the facts carry, listed in xbrl_tags.json's annual_forms
 CORE_DIMENSIONS = frozenset({"concept", "entity", "period", "unit", "language"})
 WIDER_NARROWER = "http://www.esma.europa.eu/xbrl/esef/arcrole/wider-narrower"
+RETRY_STATUSES = frozenset({429, 503})  # the host asking for a slower pace, not an answer
+RETRY_WAITS = (10.0, 30.0, 90.0)  # seconds before each repeat; a longer Retry-After is honoured, up to RETRY_WAIT_CAP
+RETRY_WAIT_CAP = 300.0
 XLINK = "{http://www.w3.org/1999/xlink}"
 CURRENCY_PREFIX = "iso4217:"
 STANDARD_PREFIX = TAXONOMY + ":"
@@ -89,18 +93,37 @@ class Adapted:
 _last_request = 0.0
 
 
-def _get(url: str, timeout: int = 300) -> bytes:
-    """One request, paced to two a second; filings.xbrl.org asks for nothing more."""
-    global _last_request
-    wait = 0.5 - (time.monotonic() - _last_request)
-    if wait > 0:
-        time.sleep(wait)
+def retry_wait(retry_after: str | None, default: float) -> float:
+    """The wait before a repeat: the host's Retry-After in seconds where it is longer than
+    [default], never past RETRY_WAIT_CAP; a Retry-After that is not a number of seconds (the
+    HTTP-date form) leaves [default]."""
     try:
-        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json, application/zip, */*"})
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return cast(bytes, response.read())
-    finally:
-        _last_request = time.monotonic()
+        asked = float(retry_after) if retry_after is not None else 0.0
+    except ValueError:
+        asked = 0.0
+    return min(max(default, asked), RETRY_WAIT_CAP)
+
+
+def _get(url: str, timeout: int = 300) -> bytes:
+    """One request, paced to two a second; filings.xbrl.org asks for nothing more. A 429 or
+    503 is repeated after each of RETRY_WAITS and then raised, so one throttled answer in a
+    batch of a hundred names no longer stops the batch; every other error is raised at once."""
+    global _last_request
+    for attempt in range(len(RETRY_WAITS) + 1):
+        wait = 0.5 - (time.monotonic() - _last_request)
+        if wait > 0:
+            time.sleep(wait)
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json, application/zip, */*"})
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return cast(bytes, response.read())
+        except urllib.error.HTTPError as e:
+            if e.code not in RETRY_STATUSES or attempt == len(RETRY_WAITS):
+                raise
+            time.sleep(retry_wait(e.headers.get("Retry-After") if e.headers else None, RETRY_WAITS[attempt]))
+        finally:
+            _last_request = time.monotonic()
+    raise AssertionError("unreachable: the last attempt returns or raises")
 
 
 def _cached(path: Path, url: str, *, max_age: float | None) -> bytes:
