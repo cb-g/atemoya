@@ -18,7 +18,8 @@
     "Eleven Swiss names added 2026-10-04 at a downstream reader's request, who supplied the facts and left the classes to this file: Zurich Insurance, Swiss Life, Julius Baer, Lonza, Straumann, Geberit, SGS, Kuehne+Nagel, Sonova, Partners Group and Swatch, all on the vendor's statements. The classes were drafted by the tool's author and confirmed by the user the same day, on the author's recommendation. The two insurers are refused for want of filed statements; Lonza, Kuehne+Nagel and Swatch are Cyclical and refused for a history shorter than the through-cycle window. A twelfth name asked for, Lindt & Sprüngli, is left out: its equity is in two listed lines, one worth a tenth of the other, and the vendor counts every unit of both at one line's price, so the per-share value would divide by the wrong number of shares, and the tool has no declared ratio between share lines to correct it.",
     "Lindt & Sprüngli added 2026-10-04 as its participation certificate, LISP.SW, the class confirmed by the user: the note above left it out for want of a ratio between share lines, and reading what the vendor reports for each line showed none is needed, the certificate line being counted correctly and only the registered line wrongly. The registered share stays out.",
     "Three names added 2026-10-17 (84) at the downstream reader's request, who supplied the facts and left the classes to this file: EMCOR an operating company, United Rentals a cyclical, Starwood Property Trust a mortgage real estate investment trust, a class added for it with no admissible model, since a lender's trust has no FFO for the equity REIT's lens and no capex or working capital for a DCF; the classes were drafted by the tool's author and confirmed by the user the same day.",
-    "growth_without_reinvestment added 2026-10-17 (84) at the downstream reader's question whether the fundamental growth estimate stays the headline for companies that grow with little reinvestment: it does, by the user's decision of 2026-10-03 that the growth shadow stays a shadow, and the code lets a reader skip the valuation layer by rule for the names where the two estimates part. Measured on the run of the day: the names valued by the generic DCF whose shadow growth is at least three times the headline and ten points above it, Nvidia, Palantir, Deckers, MercadoLibre, Evolution and Uber; the user confirmed the six the same day."
+    "growth_without_reinvestment added 2026-10-17 (84) at the downstream reader's question whether the fundamental growth estimate stays the headline for companies that grow with little reinvestment: it does, by the user's decision of 2026-10-03 that the growth shadow stays a shadow, and the code lets a reader skip the valuation layer by rule for the names where the two estimates part. Measured on the run of the day: the names valued by the generic DCF whose shadow growth is at least three times the headline and ten points above it, Nvidia, Palantir, Deckers, MercadoLibre, Evolution and Uber; the user confirmed the six the same day.",
+    "One hundred and thirty-nine names added 2026-10-24 at the downstream reader's request, who supplied the facts and left the classes to this file; the classes were drafted by the tool's author and confirmed by the user the same day, on the author's recommendation. Of the hundred and forty-seven asked for, Nscale is left out, not yet trading, and AstraZeneca's depositary line, the company being here as AZN.L; British American Tobacco and TotalEnergies are added as the home lines BATS.L and TTE.PA, the reader following the home line, and Unilever, Sony and HSBC are added as the home lines asked for, ULVR.L, 6758.T and HSBA.L, beside the depositary lines already here. Six are held out because their value would stand on the wrong basis: Honeywell, whose separation after its latest annual statements left a business about half the size of the one those statements hold; Caesars, whose financing obligations to its landlords are tagged under its own elements, which the reader does not take, so its debt would be understated; Global Payments, which paid for Worldpay after its latest statements partly in new shares, so today's count holds shares whose business the statements do not; Fidelity National Information Services, whose revenue history reads the separation of Worldpay as a fall in revenue and which bought Global Payments' issuer business after its latest statements; L3Harris, whose revenue history spans the purchase of Aerojet Rocketdyne, the filer stating only the acquired operations' pro forma revenue and none for the combined business; and Corby Spirit and Wine, whose history spans its purchase of Ace Beverage, its filing not yet read for a pro forma figure. Tetra Tech, Philip Morris International and Vertiv declare the filer's pro forma revenue for the years their large purchases straddle, as Amgen does. Uranium Energy is a miner, its 10-K reporting production restarted, as the restarting producer here is read. The depositary entries of Sony and Unilever take the carve-out limit their home lines carry."
   ],
   "scope_codes": {
     "build_out": "capital spending runs well above depreciation on capacity that is not yet earning, so the free cash flow or the return the model starts from understates the business",
@@ -254,6 +255,12 @@
       "ticker": "SONY",
       "entity_class": "OperatingCompany",
       "why": "a Japanese conglomerate filing under IFRS on a 20-F, reporting in yen under a dollar listing; adr_ratio: one American depositary share is one share of common stock (20-F, deposit agreement).",
+      "scope_limits": [
+        "the Financial Services business was partly spun off as of October 1, 2025 (20-F for the year to March 31, 2026, accession 0001193125-26-274893), inside the latest year, so part of the filed history is another business's"
+      ],
+      "scope_limit_codes": [
+        "carve_out_history"
+      ],
       "map_cik": "0000313838",
       "adr_ratio": 1
     },
@@ -1184,6 +1191,12 @@
       "ticker": "UL",
       "entity_class": "OperatingCompany",
       "why": "a consumer goods company filing under IFRS on a 20-F, reporting in euros under a dollar listing; adr_ratio: one American depositary share is one ordinary share (20-F, deposit agreement).",
+      "scope_limits": [
+        "the Ice Cream business was demerged on 6 December 2025 (20-F for 2025, accession 0000217410-26-000007), inside the latest year: the earlier years' filed figures hold it and the latest year's continuing figures do not"
+      ],
+      "scope_limit_codes": [
+        "carve_out_history"
+      ],
       "map_cik": "0000217410",
       "adr_ratio": 1
     },
@@ -2520,6 +2533,1189 @@
       "scope_limit_codes": [
         "filer_marks"
       ]
+    },
+    {
+      "ticker": "ONDS",
+      "entity_class": "Unprofitable",
+      "why": "Ondas Holdings, drones and private wireless networks for rail and industry, a 10-K filer in dollars with a December year end; net losses and cash consumed on every filed year, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "map_cik": "0001646188"
+    },
+    {
+      "ticker": "FRVO",
+      "entity_class": "ConstructionStage",
+      "why": "Fervo Energy, enhanced geothermal power plants, with only quarterly reports filed at the Securities and Exchange Commission so far, so the statements come from the vendor; revenue is next to nothing while the plants it is building absorb its capital, so construction-stage, refused by design, confirmed by the user.",
+      "map_cik": "0001853868"
+    },
+    {
+      "ticker": "LBRT",
+      "entity_class": "Cyclical",
+      "why": "Liberty Energy, hydraulic fracturing and completion services, a 10-K filer in dollars with a December year end; demand follows drilling activity and the oil price, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "map_cik": "0001694028"
+    },
+    {
+      "ticker": "AESI",
+      "entity_class": "Cyclical",
+      "why": "Atlas Energy Solutions, frac sand and its delivery in the Permian Basin, a 10-K filer in dollars with a December year end; demand follows drilling activity, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "map_cik": "0001984060"
+    },
+    {
+      "ticker": "ORA",
+      "entity_class": "OperatingCompany",
+      "why": "Ormat Technologies, geothermal power plants selling electricity under long contracts, and the equipment for them, a 10-K filer in dollars with a December year end; profitable, with capital spending on new plants above operating cash flow on every filed year; an operating company with the build-out stated, as the industrial-gas builder here is read, confirmed by the user.",
+      "scope_limits": [
+        "capital spending on new plants runs above operating cash flow on every filed year, so the free cash flow the model starts from understates the plants already earning"
+      ],
+      "scope_limit_codes": [
+        "build_out"
+      ],
+      "map_cik": "0001296445"
+    },
+    {
+      "ticker": "AKAM",
+      "entity_class": "OperatingCompany",
+      "why": "Akamai Technologies, content delivery, cloud security and cloud computing, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0001086222"
+    },
+    {
+      "ticker": "CBRS",
+      "entity_class": "Unprofitable",
+      "why": "Cerebras Systems, wafer-scale processors and systems for training and running artificial-intelligence models, with only quarterly reports filed at the Securities and Exchange Commission so far, so the statements come from the vendor; an operating loss on every year the vendor carries, the latest year's net profit arising below the operating line, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "map_cik": "0002021728"
+    },
+    {
+      "ticker": "V",
+      "entity_class": "OperatingCompany",
+      "why": "Visa, a card payments network, a 10-K filer in dollars with a September year end; fees on volume, no net-interest signature; profitable with positive, stable free cash flow; an operating company, as the other payments network here is read, confirmed by the user.",
+      "map_cik": "0001403161"
+    },
+    {
+      "ticker": "PANW",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Palo Alto Networks, network, cloud and security-operations software and firewalls, a 10-K filer in dollars with a July year end; recurring revenue growing fast; high-growth software, profitable on the latest four filed years with positive free cash flow on every one, confirmed by the user.",
+      "scope_limits": [
+        "acquisitions inside the latest fiscal year, Chronosphere in January 2026 and CyberArk in February 2026, so that year holds them for part of it; the growth estimate is capped at the return on capital, below what the revenue history reads with or without them"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
+      ],
+      "map_cik": "0001327567"
+    },
+    {
+      "ticker": "VIST",
+      "entity_class": "Cyclical",
+      "why": "Vista Energy, oil and gas production in Argentina's Vaca Muerta, incorporated in Mexico, a 20-F filer reporting under IFRS in dollars; earnings follow the oil price, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical; adr_ratio: one American depositary share is one series A share (20-F); where its facts lag its filings the vendor's statements are read by the decision the record states; confirmed by the user.",
+      "scope_limits": [
+        "incorporated in Mexico, which the vendor's profile names and which chooses the country risk premium, while its oil and gas fields are in Argentina"
+      ],
+      "scope_limit_codes": [
+        "country_basis"
+      ],
+      "map_cik": "0001762506",
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "AMBQ",
+      "entity_class": "Unprofitable",
+      "why": "Ambiq Micro, ultra-low-power microcontrollers and systems on a chip, a 10-K filer in dollars with a December year end; net losses on both filed years, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "map_cik": "0001500412"
+    },
+    {
+      "ticker": "HIMX",
+      "entity_class": "Cyclical",
+      "why": "Himax Technologies, display driver chips and imaging sensors, a Taiwanese company a 20-F filer reporting under IFRS in dollars; orders swing with the electronics cycle, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical; adr_ratio: one American depositary share is two ordinary shares (20-F); confirmed by the user.",
+      "map_cik": "0001342338",
+      "adr_ratio": 2
+    },
+    {
+      "ticker": "OSS",
+      "entity_class": "Unprofitable",
+      "why": "One Stop Systems, rugged high-performance computers for defence and industrial use at the edge, a 10-K filer in dollars with a December year end; operating losses on the latest three filed years, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "map_cik": "0001394056"
+    },
+    {
+      "ticker": "OUST",
+      "entity_class": "Unprofitable",
+      "why": "Ouster, lidar sensors for vehicles, robots and infrastructure, a 10-K filer in dollars with a December year end; net losses and cash consumed on every filed year, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "map_cik": "0001816581"
+    },
+    {
+      "ticker": "VPG",
+      "entity_class": "Cyclical",
+      "why": "Vishay Precision Group, precision sensors, weighing systems and measurement instruments, a 10-K filer in dollars with a December year end; orders follow industrial capital spending, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "map_cik": "0001487952"
+    },
+    {
+      "ticker": "HUBS",
+      "entity_class": "HighGrowthSoftware",
+      "why": "HubSpot, customer-relationship software for small and mid-sized businesses sold by subscription, a 10-K filer in dollars with a December year end; recurring revenue growing fast; high-growth software, a small operating profit filed on the latest year only, confirmed by the user.",
+      "map_cik": "0001404655"
+    },
+    {
+      "ticker": "TEAM",
+      "entity_class": "Unprofitable",
+      "why": "Atlassian, collaboration and work-management software sold by subscription, a 10-K filer in dollars with a June year end; operating cash flow well positive, but a net loss on every filed year after stock compensation, so there is no operating profit to normalise from, the state the class text calls unprofitable; the runway lens until an operating profit is filed, as the other cash-generative software names without one here are read, confirmed by the user.",
+      "map_cik": "0001650372"
+    },
+    {
+      "ticker": "BMNR",
+      "entity_class": "Wrapper",
+      "why": "BitMine Immersion Technologies, a company whose main asset is the ether it holds, a 10-K filer in dollars with a August year end; the wrapper class, as the bitcoin holder here, refused by design and judged on the premium or discount to the ether it holds, never on the consolidated statements, confirmed by the user.",
+      "map_cik": "0001829311"
+    },
+    {
+      "ticker": "FICO",
+      "entity_class": "OperatingCompany",
+      "why": "Fair Isaac, credit scores and decisioning software, a 10-K filer in dollars with a September year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "book equity is negative after years of buybacks and payouts, so any book-based reading is meaningless and only the cash flows speak"
+      ],
+      "scope_limit_codes": [
+        "balance_sheet"
+      ],
+      "map_cik": "0000814547"
+    },
+    {
+      "ticker": "APP",
+      "entity_class": "HighGrowthSoftware",
+      "why": "AppLovin, advertising software for mobile apps and the web, a 10-K filer in dollars with a December year end; recurring revenue growing fast; high-growth software, profitable on four of the five filed years with positive free cash flow on the latest four, confirmed by the user.",
+      "map_cik": "0001751008"
+    },
+    {
+      "ticker": "CTSH",
+      "entity_class": "OperatingCompany",
+      "why": "Cognizant, information-technology consulting and outsourcing, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0001058290"
+    },
+    {
+      "ticker": "NET",
+      "entity_class": "Unprofitable",
+      "why": "Cloudflare, network security, performance and developer services sold by subscription, a 10-K filer in dollars with a December year end; operating cash flow positive, but a net loss on every filed year after stock compensation, so there is no operating profit to normalise from, the state the class text calls unprofitable; the runway lens until an operating profit is filed, as the other cash-generative software names without one here are read, confirmed by the user.",
+      "map_cik": "0001477333"
+    },
+    {
+      "ticker": "TER",
+      "entity_class": "Cyclical",
+      "why": "Teradyne, test equipment for semiconductors and electronics, and industrial robots, a 10-K filer in dollars with a December year end; orders swing with chipmakers' capital spending, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the other semiconductor equipment suppliers here are read; a cyclical, confirmed by the user.",
+      "map_cik": "0000097210"
+    },
+    {
+      "ticker": "688836.SS",
+      "entity_class": "OperatingCompany",
+      "why": "Unitree Robotics, legged and humanoid robots, listed on Shanghai's STAR market and reporting in yuan; no filings at the Securities and Exchange Commission, so the statements come from the vendor; profitable with positive free cash flow on the latest two years the vendor carries, losses before them; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "CVCO",
+      "entity_class": "Cyclical",
+      "why": "Cavco Industries, factory-built homes and the mortgages and insurance sold with them, a 10-K filer in dollars with a March year end; demand follows the housing cycle, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "map_cik": "0000278166"
+    },
+    {
+      "ticker": "9984.T",
+      "entity_class": "HoldingCompany",
+      "why": "SoftBank Group, a holding company of telecom, chip-design and technology stakes, listed and unlisted, and the funds that hold them, reporting in yen; no filings at the Securities and Exchange Commission, so the statements come from the vendor; parts that need lenses which cannot share a model, so the holding-company class, refused with the sum of the parts named, confirmed by the user."
+    },
+    {
+      "ticker": "2408.TW",
+      "entity_class": "Cyclical",
+      "why": "Nanya Technology, memory chips, reporting in New Taiwan dollars; no filings at the Securities and Exchange Commission, so the statements come from the vendor; memory prices swing through the cycle, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "LOW",
+      "entity_class": "OperatingCompany",
+      "why": "Lowe's, home-improvement retail, a 10-K filer in dollars with a January year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "a large acquisition inside the latest fiscal year, Foundation Building Materials on October 9, 2025 for $8.8 billion in cash, so that year holds it for part of the year",
+        "book equity is negative after years of buybacks and payouts, so any book-based reading is meaningless and only the cash flows speak"
+      ],
+      "scope_limit_codes": [
+        "acquired_history",
+        "balance_sheet"
+      ],
+      "map_cik": "0000060667"
+    },
+    {
+      "ticker": "TGT",
+      "entity_class": "OperatingCompany",
+      "why": "Target, general-merchandise retail, a 10-K filer in dollars with a January year end; profitable on every filed year, free cash flow positive on four of the five; an operating company, confirmed by the user.",
+      "map_cik": "0000027419"
+    },
+    {
+      "ticker": "TJX",
+      "entity_class": "OperatingCompany",
+      "why": "TJX Companies, off-price apparel and home retail, a 10-K filer in dollars with a January year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0000109198"
+    },
+    {
+      "ticker": "IFF",
+      "entity_class": "OperatingCompany",
+      "why": "International Flavors & Fragrances, flavours, fragrances and food ingredients, a 10-K filer in dollars with a December year end; an operating profit as read on every filed year and positive free cash flow on four of the five, with net losses on three of them; an operating company, confirmed by the user.",
+      "map_cik": "0000051253"
+    },
+    {
+      "ticker": "BARN.SW",
+      "entity_class": "OperatingCompany",
+      "why": "Barry Callebaut, chocolate and cocoa products made for food companies, reporting in francs with an August year end; no filings at the Securities and Exchange Commission, and Swiss issuers are not in the ESEF repository, so the statements come from the vendor; profitable, its free cash flow swinging with the cocoa price through its working capital; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "cocoa is a large part of cost, and a rise in its price swells the working capital, so the free cash flow of the latest years moves with it"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "commodity_exposure"
+      ]
+    },
+    {
+      "ticker": "LRCX",
+      "entity_class": "Cyclical",
+      "why": "Lam Research, wafer fabrication equipment for etch and deposition, a 10-K filer in dollars with a June year end; orders swing with chipmakers' capital spending, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the other semiconductor equipment suppliers here are read; a cyclical, confirmed by the user.",
+      "map_cik": "0000707549"
+    },
+    {
+      "ticker": "SU.PA",
+      "entity_class": "OperatingCompany",
+      "why": "Schneider Electric, electrical distribution, automation and energy-management equipment and software, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "lei": "969500A1YF1XUYYXS284"
+    },
+    {
+      "ticker": "ETN",
+      "entity_class": "OperatingCompany",
+      "why": "Eaton, electrical and aerospace power-management equipment, incorporated in Ireland and a 10-K filer in dollars with a December year end, so the dollar curve with Ireland as the country premium; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0001551182"
+    },
+    {
+      "ticker": "VRT",
+      "entity_class": "OperatingCompany",
+      "why": "Vertiv, power and cooling equipment for data centres, a 10-K filer in dollars with a December year end; profitable on every filed year, free cash flow positive on four of the five; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "an acquisition inside the window, E&I Engineering on November 1, 2021: the growth estimate's revenue history reads the filer's unaudited pro forma net sales of the combined business for 2020 and 2021 in place of the filed figure, the history beginning in 2020"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
+      ],
+      "map_cik": "0001674101",
+      "pro_forma_revenue": {
+        "revenues": [
+          {
+            "period_end": "2020-12-31",
+            "value": 4814100000
+          },
+          {
+            "period_end": "2021-12-31",
+            "value": 5323900000
+          }
+        ],
+        "why": "Vertiv's 10-K for 2021 (accession 0001628280-22-004533), note on acquisitions, Pro Forma Financial Information: unaudited pro forma results assuming the E&I acquisition, made on November 1, 2021, had been completed on January 1, 2020, give net sales of $5,323.9 million for 2021 and $4,814.1 million for 2020, against the 4.998 billion filed for 2021",
+        "as_of": "2022-03-01"
+      }
+    },
+    {
+      "ticker": "SIE.DE",
+      "entity_class": "OperatingCompany",
+      "why": "the Frankfurt line of Siemens, automation, smart infrastructure, rail and, through a listed majority holding, medical technology, reporting in euros with a September year end; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "EMR",
+      "entity_class": "OperatingCompany",
+      "why": "Emerson Electric, automation equipment, software and controls, a 10-K filer in dollars with a September year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0000032604"
+    },
+    {
+      "ticker": "FLS",
+      "entity_class": "OperatingCompany",
+      "why": "Flowserve, pumps, valves and seals for process industries, a 10-K filer in dollars with a December year end; profitable on every filed year, free cash flow positive on four of the five; an operating company, confirmed by the user.",
+      "map_cik": "0000030625"
+    },
+    {
+      "ticker": "PM",
+      "entity_class": "OperatingCompany",
+      "why": "Philip Morris International, cigarettes outside the United States and smoke-free products, heated tobacco and nicotine pouches, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "a large acquisition inside the window, Swedish Match from November 11, 2022: the growth estimate's revenue history reads the filer's unaudited pro forma net revenues of the combined business for 2021 and 2022 in place of the filed figures",
+        "book equity is negative after years of buybacks and payouts, so any book-based reading is meaningless and only the cash flows speak"
+      ],
+      "scope_limit_codes": [
+        "acquired_history",
+        "balance_sheet"
+      ],
+      "map_cik": "0001413329",
+      "pro_forma_revenue": {
+        "revenues": [
+          {
+            "period_end": "2021-12-31",
+            "value": 33577000000
+          },
+          {
+            "period_end": "2022-12-31",
+            "value": 33690000000
+          }
+        ],
+        "why": "PMI's 10-K for 2022 (accession 0001413329-23-000025), note on acquisitions: the unaudited pro forma combined financial information of PMI and Swedish Match, of which PMI acquired a controlling interest on November 11, 2022, reflecting the acquisition as if it had occurred on January 1, 2021, gives net revenues of $33,690 million for 2022 and $33,577 million for 2021, against the 31.762 billion and 31.405 billion filed",
+        "as_of": "2023-02-10"
+      }
+    },
+    {
+      "ticker": "MO",
+      "entity_class": "OperatingCompany",
+      "why": "Altria, cigarettes, cigars, oral nicotine and e-vapour products in the United States, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "book equity is negative after years of buybacks and payouts, so any book-based reading is meaningless and only the cash flows speak"
+      ],
+      "scope_limit_codes": [
+        "balance_sheet"
+      ],
+      "map_cik": "0000764180"
+    },
+    {
+      "ticker": "BATS.L",
+      "entity_class": "OperatingCompany",
+      "why": "the London line of British American Tobacco, cigarettes and smokeless products, reporting in sterling; positive, stable free cash flow on every filed year and a net loss on one; an operating company; a second line of the company beside its New York receipt here, added because the downstream reader follows the home line, confirmed by the user. The filer is declared by CIK: BAT files a 20-F under IFRS in sterling, the same consolidated statements the London line trades on, and the ticker map knows only the New York line.",
+      "cik": "0001303523"
+    },
+    {
+      "ticker": "BCBP",
+      "entity_class": "Bank",
+      "why": "BCB Bancorp, a community bank in New Jersey and New York, a 10-K filer in dollars with a December year end; a bank, judged on price to book against return on equity, confirmed by the user.",
+      "map_cik": "0001228454"
+    },
+    {
+      "ticker": "STRT",
+      "entity_class": "Cyclical",
+      "why": "Strattec Security, vehicle locks, keys and access systems, a 10-K filer in dollars with a June year end; volumes follow vehicle production, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "map_cik": "0000933034"
+    },
+    {
+      "ticker": "BH",
+      "entity_class": "HoldingCompany",
+      "why": "Biglari Holdings, restaurants, insurance, oil and gas, media and investment partnerships, a 10-K filer in dollars with a December year end, two share classes trading and this line the class B; businesses that need lenses which cannot share a model, so the holding-company class, refused with the sum of the parts named, confirmed by the user.",
+      "map_cik": "0001726173"
+    },
+    {
+      "ticker": "CURI",
+      "entity_class": "Unprofitable",
+      "why": "CuriosityStream, a factual streaming service that also licenses its library, a 10-K filer in dollars with a December year end; net losses on every filed year, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "map_cik": "0001776909"
+    },
+    {
+      "ticker": "SEG",
+      "entity_class": "Unprofitable",
+      "why": "Seaport Entertainment Group, the entertainment and real-estate district spun off from Howard Hughes, a 10-K filer in dollars with a December year end; net losses on every filed year, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "map_cik": "0002009684"
+    },
+    {
+      "ticker": "VNV.ST",
+      "entity_class": "Wrapper",
+      "why": "VNV Global, an investment company holding stakes in mostly unlisted technology companies, reporting its net asset value in dollars while its shares trade in kronor; no filings at the Securities and Exchange Commission, and its ESEF reports on filings.xbrl.org stop short of its latest annual report, so the statements come from the vendor; the wrapper class, refused by design and judged on the discount to a net asset value that rests on its own marks of unquoted holdings, confirmed by the user."
+    },
+    {
+      "ticker": "KSB3.DE",
+      "entity_class": "OperatingCompany",
+      "why": "the preference line of KSB, pumps and valves, reporting in euros; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; profitable on every year the vendor carries, free cash flow positive on three of the four; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "two share lines, ordinary and preference, each about half the equity: the vendor counts both at the preference line's price, which KSB's own counts bear out, so the value per share is the equity over every share while each line trades at its own price"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "ownership_structure"
+      ]
+    },
+    {
+      "ticker": "SEYE.ST",
+      "entity_class": "Unprofitable",
+      "why": "Smart Eye, driver-monitoring and eye-tracking software for vehicle makers and researchers, reporting in kronor; no filings at the Securities and Exchange Commission and none of its reports found on filings.xbrl.org, so the statements come from the vendor; net losses and cash consumed on every year the vendor carries, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user."
+    },
+    {
+      "ticker": "3778.T",
+      "entity_class": "OperatingCompany",
+      "why": "Sakura Internet, data centres and cloud computing, building capacity for artificial-intelligence workloads, reporting in yen; no filings at the Securities and Exchange Commission, so the statements come from the vendor; profitable, with capital spending several times its operating cash flow; an operating company with the build-out stated, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "capital spending on computing capacity not yet earning runs several times operating cash flow, so the free cash flow the model starts from understates the business"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "build_out"
+      ]
+    },
+    {
+      "ticker": "BRN.AX",
+      "entity_class": "Unprofitable",
+      "why": "BrainChip, neuromorphic processor designs licensed to chipmakers, listed in Sydney and reporting in dollars; no filings at the Securities and Exchange Commission, so the statements come from the vendor; losses on every year the vendor carries and next to no revenue, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user."
+    },
+    {
+      "ticker": "TTEK",
+      "entity_class": "OperatingCompany",
+      "why": "Tetra Tech, consulting and engineering for water, environment and infrastructure, a 10-K filer in dollars with a September year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "a large acquisition inside the window, RPS Group on January 23, 2023: the growth estimate's revenue history reads the filer's unaudited pro forma revenue of the combined business for fiscal 2022 and fiscal 2023 in place of the filed figures"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
+      ],
+      "map_cik": "0000831641",
+      "pro_forma_revenue": {
+        "revenues": [
+          {
+            "period_end": "2022-10-02",
+            "value": 4271580000
+          },
+          {
+            "period_end": "2023-10-01",
+            "value": 4780404000
+          }
+        ],
+        "why": "Tetra Tech's 10-K for fiscal 2023 (accession 0000831641-23-000082), note on acquisitions, Supplemental Pro Forma Information (Unaudited): the consolidated results of Tetra Tech and RPS as if the RPS acquisition, completed on January 23, 2023, had been consummated as of the beginning of fiscal 2022, revenue of $4,780,404 thousand for the year ended October 1, 2023 and $4,271,580 thousand for the year ended October 2, 2022, against the 4.523 billion and 3.504 billion filed",
+        "as_of": "2023-11-22"
+      }
+    },
+    {
+      "ticker": "MRK",
+      "entity_class": "OperatingCompany",
+      "why": "Merck, pharmaceuticals and vaccines, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company whose growth depends on a pipeline the model does not see, confirmed by the user.",
+      "scope_limits": [
+        "its largest medicine's United States patent expires inside the window, Keytruda in 2028 by the patent table of the 10-K for 2025",
+        "acquisitions inside the latest year, Verona Pharma, and after it, Cidara Therapeutics in January 2026, so the filed history is not the business ahead"
+      ],
+      "scope_limit_codes": [
+        "product_transition",
+        "acquired_history"
+      ],
+      "map_cik": "0000310158"
+    },
+    {
+      "ticker": "BMY",
+      "entity_class": "OperatingCompany",
+      "why": "Bristol-Myers Squibb, pharmaceuticals, a 10-K filer in dollars with a December year end; positive, stable free cash flow on every filed year and a net loss on one; an operating company whose growth depends on a pipeline the model does not see, confirmed by the user.",
+      "map_cik": "0000014272"
+    },
+    {
+      "ticker": "REGN",
+      "entity_class": "OperatingCompany",
+      "why": "Regeneron, biotechnology medicines, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company whose growth depends on a pipeline the model does not see, confirmed by the user.",
+      "map_cik": "0000872589"
+    },
+    {
+      "ticker": "VRTX",
+      "entity_class": "OperatingCompany",
+      "why": "Vertex Pharmaceuticals, medicines for cystic fibrosis and other serious diseases, a 10-K filer in dollars with a December year end; profitable with positive free cash flow on four of the five filed years; an operating company whose growth depends on a pipeline the model does not see, confirmed by the user.",
+      "map_cik": "0000875320"
+    },
+    {
+      "ticker": "PFE",
+      "entity_class": "OperatingCompany",
+      "why": "Pfizer, pharmaceuticals and vaccines, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company whose growth depends on a pipeline the model does not see, confirmed by the user.",
+      "map_cik": "0000078003"
+    },
+    {
+      "ticker": "MRNA",
+      "entity_class": "Unprofitable",
+      "why": "Moderna, messenger-RNA vaccines and medicines, a 10-K filer in dollars with a December year end; net losses on the latest three filed years as pandemic vaccine sales fell away, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "map_cik": "0001682852"
+    },
+    {
+      "ticker": "ELV",
+      "entity_class": "Insurer",
+      "why": "Elevance Health, managed care: health plans across commercial, Medicaid and Medicare members, with pharmacy and care services beside them, a 10-K filer in dollars with a December year end; premiums are filed, so the insurer class, as the other managed-care names here are read, confirmed by the user.",
+      "map_cik": "0001156039"
+    },
+    {
+      "ticker": "CVS",
+      "entity_class": "Insurer",
+      "why": "CVS Health, pharmacy retail, pharmacy-benefit management and the Aetna health plans, a 10-K filer in dollars with a December year end; premiums are filed, so the insurer class, as the other managed-care names here are read, the pharmacy businesses beside it stated as a limit, confirmed by the user.",
+      "scope_limits": [
+        "pharmacy retail and pharmacy-benefit management are a large part of revenue and are not what the insurer's lens reads"
+      ],
+      "scope_limit_codes": [
+        "mixed_business"
+      ],
+      "map_cik": "0000064803"
+    },
+    {
+      "ticker": "HUM",
+      "entity_class": "Insurer",
+      "why": "Humana, managed care centred on Medicare Advantage, with primary care and home health beside it, a 10-K filer in dollars with a December year end; premiums are filed, so the insurer class, as the other managed-care names here are read, confirmed by the user.",
+      "scope_limits": [
+        "most premiums are Medicare rates the government sets each year"
+      ],
+      "scope_limit_codes": [
+        "policy_dependent"
+      ],
+      "map_cik": "0000049071"
+    },
+    {
+      "ticker": "CNC",
+      "entity_class": "Insurer",
+      "why": "Centene, managed care centred on Medicaid and the individual marketplace, a 10-K filer in dollars with a December year end; premiums are filed, so the insurer class, as the other managed-care names here are read, confirmed by the user.",
+      "scope_limits": [
+        "premiums are set by state Medicaid contracts and federal programmes the company does not control"
+      ],
+      "scope_limit_codes": [
+        "policy_dependent"
+      ],
+      "map_cik": "0001071739"
+    },
+    {
+      "ticker": "MOH",
+      "entity_class": "Insurer",
+      "why": "Molina Healthcare, managed care for Medicaid, Medicare and marketplace members, a 10-K filer in dollars with a December year end; premiums are filed, so the insurer class, as the other managed-care names here are read, confirmed by the user.",
+      "scope_limits": [
+        "premiums are set by state Medicaid contracts and federal programmes the company does not control"
+      ],
+      "scope_limit_codes": [
+        "policy_dependent"
+      ],
+      "map_cik": "0001179929"
+    },
+    {
+      "ticker": "TTE.PA",
+      "entity_class": "Cyclical",
+      "why": "the Paris line of TotalEnergies, integrated oil, gas and power, reporting in dollars under a euro price, so cross-currency; earnings follow the oil and gas prices, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a second line of the company beside its New York receipt here, added because the downstream reader follows the home line, confirmed by the user. The filer is declared by CIK: TotalEnergies files a 20-F under IFRS in dollars, the same consolidated statements the Paris line trades on, and the ticker map knows only the New York line.",
+      "cik": "0000879764"
+    },
+    {
+      "ticker": "MDLZ",
+      "entity_class": "OperatingCompany",
+      "why": "Mondelez International, biscuits, chocolate and snacks, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "cocoa and the other ingredients are a large part of cost and move with commodity prices"
+      ],
+      "scope_limit_codes": [
+        "commodity_exposure"
+      ],
+      "map_cik": "0001103982"
+    },
+    {
+      "ticker": "KHC",
+      "entity_class": "OperatingCompany",
+      "why": "Kraft Heinz, packaged foods and condiments, a 10-K filer in dollars with a December year end; an operating profit and positive, stable free cash flow on every filed year, a net loss on the latest; an operating company, confirmed by the user.",
+      "map_cik": "0001637459"
+    },
+    {
+      "ticker": "HSY",
+      "entity_class": "OperatingCompany",
+      "why": "Hershey, chocolate, confectionery and salty snacks, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "cocoa and the other ingredients are a large part of cost and move with commodity prices"
+      ],
+      "scope_limit_codes": [
+        "commodity_exposure"
+      ],
+      "map_cik": "0000047111"
+    },
+    {
+      "ticker": "ULVR.L",
+      "entity_class": "OperatingCompany",
+      "why": "the London line of Unilever, personal care, beauty, home care and foods, reporting in euros under a sterling price, so cross-currency; profitable with positive, stable free cash flow; an operating company; a second line of the company beside its New York receipt here, added because the downstream reader follows the home line, confirmed by the user. The filer is declared by CIK: Unilever files a 20-F under IFRS in euros, the same consolidated statements the London line trades on, and the ticker map knows only the New York line.",
+      "scope_limits": [
+        "the Ice Cream business was demerged on 6 December 2025 (20-F for 2025, accession 0000217410-26-000007), inside the latest year: the earlier years' filed figures hold it and the latest year's continuing figures do not"
+      ],
+      "scope_limit_codes": [
+        "carve_out_history"
+      ],
+      "cik": "0000217410"
+    },
+    {
+      "ticker": "KDP",
+      "entity_class": "OperatingCompany",
+      "why": "Keurig Dr Pepper, soft drinks and single-serve coffee, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "after the latest statements it bought JDE Peet's, settling on April 1, 2026 for about €14.86 billion for the shares tendered by then, paid with new notes, a term loan, a convertible preferred issue, cash on hand and the sale of 49 per cent of its pod-manufacturing business to outside investors (8-K of April 1, 2026, accession 0001193125-26-135642); none of it is on the balance sheet read, and the filed history is not the business ahead"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
+      ],
+      "map_cik": "0001418135"
+    },
+    {
+      "ticker": "AEP",
+      "entity_class": "RegulatedUtility",
+      "why": "American Electric Power, regulated electric utilities across several states, a 10-K filer in dollars with a December year end; earnings set by regulators on a rate base, so the regulated-utility class, refused by design and judged on rate-base growth and the authorised return, confirmed by the user.",
+      "map_cik": "0000004904"
+    },
+    {
+      "ticker": "NRG",
+      "entity_class": "MerchantPower",
+      "why": "NRG Energy, power generation and retail electricity and home services selling into competitive markets, a 10-K filer in dollars with a December year end; the merchant-power class by its text, refused by design and judged on its capacity and price lens instead, confirmed by the user.",
+      "map_cik": "0001013871"
+    },
+    {
+      "ticker": "RHM.DE",
+      "entity_class": "OperatingCompany",
+      "why": "Rheinmetall, defence vehicles, weapons and ammunition, reporting in euros; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; profitable on every year the vendor carries, free cash flow positive on three of the four; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "BA.L",
+      "entity_class": "OperatingCompany",
+      "why": "BAE Systems, defence and aerospace systems, reporting in sterling with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; profitable on every filed year; an operating company, confirmed by the user.",
+      "lei": "8SVCSVKSGDWMW2QHOH83"
+    },
+    {
+      "ticker": "HII",
+      "entity_class": "OperatingCompany",
+      "why": "Huntington Ingalls Industries, naval shipbuilding, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0001501585"
+    },
+    {
+      "ticker": "BA",
+      "entity_class": "Unprofitable",
+      "why": "Boeing, commercial aircraft, defence and space systems, and services, a 10-K filer in dollars with a December year end; an operating loss on four of the five filed years and on the fifth too before the gain on the digital aviation business it sold, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "map_cik": "0000012927"
+    },
+    {
+      "ticker": "GE",
+      "entity_class": "OperatingCompany",
+      "why": "GE Aerospace, jet engines and their servicing, a 10-K filer in dollars with a December year end; profitable on the latest four filed years, with positive free cash flow on every one; an operating company, confirmed by the user.",
+      "map_cik": "0000040545"
+    },
+    {
+      "ticker": "SAF.PA",
+      "entity_class": "OperatingCompany",
+      "why": "Safran, aircraft engines and aircraft equipment, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; an operating profit on every filed year and positive free cash flow on every year that carries it, with net losses on two; an operating company, confirmed by the user.",
+      "lei": "969500UIC89GT3UL7L24"
+    },
+    {
+      "ticker": "ROP",
+      "entity_class": "OperatingCompany",
+      "why": "Roper Technologies, vertical software and specialised technology products, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "growth is in part bought: acquisitions run through the window and their goodwill is most of invested capital"
+      ],
+      "scope_limit_codes": [
+        "goodwill_heavy"
+      ],
+      "map_cik": "0000882835"
+    },
+    {
+      "ticker": "TYL",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Tyler Technologies, software for state and local governments moving its clients to subscriptions, a 10-K filer in dollars with a December year end; recurring revenue growing fast; high-growth software, profitable with positive free cash flow, confirmed by the user.",
+      "scope_limits": [
+        "a large acquisition in the earliest year of the window, NIC in April 2021, so that year holds it for part of the year; the growth estimate is capped at the return on capital, below what the revenue history reads with or without it"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
+      ],
+      "map_cik": "0000860731"
+    },
+    {
+      "ticker": "DSY.PA",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Dassault Systèmes, design, simulation and product-lifecycle software, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; recurring revenue growing fast; high-growth software, profitable with positive free cash flow, confirmed by the user.",
+      "lei": "96950065LBWY0APQIM86"
+    },
+    {
+      "ticker": "WIX",
+      "entity_class": "HighGrowthSoftware",
+      "why": "Wix.com, website-building and business software sold by subscription, incorporated in Israel, a 20-F filer reporting under US GAAP in dollars; recurring revenue growing fast; high-growth software, confirmed by the user.",
+      "map_cik": "0001576789"
+    },
+    {
+      "ticker": "HSBA.L",
+      "entity_class": "Bank",
+      "why": "the London line of HSBC Holdings, reporting in dollars under a sterling price, so cross-currency; a bank, the residual-income lens, as its depositary line here is read; a second line of the company beside its New York receipt here, added because the downstream reader follows the home line, confirmed by the user. The filer is declared by CIK: HSBC files a 20-F under IFRS in dollars, the same consolidated statements the London line trades on, and the ticker map knows only the New York line.",
+      "cik": "0001089113"
+    },
+    {
+      "ticker": "SAN.MC",
+      "entity_class": "Bank",
+      "why": "the Madrid line of Banco Santander, reporting in euros; a bank, the residual-income lens, confirmed by the user. The filer is declared by CIK: Santander files a 20-F under IFRS in euros, the same consolidated statements the Madrid line trades on, and the ticker map knows only the New York line.",
+      "cik": "0000891478"
+    },
+    {
+      "ticker": "BNP.PA",
+      "entity_class": "Bank",
+      "why": "BNP Paribas, a universal bank, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; a bank, the residual-income lens, confirmed by the user.",
+      "lei": "R0MUWSFPU8MPRO8K5P83"
+    },
+    {
+      "ticker": "DBK.DE",
+      "entity_class": "Bank",
+      "why": "the Frankfurt line of Deutsche Bank, reporting in euros; a bank, the residual-income lens, confirmed by the user. The filer is declared by CIK: Deutsche Bank files a 20-F under IFRS in euros, the same consolidated statements the Frankfurt line trades on, and the ticker map knows only the New York line; where its facts lag its filings the vendor's statements are read by the decision the record states.",
+      "cik": "0001159508"
+    },
+    {
+      "ticker": "BARC.L",
+      "entity_class": "Bank",
+      "why": "the London line of Barclays, reporting in sterling; a bank, the residual-income lens, confirmed by the user. The filer is declared by CIK: Barclays files a 20-F under IFRS in sterling, the same consolidated statements the London line trades on, and the ticker map knows only the New York line.",
+      "cik": "0000312069"
+    },
+    {
+      "ticker": "GLE.PA",
+      "entity_class": "Bank",
+      "why": "Société Générale, a universal bank, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; a bank, the residual-income lens, confirmed by the user.",
+      "lei": "O2RNE8IBXP4R0TD8PU41"
+    },
+    {
+      "ticker": "6758.T",
+      "entity_class": "OperatingCompany",
+      "why": "the Tokyo line of Sony Group, games, music, pictures, image sensors and electronics, reporting in yen; an operating profit on every year the vendor carries and positive free cash flow on the latest three, with a net loss on the latest, the year of the spin-off; an operating company; a second line of the company beside its New York receipt here, added because the downstream reader follows the home line, confirmed by the user. The filer is declared by CIK: Sony files a 20-F under IFRS in yen, the same consolidated statements the Tokyo line trades on, and the ticker map knows only the New York line; where its facts lag its filings the vendor's statements are read by the decision the record states.",
+      "scope_limits": [
+        "the Financial Services business was partly spun off as of October 1, 2025 (20-F for the year to March 31, 2026, accession 0001193125-26-274893), inside the latest year, so part of the filed history is another business's"
+      ],
+      "scope_limit_codes": [
+        "carve_out_history"
+      ],
+      "cik": "0000313838"
+    },
+    {
+      "ticker": "7974.T",
+      "entity_class": "OperatingCompany",
+      "why": "Nintendo, game consoles and software, reporting in yen; no filings at the Securities and Exchange Commission, so the statements come from the vendor; profitable on every year the vendor carries, free cash flow positive on three of the four; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "8035.T",
+      "entity_class": "Cyclical",
+      "why": "Tokyo Electron, semiconductor production equipment, reporting in yen; no filings at the Securities and Exchange Commission, so the statements come from the vendor; orders swing with chipmakers' capital spending, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the other semiconductor equipment suppliers here are read; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "6954.T",
+      "entity_class": "Cyclical",
+      "why": "Fanuc, factory automation controls, robots and machine tools, reporting in yen; no filings at the Securities and Exchange Commission, so the statements come from the vendor; orders follow manufacturers' capital spending, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "6902.T",
+      "entity_class": "Cyclical",
+      "why": "Denso, vehicle components, reporting in yen; no filings at the Securities and Exchange Commission, so the statements come from the vendor; volumes follow vehicle production, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "ISRG",
+      "entity_class": "OperatingCompany",
+      "why": "Intuitive Surgical, robotic surgical systems and the instruments they use, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0001035267"
+    },
+    {
+      "ticker": "SYK",
+      "entity_class": "OperatingCompany",
+      "why": "Stryker, orthopaedic implants and medical and surgical equipment, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "acquisitions inside the window, Inari Medical in February 2025 the largest, so part of the revenue history's growth was bought"
+      ],
+      "scope_limit_codes": [
+        "acquired_history"
+      ],
+      "map_cik": "0000310764"
+    },
+    {
+      "ticker": "BSX",
+      "entity_class": "OperatingCompany",
+      "why": "Boston Scientific, medical devices for cardiology and other specialties, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "growth is in part bought: acquisitions run through the window and their goodwill is a large part of invested capital"
+      ],
+      "scope_limit_codes": [
+        "goodwill_heavy"
+      ],
+      "map_cik": "0000885725"
+    },
+    {
+      "ticker": "PODD",
+      "entity_class": "OperatingCompany",
+      "why": "Insulet, tubeless insulin pumps, a 10-K filer in dollars with a December year end; profitable on every filed year, with positive free cash flow on the latest three; an operating company, confirmed by the user.",
+      "map_cik": "0001145197"
+    },
+    {
+      "ticker": "SN.L",
+      "entity_class": "OperatingCompany",
+      "why": "the London line of Smith & Nephew, orthopaedics, sports medicine and wound care, reporting in dollars under a sterling price, so cross-currency; profitable with positive, stable free cash flow; an operating company; a second line of the company beside its New York receipt here, added because the downstream reader follows the home line, confirmed by the user. The filer is declared by CIK: Smith & Nephew files a 20-F under IFRS in dollars, the same consolidated statements the London line trades on, and the ticker map knows only the New York line.",
+      "cik": "0000845982"
+    },
+    {
+      "ticker": "SHL.DE",
+      "entity_class": "OperatingCompany",
+      "why": "Siemens Healthineers, medical imaging, diagnostics and radiotherapy, reporting in euros with a September year end; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; profitable with positive free cash flow on the years the vendor carries; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "RMS.PA",
+      "entity_class": "OperatingCompany",
+      "why": "Hermès, luxury leather goods and fashion, reporting in euros; no filings at the Securities and Exchange Commission, and its ESEF reports on filings.xbrl.org stop short of its latest annual report, so the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "MC.PA",
+      "entity_class": "OperatingCompany",
+      "why": "LVMH, luxury fashion, leather goods, wines and spirits, perfumes and watches, reporting in euros; no filings at the Securities and Exchange Commission, and its ESEF reports on filings.xbrl.org stop short of its latest annual report, so the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "KER.PA",
+      "entity_class": "OperatingCompany",
+      "why": "Kering, luxury fashion houses, reporting in euros; no filings at the Securities and Exchange Commission, and its ESEF reports on filings.xbrl.org stop short of its latest annual report, so the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "RI.PA",
+      "entity_class": "OperatingCompany",
+      "why": "Pernod Ricard, wines and spirits, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry, with a June year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "lei": "52990097YFPX9J0H5D87"
+    },
+    {
+      "ticker": "MONC.MI",
+      "entity_class": "OperatingCompany",
+      "why": "Moncler, luxury outerwear, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "lei": "815600EBD7FB00525B20"
+    },
+    {
+      "ticker": "BRBY.L",
+      "entity_class": "OperatingCompany",
+      "why": "Burberry, luxury fashion, reporting in sterling with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry, with a year ending in March or April; positive, stable free cash flow on every filed year and a net loss on one; an operating company, confirmed by the user.",
+      "lei": "213800PE1KEFCNFR1R50"
+    },
+    {
+      "ticker": "FISV",
+      "entity_class": "OperatingCompany",
+      "why": "Fiserv, payment processing and core software for banks and merchants, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0000798354"
+    },
+    {
+      "ticker": "WLN.PA",
+      "entity_class": "Unprofitable",
+      "why": "Worldline, payment processing for merchants and banks, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; net losses on four of the five filed years, write-downs of acquired businesses among them, so there is no operating profit to normalise from; the runway lens, refused by design; unprofitable, confirmed by the user.",
+      "lei": "549300CJMQNCA0U4TS33"
+    },
+    {
+      "ticker": "ADYEN.AS",
+      "entity_class": "OperatingCompany",
+      "why": "Adyen, payment processing for merchants, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "lei": "724500973ODKK3IFQ447"
+    },
+    {
+      "ticker": "PYPL",
+      "entity_class": "OperatingCompany",
+      "why": "PayPal, digital payments and wallets, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "customer balances held for users sit on their own balance-sheet lines against matching liabilities, outside the cash the record reads, and are not the company's"
+      ],
+      "scope_limit_codes": [
+        "pass_through_balances"
+      ],
+      "map_cik": "0001633917"
+    },
+    {
+      "ticker": "STLAM.MI",
+      "entity_class": "Cyclical",
+      "why": "the Milan line of Stellantis, vehicles under many brands, reporting in euros; volumes and margins swing with the cycle, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the vehicle makers here are read, confirmed by the user. The filer is declared by CIK: Stellantis files a 20-F under IFRS in euros, the same consolidated statements the Milan line trades on, and the ticker map knows only the New York line.",
+      "scope_limits": [
+        "the merger of FCA and PSA, completed on January 16, 2021, sits inside the through-cycle window: the earlier years are FCA's alone",
+        "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost"
+      ],
+      "scope_limit_codes": [
+        "acquired_history",
+        "captive_finance"
+      ],
+      "cik": "0001605484"
+    },
+    {
+      "ticker": "VOW3.DE",
+      "entity_class": "Cyclical",
+      "why": "the preference line of Volkswagen, vehicles under many brands, reporting in euros; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; volumes and margins swing with the cycle, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the vehicle makers here are read; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "captive_finance"
+      ]
+    },
+    {
+      "ticker": "BMW.DE",
+      "entity_class": "Cyclical",
+      "why": "the Frankfurt line of BMW, premium vehicles and motorcycles, reporting in euros; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; volumes and margins swing with the cycle, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the vehicle makers here are read; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "captive_finance"
+      ]
+    },
+    {
+      "ticker": "MBG.DE",
+      "entity_class": "Cyclical",
+      "why": "the Frankfurt line of Mercedes-Benz Group, premium cars and vans, reporting in euros; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; volumes and margins swing with the cycle, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the vehicle makers here are read; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "captive_finance"
+      ]
+    },
+    {
+      "ticker": "RNO.PA",
+      "entity_class": "Cyclical",
+      "why": "Renault Group, vehicles, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; volumes and margins swing with the cycle, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the vehicle makers here are read; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost"
+      ],
+      "scope_limit_codes": [
+        "captive_finance"
+      ],
+      "lei": "969500F7JLTX36OUI695"
+    },
+    {
+      "ticker": "P911.DE",
+      "entity_class": "Cyclical",
+      "why": "the preference line of Porsche AG, sports cars, reporting in euros; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; volumes and margins swing with the cycle, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the vehicle makers here are read; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "structural: a captive finance arm, whose interest is an operating cost of a lending business; the bottom-up NOPAT adds all interest back as financing and overstates the through-cycle return by the arm's funding cost"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "captive_finance"
+      ]
+    },
+    {
+      "ticker": "LULU",
+      "entity_class": "OperatingCompany",
+      "why": "Lululemon Athletica, athletic apparel, a 10-K filer in dollars with a January year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0001397187"
+    },
+    {
+      "ticker": "ADS.DE",
+      "entity_class": "OperatingCompany",
+      "why": "adidas, sportswear and footwear, reporting in euros; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; profitable on three of the four years the vendor carries, with positive free cash flow on the latest three; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "ONON",
+      "entity_class": "OperatingCompany",
+      "why": "On Holding, running shoes and apparel, a 20-F filer reporting under IFRS in francs under a dollar listing; profitable with positive free cash flow on the latest three filed years; an operating company; adr_ratio: the New York line is the class A ordinary share itself, not a receipt; declared at one so the check runs on this cross-currency name; confirmed by the user.",
+      "map_cik": "0001858985",
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "BIRK",
+      "entity_class": "OperatingCompany",
+      "why": "Birkenstock, footwear, a 20-F filer reporting under IFRS in euros under a dollar listing, with a September year end; profitable with positive, stable free cash flow; an operating company; adr_ratio: the New York line is the ordinary share itself, not a receipt; declared at one so the check runs on this cross-currency name, the vendor's count of shares matching the company's own after its redemptions, confirmed by the user.",
+      "scope_limits": [
+        "the legal domicile is Jersey while the vendor's profile, which chooses the country risk premium, names the United Kingdom, where its principal executive offices are"
+      ],
+      "scope_limit_codes": [
+        "country_basis"
+      ],
+      "map_cik": "0001977102",
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "AS",
+      "entity_class": "OperatingCompany",
+      "why": "Amer Sports, sports equipment, apparel and footwear brands, a 20-F filer reporting under IFRS in dollars; profitable on the latest two filed years, with positive free cash flow on all three; an operating company, confirmed by the user.",
+      "map_cik": "0001988894"
+    },
+    {
+      "ticker": "AF.PA",
+      "entity_class": "Cyclical",
+      "why": "Air France-KLM, an airline group, reporting in euros; no filings at the Securities and Exchange Commission, and its ESEF reports on filings.xbrl.org stop short of its latest annual report, so the statements come from the vendor; demand and fuel costs swing with the cycle, with loss years in the industry's history, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the airline here is read; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "LHA.DE",
+      "entity_class": "Cyclical",
+      "why": "Lufthansa, an airline group, reporting in euros; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; demand and fuel costs swing with the cycle, with loss years in the industry's history, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the airline here is read; a cyclical, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "IAG.L",
+      "entity_class": "Cyclical",
+      "why": "International Airlines Group, British Airways, Iberia, Aer Lingus and Vueling, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry under a sterling price; demand and fuel costs swing with the cycle, with loss years in the industry's history, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the airline here is read; a cyclical, confirmed by the user.",
+      "lei": "959800TZHQRUSH1ESL13"
+    },
+    {
+      "ticker": "RYA.IR",
+      "entity_class": "Cyclical",
+      "why": "the Dublin line of Ryanair Holdings, a low-fare airline, reporting in euros with a March year end; demand and fuel costs swing with the cycle, with loss years in the industry's history, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the airline here is read; a cyclical, confirmed by the user. The filer is declared by CIK: Ryanair files a 20-F under IFRS in euros, the same consolidated statements the Dublin line trades on, and the ticker map knows only the New York line; where its facts lag its filings the vendor's statements are read by the decision the record states.",
+      "cik": "0001038683"
+    },
+    {
+      "ticker": "WIZZ.L",
+      "entity_class": "Cyclical",
+      "why": "Wizz Air, a low-fare airline based in Hungary, reporting in euros with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry under a sterling price, with a March year end; demand and fuel costs swing with the cycle, with loss years in the industry's history, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the airline here is read; a cyclical, confirmed by the user.",
+      "lei": "213800COXGZCORLJZA85"
+    },
+    {
+      "ticker": "AAL",
+      "entity_class": "Cyclical",
+      "why": "American Airlines, a 10-K filer in dollars with a December year end; demand and fuel costs swing with the cycle, with loss years in the industry's history, so the through-cycle return on today's capital is the lens and never one year's free cash flow, as the airline here is read; a cyclical, confirmed by the user.",
+      "map_cik": "0000006201"
+    },
+    {
+      "ticker": "TMUS",
+      "entity_class": "OperatingCompany",
+      "why": "T-Mobile US, wireless and broadband service, a 10-K filer in dollars with a December year end; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "map_cik": "0001283699"
+    },
+    {
+      "ticker": "DTE.DE",
+      "entity_class": "OperatingCompany",
+      "why": "the Frankfurt line of Deutsche Telekom, telecom services in Germany and Europe and, through T-Mobile US, in the United States, reporting in euros; no filings at the Securities and Exchange Commission, and filings.xbrl.org does not aggregate the German register, so the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor",
+        "Deutsche Telekom controls a majority of T-Mobile US's voting power (T-Mobile's 10-K for 2025), so its statements consolidate a listed subsidiary whose other holders own a large part of it, and the consolidated cash flows are not all the listed line's"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements",
+        "ownership_structure"
+      ]
+    },
+    {
+      "ticker": "ORA.PA",
+      "entity_class": "OperatingCompany",
+      "why": "Orange, telecom services in France, Europe and Africa, reporting in euros; no filings at the Securities and Exchange Commission, and its ESEF reports on filings.xbrl.org stop short of its latest annual report, so the statements come from the vendor; profitable with positive, stable free cash flow; an operating company, confirmed by the user.",
+      "scope_limits": [
+        "no filings at the Securities and Exchange Commission, so the statements come from the vendor"
+      ],
+      "scope_limit_codes": [
+        "vendor_statements"
+      ]
+    },
+    {
+      "ticker": "LEN",
+      "entity_class": "Cyclical",
+      "why": "Lennar, homebuilding with mortgage and title services, a 10-K filer in dollars with a November year end; demand follows the housing cycle and mortgage rates, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "map_cik": "0000920760"
+    },
+    {
+      "ticker": "DHI",
+      "entity_class": "Cyclical",
+      "why": "D.R. Horton, homebuilding with mortgage services and lot development, a 10-K filer in dollars with a September year end; demand follows the housing cycle and mortgage rates, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "map_cik": "0000882184"
+    },
+    {
+      "ticker": "PHM",
+      "entity_class": "Cyclical",
+      "why": "PulteGroup, homebuilding with mortgage services, a 10-K filer in dollars with a December year end; demand follows the housing cycle and mortgage rates, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "map_cik": "0000822416"
+    },
+    {
+      "ticker": "TW.L",
+      "entity_class": "Cyclical",
+      "why": "Taylor Wimpey, homebuilding in the United Kingdom, reporting in sterling with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; demand follows the housing cycle and mortgage rates, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "lei": "21380089BTRXTD8S3R66"
+    },
+    {
+      "ticker": "BTRW.L",
+      "entity_class": "Cyclical",
+      "why": "Barratt Redrow, homebuilding in the United Kingdom, reporting in sterling with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry, with a June year end; demand follows the housing cycle and mortgage rates, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "lei": "2138006R85VEOF5YNK29"
+    },
+    {
+      "ticker": "PSN.L",
+      "entity_class": "Cyclical",
+      "why": "Persimmon, homebuilding in the United Kingdom, reporting in sterling with no filings at the Securities and Exchange Commission, so the statements are its ESEF annual reports on filings.xbrl.org, read by the Legal Entity Identifier declared here, the one its reports' own facts carry; demand follows the housing cycle and mortgage rates, so the through-cycle return on today's capital is the lens and never one year's free cash flow; a cyclical, confirmed by the user.",
+      "lei": "213800XI72Y57UWN6F31"
+    },
+    {
+      "ticker": "CCJ",
+      "entity_class": "Miner",
+      "why": "Cameco, uranium mining, milling and fuel services, a 40-F filer from Canada, whose financial statements the period reader does not take from companyfacts, so the statements come from the vendor; the miner class, refused by design; adr_ratio: the New York line is the common share itself, not a receipt; declared at one so the check runs on this cross-currency name; confirmed by the user.",
+      "map_cik": "0001009001",
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "NXE",
+      "entity_class": "ConstructionStage",
+      "why": "NexGen Energy, a uranium developer in Saskatchewan's Athabasca Basin with no production, a 40-F filer from Canada, whose financial statements the period reader does not take from companyfacts, so the statements come from the vendor; construction-stage, refused by design, Miner once production starts, as the other uranium developer here is read; adr_ratio: the New York line is the common share itself, not a receipt; declared at one so the check runs on this cross-currency name; confirmed by the user.",
+      "map_cik": "0001698535",
+      "adr_ratio": 1
+    },
+    {
+      "ticker": "KAP.IL",
+      "entity_class": "Miner",
+      "why": "Kazatomprom, the Kazakh national uranium producer, whose global depositary receipts trade in London in dollars while it reports in tenge; no filings at the Securities and Exchange Commission, so the statements come from the vendor; the miner class, refused by design, confirmed by the user."
+    },
+    {
+      "ticker": "UEC",
+      "entity_class": "Miner",
+      "why": "Uranium Energy, in-situ recovery uranium mines in Wyoming and Texas, a 10-K filer in dollars with a July year end; its 10-K reports production restarted at one mine and begun at another, so a producer, as the restarting producer here is read; the miner class, refused by design, confirmed by the user.",
+      "map_cik": "0001334933"
     }
   ]
 }

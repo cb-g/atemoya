@@ -285,15 +285,17 @@ def test_universe_loader_takes_both_build_out_declarations_or_neither() -> None:
 def test_the_tracked_universe_carries_the_declared_build_outs() -> None:
     """(60, 63) AMZN and VG were the two names the readout was about, confirmed in brief 63
     restated after depreciation; on 2026-10-19 the user confirmed the other coded build-outs
-    but SPCX, which is loss-making on vendor statements and cannot carry the readout. Every
-    coded build-out but that one declares both figures, dated, with a why."""
+    but SPCX, which is loss-making on vendor statements and cannot carry the readout. Ormat and
+    Sakura Internet (2026-10-24) cannot carry it either, the one refused for working capital the
+    reader does not take and the other for free cash flow below nil on vendor statements. Every
+    coded build-out but those three declares both figures, dated, with a why."""
     import universe
 
     u = universe.load(Path(__file__).resolve().parent.parent / "reference" / "universe.json")
     declared = {e.ticker: e for e in u.tickers if e.build_out_return is not None}
     assert sorted(declared) == ["AMZN", "APD", "BROS", "ENB", "LLY", "LONN.SW", "ORCL", "SAAB-B.ST", "VG"]
     coded = {e.ticker for e in u.tickers if "build_out" in (e.scope_limit_codes or [])}
-    assert coded - set(declared) == {"SPCX"}
+    assert coded - set(declared) == {"SPCX", "ORA", "3778.T"}
     for entry in declared.values():
         assert entry.build_out_lag_years is not None
         for d in (entry.build_out_return, entry.build_out_lag_years):

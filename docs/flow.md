@@ -813,6 +813,15 @@ states are written into its files, not into a record:
 
 ## Changelog
 
+- a hundred and thirty-nine names (2026-10-24): the downstream reader's batch joins the universe,
+  the classes drafted by the tool's author and confirmed by the user; six names asked for are held
+  out because their value would stand on the wrong basis (a separation or a share-financed purchase
+  after the statements read, a carve-out or a purchase inside the revenue history with no combined
+  pro forma stated, landlord financing under the filer's own tags), and two are left out, one not
+  trading and one a depositary line of a company already here;
+  Tetra Tech, Philip Morris International and Vertiv declare their filers' pro forma revenue, and
+  the depositary entries of Sony and Unilever take the carve-out limit of their new home lines. No
+  new `Failed` string.
 - the filer's pro forma revenue (2026-10-23): a universe entry may declare `pro_forma_revenue`,
   the filer's pro forma revenue of the combined business for the years before a large purchase,
   exactly a non-empty list of period ends and positive values, a why citing the filing and its

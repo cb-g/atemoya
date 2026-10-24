@@ -17,7 +17,7 @@ def test_tracked_universe_is_a_declaration_only() -> None:
     text = (ROOT / "reference" / "universe.json").read_text()
     u = universe.load_text(text)
     raw = json.loads(text)["tickers"]
-    assert len(u.tickers) == len(raw) == 250
+    assert len(u.tickers) == len(raw) == 389
     for entry in raw:
         assert set(entry) <= set(universe.ALLOWED) and all(k in entry for k in universe.REQUIRED)
         # no number followed by a unit, no percentage or multiple, no four-digit year, in a why
@@ -220,7 +220,8 @@ def test_mexicos_three_rows_and_its_curve() -> None:
 
 def test_the_holding_company_class_and_the_thirty_two() -> None:
     """(81) A name that fits no class gets a class: HoldingCompany has a row, admits no
-    model and names the sum of the parts; Howard Hughes is its one name. Strategy is a
+    model and names the sum of the parts; Howard Hughes was its first name, SoftBank Group and
+    Biglari Holdings followed (2026-10-24). Strategy is a
     Wrapper, not a new class. Thales and Saab declare the LEI their own reports carry."""
     import reference
 
@@ -233,7 +234,7 @@ def test_the_holding_company_class_and_the_thirty_two() -> None:
 
     u = universe.load_text((ROOT / "reference" / "universe.json").read_text())
     by = {e.ticker: e for e in u.tickers}
-    assert [t for t, e in by.items() if e.entity_class == "HoldingCompany"] == ["HHH"]
+    assert [t for t, e in by.items() if e.entity_class == "HoldingCompany"] == ["HHH", "9984.T", "BH"]
     assert by["MSTR"].entity_class == "Wrapper"
     assert by["HO.PA"].lei == "529900FNDVTQJOVVPZ19"
     assert by["SAAB-B.ST"].lei == "549300ZHO4JCQQI13M69"
@@ -284,7 +285,7 @@ def test_map_cik_is_ten_digits_and_spcx_declares_the_company() -> None:
     raw = json.loads((ROOT / "reference" / "universe.json").read_text())["tickers"]
     by = {e["ticker"]: e for e in raw}
     assert by["SPCX"]["map_cik"] == "0001181412" and "map_cik" not in by["SAAB-B.ST"]
-    assert sum("map_cik" in e for e in raw) == 192
+    assert sum("map_cik" in e for e in raw) == 274
     bad = json.dumps({"tickers": [{"ticker": "X", "entity_class": "Bank", "why": "a bank", "map_cik": "123"}]})
     with pytest.raises(universe.UniverseError, match="map_cik must be a ten-digit CIK"):
         universe.load_text(bad)
